@@ -1,0 +1,19 @@
+{
+  "name": "aqliteelectron",
+  "version": "1.0.0",
+  "description": "A simple fork of AqLite to address linux ",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "aqw;",
+    "aqlite;"
+  ],
+  "author": "aquasp",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^4.2.12",
+    "nw-flash-trust": "^0.3.0"
+  }
+}
