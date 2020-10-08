@@ -1,5 +1,5 @@
 # AqLiteElectron
-A simple Electron launcher using @133spider swf for launching AQW.
+A simple Electron launcher using @133spider swf file for launching AQW.
 
 
 ## Why?
@@ -46,17 +46,15 @@ This is his repository: https://github.com/133spider/AQLite
 He did create cetera bot. I did some searches, and seems like we won't update any bot anymore. Instead, he created AqLite, which includes only quality of life improvments. I am totally against botting, but I think that everyone makes mistakes and spider133 will not create or support any bot anymore.
 ## For Artix Enterteiment
 
-First, thanks for supporting linux, Artix! This means a lot for me and I will make sure to keep supporting the game as I can. 
+First, thanks for supporting linux, Artix! This means a lot for me and I will make sure to keep supporting the game as I can.
 
 Second, I want to contribute, so if you guys want, you are allowed to use any part of my code in your official launcher if  you want to.
 
-Third, if you want this repository to be off, create a issue to delete this repo and I will do so. I don't want to get in the way of artix in any way. On the contrary, I want to help. 
+Third, if you want this repository to be off, create a issue to delete this repo and I will do so. I don't want to get in the way of artix in any way. On the contrary, I want to help.
 
 So if this project gets in the way of any kind of trouble, please come in and open an issue here at github.
 
 
 ## Important thing to say
 
-Artix don't have any responsability with you as long you are using third party. Also, any bug in my launcher or 133spider launcher should be reported HERE IN GITHUB, never in artix. 
-
-
+Artix don't have any responsability with you as long you are using third party. Also, any bug in my launcher or 133spider launcher should be reported HERE IN GITHUB, never in artix.
