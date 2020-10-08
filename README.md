@@ -36,7 +36,7 @@ Well, my code is a bit different, but the core is the swf file, which is the sam
 I will try to build it for windows, mac and linux, but I can't confirm if MAC builds will work if build from a linux machine.
 
 ## Credits
-95% of the credits are deserved to 133spider. Without his efforts, this would not be possible.
+99% of the credits are deserved to 133spider. Without his efforts, this would not be possible.
 This is his repository: https://github.com/133spider/AQLite
 
 
