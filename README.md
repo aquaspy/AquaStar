@@ -1,14 +1,13 @@
-# AqLiteElectron
+# AqLite2
 A simple Electron launcher using @133spider swf file for launching AQW.
 
 
 ## Why?
 
-Sadly, I know that it is against the TOS to use third party launchers. As long I like AE and AQW, I think that their game needs some of the quality of life improvements in AQLITE
+Sadly, I know that it is against the TOS to use third party launchers. As long I like AE and AQW, I think that their game needs some of the quality of life improvements in AqLite
 For example, farming diamonds of Nulgath in /join evilwarnul is very painful if you don't want to accept Archfiend's Favor neither Dage's favor. The drops appear in the whole screen, lags a lot and makes the experience of farming a lot worse.
 
 I also love linux, so I decided to create a native launcher for it.
-
 
 ## Is it safe?
 
@@ -44,7 +43,7 @@ This is his repository: https://github.com/133spider/AQLite
 ## About 133spider past
 
 He did create cetera bot. I did some searches, and seems like we won't update any bot anymore. Instead, he created AqLite, which includes only quality of life improvements. I am totally against botting, but I think that everyone makes mistakes and spider133 will not create or support any bot anymore.
-## For Artix Enterteiment
+## For Artix Entertainment
 
 First, thanks for supporting linux, Artix! This means a lot for me and I will make sure to keep supporting the game as I can.
 
@@ -58,3 +57,11 @@ So if this project gets in the way of any kind of trouble, please come in and op
 ## Important thing to say
 
 Artix don't have any responsibility with you as long you are using third party. Also, any bug in my launcher or 133spider launcher should be reported HERE IN GITHUB, never in artix.
+
+
+## Key diferences from official AqLite
+
+The core is the same. You should thank 133spider instead of me for making all that amazing features. All I did was to write a simple code that uses his swf file and compile it for linux and mac, so linux and mac users can play too in a launcher too.
+
+### Why it is called AqLite2?
+I couldn't find a cool name, so I choose AqLite2.
