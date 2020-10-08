@@ -1,6 +1,12 @@
 # AqLite2
 A simple Electron launcher using @133spider swf file for launching AQW.
 
+## How to download
+
+Go to this link: https://github.com/aquaspy/AqLiteElectron/tree/main/Releases
+
+and download for your system
+
 ## Current working and missing
 
 ### Working:
