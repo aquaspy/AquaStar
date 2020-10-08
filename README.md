@@ -1,4 +1,4 @@
-# AqLiteElectrona
+# AqLiteElectron
 A simple Electron launcher using @133spider swf file for launching AQW.
 
 
