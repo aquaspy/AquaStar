@@ -1,10 +1,12 @@
 {
-  "name": "aqliteelectron",
+  "name": "aqlite2",
   "version": "1.0.0",
   "description": "A simple fork of AqLite to address linux ",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
   },
   "keywords": [
     "aqw;",
@@ -14,6 +16,26 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^4.2.12",
+    "electron-builder": "^22.8.1",
+    "nw-flash-trust": "^0.3.0"
+  },
+  "build": {
+    "asar": false,
+    "appId": "aquasp",
+    "mac": {
+      "category": "Games"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    },
+    "win": {
+      "target": "NSIS",
+      "icon": "Icon/Icon.png"
+    }
+  },
+  "dependencies": {
     "nw-flash-trust": "^0.3.0"
   }
 }

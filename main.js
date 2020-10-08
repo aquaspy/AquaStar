@@ -1,9 +1,9 @@
 const { app, BrowserWindow, Menu} = require('electron')
 const path = require('path')
 const {session} = require('electron')
-var flashTrust = require('nw-flash-trust');
+const flashTrust = require('nw-flash-trust');
 
-const appName = 'aqliteelectron';
+const appName = 'aqlite2';
 
 
 
@@ -38,7 +38,7 @@ const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave F
 
 const trustManager = flashTrust.initSync(appName, flashPath); //ESSA FOI A LINHA Q FEZ FUNCIONAR WTHELL 100% confirmado, é ela. Não sei pq.
 
-//const trustManager = flashTrust.initSync(appName);
+//const trustManager = flashTrust.initSync(appName); Essa sozinha n funciona no electron.
 
 trustManager.empty();
 
