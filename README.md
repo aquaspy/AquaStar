@@ -1,6 +1,18 @@
 # AqLite2
 A simple Electron launcher using @133spider swf file for launching AQW.
 
+## Current working and missing
+
+### Working:
+
+Linux build
+
+### Missing:
+
+Windows build
+Mac Build
+Installer for linux (I have only the AppImage currently)
+
 
 ## Why?
 
@@ -65,3 +77,16 @@ The core is the same. You should thank 133spider instead of me for making all th
 
 ### Why it is called AqLite2?
 I couldn't find a cool name, so I choose AqLite2.
+
+
+## How to build
+1- Clone this repository.
+2- Put the flash files in the SAME FOLDER of main.js
+
+install the dependencies in package.json (nw-flash-trust, electron@4.2.12 and electron-builder)
+
+4- open a terminal inside the main.js folder (which should also have flash and package.json)
+
+5-Type: npm run dist
+
+6- Build files will be created.
