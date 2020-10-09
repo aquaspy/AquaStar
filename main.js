@@ -42,7 +42,7 @@ function showHelpMessage(){
         message: "These are the keybindings added to the game. Note that they use 'Alt' with it",
         detail: 'W - AQW Wiki\n' +
             'D - AQW Design notes\n' +
-            'A - Account page\n' + 
+            'A - Account page\n' +
             'C - Character lookup. You can also just use the in-game lookup.\n\n' +
             'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.',
     };
@@ -123,7 +123,7 @@ function createWindow () {
   const ret4 = globalShortcut.register('Alt+C',() => {
     newBrowserWindow(win,charLookup);
   })
-  
+
   // HELP MEEE
   const ret5 = globalShortcut.register('Alt+H',() => {
     showHelpMessage();
@@ -134,7 +134,7 @@ function createWindow () {
   const ret7 = globalShortcut.register('F1',() => {
     showHelpMessage();
   })
-  
+
   // Reload page. Clears cache (...?) of aqlite. At least new releases will show then.
   const ret8 = globalShortcut.register('F5',() => {
     if (win.isFocused()){
@@ -146,10 +146,10 @@ function createWindow () {
       win.reload();
     }
   })
-  
-  
-  
-  
+
+
+
+
   /*mainSession.cookies.get({ url: 'https://laf.world/?game' }) supostamente carrega com cookies
   .then((cookies) => {
     console.log(cookies)
@@ -164,16 +164,16 @@ function createWindow () {
 })
 */
 
-  //win.setMenuBarVisibility(false)
-  // win.removeMenu(true) remove todos os atalhos de abrir as coisas tipo F11, o console etc
+  win.setMenuBarVisibility(false) //remove o menu feio :v
+   //win.removeMenu(true) remove todos os atalhos de abrir as coisas tipo F11, o console etc
 
 
   // and load the index.html of the app.
 
 
 
-  let menu = Menu.buildFromTemplate(menuTemplate);
-    Menu.setApplicationMenu(menu);
+  //let menu = Menu.buildFromTemplate(menuTemplate);
+    //Menu.setApplicationMenu(menu);
 
   //Console
   //win.webContents.openDevTools()
