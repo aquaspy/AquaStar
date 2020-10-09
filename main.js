@@ -5,9 +5,7 @@ const flashTrust = require('nw-flash-trust');
 
 // Important Variables
 const appName      = 'aqlite2';
-//FIXME
-const icon_path    = path.join(__dirname, 'Icon', 'Icon.ico');
-
+const iconPath    = path.join(__dirname, 'Icon', 'Icon.png');
 
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 const accountAq    = 'https://account.aq.com/'
@@ -28,7 +26,7 @@ function newBrowserWindow(win, new_path){
                 'contextIsolation': true,
                 'enableRemoteModule': false
             },
-            'icon': icon_path
+            'icon': iconPath
         });
         newWin.loadURL(new_path);
     }
@@ -78,7 +76,6 @@ const trustManager = flashTrust.initSync(appName, flashPath); //ESSA FOI A LINHA
 //const trustManager = flashTrust.initSync(appName); Essa sozinha n funciona no electron.
 
 trustManager.empty();
-console.log(icon_path);
 trustManager.add(path.resolve(__dirname, 'aqlite.swf'));
 
 function createWindow () {
@@ -87,7 +84,7 @@ function createWindow () {
     width: 800,
     height: 600,
     // brackgroundColor: '#312450', cor de fundo do app, mas como uso o iframe nao faz tanta diferença
-    icon: icon_path,
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       plugins: true,
