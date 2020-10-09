@@ -4,3 +4,4 @@ node_modules
 # If it's necessary in the future:
 releases/
 build/
+dist/
