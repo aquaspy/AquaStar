@@ -1,14 +1,53 @@
-const { app, BrowserWindow, Menu} = require('electron')
+const { app, BrowserWindow, Menu, globalShortcut} = require('electron')
 const path = require('path')
 const {session} = require('electron')
 const flashTrust = require('nw-flash-trust');
 
-const appName = 'aqlite2';
+// Important Variables
+const appName      = 'aqlite2';
+//FIXME
+const icon_path    = path.join(__dirname, 'Icon', 'Icon.ico');
 
 
+const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
+const accountAq    = 'https://account.aq.com/'
+const designNotes  = 'https://www.aq.com/gamedesignnotes/'
+const charLookup   = 'https://www.aq.com/character.asp'; // Maybe ask nickname in dialog box...?
 
 
-
+// New page function
+function newBrowserWindow(win, new_path){
+    if (win.isFocused()){
+        const newWin = new BrowserWindow({
+            'width': 800,
+            'height': 600,
+            'webPreferences': {
+                'plugins': true,
+                'nodeIntegration': false,
+                'javascript': true,
+                'contextIsolation': true,
+                'enableRemoteModule': false
+            },
+            'icon': icon_path
+        });
+        newWin.loadURL(new_path);
+    }
+}
+// Help Function
+function showHelpMessage(){
+    const { dialog } = require('electron')
+    const dialog_options = {
+        buttons: ['Ok'],
+        title: 'Help:',
+        message: "These are the keybindings added to the game. Note that they use 'Alt' with it",
+        detail: 'W - AQW Wiki\n' +
+            'D - AQW Design notes\n' +
+            'A - Account page\n' + 
+            'C - Character lookup. You can also just use the in-game lookup.\n\n' +
+            'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.',
+    };
+    const response = dialog.showMessageBox(null,dialog_options);
+}
 
 let menuTemplate = [
        {role : "reload"}
@@ -27,8 +66,6 @@ switch (process.platform) {
     break
 }
 
-
-
 app.commandLine.appendSwitch('ppapi-flash-path', path.join(__dirname,"FlashPlayer", pluginName))
 app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.255');
 
@@ -41,7 +78,7 @@ const trustManager = flashTrust.initSync(appName, flashPath); //ESSA FOI A LINHA
 //const trustManager = flashTrust.initSync(appName); Essa sozinha n funciona no electron.
 
 trustManager.empty();
-
+console.log(icon_path);
 trustManager.add(path.resolve(__dirname, 'aqlite.swf'));
 
 function createWindow () {
@@ -50,10 +87,13 @@ function createWindow () {
     width: 800,
     height: 600,
     // brackgroundColor: '#312450', cor de fundo do app, mas como uso o iframe nao faz tanta diferença
-    icon: __dirname + "/Icon/Icon.png",
+    icon: icon_path,
     webPreferences: {
       nodeIntegration: false,
       plugins: true,
+      javascript: true,
+      contextIsolation: true,
+      enableRemoteModule: false
       //webviewTag: true desativo pois Iframe tem melhor performance, além do bug do input cursor no webview
     },
     //show: false faz nao aparecer a janela
@@ -70,8 +110,46 @@ function createWindow () {
 
   win.loadURL(`file://${__dirname}/aqlite.swf`)
 
-
-
+  // KeyBindings ---
+  const ret1 = globalShortcut.register('Alt+W',() => {
+    newBrowserWindow(win,wikiReleases);
+  })
+  const ret2 = globalShortcut.register('Alt+D',() => {
+    newBrowserWindow(win,designNotes);
+  })
+  const ret3 = globalShortcut.register('Alt+A',() => {
+    newBrowserWindow(win,accountAq);
+  })
+  const ret4 = globalShortcut.register('Alt+C',() => {
+    newBrowserWindow(win,charLookup);
+  })
+  
+  // HELP MEEE
+  const ret5 = globalShortcut.register('Alt+H',() => {
+    showHelpMessage();
+  })
+  const ret6 = globalShortcut.register('CommandOrControl+H',() => {
+    showHelpMessage();
+  })
+  const ret7 = globalShortcut.register('F1',() => {
+    showHelpMessage();
+  })
+  
+  // Reload page. Clears cache (...?) of aqlite. At least new releases will show then.
+  const ret8 = globalShortcut.register('F5',() => {
+    if (win.isFocused()){
+      win.reload();
+    }
+  })
+  const ret9 = globalShortcut.register('CommandOrControl+R',() => {
+    if (win.isFocused()){
+      win.reload();
+    }
+  })
+  
+  
+  
+  
   /*mainSession.cookies.get({ url: 'https://laf.world/?game' }) supostamente carrega com cookies
   .then((cookies) => {
     console.log(cookies)
