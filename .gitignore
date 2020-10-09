@@ -1,1 +1,6 @@
-(I don't even know what I am supposed to write here)
+node_modules/*
+node_modules
+
+# If it's necessary in the future:
+releases/
+build/
