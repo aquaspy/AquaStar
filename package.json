@@ -36,6 +36,7 @@
     }
   },
   "dependencies": {
-    "nw-flash-trust": "^0.3.0"
+    "nw-flash-trust": "^0.3.0",
+    "rimraf": "^3.0.2"
   }
 }
