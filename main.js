@@ -3,6 +3,7 @@ const path = require('path')
 const {session} = require('electron')
 const flashTrust = require('nw-flash-trust');
 const fs = require('fs');
+const os = require ('os');
 
 // Important Variables
 const appName      = 'aqlite2';
@@ -139,8 +140,8 @@ function createWindow () {
   // Reload page. Clears cache (...?) of aqlite. At least new releases will show then.
   const ret8 = globalShortcut.register('F5',() => {
     if (win.isFocused()){
-      const username = process.env.username || process.env.user; //getting username...
-      const dir = '/home/'+username+'.config/aqlite2/.Cache';
+      const username = os.userInfo ().username; //getting username...
+      const dir = '/home/'+username+'/.config/aqlite2/Cache';
       try {
     fs.rmdirSync(dir, { recursive: true });
 
