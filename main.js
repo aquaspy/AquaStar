@@ -47,7 +47,7 @@ function showHelpMessage(){
         detail: 'Alt + W - AQW Wiki\n' +
             'Alt + D - AQW Design notes\n' +
             'Alt + A - Account page\n' +
-            'Alt + C - Character lookup. You can also just use the in-game lookup.\n\n' +
+            'Alt + C - Character lookup. You can also just use the in-game lookup.\n' +
             'Shift + F5 - Clears all game cache and refresh the window.\n\n' +
             'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.',
     };
