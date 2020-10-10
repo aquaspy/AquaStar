@@ -2,6 +2,7 @@ const { app, BrowserWindow, Menu, globalShortcut} = require('electron')
 const path = require('path')
 const {session} = require('electron')
 const flashTrust = require('nw-flash-trust');
+const fs = require('fs');
 
 // Important Variables
 const appName      = 'aqlite2';
@@ -139,6 +140,14 @@ function createWindow () {
   const ret8 = globalShortcut.register('F5',() => {
     if (win.isFocused()){
       const username = process.env.username || process.env.user; //getting username...
+      const dir = '/home/'+username+'.config/aqlite2/.Cache';
+      try {
+    fs.rmdirSync(dir, { recursive: true });
+
+    console.log(`${dir} is deleted!`);
+} catch (err) {
+    console.error(`Error while deleting ${dir}.`);
+}
       win.reload();
     }
   })
