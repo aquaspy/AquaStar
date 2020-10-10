@@ -139,19 +139,6 @@ function createWindow () {
   const ret8 = globalShortcut.register('F5',() => {
     if (win.isFocused()){
       const username = process.env.username || process.env.user; //getting username...
-      switch (process.platform) {
-        case 'win32':
-          primraf("/some/directory", function () { console.log("done"); });
-          break
-        case 'darwin':
-          rimraf("/some/directory", function () { console.log("done"); });
-          break
-        case 'linux':
-          //rimraf("/home/"+username+"/.config/aqlite2/Cache", function () { console.log("done"); });
-          break
-      }
-      //rimraf("/some/directory", function () { console.log("done"); });
-
       win.reload();
     }
   })
@@ -199,7 +186,7 @@ function createWindow () {
     //Menu.setApplicationMenu(menu);
 
   //Console
-  win.webContents.openDevTools()
+  //win.webContents.openDevTools()
 
   win.on('closed', () => {
     // Dereference the window object, usually you would store windows
