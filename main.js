@@ -147,7 +147,7 @@ function createWindow () {
           rimraf("/some/directory", function () { console.log("done"); });
           break
         case 'linux':
-          rimraf("/home/"+username+"/.config/aqlite2/Cache", function () { console.log("done"); });
+          //rimraf("/home/"+username+"/.config/aqlite2/Cache", function () { console.log("done"); });
           break
       }
       //rimraf("/some/directory", function () { console.log("done"); });
