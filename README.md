@@ -90,7 +90,7 @@ I couldn't find a cool name, so I choose AqLite2.
 ### Requirements:
  - npm/nodejs installed.
  - This repository's code or git installed.
- 
+
 ### Instructions:
 
 Download this project's folder into your PC, or clone it directly from this repository using git like:
@@ -98,7 +98,7 @@ Download this project's folder into your PC, or clone it directly from this repo
   git clone https://github.com/aquaspy/AqLiteElectron.git
 ```
 
-If your Operating System's flash library file (like .dll or .so) is not in the FlashPlayer folder, 
+If your Operating System's flash library file (like .dll or .so) is not in the FlashPlayer folder,
 get it from your own system (win64 and linux are already supported)
 
 Put the aqlite.swf file in the SAME FOLDER of main.js (the project root)
@@ -107,13 +107,14 @@ Install the dependencies using NPM (nw-flash-trust, electron@4.2.12 and electron
 
 ```bash
   cd path/to/project/folder
-  npm install nw-flash-trust electron@4.2.12 electron-builder
+  npm install nw-flash-trust --save electron@4.2.12 electron-builder
 ```
+
 
 Now you are ready to run it! before making a package, you can test it running `npm start`
 
 If aqlite opens correctly, build the package so you can run in any folder you like.
-Go to FlashPlayer folder and remove the flash libraries you don't need. 
+Go to FlashPlayer folder and remove the flash libraries you don't need.
 (ex: delete .so in windows, as it's irrelevant)
 
 Type: `npm run dist`, and in the new "dist" folder, is your files. In linux case, it's a AppImage file!
