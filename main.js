@@ -2,8 +2,8 @@ const { app, BrowserWindow, Menu, globalShortcut} = require('electron')
 const path = require('path')
 const {session} = require('electron')
 const flashTrust = require('nw-flash-trust');
-const fs = require('fs');
 const os = require ('os');
+var rimraf = require("rimraf");
 
 // Important Variables
 const appName      = 'aqlite2';
@@ -30,6 +30,7 @@ function newBrowserWindow(win, new_path){
                 'javascript': true,
                 'contextIsolation': true,
                 'enableRemoteModule': false
+                //nodeIntegrationInWorker: true // https://www.electronjs.org/docs/all#multithreading (performance talvez?!)
             },
             'icon': iconPath
         });
@@ -42,11 +43,12 @@ function showHelpMessage(){
     const dialog_options = {
         buttons: ['Ok'],
         title: 'Help:',
-        message: "These are the keybindings added to the game. Note that they use 'Alt' with it",
-        detail: 'W - AQW Wiki\n' +
-            'D - AQW Design notes\n' +
-            'A - Account page\n' +
-            'C - Character lookup. You can also just use the in-game lookup.\n\n' +
+        message: "These are the keybindings added to the game.",
+        detail: 'Alt + W - AQW Wiki\n' +
+            'Alt + D - AQW Design notes\n' +
+            'Alt + A - Account page\n' +
+            'Alt + C - Character lookup. You can also just use the in-game lookup.\n\n' +
+            'Shift + F5 - Clears all game cache.\n\n' +
             'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.',
     };
     const response = dialog.showMessageBox(null,dialog_options);
@@ -74,9 +76,9 @@ app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.433');
 
 //const trustManager = flashTrust.initSync(appName, '/libpepflashplayer.so');
 
-const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot'); //MANO PQ ISSO FUNCIONOU?!
+const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot'); //
 
-const trustManager = flashTrust.initSync(appName, flashPath); //ESSA FOI A LINHA Q FEZ FUNCIONAR WTHELL 100% confirmado, é ela. Não sei pq.
+const trustManager = flashTrust.initSync(appName, flashPath); //
 
 //const trustManager = flashTrust.initSync(appName); Essa sozinha n funciona no electron.
 
@@ -96,6 +98,7 @@ function createWindow () {
       javascript: true,
       contextIsolation: true,
       enableRemoteModule: false
+
       //webviewTag: true desativo pois Iframe tem melhor performance, além do bug do input cursor no webview
     },
     //show: false faz nao aparecer a janela
@@ -137,18 +140,9 @@ function createWindow () {
     showHelpMessage();
   })
 
-  // Reload page. Clears cache (...?) of aqlite. At least new releases will show then.
+  // Reload page.
   const ret8 = globalShortcut.register('F5',() => {
     if (win.isFocused()){
-      const username = os.userInfo ().username; //getting username...
-      const dir = '/home/'+username+'/.config/aqlite2/Cache';
-      try {
-    fs.rmdirSync(dir, { recursive: true });
-
-    console.log(`${dir} is deleted!`);
-} catch (err) {
-    console.error(`Error while deleting ${dir}.`);
-}
       win.reload();
     }
   })
@@ -157,6 +151,32 @@ function createWindow () {
       win.reload();
     }
   })
+
+  const ret10 = globalShortcut.register('Shift+F5',() => { //Finally, clear chaching!
+    if (win.isFocused()){
+      const username = os.userInfo ().username; //getting username...
+      switch (process.platform) {
+        case 'win32':
+        rimraf.sync('C:\\Users\\'+username+'\\AppData\\Roaming\\'+appName+'\\Cache');
+        rimraf.sync('C:\\Users\\'+username+'\\AppData\\Roaming\\'+appName+'\\GPUCache');
+        win.reload();
+          break
+        case 'darwin':
+          rimraf.sync('/Users/'+username+'/Library/Application Support/'+appName+'/Cache');
+          rimraf.sync('/Users/'+username+'/Library/Application Support/'+appName+'/GPUCache');
+          win.reload();
+          break
+        case 'linux':
+        rimraf.sync('/home/'+username+'/.config/'+appName+'/Cache');
+        rimraf.sync('/home/'+username+'/.config/'+appName+'/GPUCache');
+        win.reload();
+          break
+      }
+
+    }
+  })
+
+
 
 
 

@@ -103,11 +103,11 @@ get it from your own system (win64 and linux are already supported)
 
 Put the aqlite.swf file in the SAME FOLDER of main.js (the project root)
 
-Install the dependencies using NPM (nw-flash-trust, electron@4.2.12 and electron-builder) like:
+Install the dependencies using NPM (nw-flash-trust, electron@4.2.12, electron-builder and rimraf) like:
 
 ```bash
   cd path/to/project/folder
-  npm install nw-flash-trust --save electron@4.2.12 electron-builder
+  npm install nw-flash-trust --save electron@4.2.12 electron-builder rimraf --save
 ```
 
 
