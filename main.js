@@ -136,24 +136,22 @@ function createWindow () {
   const ret10 = globalShortcut.register('Shift+F5',() => { //Finally, clear chaching!
     if (win.isFocused()){
       const username = os.userInfo ().username; //getting username...
+      const ses = win.webContents.session //creating session
       switch (process.platform) {
         case 'win32':
-        const ses = win.webContents.session
         ses.flushStorageData()
         ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
         //Documentation for clearStorage: https://github.com/electron/electron/blob/v4.2.12/docs/api/session.md
         win.reload();
           break
         case 'darwin':
-        const sesd = win.webContents.session
-        sesd.flushStorageData()
-        sesd.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
+        ses.flushStorageData()
+        ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
           win.reload();
           break
         case 'linux':
-        const sesl = win.webContents.session
-        sesl.flushStorageData()
-        sesl.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
+        ses.flushStorageData()
+        ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
         win.reload();
           break
       }
