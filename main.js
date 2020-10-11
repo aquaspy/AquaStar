@@ -145,15 +145,15 @@ function createWindow () {
         win.reload();
           break
         case 'darwin':
-        const ses = win.webContents.session
-        ses.flushStorageData()
-        ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
+        const sesd = win.webContents.session
+        sesd.flushStorageData()
+        sesd.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
           win.reload();
           break
         case 'linux':
-        const ses = win.webContents.session
-        ses.flushStorageData()
-        ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
+        const sesl = win.webContents.session
+        sesl.flushStorageData()
+        sesl.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
         win.reload();
           break
       }
