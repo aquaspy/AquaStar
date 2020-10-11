@@ -3,7 +3,7 @@ const path = require('path')
 const {session} = require('electron')
 const flashTrust = require('nw-flash-trust');
 const os = require ('os');
-var rimraf = require("rimraf");
+const rimraf = require("rimraf");
 
 // Important Variables
 const appName      = 'aqlite2';
@@ -87,7 +87,7 @@ trustManager.add(path.resolve(__dirname, 'aqlite.swf'));
 
 function createWindow () {
   // Create the browser window.
-  let win = new BrowserWindow({
+  let win = new BrowserWindow.webContents.session({
     width: 800,
     height: 600,
     // brackgroundColor: '#312450', cor de fundo do app, mas como uso o iframe nao faz tanta diferença
@@ -103,8 +103,9 @@ function createWindow () {
     },
     //show: false faz nao aparecer a janela
   })
+  const ses = win.webContents.session //creating session
 
-  let mainSession = win.webContents.session
+
 
 
   //limpeza de cookies
@@ -157,8 +158,9 @@ function createWindow () {
       const username = os.userInfo ().username; //getting username...
       switch (process.platform) {
         case 'win32':
-        rimraf.sync('C:\\Users\\'+username+'\\AppData\\Roaming\\'+appName+'\\Cache');
-        rimraf.sync('C:\\Users\\'+username+'\\AppData\\Roaming\\'+appName+'\\GPUCache');
+        ses.clearCache()
+        //rimraf.sync('C:\\Users\\'+username+'\\AppData\\Roaming\\'+appName+'\\Cache');
+        //rimraf.sync('C:\\Users\\'+username+'\\AppData\\Roaming\\'+appName+'\\GPUCache');
         win.reload();
           break
         case 'darwin':
