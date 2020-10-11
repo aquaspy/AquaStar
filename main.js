@@ -1,9 +1,7 @@
 const { app, BrowserWindow, Menu, globalShortcut} = require('electron')
 const path = require('path')
-const {session} = require('electron')
 const flashTrust = require('nw-flash-trust');
 const os = require ('os');
-const rimraf = require("rimraf");
 
 // Important Variables
 const appName      = 'aqlite2';
@@ -30,7 +28,6 @@ function newBrowserWindow(win, new_path){
                 'javascript': true,
                 'contextIsolation': true,
                 'enableRemoteModule': false
-                //nodeIntegrationInWorker: true // https://www.electronjs.org/docs/all#multithreading (performance talvez?!)
             },
             'icon': iconPath
         });
@@ -48,15 +45,11 @@ function showHelpMessage(){
             'Alt + D - AQW Design notes\n' +
             'Alt + A - Account page\n' +
             'Alt + C - Character lookup. You can also just use the in-game lookup.\n' +
-            'Shift + F5 - Clears all game cache and refresh the window.\n\n' +
+            'Shift + F5 - Clears all game cache, some cookies and refresh the window(can fix some bugs in game).\n\n' +
             'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.',
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
-
-let menuTemplate = [
-       {role : "reload"}
-      ];
 
 let pluginName
 switch (process.platform) {
@@ -74,23 +67,20 @@ switch (process.platform) {
 app.commandLine.appendSwitch('ppapi-flash-path', path.join(__dirname,"FlashPlayer", pluginName))
 app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.433');
 
-//const trustManager = flashTrust.initSync(appName, '/libpepflashplayer.so');
 
 const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot'); //
 
 const trustManager = flashTrust.initSync(appName, flashPath); //
 
-//const trustManager = flashTrust.initSync(appName); Essa sozinha n funciona no electron.
 
 trustManager.empty();
 trustManager.add(path.resolve(__dirname, 'aqlite.swf'));
 
 function createWindow () {
   // Create the browser window.
-  let win = new BrowserWindow.webContents.session({
+  let win = new BrowserWindow({
     width: 800,
     height: 600,
-    // brackgroundColor: '#312450', cor de fundo do app, mas como uso o iframe nao faz tanta diferença
     icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
@@ -98,23 +88,13 @@ function createWindow () {
       javascript: true,
       contextIsolation: true,
       enableRemoteModule: false
-
-      //webviewTag: true desativo pois Iframe tem melhor performance, além do bug do input cursor no webview
     },
-    //show: false faz nao aparecer a janela
   })
-  const ses = win.webContents.session //creating session
 
-
-
-
-  //limpeza de cookies
-  //mainSession.clearCache()
-  //mainSession.clearStorageData()
-
-  //win.loadURL('https://www.aq.com/play-now/'); //Carrega o aqw direto
+  //win.loadURL('https://www.aq.com/play-now/'); //Loads aqw from url (just if needed)
 
   win.loadURL(`file://${__dirname}/aqlite.swf`)
+
 
   // KeyBindings ---
   const ret1 = globalShortcut.register('Alt+W',() => {
@@ -158,19 +138,20 @@ function createWindow () {
       const username = os.userInfo ().username; //getting username...
       switch (process.platform) {
         case 'win32':
-        ses.clearCache()
-        //rimraf.sync('C:\\Users\\'+username+'\\AppData\\Roaming\\'+appName+'\\Cache');
-        //rimraf.sync('C:\\Users\\'+username+'\\AppData\\Roaming\\'+appName+'\\GPUCache');
+        const ses = win.webContents.session
+        ses.flushStorageData()
+        ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
+        //Documentation for clearStorage: https://github.com/electron/electron/blob/v4.2.12/docs/api/session.md
         win.reload();
           break
         case 'darwin':
-          rimraf.sync('/Users/'+username+'/Library/Application Support/'+appName+'/Cache');
-          rimraf.sync('/Users/'+username+'/Library/Application Support/'+appName+'/GPUCache');
+        ses.flushStorageData()
+        ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
           win.reload();
           break
         case 'linux':
-        rimraf.sync('/home/'+username+'/.config/'+appName+'/Cache');
-        rimraf.sync('/home/'+username+'/.config/'+appName+'/GPUCache');
+        ses.flushStorageData()
+        ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
         win.reload();
           break
       }
@@ -190,32 +171,12 @@ function createWindow () {
   */
 
 
-
-
-  /*mainSession.cookies.get({ url: 'https://laf.world/?game' }) supostamente carrega com cookies
-  .then((cookies) => {
-    console.log(cookies)
-  }).catch((error) => {
-    console.log(error)
-  })
-  */
-
-
-  /*win.once('ready-to-show', () => { aparecer quando tiver carregado ja
+  win.once('ready-to-show', () => {  //show window when ready
   win.show()
 })
-*/
-
-  win.setMenuBarVisibility(false) //remove o menu feio :v
-   //win.removeMenu(true) remove todos os atalhos de abrir as coisas tipo F11, o console etc
 
 
-  // and load the index.html of the app.
-
-
-
-  //let menu = Menu.buildFromTemplate(menuTemplate);
-    //Menu.setApplicationMenu(menu);
+  win.setMenuBarVisibility(false) //Remove default electron menu
 
   //Console
   //win.webContents.openDevTools()
