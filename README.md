@@ -103,12 +103,13 @@ get it from your own system (win64 and linux are already supported)
 
 Put the aqlite.swf file in the SAME FOLDER of main.js (the project root)
 
-Install the dependencies using NPM (nw-flash-trust, electron@4.2.12, electron-builder and rimraf) like:
+Install the dependencies using NPM (nw-flash-trust, electron@4.2.12 and electron-builder) like:
 
 ```bash
   cd path/to/project/folder
-  npm install nw-flash-trust --save electron@4.2.12 electron-builder rimraf --save
+  npm install
 ```
+(npm install will install automatically all deependencies, so no need to specify them manually, just use "npm install")
 
 
 Now you are ready to run it! before making a package, you can test it running `npm start`
