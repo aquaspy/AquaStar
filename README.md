@@ -119,3 +119,9 @@ Go to FlashPlayer folder and remove the flash libraries you don't need.
 (ex: delete .so in windows, as it's irrelevant)
 
 Type: `npm run dist`, and in the new "dist" folder, is your files. In linux case, it's a AppImage file!
+
+## Troubleshooting
+
+### Stuck at 0%
+Try to f5 the launcher. It will reload the page.
+Try to shift f5, to clear cache
