@@ -1,6 +1,6 @@
 {
   "name": "aqlite2",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A simple fork of AqLite to add some small features",
   "main": "main.js",
   "scripts": {
@@ -36,7 +36,7 @@
     }
   },
   "dependencies": {
-    "nw-flash-trust": "^0.3.0",
-    "rimraf": "^3.0.2"
+    "electron-localshortcut": "^3.2.1",
+    "nw-flash-trust": "^0.3.0"
   }
 }
