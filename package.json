@@ -27,11 +27,23 @@
     },
     "linux": {
       "target": [
-        "AppImage"
+    {
+      "target": "AppImage",
+      "arch": [
+        "x64"
+      ]
+    }
+  },
+    "win": {
+      "target": [
+    {
+      "target": "nsis",
+      "arch": [
+        "x64",
+        "ia32"
       ]
     },
-    "win": {
-      "target": "NSIS",
+  ]
       "icon": "Icon/Icon.png"
     }
   },
