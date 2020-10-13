@@ -33,6 +33,7 @@
         "x64"
       ]
     }
+  ]
   },
     "win": {
       "target": [
@@ -42,10 +43,10 @@
         "x64",
         "ia32"
       ]
-    },
-  ]
-      "icon": "Icon/Icon.png"
     }
+  ]
+},
+      "icon": "Icon/Icon.png"
   },
   "dependencies": {
     "electron-localshortcut": "^3.2.1",
