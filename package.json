@@ -17,7 +17,8 @@
   "devDependencies": {
     "electron": "^4.2.12",
     "electron-builder": "^22.8.1",
-    "nw-flash-trust": "^0.3.0"
+    "nw-flash-trust": "^0.3.0",
+    "electron-localshortcut": "^3.2.1"
   },
   "build": {
     "asar": false,
@@ -27,26 +28,25 @@
     },
     "linux": {
       "target": [
-    {
-      "target": "AppImage",
-      "arch": [
-        "x64"
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
-    }
-  ]
-  },
+    },
     "win": {
       "target": [
-    {
-      "target": "nsis",
-      "arch": [
-        "x64",
-        "ia32"
+        {
+          "target": "nsis",
+          "arch": [
+            "ia32"
+          ]
+        }
       ]
-    }
-  ]
-},
-      "icon": "Icon/Icon.png"
+    },
+    "icon": "Icon/Icon.png"
   },
   "dependencies": {
     "electron-localshortcut": "^3.2.1",
