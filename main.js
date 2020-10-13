@@ -1,11 +1,14 @@
-const { app, BrowserWindow, Menu, globalShortcut} = require('electron')
+const { app, BrowserWindow} = require('electron')
 const path = require('path')
 const flashTrust = require('nw-flash-trust');
 const os = require ('os');
+const electronLocalshortcut = require('electron-localshortcut');
 
 // Important Variables
 const appName      = 'aqlite2';
 const iconPath    = path.join(__dirname, 'Icon', 'Icon.png');
+
+//const newaqlite = 'file://${__dirname}/aqlite.swf' to be used in future...
 
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 const accountAq    = 'https://account.aq.com/'
@@ -17,8 +20,9 @@ const charLookup   = 'https://www.aq.com/character.asp'; // Maybe ask nickname i
 
 
 // New page function
+
+
 function newBrowserWindow(win, new_path){
-    if (win.isFocused()){
         const newWin = new BrowserWindow({
             'width': 800,
             'height': 600,
@@ -31,9 +35,12 @@ function newBrowserWindow(win, new_path){
             },
             'icon': iconPath
         });
+        newWin.setMenuBarVisibility(false) //Remove default electron menu
         newWin.loadURL(new_path);
-    }
 }
+
+
+
 // Help Function
 function showHelpMessage(){
     const { dialog } = require('electron')
@@ -45,6 +52,7 @@ function showHelpMessage(){
             'Alt + D - AQW Design notes\n' +
             'Alt + A - Account page\n' +
             'Alt + C - Character lookup. You can also just use the in-game lookup.\n' +
+            //'Alt + L - Opens a new Aqlite instance.\n' +
             'Shift + F5 - Clears all game cache, some cookies and refresh the window(can fix some bugs in game).\n\n' +
             'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.',
     };
@@ -87,53 +95,74 @@ function createWindow () {
       plugins: true,
       javascript: true,
       contextIsolation: true,
-      enableRemoteModule: false
-    },
+      enableRemoteModule: false,
+      nodeIntegrationInWorker: true //maybe better performance for more instances in future... Neends testing.
+    }
   })
-
-  //win.loadURL('https://www.aq.com/play-now/'); //Loads aqw from url (just if needed)
 
   win.loadURL(`file://${__dirname}/aqlite.swf`)
 
-
   // KeyBindings ---
-  const ret1 = globalShortcut.register('Alt+W',() => {
-    newBrowserWindow(win,wikiReleases);
+  const ret1 = electronLocalshortcut.register('Alt+W',() => {
+    if (win.isFocused()){
+      newBrowserWindow(win,wikiReleases);
+    }
+    //window.open('http://aqwwiki.wikidot.com/new-releases', '_blank') window.open isn't working...
+
   })
-  const ret2 = globalShortcut.register('Alt+D',() => {
-    newBrowserWindow(win,designNotes);
+  const ret2 = electronLocalshortcut.register('Alt+D',() => {
+    if (win.isFocused()){
+      newBrowserWindow(win,designNotes);
+    }
+    //window.open('https://www.aq.com/gamedesignnotes/', '_blank')
+
   })
-  const ret3 = globalShortcut.register('Alt+A',() => {
-    newBrowserWindow(win,accountAq);
+  const ret3 = electronLocalshortcut.register('Alt+A',() => {
+    if (win.isFocused()){
+      newBrowserWindow(win,accountAq);
+    }
+    //window.open('https://account.aq.com/', '_blank',)
   })
-  const ret4 = globalShortcut.register('Alt+C',() => {
-    newBrowserWindow(win,charLookup);
+  const ret4 = electronLocalshortcut.register('Alt+C',() => {
+    //window.open('https://www.aq.com/character.asp', '_blank')
+    if (win.isFocused()){
+      newBrowserWindow(win,charLookup);
+    }
+
   })
 
-  // HELP MEEE
-  const ret5 = globalShortcut.register('Alt+H',() => {
-    showHelpMessage();
+  // Help keybinding
+  const ret5 = electronLocalshortcut.register('Alt+H',() => {
+    if (win.isFocused()){
+      showHelpMessage();
+    }
   })
-  const ret6 = globalShortcut.register('CommandOrControl+H',() => {
-    showHelpMessage();
+  const ret6 = electronLocalshortcut.register('CommandOrControl+H',() => {
+    if (win.isFocused()){
+      showHelpMessage();
+    }
   })
-  const ret7 = globalShortcut.register('F1',() => {
-    showHelpMessage();
+  const ret7 = electronLocalshortcut.register('F1',() => {
+    if (win.isFocused()){
+      showHelpMessage();
+    }
+
   })
 
   // Reload page.
-  const ret8 = globalShortcut.register('F5',() => {
+  const ret8 = electronLocalshortcut.register('F5',() => {
     if (win.isFocused()){
       win.reload();
     }
+
   })
-  const ret9 = globalShortcut.register('CommandOrControl+R',() => {
+  const ret9 = electronLocalshortcut.register('CommandOrControl+R',() => {
     if (win.isFocused()){
       win.reload();
     }
   })
 
-  const ret10 = globalShortcut.register('Shift+F5',() => { //Finally, clear chaching!
+  const ret10 = electronLocalshortcut.register('Shift+F5',() => { //Finally, clear chaching!
     if (win.isFocused()){
       const username = os.userInfo ().username; //getting username...
       const ses = win.webContents.session //creating session
@@ -157,26 +186,28 @@ function createWindow () {
       }
 
     }
+
   })
+  /* Does not works for now...
+  const ret11 = electronLocalshortcut.register('Alt+L',() => {
+    if (win.isFocused()){
+      newBrowserWindow(win,newaqlite);
+    }
+      //window.open('file://${__dirname}/aqlite.swf', '_blank',)
 
-
-
-
-
-
-  /*const ret6 = globalShortcut.register('CommandOrControl+Alt+C',() => {
-    showHelpMessage();
   })
-
   */
 
 
-  win.once('ready-to-show', () => {  //show window when ready
+
+
+  win.once('ready-to-show', () => {  //show launcher only when ready
   win.show()
 })
 
 
   win.setMenuBarVisibility(false) //Remove default electron menu
+
 
   //Console
   //win.webContents.openDevTools()
