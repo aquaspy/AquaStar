@@ -53,6 +53,7 @@ function showHelpMessage(){
             'Alt + A - Account page\n' +
             'Alt + C - Character lookup. You can also just use the in-game lookup.\n' +
             'F9 - About Aqlite2.\n' +
+            'F11 - Toggles Fullscreen\n' +
             //'Alt + L - Opens a new Aqlite instance.\n' +
             'Shift + F5 - Clears all game cache, some cookies and refresh the window(can fix some bugs in game).\n\n' +
             'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.',
@@ -226,6 +227,21 @@ function createWindow () {
     }
   })
 
+  const ret13 = electronLocalshortcut.register('F11',() => {
+    if (win.isFocused()){
+      if (win.isFullScreen() == false){
+        win.setFullScreen(true)
+      }
+      else{
+        win.setFullScreen(false)
+        win.setMenuBarVisibility(false)
+      }
+
+    }
+  })
+
+
+
 
 
 
@@ -235,7 +251,6 @@ function createWindow () {
 
 
   win.setMenuBarVisibility(false) //Remove default electron menu
-
 
   //Console
   //win.webContents.openDevTools()
