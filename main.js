@@ -52,12 +52,35 @@ function showHelpMessage(){
             'Alt + D - AQW Design notes\n' +
             'Alt + A - Account page\n' +
             'Alt + C - Character lookup. You can also just use the in-game lookup.\n' +
+            'F9 - About Aqlite2.\n' +
             //'Alt + L - Opens a new Aqlite instance.\n' +
             'Shift + F5 - Clears all game cache, some cookies and refresh the window(can fix some bugs in game).\n\n' +
             'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.',
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
+
+//About function
+function showAboutMessage(){
+    const { dialog } = require('electron')
+    const dialog_options = {
+        buttons: ['Ok'],
+        title: 'About AqLite2 version:',
+        message: "AqLite2 v"+app.getVersion()+" would not be possible without the help of:",
+        detail: '133spider (github)\n' +
+         'CaioFViana (github)\n' +
+         'aquaspy (github)\n' +
+         'Artix Entertainment (artix.com)\n' +
+         'ElectronJs (electronjs.org)\n' +
+         'Adobe Flash Player (adobe.com)\n' +
+         'YOU! (Yes, You! Thanks for supporting us!)\n\n' +
+        'Note: This is NOT an official Artix product. Artix Entertainment does not recommends it by any means. You are at your own risk using it.\n\n' +
+        'You can give your opinion, contribute and follow the project here: https://github.com/aquaspy/AqLite2',
+    };
+    const response = dialog.showMessageBox(null,dialog_options);
+}
+
+
 
 let pluginName
 switch (process.platform) {
@@ -197,6 +220,11 @@ function createWindow () {
 
   })
   */
+  const ret12 = electronLocalshortcut.register('F9',() => {
+    if (win.isFocused()){
+      showAboutMessage()
+    }
+  })
 
 
 
