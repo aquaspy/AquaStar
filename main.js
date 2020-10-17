@@ -1,7 +1,6 @@
 const { app, BrowserWindow} = require('electron')
 const path = require('path')
 const flashTrust = require('nw-flash-trust');
-const os = require ('os');
 const electronLocalshortcut = require('electron-localshortcut');
 
 // Important Variables
@@ -25,7 +24,8 @@ function newBrowserWindow(new_path){
             'nodeIntegration': false,
             'javascript': true,
             'contextIsolation': true,
-            'enableRemoteModule': false
+            'enableRemoteModule': false,
+            'nodeIntegrationInWorker': true //maybe better performance for more instances in future... Neends testing.
         },
         'icon': iconPath
     });
@@ -114,11 +114,12 @@ function createWindow () {
       nodeIntegrationInWorker: true //maybe better performance for more instances in future... Neends testing.
     }
   })
+  const ses = win.webContents.session //creating session for cache cleaning later.
 
   win.loadURL(aqlitePath);
 
   // KeyBindings ---
-  
+
   var addKeybing = function(keybind, func){
     electronLocalshortcut.register(keybind,()=>{
       if (win.isFocused()){
@@ -133,29 +134,27 @@ function createWindow () {
 
   // Open new Aqlite window (usefull for alts)
   addKeybing('Alt+L',  ()=>{newBrowserWindow(aqlitePath)});
-  
+
   // Show help message
   addKeybing('Alt+H',              ()=>{showHelpMessage()});
   addKeybing('F1',                 ()=>{showHelpMessage()});
   addKeybing('CommandOrControl+H', ()=>{showHelpMessage()});
-  // Show About 
+  // Show About
   addKeybing('F9',  ()=>{showAboutMessage()});
   // Toggle Fullscreen
   addKeybing('F11', ()=>{win.setFullScreen(!win.isFullScreen()); win.setMenuBarVisibility(false);});
-  
+
   // Reload page.
   addKeybing('F5',                 ()=>{win.reload()});
-  addKeybing('CommandOrControl+R', ()=>{win.reload()});  
+  addKeybing('CommandOrControl+R', ()=>{win.reload()});
   // Reload and Clear cache
-  addKeybing('Shift+F5', () => { 
-    const username = os.userInfo ().username; //getting username...
-    const ses = win.webContents.session //creating session
-    ses.flushStorageData()
+  addKeybing('Shift+F5', () => {
+    ses.flushStorageData() //writing some data from memory to disk before cleaning
     ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
     win.reload();
   })
-  
-  win.once('ready-to-show', () => {win.show()});  //show launcher only when ready   
+
+  win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
   win.setMenuBarVisibility(false);                //Remove default electron menu
 
   win.on('closed', () => {
@@ -164,7 +163,7 @@ function createWindow () {
     // when you should delete the corresponding element.
     win = null
   })
-  
+
   //Console
   //win.webContents.openDevTools()
 }
