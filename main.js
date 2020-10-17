@@ -6,9 +6,8 @@ const electronLocalshortcut = require('electron-localshortcut');
 
 // Important Variables
 const appName      = 'aqlite2';
-const iconPath    = path.join(__dirname, 'Icon', 'Icon.png');
-
-//const newaqlite = 'file://${__dirname}/aqlite.swf' to be used in future...
+const iconPath     = path.join(__dirname, 'Icon', 'Icon.png');
+const aqlitePath   = 'file://'+ path.join(__dirname, 'aqlite.swf');
 
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 const accountAq    = 'https://account.aq.com/'
@@ -16,32 +15,26 @@ const designNotes  = 'https://www.aq.com/gamedesignnotes/'
 const charLookup   = 'https://www.aq.com/character.asp'; // Maybe ask nickname in dialog box...?
 
 
-
-
-
 // New page function
-
-
-function newBrowserWindow(win, new_path){
-        const newWin = new BrowserWindow({
-            'width': 800,
-            'height': 600,
-            'webPreferences': {
-                'plugins': true,
-                'nodeIntegration': false,
-                'javascript': true,
-                'contextIsolation': true,
-                'enableRemoteModule': false
-            },
-            'icon': iconPath
-        });
-        newWin.setMenuBarVisibility(false) //Remove default electron menu
-        newWin.loadURL(new_path);
+function newBrowserWindow(new_path){
+    const newWin = new BrowserWindow({
+        'width': 800,
+        'height': 600,
+        'webPreferences': {
+            'plugins': true,
+            'nodeIntegration': false,
+            'javascript': true,
+            'contextIsolation': true,
+            'enableRemoteModule': false
+        },
+        'icon': iconPath
+    });
+    newWin.setMenuBarVisibility(false) //Remove default electron menu
+    newWin.loadURL(new_path);
 }
 
 
-
-// Help Function
+// Show help Function
 function showHelpMessage(){
     const { dialog } = require('electron')
     const dialog_options = {
@@ -52,9 +45,9 @@ function showHelpMessage(){
             'Alt + D - AQW Design notes\n' +
             'Alt + A - Account page\n' +
             'Alt + C - Character lookup. You can also just use the in-game lookup.\n' +
-            'F9 - About Aqlite2.\n' +
+            'Alt + L - Opens a new Aqlite instance.\n' +
+            'F9 - About ' + appName + '.\n' +
             'F11 - Toggles Fullscreen\n' +
-            //'Alt + L - Opens a new Aqlite instance.\n' +
             'Shift + F5 - Clears all game cache, some cookies and refresh the window(can fix some bugs in game).\n\n' +
             'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.',
     };
@@ -82,7 +75,6 @@ function showAboutMessage(){
 }
 
 
-
 let pluginName
 switch (process.platform) {
   case 'win32':
@@ -100,10 +92,8 @@ app.commandLine.appendSwitch('ppapi-flash-path', path.join(__dirname,"FlashPlaye
 app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.433');
 
 
-const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot'); //
-
-const trustManager = flashTrust.initSync(appName, flashPath); //
-
+const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot');
+const trustManager = flashTrust.initSync(appName, flashPath);
 
 trustManager.empty();
 trustManager.add(path.resolve(__dirname, 'aqlite.swf'));
@@ -114,6 +104,7 @@ function createWindow () {
     width: 800,
     height: 600,
     icon: iconPath,
+    title: appName, // Maybe change to something else...?
     webPreferences: {
       nodeIntegration: false,
       plugins: true,
@@ -124,136 +115,48 @@ function createWindow () {
     }
   })
 
-  win.loadURL(`file://${__dirname}/aqlite.swf`)
+  win.loadURL(aqlitePath);
 
   // KeyBindings ---
-  const ret1 = electronLocalshortcut.register('Alt+W',() => {
-    if (win.isFocused()){
-      newBrowserWindow(win,wikiReleases);
-    }
-    //window.open('http://aqwwiki.wikidot.com/new-releases', '_blank') window.open isn't working...
+  
+  var addKeybing = function(keybind, func){
+    electronLocalshortcut.register(keybind,()=>{
+      if (win.isFocused()){
+        func();
+      }
+    })
+  }
+  addKeybing('Alt+W', ()=>{newBrowserWindow(wikiReleases)});
+  addKeybing('Alt+D', ()=>{newBrowserWindow(designNotes)});
+  addKeybing('Alt+A', ()=>{newBrowserWindow(accountAq)});
+  addKeybing('Alt+C', ()=>{newBrowserWindow(charLookup)});
 
-  })
-  const ret2 = electronLocalshortcut.register('Alt+D',() => {
-    if (win.isFocused()){
-      newBrowserWindow(win,designNotes);
-    }
-    //window.open('https://www.aq.com/gamedesignnotes/', '_blank')
-
-  })
-  const ret3 = electronLocalshortcut.register('Alt+A',() => {
-    if (win.isFocused()){
-      newBrowserWindow(win,accountAq);
-    }
-    //window.open('https://account.aq.com/', '_blank',)
-  })
-  const ret4 = electronLocalshortcut.register('Alt+C',() => {
-    //window.open('https://www.aq.com/character.asp', '_blank')
-    if (win.isFocused()){
-      newBrowserWindow(win,charLookup);
-    }
-
-  })
-
-  // Help keybinding
-  const ret5 = electronLocalshortcut.register('Alt+H',() => {
-    if (win.isFocused()){
-      showHelpMessage();
-    }
-  })
-  const ret6 = electronLocalshortcut.register('CommandOrControl+H',() => {
-    if (win.isFocused()){
-      showHelpMessage();
-    }
-  })
-  const ret7 = electronLocalshortcut.register('F1',() => {
-    if (win.isFocused()){
-      showHelpMessage();
-    }
-
-  })
-
+  // Open new Aqlite window (usefull for alts)
+  addKeybing('Alt+L',  ()=>{newBrowserWindow(aqlitePath)});
+  
+  // Show help message
+  addKeybing('Alt+H',              ()=>{showHelpMessage()});
+  addKeybing('F1',                 ()=>{showHelpMessage()});
+  addKeybing('CommandOrControl+H', ()=>{showHelpMessage()});
+  // Show About 
+  addKeybing('F9',  ()=>{showAboutMessage()});
+  // Toggle Fullscreen
+  addKeybing('F11', ()=>{win.setFullScreen(!win.isFullScreen()); win.setMenuBarVisibility(false);});
+  
   // Reload page.
-  const ret8 = electronLocalshortcut.register('F5',() => {
-    if (win.isFocused()){
-      win.reload();
-    }
-
+  addKeybing('F5',                 ()=>{win.reload()});
+  addKeybing('CommandOrControl+R', ()=>{win.reload()});  
+  // Reload and Clear cache
+  addKeybing('Shift+F5', () => { 
+    const username = os.userInfo ().username; //getting username...
+    const ses = win.webContents.session //creating session
+    ses.flushStorageData()
+    ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
+    win.reload();
   })
-  const ret9 = electronLocalshortcut.register('CommandOrControl+R',() => {
-    if (win.isFocused()){
-      win.reload();
-    }
-  })
-
-  const ret10 = electronLocalshortcut.register('Shift+F5',() => { //Finally, clear chaching!
-    if (win.isFocused()){
-      const username = os.userInfo ().username; //getting username...
-      const ses = win.webContents.session //creating session
-      switch (process.platform) {
-        case 'win32':
-        ses.flushStorageData()
-        ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
-        //Documentation for clearStorage: https://github.com/electron/electron/blob/v4.2.12/docs/api/session.md
-        win.reload();
-          break
-        case 'darwin':
-        ses.flushStorageData()
-        ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
-          win.reload();
-          break
-        case 'linux':
-        ses.flushStorageData()
-        ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
-        win.reload();
-          break
-      }
-
-    }
-
-  })
-  /* Does not works for now...
-  const ret11 = electronLocalshortcut.register('Alt+L',() => {
-    if (win.isFocused()){
-      newBrowserWindow(win,newaqlite);
-    }
-      //window.open('file://${__dirname}/aqlite.swf', '_blank',)
-
-  })
-  */
-  const ret12 = electronLocalshortcut.register('F9',() => {
-    if (win.isFocused()){
-      showAboutMessage()
-    }
-  })
-
-  const ret13 = electronLocalshortcut.register('F11',() => {
-    if (win.isFocused()){
-      if (win.isFullScreen() == false){
-        win.setFullScreen(true)
-      }
-      else{
-        win.setFullScreen(false)
-        win.setMenuBarVisibility(false)
-      }
-
-    }
-  })
-
-
-
-
-
-
-  win.once('ready-to-show', () => {  //show launcher only when ready
-  win.show()
-})
-
-
-  win.setMenuBarVisibility(false) //Remove default electron menu
-
-  //Console
-  //win.webContents.openDevTools()
+  
+  win.once('ready-to-show', () => {win.show()});  //show launcher only when ready   
+  win.setMenuBarVisibility(false);                //Remove default electron menu
 
   win.on('closed', () => {
     // Dereference the window object, usually you would store windows
@@ -261,7 +164,9 @@ function createWindow () {
     // when you should delete the corresponding element.
     win = null
   })
-
+  
+  //Console
+  //win.webContents.openDevTools()
 }
 
 app.on('ready', createWindow)
