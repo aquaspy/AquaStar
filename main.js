@@ -13,6 +13,9 @@ const accountAq    = 'https://account.aq.com/'
 const designNotes  = 'https://www.aq.com/gamedesignnotes/'
 const charLookup   = 'https://www.aq.com/character.asp'; // Maybe ask nickname in dialog box...?
 
+let altPages = 1; // Total Aqlite windows opened
+
+let aqliteWindowArray = []; // Store the alt windows
 
 // New page function
 function newBrowserWindow(new_path){
@@ -31,8 +34,46 @@ function newBrowserWindow(new_path){
     });
     newWin.setMenuBarVisibility(false) //Remove default electron menu
     newWin.loadURL(new_path);
+    
+    if (new_path == aqlitePath) {
+        // Its alt window, Put the aqlite title...
+        altPages++;
+        newWin.setTitle("AQLite (Window " + altPages + ")");
+        // ...and add it in the arrays
+        aqliteWindowArray.push(newWin);
+        
+        newWin.on('closed', () => {
+            // Remove it from array! Will cause problems if not!
+            for( var i = 0; i < aqliteWindowArray.length; i++){ 
+                if ( aqliteWindowArray[i] === newWin) { 
+                    aqliteWindowArray.splice(i, 1); 
+                }
+            }
+        });
+    }
 }
 
+// Test if the window focused is a Aqlite window (more like if
+//  one of the aqlite windows is focused) so it can use keybinds
+function testForFocus(){
+    for (var i = 0; i < aqliteWindowArray.length; i++){
+        if (aqliteWindowArray[i].isFocused()) return true;
+    }
+    return false;
+}
+// Same as above, but we want to reload the window focused instead!
+function reloadCurrentWindow(mainWin){
+    if(mainWin.isFocused()) {
+        mainWin.reload();
+        return;
+    }
+    else {
+        for (var i = 0; i < aqliteWindowArray.length; i++){
+            if (aqliteWindowArray[i].isFocused()) 
+                aqliteWindowArray[i].reload();
+        }
+    }
+}
 
 // Show help Function
 function showHelpMessage(){
@@ -104,7 +145,7 @@ function createWindow () {
     width: 800,
     height: 600,
     icon: iconPath,
-    title: appName, // Maybe change to something else...?
+    title: appName,
     webPreferences: {
       nodeIntegration: false,
       plugins: true,
@@ -117,12 +158,12 @@ function createWindow () {
   const ses = win.webContents.session //creating session for cache cleaning later.
 
   win.loadURL(aqlitePath);
-
+  win.setTitle("AQLite");
+  
   // KeyBindings ---
-
   var addKeybing = function(keybind, func){
     electronLocalshortcut.register(keybind,()=>{
-      if (win.isFocused()){
+      if ( win.isFocused() || testForFocus() ){
         func();
       }
     })
@@ -144,14 +185,13 @@ function createWindow () {
   // Toggle Fullscreen
   addKeybing('F11', ()=>{win.setFullScreen(!win.isFullScreen()); win.setMenuBarVisibility(false);});
 
-  // Reload page.
-  addKeybing('F5',                 ()=>{win.reload()});
-  addKeybing('CommandOrControl+R', ()=>{win.reload()});
+  addKeybing('F5',                 ()=>{reloadCurrentWindow(win)});
+  addKeybing('CommandOrControl+R', ()=>{reloadCurrentWindow(win)});
   // Reload and Clear cache
   addKeybing('Shift+F5', () => {
     ses.flushStorageData() //writing some data from memory to disk before cleaning
     ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
-    win.reload();
+    reloadCurrentWindow(win);
   })
 
   win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
