@@ -53,6 +53,7 @@ function newBrowserWindow(new_path){
     }
 }
 
+// TODO - Compact some of this code. All of them ask for "who is in focus?"
 // Test if the window focused is a Aqlite window (more like if
 //  one of the aqlite windows is focused) so it can use keybinds
 function testForFocus(){
@@ -60,6 +61,27 @@ function testForFocus(){
         if (aqliteWindowArray[i].isFocused()) return true;
     }
     return false;
+}
+// Same as above, but toggles the Fullscreen of the focused window
+function toggleFullScreen(mainWin){
+    //win.setFullScreen(!win.isFullScreen()); win.setMenuBarVisibility(false);
+    
+    var toggle = function(focusedWin){
+        focusedWin.setFullScreen(!focusedWin.isFullScreen()); 
+        focusedWin.setMenuBarVisibility(false)
+    };
+    if(mainWin.isFocused()) {
+        toggle(mainWin);
+        return;
+    }
+    else {
+        for (var i = 0; i < aqliteWindowArray.length; i++){
+            if (aqliteWindowArray[i].isFocused()){
+                toggle(aqliteWindowArray[i]);
+                break;
+            }
+        }
+    }
 }
 // Same as above, but we want to reload the window focused instead!
 function reloadCurrentWindow(mainWin){
@@ -86,7 +108,7 @@ function showHelpMessage(){
             'Alt + D - AQW Design notes\n' +
             'Alt + A - Account page\n' +
             'Alt + C - Character lookup. You can also just use the in-game lookup.\n' +
-            'Alt + L - Opens a new Aqlite instance.\n' +
+            'Alt + N - Opens a new Aqlite instance.\n' +
             'F9 - About ' + appName + '.\n' +
             'F11 - Toggles Fullscreen\n' +
             'Shift + F5 - Clears all game cache, some cookies and refresh the window(can fix some bugs in game).\n\n' +
@@ -161,34 +183,35 @@ function createWindow () {
   win.setTitle("AQLite");
   
   // KeyBindings ---
-  var addKeybing = function(keybind, func){
+  var addKeybind = function(keybind, func){
     electronLocalshortcut.register(keybind,()=>{
       if ( win.isFocused() || testForFocus() ){
         func();
       }
     })
   }
-  addKeybing('Alt+W', ()=>{newBrowserWindow(wikiReleases)});
-  addKeybing('Alt+D', ()=>{newBrowserWindow(designNotes)});
-  addKeybing('Alt+A', ()=>{newBrowserWindow(accountAq)});
-  addKeybing('Alt+C', ()=>{newBrowserWindow(charLookup)});
+  addKeybind('Alt+W', ()=>{newBrowserWindow(wikiReleases)});
+  addKeybind('Alt+D', ()=>{newBrowserWindow(designNotes)});
+  addKeybind('Alt+A', ()=>{newBrowserWindow(accountAq)});
+  addKeybind('Alt+C', ()=>{newBrowserWindow(charLookup)});
 
   // Open new Aqlite window (usefull for alts)
-  addKeybing('Alt+L',  ()=>{newBrowserWindow(aqlitePath)});
+  addKeybind('Alt+N',  ()=>{newBrowserWindow(aqlitePath)});
 
   // Show help message
-  addKeybing('Alt+H',              ()=>{showHelpMessage()});
-  addKeybing('F1',                 ()=>{showHelpMessage()});
-  addKeybing('CommandOrControl+H', ()=>{showHelpMessage()});
+  addKeybind('Alt+H',              ()=>{showHelpMessage()});
+  addKeybind('F1',                 ()=>{showHelpMessage()});
+  addKeybind('CommandOrControl+H', ()=>{showHelpMessage()});
   // Show About
-  addKeybing('F9',  ()=>{showAboutMessage()});
+  addKeybind('F9',  ()=>{showAboutMessage()});
   // Toggle Fullscreen
-  addKeybing('F11', ()=>{win.setFullScreen(!win.isFullScreen()); win.setMenuBarVisibility(false);});
+  // FIXME -- Only in main window, not the alts.
+  addKeybind('F11', ()=>{toggleFullScreen(win);});
 
-  addKeybing('F5',                 ()=>{reloadCurrentWindow(win)});
-  addKeybing('CommandOrControl+R', ()=>{reloadCurrentWindow(win)});
+  addKeybind('F5',                 ()=>{reloadCurrentWindow(win)});
+  addKeybind('CommandOrControl+R', ()=>{reloadCurrentWindow(win)});
   // Reload and Clear cache
-  addKeybing('Shift+F5', () => {
+  addKeybind('Shift+F5', () => {
     ses.flushStorageData() //writing some data from memory to disk before cleaning
     ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
     reloadCurrentWindow(win);
