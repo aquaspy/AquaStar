@@ -53,7 +53,19 @@ function newBrowserWindow(new_path){
     }
 }
 
-// TODO - Compact some of this code. All of them ask for "who is in focus?"
+function executeOnFocused(mainWin, funcForWindow){
+    if(mainWin.isFocused()) {
+        funcForWindow(mainWin);
+        return;
+    }
+    else {
+        for (var i = 0; i < aqliteWindowArray.length; i++){
+            if (aqliteWindowArray[i].isFocused()) 
+                funcForWindow(aqliteWindowArray[i]);
+        }
+    }
+}
+
 // Test if the window focused is a Aqlite window (more like if
 //  one of the aqlite windows is focused) so it can use keybinds
 function testForFocus(){
@@ -61,40 +73,6 @@ function testForFocus(){
         if (aqliteWindowArray[i].isFocused()) return true;
     }
     return false;
-}
-// Same as above, but toggles the Fullscreen of the focused window
-function toggleFullScreen(mainWin){
-    //win.setFullScreen(!win.isFullScreen()); win.setMenuBarVisibility(false);
-    
-    var toggle = function(focusedWin){
-        focusedWin.setFullScreen(!focusedWin.isFullScreen()); 
-        focusedWin.setMenuBarVisibility(false)
-    };
-    if(mainWin.isFocused()) {
-        toggle(mainWin);
-        return;
-    }
-    else {
-        for (var i = 0; i < aqliteWindowArray.length; i++){
-            if (aqliteWindowArray[i].isFocused()){
-                toggle(aqliteWindowArray[i]);
-                break;
-            }
-        }
-    }
-}
-// Same as above, but we want to reload the window focused instead!
-function reloadCurrentWindow(mainWin){
-    if(mainWin.isFocused()) {
-        mainWin.reload();
-        return;
-    }
-    else {
-        for (var i = 0; i < aqliteWindowArray.length; i++){
-            if (aqliteWindowArray[i].isFocused()) 
-                aqliteWindowArray[i].reload();
-        }
-    }
 }
 
 // Show help Function
@@ -117,7 +95,7 @@ function showHelpMessage(){
     const response = dialog.showMessageBox(null,dialog_options);
 }
 
-//About function
+// About function
 function showAboutMessage(){
     const { dialog } = require('electron')
     const dialog_options = {
@@ -136,7 +114,6 @@ function showAboutMessage(){
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
-
 
 let pluginName
 switch (process.platform) {
@@ -204,17 +181,23 @@ function createWindow () {
   addKeybind('CommandOrControl+H', ()=>{showHelpMessage()});
   // Show About
   addKeybind('F9',  ()=>{showAboutMessage()});
+  
   // Toggle Fullscreen
-  // FIXME -- Only in main window, not the alts.
-  addKeybind('F11', ()=>{toggleFullScreen(win);});
+  var toggle = function(focusedWin){
+    focusedWin.setFullScreen(!focusedWin.isFullScreen()); 
+    focusedWin.setMenuBarVisibility(false)
+  };
+  addKeybind('F11', ()=>{executeOnFocused(win,toggle)});
 
-  addKeybind('F5',                 ()=>{reloadCurrentWindow(win)});
-  addKeybind('CommandOrControl+R', ()=>{reloadCurrentWindow(win)});
+  // Reload
+  var reloadPage = function(focusedWin){focusedWin.reload()};
+  addKeybind('F5',                 ()=>{executeOnFocused(win,reloadPage)});
+  addKeybind('CommandOrControl+R', ()=>{executeOnFocused(win,reloadPage)});
   // Reload and Clear cache
   addKeybind('Shift+F5', () => {
     ses.flushStorageData() //writing some data from memory to disk before cleaning
     ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
-    reloadCurrentWindow(win);
+    executeOnFocused(win,reloadPage)
   })
 
   win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
