@@ -51,7 +51,7 @@ Well, my code is a bit different, but the core is the swf file, which is the sam
 
 ## Will it be cross platform?
 
-I will try to build it for windows, mac and linux, but I can't confirm if MAC builds will work if build from a linux machine.
+As cross as we can. Currently there are ARM, both 32 bits and 64 for windows and Linux.
 
 ## Credits
 99% of the credits are deserved to 133spider. Without his efforts, this would not be possible.
