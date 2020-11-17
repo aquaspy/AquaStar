@@ -20,8 +20,8 @@ let aqliteWindowArray = []; // Store the alt windows
 // New page function
 function newBrowserWindow(new_path){
     const newWin = new BrowserWindow({
-        'width': 800,
-        'height': 600,
+        'width': 960,
+        'height': 550,
         'webPreferences': {
             'plugins': true,
             'nodeIntegration': false,
@@ -141,8 +141,8 @@ trustManager.add(path.resolve(__dirname, 'aqlite.swf'));
 function createWindow () {
   // Create the browser window.
   let win = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 960,
+    height: 550,
     icon: iconPath,
     title: appName,
     webPreferences: {
