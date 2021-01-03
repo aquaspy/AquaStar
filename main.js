@@ -7,6 +7,7 @@ const electronLocalshortcut = require('electron-localshortcut');
 const appName      = 'aqlite2';
 const iconPath     = path.join(__dirname, 'Icon', 'Icon.png');
 const aqlitePath   = 'file://'+ path.join(__dirname, 'aqlite.swf');
+const vanillaAQW    = 'http://aq.com/game/gamefiles/Loader.swf'
 
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 const accountAq    = 'https://account.aq.com/'
@@ -39,6 +40,22 @@ function newBrowserWindow(new_path){
         // Its alt window, Put the aqlite title...
         altPages++;
         newWin.setTitle("AQLite (Window " + altPages + ")");
+        // ...and add it in the arrays
+        aqliteWindowArray.push(newWin);
+        
+        newWin.on('closed', () => {
+            // Remove it from array! Will cause problems if not!
+            for( var i = 0; i < aqliteWindowArray.length; i++){ 
+                if ( aqliteWindowArray[i] === newWin) { 
+                    aqliteWindowArray.splice(i, 1); 
+                }
+            }
+        });
+    }
+    else if (new_path == vanillaAQW) {
+        // Its alt window, but for vanilla.
+        altPages++;
+        newWin.setTitle("Adventure Quest Worlds (Window " + altPages + ")");
         // ...and add it in the arrays
         aqliteWindowArray.push(newWin);
         
@@ -85,11 +102,12 @@ function showHelpMessage(){
         detail: 'Alt + W - AQW Wiki\n' +
             'Alt + D - AQW Design notes\n' +
             'Alt + A - Account page\n' +
-            'Alt + C - Character lookup. You can also just use the in-game lookup.\n' +
+            'Alt + P - Character (Player) lookup. You can also just use the in-game lookup.\n' +
             'Alt + N - Opens a new Aqlite instance.\n' +
+            'Alt + Q - Opens a Vanilla AQW instance as in aq.com/game/ (keybind subject to change as its temporary)\n' +
             'F9 - About ' + appName + '.\n' +
             'F11 - Toggles Fullscreen\n' +
-            'Shift + F5 - Clears all game cache, some cookies and refresh the window(can fix some bugs in game).\n\n' +
+            'Shift + F5 - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
             'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.',
     };
     const response = dialog.showMessageBox(null,dialog_options);
@@ -170,11 +188,12 @@ function createWindow () {
   addKeybind('Alt+W', ()=>{newBrowserWindow(wikiReleases)});
   addKeybind('Alt+D', ()=>{newBrowserWindow(designNotes)});
   addKeybind('Alt+A', ()=>{newBrowserWindow(accountAq)});
-  addKeybind('Alt+C', ()=>{newBrowserWindow(charLookup)});
+  addKeybind('Alt+P', ()=>{newBrowserWindow(charLookup)});
 
   // Open new Aqlite window (usefull for alts)
   addKeybind('Alt+N',  ()=>{newBrowserWindow(aqlitePath)});
-
+  addKeybind('Alt+Q',  ()=>{newBrowserWindow(vanillaAQW)});
+  
   // Show help message
   addKeybind('Alt+H',              ()=>{showHelpMessage()});
   addKeybind('F1',                 ()=>{showHelpMessage()});
