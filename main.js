@@ -4,14 +4,13 @@ const flashTrust = require('nw-flash-trust');
 const electronLocalshortcut = require('electron-localshortcut');
 
 // Important Variables
-const appName      = 'aqlite2';
+const appName      = 'Herosmash Launcher';
 const iconPath     = path.join(__dirname, 'Icon', 'Icon.png');
-const aqlitePath   = 'file://'+ path.join(__dirname, 'aqlite.swf');
 
-const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
-const accountAq    = 'https://account.aq.com/'
-const designNotes  = 'https://www.aq.com/gamedesignnotes/'
-const charLookup   = 'https://www.aq.com/character.asp'; // Maybe ask nickname in dialog box...?
+const heroPath = "http://herosmash.battleon.com/game/gamefiles/loader.swf";
+const wikiReleases = 'http://hswiki.wikidot.com/';
+const accountAq    = 'https://portal.battleon.com/account/manage.asp'
+const designNotes  = 'https://herosmash.artix.com/gamedesignnotes'
 
 let altPages = 1; // Total Aqlite windows opened
 
@@ -35,10 +34,10 @@ function newBrowserWindow(new_path){
     newWin.setMenuBarVisibility(false) //Remove default electron menu
     newWin.loadURL(new_path);
     
-    if (new_path == aqlitePath) {
+    if (new_path == heroPath) {
         // Its alt window, Put the aqlite title...
         altPages++;
-        newWin.setTitle("AQLite (Window " + altPages + ")");
+        newWin.setTitle("HeroSmash (Window " + altPages + ")");
         // ...and add it in the arrays
         aqliteWindowArray.push(newWin);
         
@@ -82,11 +81,10 @@ function showHelpMessage(){
         buttons: ['Ok'],
         title: 'Help:',
         message: "These are the keybindings added to the game.",
-        detail: 'Alt + W - AQW Wiki\n' +
-            'Alt + D - AQW Design notes\n' +
+        detail: 'Alt + W - HeroSmash Wiki\n' +
+            'Alt + D - HeroSmash Design notes\n' +
             'Alt + A - Account page\n' +
-            'Alt + C - Character lookup. You can also just use the in-game lookup.\n' +
-            'Alt + N - Opens a new Aqlite instance.\n' +
+            'Alt + N - Opens a new instance.\n' +
             'F9 - About ' + appName + '.\n' +
             'F11 - Toggles Fullscreen\n' +
             'Shift + F5 - Clears all game cache, some cookies and refresh the window(can fix some bugs in game).\n\n' +
@@ -100,10 +98,10 @@ function showAboutMessage(){
     const { dialog } = require('electron')
     const dialog_options = {
         buttons: ['Ok'],
-        title: 'About AqLite2 version:',
-        message: "AqLite2 v"+app.getVersion()+" would not be possible without the help of:",
+        title: 'About HeroSmash version:',
+        message: "HeroSmash v"+app.getVersion()+" would not be possible without the help of:",
         detail: '133spider (github)\n' +
-         'CaioFViana (github)\n' +
+         'Dstar (Aqw)\n' +
          'aquaspy (github)\n' +
          'Artix Entertainment (artix.com)\n' +
          'ElectronJs (electronjs.org)\n' +
@@ -132,11 +130,11 @@ app.commandLine.appendSwitch('ppapi-flash-path', path.join(__dirname,"FlashPlaye
 app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.433');
 
 
-const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot');
-const trustManager = flashTrust.initSync(appName, flashPath);
-
-trustManager.empty();
-trustManager.add(path.resolve(__dirname, 'aqlite.swf'));
+// const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot');
+// const trustManager = flashTrust.initSync(appName, flashPath);
+// 
+// trustManager.empty();
+// trustManager.add(path.resolve(__dirname, 'aqlite.swf'));
 
 function createWindow () {
   // Create the browser window.
@@ -156,8 +154,8 @@ function createWindow () {
   })
   const ses = win.webContents.session //creating session for cache cleaning later.
 
-  win.loadURL(aqlitePath);
-  win.setTitle("AQLite");
+  win.loadURL(heroPath);
+  win.setTitle("HeroSmash");
   
   // KeyBindings ---
   var addKeybind = function(keybind, func){
@@ -170,10 +168,9 @@ function createWindow () {
   addKeybind('Alt+W', ()=>{newBrowserWindow(wikiReleases)});
   addKeybind('Alt+D', ()=>{newBrowserWindow(designNotes)});
   addKeybind('Alt+A', ()=>{newBrowserWindow(accountAq)});
-  addKeybind('Alt+C', ()=>{newBrowserWindow(charLookup)});
 
   // Open new Aqlite window (usefull for alts)
-  addKeybind('Alt+N',  ()=>{newBrowserWindow(aqlitePath)});
+  addKeybind('Alt+N',  ()=>{newBrowserWindow(heroPath)});
 
   // Show help message
   addKeybind('Alt+H',              ()=>{showHelpMessage()});
