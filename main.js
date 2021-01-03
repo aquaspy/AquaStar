@@ -1,4 +1,4 @@
-const { app, BrowserWindow} = require('electron')
+const { app, BrowserWindow, ipcMain} = require('electron')
 const path = require('path')
 const flashTrust = require('nw-flash-trust');
 const electronLocalshortcut = require('electron-localshortcut');
@@ -137,16 +137,27 @@ const trustManager = flashTrust.initSync(appName, flashPath);
 
 trustManager.empty();
 trustManager.add(path.resolve(__dirname, 'aqlite.swf'));
+trustManager.add(path.resolve(__dirname, 'pages', 'aqlite.swf'));
+ 
+ipcMain.on("changeWindow", function(event, arg) {
+    console.log("testing");
+    switch (arg){
+        default: case "menu":
+            win.loadURL('file://' + path.join(__dirname, 'menu.html'));
+            break;
+        case "flash":
+            win.loadURL("file://" + path.join(__dirname, 'pages','flash-loader.html'));
+    }
+});
 
 function createWindow () {
-  // Create the browser window.
-  let win = new BrowserWindow({
+   let win = new BrowserWindow({
     width: 960,
     height: 550,
     icon: iconPath,
     title: appName,
     webPreferences: {
-      nodeIntegration: false,
+      nodeIntegration: true,
       plugins: true,
       javascript: true,
       contextIsolation: true,
@@ -154,10 +165,12 @@ function createWindow () {
       nodeIntegrationInWorker: true //maybe better performance for more instances in future... Neends testing.
     }
   })
+    
   const ses = win.webContents.session //creating session for cache cleaning later.
 
-  win.loadURL(aqlitePath);
-  win.setTitle("AQLite");
+  //win.loadURL(aqlitePath);
+  win.loadURL('file://'+ path.join(__dirname, 'menu.html'));
+  win.setTitle("Loading...");
   
   // KeyBindings ---
   var addKeybind = function(keybind, func){

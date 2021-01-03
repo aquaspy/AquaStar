@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="">
+  <head>
+    <meta charset="utf-8">
+    <title>Loading...</title>
+    <style>
+    html, body {
+        height:100%;
+        width:100%;
+    }
+    .full-flash{
+        height: 100%;
+        width:100%;
+    }
+    </style>
+  </head>
+  <body marginwidth="0" marginheight="0" onload="loadFlashPage()" id="body">
+ <!-- 
+    Original do aq.com/game/
+ <object id="AQWGame" type="application/x-shockwave-flash" name="flashContent" data="aq.com/game/gamefiles/Loader.swf?ver=7" style="width:100%; height: 100%;">
+    <param name="LOOP" value="false">
+    <param name="allowScriptAcess" value="always">
+    <param name="allowFullScreen" value="true">
+    <param name="menu" value="false">
+    <param name="flashvars" value="&sLang=en&isweb=true">
+  </object>-->
+  
+  <script>
+    loadFlashPage(){
+        // http://aq.com/game/gamefiles/Loader.swf"
+        document.getElementById("body").innerHTML = 
+       '<embed class="full-flash" name="plugin" src="' + 
+        window.localStorage.getItem("AE-FLASH-PAGE");
+       +  '" type="application/x-shockwave-flash"></embed>';
+       
+       //TODO - mudar title se necessário!
+    }
+  </script>
+  </body>
+</html>

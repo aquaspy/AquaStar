@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+  </head>
+  <body>
+    <button onclick="changePage('AQW')">Aqw Vanilla</button>
+    <button onclick="changePage('AQLITE')">Aqlite from @Spider1337</button>
+    <button onclick="changePage('HEROSMASH')">HeroSmash</button>
+    <button onclick="changePage('DRAGONFABLE')">DragonFable</button>
+    <script>
+        /// Muda a pagina para o carregador de flash. pelo local storage ele sabe qual carregar.
+        function changePage(game){
+            var gameLocation = "";
+            switch(game){
+                case "AQW":
+                    gameLocation='http://aq.com/game/gamefiles/Loader.swf';
+                break;
+                default: case "AQLITE":
+                    gameLocation='aqlite.swf';
+                break;
+                case "HEROSMASH":
+                    gameLocation='http://herosmash.battleon.com/game/gamefiles/loader.swf';
+                break;
+                case "DRAGONFABLE":
+                    gameLocation='https://play.dragonfable.com/game/DFLoader.swf';
+            }
+            window.location.href = "pages/flash-loader.html?"+ gameLocation;
+        }
+    
+    </script>
+  </body>
+</html>

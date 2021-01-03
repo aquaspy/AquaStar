@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="">
+  <head>
+    <meta charset="utf-8">
+    <title>Loading...</title>
+    <style>
+    html, body {
+        height:100%;
+        width:100%;
+    }
+    .full-flash{
+        height: 100%;
+        width:100%;
+    }
+    </style>
+    <script>
+        function loadFlashPage(){
+            document.getElementById("body").innerHTML = '<embed class="full-flash" name="plugin" src="' + 
+            location.search.substring(1)
+        +  '" type="application/x-shockwave-flash"></embed>';
+        //TODO - mudar title se necessário!
+        }
+    </script>
+  </head>
+  <body marginwidth="0" marginheight="0" onload="loadFlashPage()" id="body"> </body>
+</html>
