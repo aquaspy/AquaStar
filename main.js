@@ -16,7 +16,7 @@ const charLookup   = 'https://www.aq.com/character.asp'; // Maybe ask nickname i
 
 let altPages = 1; // Total Aqlite windows opened
 
-let aqliteWindowArray = []; // Store the alt windows
+let aqliteWindowArray = []; // Store the alt windowss
 
 // New page function
 function newBrowserWindow(new_path){
@@ -35,19 +35,19 @@ function newBrowserWindow(new_path){
     });
     newWin.setMenuBarVisibility(false) //Remove default electron menu
     newWin.loadURL(new_path);
-    
+
     if (new_path == aqlitePath) {
         // Its alt window, Put the aqlite title...
         altPages++;
         newWin.setTitle("AQLite (Window " + altPages + ")");
         // ...and add it in the arrays
         aqliteWindowArray.push(newWin);
-        
+
         newWin.on('closed', () => {
             // Remove it from array! Will cause problems if not!
-            for( var i = 0; i < aqliteWindowArray.length; i++){ 
-                if ( aqliteWindowArray[i] === newWin) { 
-                    aqliteWindowArray.splice(i, 1); 
+            for( var i = 0; i < aqliteWindowArray.length; i++){
+                if ( aqliteWindowArray[i] === newWin) {
+                    aqliteWindowArray.splice(i, 1);
                 }
             }
         });
@@ -58,12 +58,12 @@ function newBrowserWindow(new_path){
         newWin.setTitle("Adventure Quest Worlds (Window " + altPages + ")");
         // ...and add it in the arrays
         aqliteWindowArray.push(newWin);
-        
+
         newWin.on('closed', () => {
             // Remove it from array! Will cause problems if not!
-            for( var i = 0; i < aqliteWindowArray.length; i++){ 
-                if ( aqliteWindowArray[i] === newWin) { 
-                    aqliteWindowArray.splice(i, 1); 
+            for( var i = 0; i < aqliteWindowArray.length; i++){
+                if ( aqliteWindowArray[i] === newWin) {
+                    aqliteWindowArray.splice(i, 1);
                 }
             }
         });
@@ -77,7 +77,7 @@ function executeOnFocused(mainWin, funcForWindow){
     }
     else {
         for (var i = 0; i < aqliteWindowArray.length; i++){
-            if (aqliteWindowArray[i].isFocused()) 
+            if (aqliteWindowArray[i].isFocused())
                 funcForWindow(aqliteWindowArray[i]);
         }
     }
@@ -176,7 +176,7 @@ function createWindow () {
 
   win.loadURL(aqlitePath);
   win.setTitle("AQLite");
-  
+
   // KeyBindings ---
   var addKeybind = function(keybind, func){
     electronLocalshortcut.register(keybind,()=>{
@@ -193,17 +193,17 @@ function createWindow () {
   // Open new Aqlite window (usefull for alts)
   addKeybind('Alt+N',  ()=>{newBrowserWindow(aqlitePath)});
   addKeybind('Alt+Q',  ()=>{newBrowserWindow(vanillaAQW)});
-  
+
   // Show help message
   addKeybind('Alt+H',              ()=>{showHelpMessage()});
   addKeybind('F1',                 ()=>{showHelpMessage()});
   addKeybind('CommandOrControl+H', ()=>{showHelpMessage()});
   // Show About
   addKeybind('F9',  ()=>{showAboutMessage()});
-  
+
   // Toggle Fullscreen
   var toggle = function(focusedWin){
-    focusedWin.setFullScreen(!focusedWin.isFullScreen()); 
+    focusedWin.setFullScreen(!focusedWin.isFullScreen());
     focusedWin.setMenuBarVisibility(false)
   };
   addKeybind('F11', ()=>{executeOnFocused(win,toggle)});
