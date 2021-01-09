@@ -12,12 +12,10 @@ and download for your system
 ### Working:
 
 Linux build
+Windows Build
 
 ### Missing:
-
-Windows build
 Mac Build
-Installer for linux (I have only the AppImage currently)
 
 
 ## Why?
@@ -119,6 +117,12 @@ Go to FlashPlayer folder and remove the flash libraries you don't need.
 (ex: delete .so in windows, as it's irrelevant)
 
 Type: `npm run dist`, and in the new "dist" folder, is your files. In linux case, it's a AppImage file!
+
+Obs: Before running the npm run dist, you can change a line in the package.json
+![How to change siste](https://i.imgur.com/fO13ynR.png)
+
+If you change to "dist": "electron-builder -l", it will build for linux only. If you change to -w, windows only, and if you let .wlm, and will build for all systems (if supported). If you don't use a parameter, it will build for your current system
+
 
 ## Troubleshooting
 
