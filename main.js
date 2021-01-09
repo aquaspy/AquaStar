@@ -16,7 +16,7 @@ const charLookup   = 'https://www.aq.com/character.asp'; // Maybe ask nickname i
 
 let altPages = 1; // Total Aqlite windows opened
 
-let aqliteWindowArray = []; // Store the alt windowss
+let aqliteWindowArray = []; // Store the alt windows
 
 // New page function
 function newBrowserWindow(new_path){
