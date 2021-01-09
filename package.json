@@ -1,18 +1,18 @@
 {
-  "name": "aqlite2",
+  "name": "HsLauncher",
   "version": "0.1.0",
-  "description": "A simple fork of AqLite to add some small features",
+  "description": "A HeroSmashLauncher :D",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder -w"
   },
   "keywords": [
-    "aqw;",
-    "aqlite2;"
+    "HeroSmash;",
+    "HeroSmashLauncher;"
   ],
-  "author": "aquasp",
+  "author": "DoubleStar",
   "license": "MIT",
   "devDependencies": {
     "electron": "^4.2.12",
@@ -22,7 +22,7 @@
   },
   "build": {
     "asar": false,
-    "appId": "aquasp",
+    "appId": "DoubleStar",
     "mac": {
       "category": "Games"
     },
