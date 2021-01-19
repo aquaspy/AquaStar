@@ -136,18 +136,33 @@ function showAboutMessage(){
 let pluginName
 switch (process.platform) {
   case 'win32':
-    pluginName = 'pepflashplayer.dll'
+    if (process.arch == "x86"){
+      pluginName = 'pepflashplayer32bits.dll'
+    }
+    else {
+      pluginName = 'pepflashplayer.dll'
+    }
     break
   case 'darwin':
+    // In testing...
     pluginName = 'PepperFlashPlayer.plugin'
     break
   case 'linux':
-    pluginName = 'libpepflashplayer.so'
+    // Can be arm too...
+     if (process.arch == "x86"){
+      pluginName = 'libpepflashplayer32bits.so'
+    }
+    else if (process.arch == "arm") {
+      pluginName = 'libpepflashplayerARM.so'
+    }
+    else {
+        pluginName = 'libpepflashplayer.so'
+    }
     break
 }
 
 app.commandLine.appendSwitch('ppapi-flash-path', path.join(__dirname,"FlashPlayer", pluginName))
-app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.433');
+app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.344');
 
 
 const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot');

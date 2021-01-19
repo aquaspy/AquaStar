@@ -34,7 +34,8 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "category": "Game"
     },
     "win": {
       "target": [
