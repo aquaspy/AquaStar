@@ -41,11 +41,11 @@ function tabChange(detail) {
     // chromeTabs.activeTabEl.getElementsByClassName("chrome-tab-title")[0].innerText
     var currentText = chromeTabs.activeTabEl.getElementsByClassName("chrome-tab-title")[0].innerText;
     
-    if          (currentText === texts.wiki            ) { markActive("wiki",          texts.wiki)           }
-    else if (currentText ===  texts.account    ) { markActive("account",   texts.account)    }
-    else if (currentText ===  texts.charpage ) { markActive("charpage", texts.charpage) }
-    else if (currentText ===  texts.design      ) { markActive("design",      texts.design)      }
-    else if (currentText ===  texts.twitter      ) { markActive("twitter",      texts.twitter)      }
+    if      (currentText === texts.wiki     ) { markActive("wiki",    texts.wiki)     }
+    else if (currentText === texts.account  ) { markActive("account", texts.account)  }
+    else if (currentText === texts.charpage ) { markActive("charpage",texts.charpage) }
+    else if (currentText === texts.design   ) { markActive("design",  texts.design)   }
+    else if (currentText === texts.twitter  ) { markActive("twitter", texts.twitter)  }
     
 }
 
@@ -54,24 +54,24 @@ el.addEventListener('activeTabChange', ({ detail }) => tabChange(detail) )
 //el.addEventListener('tabAdd', ({ detail }) => blockAdd(detail) );
 
 chromeTabs.addTab({
-          title: texts.wiki,
-          favicon: false
+    title: texts.wiki,
+    favicon: false
 })
 chromeTabs.addTab({
-          title: texts.account,
-          favicon: false
+    title: texts.account,
+    favicon: false
 })
 chromeTabs.addTab({
-          title: texts.charpage,
-          favicon: false
+    title: texts.charpage,
+    favicon: false
 })
 chromeTabs.addTab({
-          title: texts.design,
-          favicon: false
+    title: texts.design,
+    favicon: false
 })
 chromeTabs.addTab({
-          title: texts.twitter,
-          favicon: false
+    title: texts.twitter,
+    favicon: false
 })
 
 // Set to the first tab. which is Wiki
@@ -82,8 +82,8 @@ chromeTabs.setCurrentTab(chromeTabs.activeTabEl.parentElement.firstElementChild)
 
 function toggleLightDarkMode() {
     if (el.classList.contains('chrome-tabs-dark-theme')) {
-          el.classList.remove('chrome-tabs-dark-theme')
-        } else {
-          el.classList.add('chrome-tabs-dark-theme')
-        }
+        el.classList.remove('chrome-tabs-dark-theme')
+    } else {
+        el.classList.add('chrome-tabs-dark-theme')
+    }
 }
