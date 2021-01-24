@@ -8,6 +8,7 @@ const appName      = 'aqlite2';
 const iconPath     = path.join(__dirname, 'Icon', 'Icon.png');
 const aqlitePath   = 'file://'+ path.join(__dirname, 'aqlite.swf');
 const vanillaAQW    = 'http://aq.com/game/gamefiles/Loader.swf'
+const pagesPath   = 'file://'+ path.join(__dirname, 'pages', 'pages.html');
 
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 const accountAq    = 'https://account.aq.com/'
@@ -26,6 +27,7 @@ function newBrowserWindow(new_path){
         'webPreferences': {
             'plugins': true,
             'nodeIntegration': false,
+            'webviewTag': false,
             'javascript': true,
             'contextIsolation': true,
             'enableRemoteModule': false,
@@ -70,6 +72,25 @@ function newBrowserWindow(new_path){
     }
 }
 
+function newTabbedWindow(){
+    const newWin = new BrowserWindow({
+        'width': 960,
+        'height': 550,
+        'webPreferences': {
+            'plugins': true,
+            'nodeIntegration': false,
+            'webviewTag': true,
+            'javascript': true,
+            'contextIsolation': true,
+            'enableRemoteModule': false,
+            'nodeIntegrationInWorker': true //maybe better performance for more instances in future... Neends testing.
+        },
+        'icon': iconPath
+    });
+    newWin.setMenuBarVisibility(false) //Remove default electron menu
+    newWin.loadURL(pagesPath);
+}
+
 function executeOnFocused(mainWin, funcForWindow){
     if(mainWin.isFocused()) {
         funcForWindow(mainWin);
@@ -105,6 +126,7 @@ function showHelpMessage(){
             'Alt + P - Character (Player) lookup. You can also just use the in-game lookup.\n' +
             'Alt + N - Opens a new Aqlite instance.\n' +
             'Alt + Q - Opens a Vanilla AQW instance as in aq.com/game/ (keybind subject to change as its temporary)\n' +
+            'Alt + Y - Opens a new Window with tabs. The tabs are the Alt browser pages, but grouped up so doesnt spam windows.\n' +
             'F9 - About ' + appName + '.\n' +
             'F11 - Toggles Fullscreen\n' +
             'Shift + F5 - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
@@ -180,6 +202,7 @@ function createWindow () {
     title: appName,
     webPreferences: {
       nodeIntegration: false,
+      webviewTag: false,
       plugins: true,
       javascript: true,
       contextIsolation: true,
@@ -205,10 +228,12 @@ function createWindow () {
   addKeybind('Alt+A', ()=>{newBrowserWindow(accountAq)});
   addKeybind('Alt+P', ()=>{newBrowserWindow(charLookup)});
 
+  addKeybind('Alt+Y',  ()=>{newTabbedWindow()});
+  
   // Open new Aqlite window (usefull for alts)
   addKeybind('Alt+N',  ()=>{newBrowserWindow(aqlitePath)});
   addKeybind('Alt+Q',  ()=>{newBrowserWindow(vanillaAQW)});
-
+  
   // Show help message
   addKeybind('Alt+H',              ()=>{showHelpMessage()});
   addKeybind('F1',                 ()=>{showHelpMessage()});

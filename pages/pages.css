@@ -1,0 +1,51 @@
+html,
+body {
+  margin: 0;
+    max-height:100%;
+}
+
+.box {
+  display: flex;
+  flex-flow: column;
+  height: 100%;
+}
+
+.box .row.header {
+  flex: 0 1 auto;
+  /* flex-grow: 0,
+  flex-shrink: 1,
+  flex-basis: auto
+  */
+}
+
+.box .row.content {
+  flex: 1 1 auto;
+}
+
+.box .row.footer {
+  flex: 0 1 40px;
+}
+
+.tabs {
+/*     min-height: -webkit-fill-available; */
+    display:none;
+    visibility: hidden;
+    opacity: 0.0;
+}
+
+.page-active {
+    min-height: -webkit-fill-available;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1.0 !important;
+}
+
+.page-container{
+    max-height:100%;
+}
+
+.chrome-tab-close {
+/*  removes the close button  */
+    width: 0 !important;
+    height: 0 !important;
+}
