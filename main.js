@@ -126,7 +126,7 @@ function showHelpMessage(){
             'Alt + P - Character (Player) lookup. You can also just use the in-game lookup.\n' +
             'Alt + N - Opens a new Aqlite instance.\n' +
             'Alt + Q - Opens a Vanilla AQW instance as in aq.com/game/ (keybind subject to change as its temporary)\n' +
-            'Alt + Y - Opens a new Window with tabs. The tabs are the Alt browser pages, but grouped up so doesnt spam windows.\n' +
+            'Alt + Y - Opens a new Window with the usefull browser pages with tabs, being grouped up so doesnt spam windows. Uses more memory (500mb) tho.\n' +
             'F9 - About ' + appName + '.\n' +
             'F11 - Toggles Fullscreen\n' +
             'Shift + F5 - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
