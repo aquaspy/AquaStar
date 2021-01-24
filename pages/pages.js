@@ -77,3 +77,13 @@ chromeTabs.addTab({
 // Set to the first tab. which is Wiki
 markActive("wiki");
 chromeTabs.setCurrentTab(chromeTabs.activeTabEl.parentElement.firstElementChild);
+
+//TODO - Dark mode
+
+function toggleLightDarkMode() {
+    if (el.classList.contains('chrome-tabs-dark-theme')) {
+          el.classList.remove('chrome-tabs-dark-theme')
+        } else {
+          el.classList.add('chrome-tabs-dark-theme')
+        }
+}
