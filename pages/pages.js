@@ -6,10 +6,10 @@ chromeTabs.init(el);
 var texts = {
     account: "AQW Account",
     wiki: "Wiki New Releases",
-    charpage : "Char Page Lookup",
+    //charpage : "Char Page Lookup",
     design: "Design Notes",
-    twitter: "Twitter News (Alina)",
-    length: 5
+    //twitter: "Twitter News (Alina)",
+    length: 3
 }
 
  var markActive = function(idName, idText) {
@@ -43,9 +43,9 @@ function tabChange(detail) {
     
     if      (currentText === texts.wiki     ) { markActive("wiki",    texts.wiki)     }
     else if (currentText === texts.account  ) { markActive("account", texts.account)  }
-    else if (currentText === texts.charpage ) { markActive("charpage",texts.charpage) }
+    //else if (currentText === texts.charpage ) { markActive("charpage",texts.charpage) }
     else if (currentText === texts.design   ) { markActive("design",  texts.design)   }
-    else if (currentText === texts.twitter  ) { markActive("twitter", texts.twitter)  }
+    //else if (currentText === texts.twitter  ) { markActive("twitter", texts.twitter)  }
     
 }
 
@@ -61,18 +61,18 @@ chromeTabs.addTab({
     title: texts.account,
     favicon: false
 })
-chromeTabs.addTab({
-    title: texts.charpage,
-    favicon: false
-})
+// chromeTabs.addTab({
+//     title: texts.charpage,
+//     favicon: false
+// })
 chromeTabs.addTab({
     title: texts.design,
     favicon: false
 })
-chromeTabs.addTab({
-    title: texts.twitter,
-    favicon: false
-})
+// chromeTabs.addTab({
+//     title: texts.twitter,
+//     favicon: false
+// })
 
 // Set to the first tab. which is Wiki
 markActive("wiki");
