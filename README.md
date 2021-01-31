@@ -1,5 +1,6 @@
 # AquaStar
 ![AquaStarLogo](https://i.imgur.com/R8oZonX.png)
+
 AquaStar is a custom AqLite launcher. It aims to uses the latest aqlite .swf while providing additional features and builds for Linux,
 
 ## How to download
