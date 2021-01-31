@@ -1,14 +1,14 @@
 const { app, BrowserWindow} = require('electron')
-const path = require('path')
-const flashTrust = require('nw-flash-trust');
+const path                  = require('path')
+const flashTrust            = require('nw-flash-trust');
 const electronLocalshortcut = require('electron-localshortcut');
 
 // Important Variables
 const appName      = 'aqlite2';
 const iconPath     = path.join(__dirname, 'Icon', 'Icon.png');
 const aqlitePath   = 'file://'+ path.join(__dirname, 'aqlite.swf');
-const vanillaAQW    = 'http://aq.com/game/gamefiles/Loader.swf'
-const pagesPath   = 'file://'+ path.join(__dirname, 'pages', 'pages.html');
+const vanillaAQW   = 'http://aq.com/game/gamefiles/Loader.swf'
+const pagesPath    = 'file://'+ path.join(__dirname, 'pages', 'pages.html');
 
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 const accountAq    = 'https://account.aq.com/'
@@ -123,10 +123,10 @@ function showHelpMessage(){
         detail: 'Alt + W - AQW Wiki\n' +
             'Alt + D - AQW Design notes\n' +
             'Alt + A - Account page\n' +
-            'Alt + P - Character (Player) lookup. You can also just use the in-game lookup.\n' +
+            //'Alt + P - Character (Player) lookup. You can also just use the in-game lookup.\n' +
             'Alt + N - Opens a new Aqlite instance.\n' +
             'Alt + Q - Opens a Vanilla AQW instance as in aq.com/game/ (keybind subject to change as its temporary)\n' +
-            'Alt + Y - Opens a new Window with the usefull browser pages with tabs, being grouped up so doesnt spam windows. Uses more memory (500mb) tho.\n' +
+            'Alt + Y - Opens a new Window with the usefull browser pages with tabs, being grouped up so doesnt spam windows. Uses more memory (300mb) tho.\n' +
             'F9 - About ' + appName + '.\n' +
             'F11 - Toggles Fullscreen\n' +
             'Shift + F5 - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
@@ -226,7 +226,7 @@ function createWindow () {
   addKeybind('Alt+W', ()=>{newBrowserWindow(wikiReleases)});
   addKeybind('Alt+D', ()=>{newBrowserWindow(designNotes)});
   addKeybind('Alt+A', ()=>{newBrowserWindow(accountAq)});
-  addKeybind('Alt+P', ()=>{newBrowserWindow(charLookup)});
+  //addKeybind('Alt+P', ()=>{newBrowserWindow(charLookup)});
 
   addKeybind('Alt+Y',  ()=>{newTabbedWindow()});
   
