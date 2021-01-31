@@ -4,7 +4,7 @@ const flashTrust            = require('nw-flash-trust');
 const electronLocalshortcut = require('electron-localshortcut');
 
 // Important Variables
-const appName      = 'aqlite2';
+const appName      = 'aquastar';
 const iconPath     = path.join(__dirname, 'Icon', 'Icon.png');
 const aqlitePath   = 'file://'+ path.join(__dirname, 'aqlite.swf');
 const vanillaAQW   = 'http://aq.com/game/gamefiles/Loader.swf'
@@ -140,8 +140,8 @@ function showAboutMessage(){
     const { dialog } = require('electron')
     const dialog_options = {
         buttons: ['Ok'],
-        title: 'About AqLite2 version:',
-        message: "AqLite2 v"+app.getVersion()+" would not be possible without the help of:",
+        title: 'About AquaStar version:',
+        message: "AquaStar v"+app.getVersion()+" would not be possible without the help of:",
         detail: '133spider (github)\n' +
          'CaioFViana (github)\n' +
          'aquaspy (github)\n' +
@@ -150,7 +150,7 @@ function showAboutMessage(){
          'Adobe Flash Player (adobe.com)\n' +
          'YOU! (Yes, You! Thanks for supporting us!)\n\n' +
         'Note: This is NOT an official Artix product. Artix Entertainment does not recommends it by any means. You are at your own risk using it.\n\n' +
-        'You can give your opinion, contribute and follow the project here: https://github.com/aquaspy/AqLite2',
+        'You can give your opinion, contribute and follow the project here: https://github.com/aquaspy/AquaStar',
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
@@ -229,11 +229,11 @@ function createWindow () {
   //addKeybind('Alt+P', ()=>{newBrowserWindow(charLookup)});
 
   addKeybind('Alt+Y',  ()=>{newTabbedWindow()});
-  
+
   // Open new Aqlite window (usefull for alts)
   addKeybind('Alt+N',  ()=>{newBrowserWindow(aqlitePath)});
   addKeybind('Alt+Q',  ()=>{newBrowserWindow(vanillaAQW)});
-  
+
   // Show help message
   addKeybind('Alt+H',              ()=>{showHelpMessage()});
   addKeybind('F1',                 ()=>{showHelpMessage()});
