@@ -1,9 +1,9 @@
-# AqLite2
-A simple Electron launcher using @133spider swf file for launching AQW.
+# AquaStar
+AquaStar is a custom AqLite launcher. It aims to uses the latest aqlite .swf while providing additional features and builds for Linux,
 
 ## How to download
 
-Go to this link: https://github.com/aquaspy/AqLiteElectron/releases
+Go to this link: https://github.com/aquaspy/AquaStar/releases
 
 and download for your system
 
@@ -45,7 +45,7 @@ https://youtu.be/ALi0CcmSfus
 
 ## Is this the same as AqLite?
 
-Well, my code is a bit different, but the core is the swf file, which is the same used by @133spider here in github
+We have our own code, but we use the aqlite swf and add some more features
 
 ## Will it be cross platform?
 
@@ -79,9 +79,6 @@ Artix don't have any responsibility with you as long you are using third party. 
 
 The core is the same. You should thank 133spider instead of me for making all that amazing features. All I did was to write a simple code that uses his swf file and compile it for linux and mac, so linux and mac users can play too in a launcher too.
 
-### Why it is called AqLite2?
-I couldn't find a cool name, so I choose AqLite2.
-
 
 ## How to build
 
@@ -93,7 +90,7 @@ I couldn't find a cool name, so I choose AqLite2.
 
 Download this project's folder into your PC, or clone it directly from this repository using git like:
 ```
-  git clone https://github.com/aquaspy/AqLiteElectron.git
+  git clone https://github.com/aquaspy/AquaStar.git
 ```
 
 If your Operating System's flash library file (like .dll or .so) is not in the FlashPlayer folder,
