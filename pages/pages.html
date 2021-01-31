@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="">
+  <head>
+    <meta charset="utf-8">
+    <title>Loading...</title>
+    <link href="css/chrome-tabs.css" rel="stylesheet">
+    <link href="css/chrome-tabs-dark-theme.css" rel="stylesheet">
+    <link href="pages.css" rel="stylesheet">
+  </head>
+    <body>
+        <div class="box">
+            <div id="tab-bar" class=" row header chrome-tabs">
+                <div class="chrome-tabs-content"></div>
+                <div class="chrome-tabs-bottom-bar"></div>
+            </div>
+            <div class="row content page-container">
+                <div class=page-holder><webview id="wiki"  class="page-active tabs" src="http://aqwwiki.wikidot.com/new-releases" plugins></webview></div>
+                <div class=page-holder><webview id="account"  class="tabs" src="https://account.aq.com/" plugins></webview></div>
+                <!--<div class=page-holder><webview id="charpage"  class="tabs" src="https://www.aq.com/character.asp" plugins></webview></div>-->
+                <div class=page-holder><webview id="design"  class="tabs" src="https://www.aq.com/gamedesignnotes/" plugins></webview></div>
+                <!--<div class=page-holder><webview id="twitter"  class="tabs" src="https://twitter.com/alina_ae" plugins></webview></div>-->
+            </div>
+        </div>
+        <!--  ----------------------------------------------------------  -->
+        
+        <script src="js/draggabilly.pkgd.min.js"></script>
+        <script src="js/chrome-tabs.js"></script>
+        <script src="pages.js"></script>
+
+  </body>
+</html>
