@@ -4,107 +4,31 @@ const electronLocalshortcut = require('electron-localshortcut');
 
 const flash    = require('./res/flash.js');
 //const keyb  = require('./res/keybinding.js');
-
+const inst     = require('./res/instances.js');
 // Important Variables - in const.js
 const constant = require('./res/const.js');
 
-let altPages = 1; // Total Aqlite windows opened
-
-let aqliteWindowArray = []; // Store the alt windows
-
-// New page function
-function newBrowserWindow(new_path){
-    const newWin = new BrowserWindow({
-        'width': 960,
-        'height': 550,
-        'webPreferences': {
-            'plugins': true,
-            'nodeIntegration': false,
-            'webviewTag': false,
-            'javascript': true,
-            'contextIsolation': true,
-            'enableRemoteModule': false,
-            'nodeIntegrationInWorker': true //maybe better performance for more instances in future... Neends testing.
-        },
-        'icon': constant.iconPath
-    });
-    newWin.setMenuBarVisibility(false) //Remove default electron menu
-    newWin.loadURL(new_path);
-
-    if (new_path == constant.aqlitePath) {
-        // Its alt window, Put the aqlite title...
-        altPages++;
-        newWin.setTitle("AQLite (Window " + altPages + ")");
-        // ...and add it in the arrays
-        aqliteWindowArray.push(newWin);
-
-        newWin.on('closed', () => {
-            // Remove it from array! Will cause problems if not!
-            for( var i = 0; i < aqliteWindowArray.length; i++){
-                if ( aqliteWindowArray[i] === newWin) {
-                    aqliteWindowArray.splice(i, 1);
-                }
-            }
-        });
-    }
-    else if (new_path == constant.vanillaAQW) {
-        // Its alt window, but for vanilla.
-        altPages++;
-        newWin.setTitle("Adventure Quest Worlds (Window " + altPages + ")");
-        // ...and add it in the arrays
-        aqliteWindowArray.push(newWin);
-
-        newWin.on('closed', () => {
-            // Remove it from array! Will cause problems if not!
-            for( var i = 0; i < aqliteWindowArray.length; i++){
-                if ( aqliteWindowArray[i] === newWin) {
-                    aqliteWindowArray.splice(i, 1);
-                }
-            }
-        });
-    }
-}
-
-function newTabbedWindow(){
-    const newWin = new BrowserWindow({
-        'width': 960,
-        'height': 550,
-        'webPreferences': {
-            'plugins': true,
-            'nodeIntegration': false,
-            'webviewTag': true,
-            'javascript': true,
-            'contextIsolation': true,
-            'enableRemoteModule': false,
-            'nodeIntegrationInWorker': true //maybe better performance for more instances in future... Neends testing.
-        },
-        'icon': constant.iconPath
-    });
-    newWin.setMenuBarVisibility(false) //Remove default electron menu
-    newWin.loadURL(pagesPath);
-}
-
-function executeOnFocused(mainWin, funcForWindow){
-    if(mainWin.isFocused()) {
-        funcForWindow(mainWin);
-        return;
-    }
-    else {
-        for (var i = 0; i < aqliteWindowArray.length; i++){
-            if (aqliteWindowArray[i].isFocused())
-                funcForWindow(aqliteWindowArray[i]);
-        }
-    }
-}
-
-// Test if the window focused is a Aqlite window (more like if
-//  one of the aqlite windows is focused) so it can use keybinds
-function testForFocus(){
-    for (var i = 0; i < aqliteWindowArray.length; i++){
-        if (aqliteWindowArray[i].isFocused()) return true;
-    }
-    return false;
-}
+// function executeOnFocused(mainWin, funcForWindow){
+//     if(mainWin.isFocused()) {
+//         funcForWindow(mainWin);
+//         return;
+//     }
+//     else {
+//         for (var i = 0; i < aqliteWindowArray.length; i++){
+//             if (aqliteWindowArray[i].isFocused())
+//                 funcForWindow(aqliteWindowArray[i]);
+//         }
+//     }
+// }
+// 
+// // Test if the window focused is a Aqlite window (more like if
+// //  one of the aqlite windows is focused) so it can use keybinds
+// function testForFocus(){
+//     for (var i = 0; i < aqliteWindowArray.length; i++){
+//         if (aqliteWindowArray[i].isFocused()) return true;
+//     }
+//     return false;
+// }
 
 // Show help Function
 function showHelpMessage(){
@@ -147,7 +71,8 @@ function showAboutMessage(){
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
-// Flash stuff is isolated
+
+// Flash stuff is isolated in flash.js
 flash.flashManager(app,__dirname,constant.appName);
 
 function createWindow () {
@@ -175,21 +100,21 @@ function createWindow () {
   // KeyBindings ---
   var addKeybind = function(keybind, func){
     electronLocalshortcut.register(keybind,()=>{
-      if ( win.isFocused() || testForFocus() ){
+      if ( win.isFocused() || inst.testForFocus() ){
         func();
       }
     })
   }
-  addKeybind('Alt+W', ()=>{newBrowserWindow(constant.wikiReleases)});
-  addKeybind('Alt+D', ()=>{newBrowserWindow(constant.designNotes)});
-  addKeybind('Alt+A', ()=>{newBrowserWindow(constant.accountAq)});
+  addKeybind('Alt+W', ()=>{inst.newBrowserWindow(constant.wikiReleases)});
+  addKeybind('Alt+D', ()=>{inst.newBrowserWindow(constant.designNotes)});
+  addKeybind('Alt+A', ()=>{inst.newBrowserWindow(constant.accountAq)});
   //addKeybind('Alt+P', ()=>{newBrowserWindow(constant.charLookup)});
 
-  addKeybind('Alt+Y',  ()=>{newTabbedWindow()});
+  addKeybind('Alt+Y',  ()=>{inst.newTabbedWindow()});
   
   // Open new Aqlite window (usefull for alts)
-  addKeybind('Alt+N',  ()=>{newBrowserWindow(constant.aqlitePath)});
-  addKeybind('Alt+Q',  ()=>{newBrowserWindow(constant.vanillaAQW)});
+  addKeybind('Alt+N',  ()=>{inst.newBrowserWindow(constant.aqlitePath)});
+  addKeybind('Alt+Q',  ()=>{inst.newBrowserWindow(constant.vanillaAQW)});
   
   // Show help message
   addKeybind('Alt+H',              ()=>{showHelpMessage()});
@@ -203,17 +128,17 @@ function createWindow () {
     focusedWin.setFullScreen(!focusedWin.isFullScreen());
     focusedWin.setMenuBarVisibility(false)
   };
-  addKeybind('F11', ()=>{executeOnFocused(win,toggle)});
+  addKeybind('F11', ()=>{inst.executeOnFocused(win,toggle)});
 
   // Reload
   var reloadPage = function(focusedWin){focusedWin.reload()};
-  addKeybind('F5',                 ()=>{executeOnFocused(win,reloadPage)});
-  addKeybind('CommandOrControl+R', ()=>{executeOnFocused(win,reloadPage)});
+  addKeybind('F5',                 ()=>{inst.executeOnFocused(win,reloadPage)});
+  addKeybind('CommandOrControl+R', ()=>{inst.executeOnFocused(win,reloadPage)});
   // Reload and Clear cache
   addKeybind('Shift+F5', () => {
     ses.flushStorageData() //writing some data from memory to disk before cleaning
     ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
-    executeOnFocused(win,reloadPage)
+    inst.executeOnFocused(win,reloadPage)
   })
 
   win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
