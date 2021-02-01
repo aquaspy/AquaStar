@@ -1,7 +1,7 @@
 {
-  "name": "aqlite2",
+  "name": "AquaStar",
   "version": "0.2.0",
-  "description": "A simple fork of AqLite to add some small features",
+  "description": "A custom aqlite launcher",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -12,7 +12,7 @@
     "aqw;",
     "aqlite2;"
   ],
-  "author": "aquasp",
+  "author": "aquastar",
   "license": "MIT",
   "devDependencies": {
     "electron": "^4.2.12",
@@ -22,7 +22,7 @@
   },
   "build": {
     "asar": false,
-    "appId": "aquasp",
+    "appId": "aquastar",
     "mac": {
       "category": "Games"
     },
