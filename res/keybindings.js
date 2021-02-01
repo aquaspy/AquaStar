@@ -50,6 +50,10 @@ const addBinds = function (targetWin, ses){
         ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
         inst.executeOnFocused(win,reloadPage)
     })
+    
+    // Yay, AquaSP can have his DF too!
+    addKeybind('Alt+1', () => inst.newBrowserWindow('https://play.dragonfable.com/game/DFLoader.swf'));
+    // This is a easter egg BTW, congratulations if you found it!
 }
 
 exports.addKeybinding = addBinds;
