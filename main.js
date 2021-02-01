@@ -1,19 +1,12 @@
 const { app, BrowserWindow} = require('electron')
 const path                  = require('path')
-const flashTrust            = require('nw-flash-trust');
 const electronLocalshortcut = require('electron-localshortcut');
 
-// Important Variables
-const appName      = 'aqlite2';
-const iconPath     = path.join(__dirname, 'Icon', 'Icon.png');
-const aqlitePath   = 'file://'+ path.join(__dirname, 'aqlite.swf');
-const vanillaAQW   = 'http://aq.com/game/gamefiles/Loader.swf'
-const pagesPath    = 'file://'+ path.join(__dirname, 'pages', 'pages.html');
+const flash    = require('./res/flash.js');
+//const keyb  = require('./res/keybinding.js');
 
-const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
-const accountAq    = 'https://account.aq.com/'
-const designNotes  = 'https://www.aq.com/gamedesignnotes/'
-const charLookup   = 'https://www.aq.com/character.asp'; // Maybe ask nickname in dialog box...?
+// Important Variables - in const.js
+const constant = require('./res/const.js');
 
 let altPages = 1; // Total Aqlite windows opened
 
@@ -33,12 +26,12 @@ function newBrowserWindow(new_path){
             'enableRemoteModule': false,
             'nodeIntegrationInWorker': true //maybe better performance for more instances in future... Neends testing.
         },
-        'icon': iconPath
+        'icon': constant.iconPath
     });
     newWin.setMenuBarVisibility(false) //Remove default electron menu
     newWin.loadURL(new_path);
 
-    if (new_path == aqlitePath) {
+    if (new_path == constant.aqlitePath) {
         // Its alt window, Put the aqlite title...
         altPages++;
         newWin.setTitle("AQLite (Window " + altPages + ")");
@@ -54,7 +47,7 @@ function newBrowserWindow(new_path){
             }
         });
     }
-    else if (new_path == vanillaAQW) {
+    else if (new_path == constant.vanillaAQW) {
         // Its alt window, but for vanilla.
         altPages++;
         newWin.setTitle("Adventure Quest Worlds (Window " + altPages + ")");
@@ -85,7 +78,7 @@ function newTabbedWindow(){
             'enableRemoteModule': false,
             'nodeIntegrationInWorker': true //maybe better performance for more instances in future... Neends testing.
         },
-        'icon': iconPath
+        'icon': constant.iconPath
     });
     newWin.setMenuBarVisibility(false) //Remove default electron menu
     newWin.loadURL(pagesPath);
@@ -127,7 +120,7 @@ function showHelpMessage(){
             'Alt + N - Opens a new Aqlite instance.\n' +
             'Alt + Q - Opens a Vanilla AQW instance as in aq.com/game/ (keybind subject to change as its temporary)\n' +
             'Alt + Y - Opens a new Window with the usefull browser pages with tabs, being grouped up so doesnt spam windows. Uses more memory (300mb) tho.\n' +
-            'F9 - About ' + appName + '.\n' +
+            'F9 - About ' + constant.appName + '.\n' +
             'F11 - Toggles Fullscreen\n' +
             'Shift + F5 - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
             'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.',
@@ -140,9 +133,9 @@ function showAboutMessage(){
     const { dialog } = require('electron')
     const dialog_options = {
         buttons: ['Ok'],
-        title: 'About AqLite2 version:',
-        message: "AqLite2 v"+app.getVersion()+" would not be possible without the help of:",
-        detail: '133spider (github)\n' +
+        title: 'About AquaStar version:' + app.getVersion(),
+        message: "Aquastar would not be possible without the help of:",
+        detail: '133spider (github) for creating AQLite itself\n' +
          'CaioFViana (github)\n' +
          'aquaspy (github)\n' +
          'Artix Entertainment (artix.com)\n' +
@@ -150,56 +143,20 @@ function showAboutMessage(){
          'Adobe Flash Player (adobe.com)\n' +
          'YOU! (Yes, You! Thanks for supporting us!)\n\n' +
         'Note: This is NOT an official Artix product. Artix Entertainment does not recommends it by any means. You are at your own risk using it.\n\n' +
-        'You can give your opinion, contribute and follow the project here: https://github.com/aquaspy/AqLite2',
+        'You can give your opinion, contribute and follow the project here: https://github.com/aquaspy/AquaStar',
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
-
-let pluginName
-switch (process.platform) {
-  case 'win32':
-    if (process.arch == "x86"){
-      pluginName = 'pepflashplayer32bits.dll'
-    }
-    else {
-      pluginName = 'pepflashplayer.dll'
-    }
-    break
-  case 'darwin':
-    // In testing...
-    pluginName = 'PepperFlashPlayer.plugin'
-    break
-  case 'linux':
-    // Can be arm too...
-     if (process.arch == "x86"){
-      pluginName = 'libpepflashplayer32bits.so'
-    }
-    else if (process.arch == "arm") {
-      pluginName = 'libpepflashplayerARM.so'
-    }
-    else {
-        pluginName = 'libpepflashplayer.so'
-    }
-    break
-}
-
-app.commandLine.appendSwitch('ppapi-flash-path', path.join(__dirname,"FlashPlayer", pluginName))
-app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.344');
-
-
-const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot');
-const trustManager = flashTrust.initSync(appName, flashPath);
-
-trustManager.empty();
-trustManager.add(path.resolve(__dirname, 'aqlite.swf'));
+// Flash stuff is isolated
+flash.flashManager(app,__dirname,constant.appName);
 
 function createWindow () {
   // Create the browser window.
   let win = new BrowserWindow({
     width: 960,
     height: 550,
-    icon: iconPath,
-    title: appName,
+    icon: constant.iconPath,
+    title: constant.appName,
     webPreferences: {
       nodeIntegration: false,
       webviewTag: false,
@@ -212,7 +169,7 @@ function createWindow () {
   })
   const ses = win.webContents.session //creating session for cache cleaning later.
 
-  win.loadURL(aqlitePath);
+  win.loadURL(constant.aqlitePath);
   win.setTitle("AQLite");
 
   // KeyBindings ---
@@ -223,16 +180,16 @@ function createWindow () {
       }
     })
   }
-  addKeybind('Alt+W', ()=>{newBrowserWindow(wikiReleases)});
-  addKeybind('Alt+D', ()=>{newBrowserWindow(designNotes)});
-  addKeybind('Alt+A', ()=>{newBrowserWindow(accountAq)});
-  //addKeybind('Alt+P', ()=>{newBrowserWindow(charLookup)});
+  addKeybind('Alt+W', ()=>{newBrowserWindow(constant.wikiReleases)});
+  addKeybind('Alt+D', ()=>{newBrowserWindow(constant.designNotes)});
+  addKeybind('Alt+A', ()=>{newBrowserWindow(constant.accountAq)});
+  //addKeybind('Alt+P', ()=>{newBrowserWindow(constant.charLookup)});
 
   addKeybind('Alt+Y',  ()=>{newTabbedWindow()});
   
   // Open new Aqlite window (usefull for alts)
-  addKeybind('Alt+N',  ()=>{newBrowserWindow(aqlitePath)});
-  addKeybind('Alt+Q',  ()=>{newBrowserWindow(vanillaAQW)});
+  addKeybind('Alt+N',  ()=>{newBrowserWindow(constant.aqlitePath)});
+  addKeybind('Alt+Q',  ()=>{newBrowserWindow(constant.vanillaAQW)});
   
   // Show help message
   addKeybind('Alt+H',              ()=>{showHelpMessage()});
