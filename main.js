@@ -12,42 +12,45 @@ const constant = require('./res/const.js');
 flash.flashManager(app,__dirname,constant.appName);
 
 function createWindow () {
-  // Create the browser window.
-  let win = new BrowserWindow({
-    width: 960,
-    height: 550,
-    icon: constant.iconPath,
-    title: constant.appName,
-    webPreferences: {
-      nodeIntegration: false,
-      webviewTag: false,
-      plugins: true,
-      javascript: true,
-      contextIsolation: true,
-      enableRemoteModule: false,
-      nodeIntegrationInWorker: true //maybe better performance for more instances in future... Neends testing.
-    }
-  })
-  const ses = win.webContents.session //creating session for cache cleaning later.
+    // Lang setup. Has to be after Ready event.
+    constant.setLocale(app.getLocale());
+    //console.log(app.getLocale());
+    // Create the browser window.
+    let win = new BrowserWindow({
+        width: 960,
+        height: 550,
+        icon: constant.iconPath,
+        title: constant.appName,
+        webPreferences: {
+        nodeIntegration: false,
+        webviewTag: false,
+        plugins: true,
+        javascript: true,
+        contextIsolation: true,
+        enableRemoteModule: false,
+        nodeIntegrationInWorker: true //maybe better performance for more instances in future... Neends testing.
+        }
+    })
+    const ses = win.webContents.session //creating session for cache cleaning later.
 
-  win.loadURL(constant.aqlitePath);
-  win.setTitle("AQLite");
+    win.loadURL(constant.aqlitePath);
+    win.setTitle("AQLite");
 
-  // Keybindings now in keybindings.js
-  keyb.addKeybinding(win, ses);
+    // Keybindings now in keybindings.js
+    keyb.addKeybinding(win, ses);
 
-  win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
-  win.setMenuBarVisibility(false);                //Remove default electron menu
+    win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
+    win.setMenuBarVisibility(false);                //Remove default electron menu
 
-  win.on('closed', () => {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
-    win = null
-  })
+    win.on('closed', () => {
+        // Dereference the window object, usually you would store windows
+        // in an array if your app supports multi windows, this is the time
+        // when you should delete the corresponding element.
+        win = null
+    })
 
-  //Console
-  //win.webContents.openDevTools()
+    //Console
+    //win.webContents.openDevTools()
 }
 
 app.on('ready', createWindow)

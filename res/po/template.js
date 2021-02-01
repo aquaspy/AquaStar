@@ -1,0 +1,6 @@
+exports.helpTitle = ""
+exports.helpMessage = ""
+exports.helpDetail = ""
+exports.aboutTitle = ""
+exports.aboutMessage = ""
+exports.aboutDetail = ""
