@@ -1,6 +1,5 @@
 const {app, BrowserWindow} = require('electron')
 const path                  = require('path')
-//const electronLocalshortcut = require('electron-localshortcut');
 
 const flash    = require('./res/flash.js');
 const keyb  = require('./res/keybindings.js');
@@ -22,13 +21,13 @@ function createWindow () {
         icon: constant.iconPath,
         title: constant.appName,
         webPreferences: {
-        nodeIntegration: false,
-        webviewTag: false,
-        plugins: true,
-        javascript: true,
-        contextIsolation: true,
-        enableRemoteModule: false,
-        nodeIntegrationInWorker: true //maybe better performance for more instances in future... Neends testing.
+            nodeIntegration: false,
+            webviewTag: false,
+            plugins: true,
+            javascript: true,
+            contextIsolation: true,
+            enableRemoteModule: false,
+            nodeIntegrationInWorker: true //maybe better performance for more instances in future... Neends testing.
         }
     })
     const ses = win.webContents.session //creating session for cache cleaning later.
