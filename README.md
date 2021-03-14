@@ -19,7 +19,6 @@ Windows Build
 ### Missing:
 Mac Build
 
-
 ## Why?
 
 Sadly, I know that it is against the TOS to use third party launchers. As long I like AE and AQW, I think that their game needs some of the quality of life improvements in AqLite
