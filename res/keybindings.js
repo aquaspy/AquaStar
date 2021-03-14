@@ -7,10 +7,16 @@ let win;
 
 const addKeybind = function(keybind, func){
     electronLocalshortcut.register(keybind,()=>{
-        if ( win.isFocused() || inst.testForFocus() ){
-            func();
+        if (inst.testForFocus() ) func();
+        try{
+            if (win.isFocused())
+                func();
         }
-    })
+        catch (ex){
+            // Do nothing with it. if the main window does not exist anymore, it would do nothing anyway.
+            // This is to avoid error.
+        }
+    });
 }
 
 const addBinds = function (targetWin, ses){
@@ -18,7 +24,7 @@ const addBinds = function (targetWin, ses){
     addKeybind('Alt+W', ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind('Alt+D', ()=>{inst.newBrowserWindow(constant.designNotes)});
     addKeybind('Alt+A', ()=>{inst.newBrowserWindow(constant.accountAq)});
-    //addKeybind('Alt+P', ()=>{newBrowserWindow(constant.charLookup)});
+    addKeybind('Alt+P', ()=>{inst.newBrowserWindow(constant.charLookup)});
 
     addKeybind('Alt+Y',  ()=>{inst.newTabbedWindow()});
     
@@ -36,7 +42,8 @@ const addBinds = function (targetWin, ses){
     // Toggle Fullscreen
     var toggle = function(focusedWin){
         focusedWin.setFullScreen(!focusedWin.isFullScreen());
-        focusedWin.setMenuBarVisibility(false)
+        focusedWin.setMenuBarVisibility(false);
+        // FIXME TODO - not working on alt A and usual browsers when comming back from Fullscreen (test only for now) 
     };
     addKeybind('F11', ()=>{inst.executeOnFocused(win,toggle)});
 

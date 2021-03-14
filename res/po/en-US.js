@@ -4,7 +4,7 @@ exports.helpDetail =
     'Alt + W - AQW Wiki\n' +
     'Alt + D - AQW Design notes\n' +
     'Alt + A - Account page\n' +
-    //'Alt + P - Character (Player) lookup. You can also just use the in-game lookup.\n' +
+    'Alt + P - Character (Player) lookup. You can also just use the in-game lookup.\n' +
     'Alt + N - Opens a new Aqlite instance.\n' +
     'Alt + Q - Opens a Vanilla AQW instance as in aq.com/game/ (keybind subject to change as its temporary)\n' +
     'Alt + Y - Opens a new Window with the usefull browser pages with tabs, being grouped up so doesnt spam windows. Uses more memory (300mb) tho.\n' +

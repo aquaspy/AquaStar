@@ -16,7 +16,8 @@ exports.pagesPath = 'file://'+ path.join(appRoot, 'pages', 'pages.html');
 exports.wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 exports.accountAq = 'https://account.aq.com/'
 exports.designNotes = 'https://www.aq.com/gamedesignnotes/'
-exports.charLookup = 'https://www.aq.com/character.asp';
+//exports.charLookup = 'https://www.aq.com/character.asp';
+exports.charLookup = 'https://account.aq.com/CharPage';
 
 
 // Show help Function ----------------------------------------------------------------

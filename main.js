@@ -34,7 +34,7 @@ function createWindow () {
     const ses = win.webContents.session //creating session for cache cleaning later.
 
     win.loadURL(constant.aqlitePath);
-    win.setTitle("AQLite");
+    win.setTitle("AquaStar - AQLite");
 
     // Keybindings now in keybindings.js
     keyb.addKeybinding(win, ses);

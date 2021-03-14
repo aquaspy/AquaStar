@@ -1,8 +1,8 @@
 const constant        = require('./const.js');
 const {BrowserWindow} = require('electron');
 
-let altPages = 1;           // Total Aqlite windows opened
 let aqliteWindowArray = []; // Store the alt windows
+let usedAltPagesNumbers = [];
 
 // New page function
 function newBrowserWindow(new_path){
@@ -15,42 +15,51 @@ function newBrowserWindow(new_path){
             'webviewTag': false,
             'javascript': true,
             'contextIsolation': true,
+            //'preload': __dirname + '/../preload.js',
             'enableRemoteModule': false,
             'nodeIntegrationInWorker': true //maybe better performance for more instances in future... Neends testing.
         },
         'icon': constant.iconPath
     });
-    newWin.setMenuBarVisibility(false) //Remove default electron menu
+    newWin.setMenuBarVisibility(false); //Remove default electron menu
+    /*
+    console.log(new_path);
+    console.log( __dirname + '/../preload.js');
+    */
     newWin.loadURL(new_path);
 
-    if (new_path == constant.aqlitePath) {
-        // Its alt window, Put the aqlite title...
-        altPages++;
-        newWin.setTitle("AQLite (Window " + altPages + ")");
-        // ...and add it in the arrays
+    if (new_path == constant.aqlitePath || 
+        new_path == constant.vanillaAQW) {
+        // Its alt window, Put the aqlite/Aqw title...
+        
+        var windowNumber = 2; // As the Main one is 1.
+        
+        for (;usedAltPagesNumbers.includes(windowNumber);windowNumber++){
+             if (windowNumber === 20000) {
+                console.log("just how long is this opened!?!?");
+                break;
+            };
+        }
+        
+        // Deciding the new title name...
+        var winTitle = "";
+        (new_path == constant.aqlitePath) ? 
+            winTitle = "AquaStar - AQLite (Window " + windowNumber + ")" : 
+            winTitle = "AquaStar - Adventure Quest Worlds (Window " + windowNumber + ")";
+        
+        newWin.setTitle(winTitle);
+
+        // ...and add them in the arrays
         aqliteWindowArray.push(newWin);
+        usedAltPagesNumbers.push(windowNumber);
 
         newWin.on('closed', () => {
             // Remove it from array! Will cause problems if not!
             for( var i = 0; i < aqliteWindowArray.length; i++){
                 if ( aqliteWindowArray[i] === newWin) {
                     aqliteWindowArray.splice(i, 1);
-                }
-            }
-        });
-    }
-    else if (new_path == constant.vanillaAQW) {
-        // Its alt window, but for vanilla.
-        altPages++;
-        newWin.setTitle("Adventure Quest Worlds (Window " + altPages + ")");
-        // ...and add it in the arrays
-        aqliteWindowArray.push(newWin);
-
-        newWin.on('closed', () => {
-            // Remove it from array! Will cause problems if not!
-            for( var i = 0; i < aqliteWindowArray.length; i++){
-                if ( aqliteWindowArray[i] === newWin) {
-                    aqliteWindowArray.splice(i, 1);
+                    // For numbering, as the order in both arrays should be the same
+                    usedAltPagesNumbers.splice(i, 1);
                 }
             }
         });
@@ -77,15 +86,22 @@ function newTabbedWindow(){
 }
 
 function executeOnFocused(mainWin, funcForWindow){
-    if(mainWin.isFocused()) {
-        funcForWindow(mainWin);
-        return;
-    }
-    else {
-        for (var i = 0; i < aqliteWindowArray.length; i++){
-            if (aqliteWindowArray[i].isFocused())
-                funcForWindow(aqliteWindowArray[i]);
+    // First the alt windows
+    for (var i = 0; i < aqliteWindowArray.length; i++){
+        if (aqliteWindowArray[i].isFocused()){
+            funcForWindow(aqliteWindowArray[i]);
+            break;
         }
+    }
+    
+    // Now the test for the main one... if doesnt exist it could crash (S.A. keybinding's add keybind func.
+    try{
+        if (mainWin.isFocused())
+            funcForWindow(mainWin);
+    }
+    catch (ex){
+        // Do nothing with it. if the main window does not exist anymore, it would do nothing anyway.
+        // This is to avoid error.
     }
 }
 
