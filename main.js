@@ -1,4 +1,4 @@
-const {app, BrowserWindow} = require('electron')
+const {app, BrowserWindow, session } = require('electron')
 const path                  = require('path')
 
 const flash    = require('./res/flash.js');
@@ -48,6 +48,27 @@ function createWindow () {
         win = null
     })
 
+    // FIX for the "Save PX" Dialog!! Wiki is annoying to use w/o this!
+    session.defaultSession.webRequest.onBeforeRequest(['*://*./*'], function(details, callback) {
+        
+        var test_url = details.url;
+        var check_block_list =/.*adsymptotic\.com\/.*/gi; 
+        var check_white_list =/(account.)?aq.com\/.*/gi;
+        
+        var block_me = check_block_list.test(test_url);
+        var release_me = check_white_list.test(test_url);
+
+        if(release_me){
+            callback({cancel: false})
+        }else if(block_me){
+            callback({cancel: true});
+
+        }else{
+            callback({cancel: false})
+        }
+
+    });
+    
     //Console
     //win.webContents.openDevTools()
 }
