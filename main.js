@@ -27,7 +27,7 @@ function createWindow () {
             javascript: true,
             contextIsolation: true,
             enableRemoteModule: false,
-            nodeIntegrationInWorker: true //maybe better performance for more instances in future... Neends testing.
+            nodeIntegrationInWorker: true //maybe better performance for more instances in future... Needs testing.
         }
     })
     const ses = win.webContents.session //creating session for cache cleaning later.
@@ -50,11 +50,11 @@ function createWindow () {
 
     // FIX for the "Save PX" Dialog!! Wiki is annoying to use w/o this!
     session.defaultSession.webRequest.onBeforeRequest(['*://*./*'], function(details, callback) {
-        
+
         var test_url = details.url;
-        var check_block_list =/.*adsymptotic\.com\/.*/gi; 
+        var check_block_list =/.*adsymptotic\.com\/.*/gi;
         var check_white_list =/(account.)?aq.com\/.*/gi;
-        
+
         var block_me = check_block_list.test(test_url);
         var release_me = check_white_list.test(test_url);
 
@@ -68,7 +68,7 @@ function createWindow () {
         }
 
     });
-    
+
     //Console
     //win.webContents.openDevTools()
 }
