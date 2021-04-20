@@ -62,12 +62,20 @@ function createWindow () {
             callback({cancel: false})
         }else if(block_me){
             callback({cancel: true});
-
         }else{
             callback({cancel: false})
         }
 
     });
+
+    // Enable Flash swf in official char pages. Thanks for /u/gulag1337 for finding this info and posting in reddit. I almost found it myself by accident... oof.
+    const agentTagetFilter = {
+        urls: ['*://*.aq.com/*','*://*.aq.com', '*://aq.com(/*)?',]
+    }
+    session.defaultSession.webRequest.onBeforeSendHeaders(agentTagetFilter, (details, callback) => {
+        details.requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ArtixGameLauncher/2.0.4 Chrome/73.0.3683.121 Electron/5.0.11 Safari/537.36'
+        callback({ requestHeaders: details.requestHeaders })
+    })
 
     //Console
     //win.webContents.openDevTools()
