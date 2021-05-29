@@ -7,6 +7,7 @@ const appName = "AquaStar";
 
 exports.appName = appName;
 exports.appVersion = appVersion;
+exports.appRootPath = appRoot;
 exports.iconPath = path.join(appRoot, 'Icon', 'Icon.png');
 
 exports.aqlitePath = 'file://'+ path.join(appRoot, 'aqlite.swf');

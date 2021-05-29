@@ -96,8 +96,14 @@ function executeOnFocused(mainWin, funcForWindow){
     
     // Now the test for the main one... if doesnt exist it could crash (S.A. keybinding's add keybind func.
     try{
-        if (mainWin.isFocused())
-            funcForWindow(mainWin);
+        if (mainWin.isFocused()){
+            try{
+                funcForWindow(mainWin);    
+            }
+            catch (ex)  {
+                console.log(ex);
+            }
+        }
     }
     catch (ex){
         // Do nothing with it. if the main window does not exist anymore, it would do nothing anyway.

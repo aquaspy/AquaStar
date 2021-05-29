@@ -1,6 +1,7 @@
 node_modules/*
 node_modules
-
+AquaStar Screenshots
+AquaStar Screenshots/*
 # If it's necessary in the future:
 releases/
 build/
