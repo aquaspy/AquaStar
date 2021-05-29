@@ -10,6 +10,7 @@ exports.helpDetail =
     'Alt + Y - Abre uma janela com abas de browser uteis, agrupadas para não abrir muitas janelas. Usa mais memória por consequência. (300mb)\n' +
     'F9 - Sobre AquaStar.\n' +
     'F11 - Ativa/Desativa Fullscreen\n' +
+    'F12 - Printa a tela do jogo (apenas AQW e AQLITE). Eles são salvos na mesma pasta que a executável.\n' +
     'Shift + F5 - Limpa todo o cachê do jogo, alguns cookies, e recarrega a página (pode consertar bugs dentro do jogo).\n\n' +
     'Nota: F1, ou Cmd/Ctrl + H, ou Alt + H Mostra esta mensagem.';
 

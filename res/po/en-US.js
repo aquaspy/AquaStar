@@ -10,6 +10,7 @@ exports.helpDetail =
     'Alt + Y - Opens a new Window with the usefull browser pages with tabs, being grouped up so doesnt spam windows. Uses more memory (300mb) tho.\n' +
     'F9 - About AquaStar.\n' +
     'F11 - Toggles Fullscreen\n' +
+    'F12 - Screenshot the game window (AQW and AQLITE only). They are saved in the same folder as the executable.\n' +
     'Shift + F5 - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
     'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.';
 
