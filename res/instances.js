@@ -17,7 +17,7 @@ function newBrowserWindow(new_path){
             'contextIsolation': true,
             //'preload': __dirname + '/../preload.js',
             'enableRemoteModule': false,
-            'nodeIntegrationInWorker': true //maybe better performance for more instances in future... Neends testing.
+            'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
         },
         'icon': constant.iconPath
     });
@@ -44,7 +44,7 @@ function newBrowserWindow(new_path){
         // Deciding the new title name...
         var winTitle = "";
         (new_path == constant.aqlitePath) ? 
-            winTitle = "AquaStar - AQLite (Window " + windowNumber + ")" : 
+            winTitle = "AquaStar - AQLite " + (constant.isOldAqlite ? '(Older/Custom AQLite Version - ': "(") + "Window " + windowNumber + ")" : 
             winTitle = "AquaStar - Adventure Quest Worlds (Window " + windowNumber + ")";
         
         newWin.setTitle(winTitle);

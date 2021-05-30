@@ -12,6 +12,7 @@ exports.helpDetail =
     'F11 - Toggles Fullscreen\n' +
     'F12 - Screenshot the game window (AQW and AQLITE only). They are saved in the same folder as the executable.\n' +
     'Shift + F5 - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
+    'For an older/custom aqlite file, please name it "aqlite_old.swf" and put it in the same folder as the executable!\n\n' +
     'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.';
 
 exports.aboutTitle = 'About AquaStar Version: '

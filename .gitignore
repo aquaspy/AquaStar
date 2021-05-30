@@ -2,7 +2,11 @@ node_modules/*
 node_modules
 AquaStar Screenshots
 AquaStar Screenshots/*
+aqlite_old*.swf
 # If it's necessary in the future:
 releases/
 build/
 dist/
+
+# dont ask... just personal stuff
+launch.sh

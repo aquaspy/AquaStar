@@ -42,6 +42,7 @@ const flashTrustManager = (app, appRootPath, appName) =>{
 
     trustManager.empty();
     trustManager.add(path.resolve(appRootPath, 'aqlite.swf'));
+    trustManager.add(path.resolve(appRootPath, 'aqlite_old.swf'));
 }
 
 exports.flashManager = flashTrustManager;

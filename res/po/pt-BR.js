@@ -12,6 +12,7 @@ exports.helpDetail =
     'F11 - Ativa/Desativa Fullscreen\n' +
     'F12 - Printa a tela do jogo (apenas AQW e AQLITE). Eles são salvos na mesma pasta que a executável.\n' +
     'Shift + F5 - Limpa todo o cachê do jogo, alguns cookies, e recarrega a página (pode consertar bugs dentro do jogo).\n\n' +
+    'Para um aqlite antigo/customizado, por favor nomeie ele para "aqlite_old.swf" e o coloque na mesma pasta da executável!\n\n' +
     'Nota: F1, ou Cmd/Ctrl + H, ou Alt + H Mostra esta mensagem.';
 
 exports.aboutTitle = 'Sobre o AquaStar, versão: '

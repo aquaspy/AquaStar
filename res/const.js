@@ -1,5 +1,6 @@
-const path = require("path");
+const path   = require("path");
 const locale = require("./locale.js");
+const fs     = require("fs");
 
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
 const appVersion = require('electron').app.getVersion();
@@ -10,7 +11,11 @@ exports.appVersion = appVersion;
 exports.appRootPath = appRoot;
 exports.iconPath = path.join(appRoot, 'Icon', 'Icon.png');
 
-exports.aqlitePath = 'file://'+ path.join(appRoot, 'aqlite.swf');
+exports.aqlitePath = fs.existsSync(path.join(appRoot,'aqlite_old.swf'))? 
+            'file://'+ path.join(appRoot, 'aqlite_old.swf') : 
+            'file://'+ path.join(appRoot, 'aqlite.swf');
+exports.isOldAqlite = fs.existsSync(path.join(appRoot,'aqlite_old.swf'));
+
 exports.vanillaAQW = 'http://aq.com/game/gamefiles/Loader.swf'
 exports.pagesPath = 'file://'+ path.join(appRoot, 'pages', 'pages.html');
 
