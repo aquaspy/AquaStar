@@ -1,5 +1,5 @@
-const {app, BrowserWindow}  = require('electron')
-const path                  = require('path')
+const {app, BrowserWindow, session}  = require('electron')
+const path                           = require('path')
 
 const flash    = require('./res/flash.js');
 const keyb     = require('./res/keybindings.js');
