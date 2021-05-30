@@ -32,7 +32,7 @@ function getPluginName() {
     return pluginName;
 }
 
-const flashTrustManager = (app, appRootPath, appName) =>{
+const flashTrustManager = (app, appRootPath, aqlitePath, appName) =>{
     
     app.commandLine.appendSwitch('ppapi-flash-path', path.join(appRootPath,"FlashPlayer", getPluginName()))
     app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.344');
@@ -41,7 +41,7 @@ const flashTrustManager = (app, appRootPath, appName) =>{
     const trustManager = flashTrust.initSync(appName, flashPath);
 
     trustManager.empty();
-    trustManager.add(path.resolve(appRootPath, 'aqlite.swf'));
+    trustManager.add(aqlitePath);
 }
 
 exports.flashManager = flashTrustManager;

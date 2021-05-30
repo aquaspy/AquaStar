@@ -17,7 +17,7 @@ function newBrowserWindow(new_path){
             'contextIsolation': true,
             //'preload': __dirname + '/../preload.js',
             'enableRemoteModule': false,
-            'nodeIntegrationInWorker': true //maybe better performance for more instances in future... Neends testing.
+            'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
         },
         'icon': constant.iconPath
     });
@@ -44,7 +44,7 @@ function newBrowserWindow(new_path){
         // Deciding the new title name...
         var winTitle = "";
         (new_path == constant.aqlitePath) ? 
-            winTitle = "AquaStar - AQLite (Window " + windowNumber + ")" : 
+            winTitle = "AquaStar - AQLite " + (constant.isOldAqlite ? '(Older/Custom AQLite Version - ': "(") + "Window " + windowNumber + ")" : 
             winTitle = "AquaStar - Adventure Quest Worlds (Window " + windowNumber + ")";
         
         newWin.setTitle(winTitle);
@@ -96,8 +96,14 @@ function executeOnFocused(mainWin, funcForWindow){
     
     // Now the test for the main one... if doesnt exist it could crash (S.A. keybinding's add keybind func.
     try{
-        if (mainWin.isFocused())
-            funcForWindow(mainWin);
+        if (mainWin.isFocused()){
+            try{
+                funcForWindow(mainWin);    
+            }
+            catch (ex)  {
+                console.log(ex);
+            }
+        }
     }
     catch (ex){
         // Do nothing with it. if the main window does not exist anymore, it would do nothing anyway.

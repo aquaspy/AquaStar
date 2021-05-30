@@ -2,6 +2,10 @@ const electronLocalshortcut = require('electron-localshortcut');
 const inst     = require('./instances.js');
 const constant = require('./const.js');
 
+// SS asks for them....
+const fs       = require('fs');
+const path     = require('path');
+
 // Store window info here.
 let win;
 
@@ -47,6 +51,44 @@ const addBinds = function (targetWin, ses){
     };
     addKeybind('F11', ()=>{inst.executeOnFocused(win,toggle)});
 
+    // Print Screen 
+    addKeybind('F12', ()=>{
+        inst.executeOnFocused(win,(focusedWindow) => {
+            // Check to see if we do have an window.
+            if (focusedWindow == null || focusedWindow == undefined) return;
+            focusedWindow.webContents.capturePage(
+                (sshot) => {
+                    console.log("Screenshotting it...");
+                    // Create SS directory if doesnt exist
+                    var ssfolder = constant.sshotPath;
+                    _mkdir(ssfolder);
+                    
+                    // SORT FILENAME BEFORE SAVING
+                    var today = new Date();
+                    var sshotFileName = "Screenshot-"+
+                        today.getFullYear() + "-" +
+                        (today.getMonth() + 1) + "-" +
+                        today.getDate() + "_";
+                    
+                    var extraNumberName = 1;
+                    for (;;extraNumberName++){
+                        if (fs.existsSync( path.join( ssfolder, sshotFileName + extraNumberName + ".png"))){
+                            if (extraNumberName === 10000) {
+                                console.log("10000 prints per day...? wow! Thats a lot!");
+                            }
+                            continue;
+                        }
+                        else {
+                            sshotFileName += extraNumberName + ".png";
+                            fs.writeFileSync(path.join(ssfolder, sshotFileName), sshot.toPNG());
+                            console.log("Done! Saved in" + path.join(ssfolder, sshotFileName));
+                            break;
+                        }
+                    }// Fim for
+                })
+        })
+    });
+    
     // Reload
     var reloadPage = function(focusedWin){focusedWin.reload()};
     addKeybind('F5',                 ()=>{inst.executeOnFocused(win,reloadPage)});
@@ -62,5 +104,18 @@ const addBinds = function (targetWin, ses){
     addKeybind('Alt+1', () => inst.newBrowserWindow('https://play.dragonfable.com/game/DFLoader.swf'));
     // This is a easter egg BTW, congratulations if you found it!
 }
+
+function _mkdir (filepath){ 
+    try { fs.lstatSync(filepath).isDirectory() }
+    catch (ex) {
+        if (ex.code == 'ENOENT') {
+            fs.mkdir(filepath, (err) =>{
+                console.log(err);
+            })
+        }
+        else console.log(ex);
+    }
+}
+
 
 exports.addKeybinding = addBinds;

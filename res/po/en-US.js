@@ -10,8 +10,13 @@ exports.helpDetail =
     'Alt + Y - Opens a new Window with the usefull browser pages with tabs, being grouped up so doesnt spam windows. Uses more memory (300mb) tho.\n' +
     'F9 - About AquaStar.\n' +
     'F11 - Toggles Fullscreen\n' +
+    'F12 - Screenshot the game window (AQW and AQLITE only). They are saved in another folder as detailed below.\n' +
     'Shift + F5 - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
+    'For an older/custom aqlite file, please name it "aqlite_old.swf" and put it in the same folder as the executable, as said below!\n\n' +
     'Note: F1, or Cmd/Ctrl + H, or Alt + H Shows this message.';
+
+exports.helpScreenshot = "Screenshot folder:"
+exports.helpAqliteOld  = "App folder for aqlite_old (can change if user move the application):"
 
 exports.aboutTitle = 'About AquaStar Version: '
 exports.aboutMessage = "Aquastar would not be possible without the help of:";
@@ -25,3 +30,4 @@ exports.aboutDetail =
     'YOU! (Yes, You! Thanks for supporting us!)\n\n' +
     'Note: This is NOT an official Artix product. Artix Entertainment does not recommends it by any means. You are at your own risk using it.\n\n' +
     'You can give your opinion, contribute and follow the project here: '
+

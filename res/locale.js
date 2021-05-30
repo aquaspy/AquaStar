@@ -17,12 +17,14 @@ function detectLang(){
         //TODO - test for similar langs with substringing the Lang using the '-' as a separator.
     }
 
-    exports.getHelpTitle    = langFile.helpTitle;
-    exports.getHelpMessage  = langFile.helpMessage;
-    exports.getHelpDetail   = langFile.helpDetail;
-    exports.getAboutTitle   = langFile.aboutTitle;
-    exports.getAboutMessage = langFile.aboutMessage;
-    exports.getAboutDetail  = langFile.aboutDetail;
+    exports.getHelpTitle        = langFile.helpTitle;
+    exports.getHelpMessage      = langFile.helpMessage;
+    exports.getHelpDetail       = langFile.helpDetail;
+    exports.getHelpScreenshot   = langFile.helpScreenshot;
+    exports.getHelpAqliteOld    = langFile.helpAqliteOld;
+    exports.getAboutTitle       = langFile.aboutTitle;
+    exports.getAboutMessage     = langFile.aboutMessage;
+    exports.getAboutDetail      = langFile.aboutDetail;
 
     return lang;
 }

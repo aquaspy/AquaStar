@@ -1,14 +1,14 @@
-const {app, BrowserWindow, session } = require('electron')
+const {app, BrowserWindow}  = require('electron')
 const path                  = require('path')
 
 const flash    = require('./res/flash.js');
-const keyb  = require('./res/keybindings.js');
+const keyb     = require('./res/keybindings.js');
 const inst     = require('./res/instances.js');
 // Important Variables - in const.js
 const constant = require('./res/const.js');
 
 // Flash stuff is isolated in flash.js
-flash.flashManager(app,__dirname,constant.appName);
+flash.flashManager(app,__dirname,constant.aqlitePath,constant.appName);
 
 function createWindow () {
     // Lang setup. Has to be after Ready event.
@@ -27,13 +27,13 @@ function createWindow () {
             javascript: true,
             contextIsolation: true,
             enableRemoteModule: false,
-            nodeIntegrationInWorker: true //maybe better performance for more instances in future... Needs testing.
+            nodeIntegrationInWorker: false //maybe better performance for more instances in future... Neends testing.
         }
     })
     const ses = win.webContents.session //creating session for cache cleaning later.
 
     win.loadURL(constant.aqlitePath);
-    win.setTitle("AquaStar - AQLite");
+    win.setTitle("AquaStar - AQLite " + (constant.isOldAqlite ? '(Older/Custom AQLite Version)' : ""));
 
     // Keybindings now in keybindings.js
     keyb.addKeybinding(win, ses);

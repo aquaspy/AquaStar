@@ -1,15 +1,29 @@
-const path = require("path");
+const path   = require("path");
+const {app}  = require("electron");
 const locale = require("./locale.js");
+const fs     = require("fs");
 
+/// Inside the app itself. Root of the project
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
+/// Where app is ran from.
+const appCurrentDirectory = process.cwd();
+/// Pictures save location.
+const sshotPath = path.join(app.getPath("pictures"),"AquaStar Screenshots");
 const appVersion = require('electron').app.getVersion();
 const appName = "AquaStar";
 
 exports.appName = appName;
 exports.appVersion = appVersion;
+exports.appRootPath = appRoot;
+exports.appDirectoryPath = appCurrentDirectory;
+exports.sshotPath = sshotPath;
 exports.iconPath = path.join(appRoot, 'Icon', 'Icon.png');
 
-exports.aqlitePath = 'file://'+ path.join(appRoot, 'aqlite.swf');
+exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf'))? 
+            'file://'+ path.join(appCurrentDirectory, 'aqlite_old.swf') : 
+            'file://'+ path.join(appRoot, 'aqlite.swf');
+exports.isOldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
+
 exports.vanillaAQW = 'http://aq.com/game/gamefiles/Loader.swf'
 exports.pagesPath = 'file://'+ path.join(appRoot, 'pages', 'pages.html');
 
@@ -27,7 +41,9 @@ function showHelpMessage(){
         buttons: ['Ok'],
         title:   locale.getHelpTitle,
         message: locale.getHelpMessage,
-        detail:  locale.getHelpDetail,
+        detail:  locale.getHelpDetail + "\n\n" +
+            locale.getHelpScreenshot + sshotPath + "\n" + 
+            locale.getHelpAqliteOld + appCurrentDirectory 
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
@@ -39,7 +55,7 @@ function showAboutMessage(){
         buttons: ['Ok'],
         title:   locale.getAboutTitle + appVersion,
         message: locale.getAboutMessage,
-        detail:  locale.getAboutDetail + 'https://github.com/aquaspy/AquaStar',
+        detail:  locale.getAboutDetail + 'https://github.com/aquaspy/AquaStar\n\n'
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
