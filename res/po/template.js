@@ -1,6 +1,8 @@
 exports.helpTitle = ""
 exports.helpMessage = ""
 exports.helpDetail = ""
+exports.helpScreenshot = ""
+exports.helpAqliteOld  = ""
 exports.aboutTitle = ""
 exports.aboutMessage = ""
 exports.aboutDetail = ""

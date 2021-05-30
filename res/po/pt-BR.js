@@ -10,10 +10,13 @@ exports.helpDetail =
     'Alt + Y - Abre uma janela com abas de browser uteis, agrupadas para não abrir muitas janelas. Usa mais memória por consequência. (300mb)\n' +
     'F9 - Sobre AquaStar.\n' +
     'F11 - Ativa/Desativa Fullscreen\n' +
-    'F12 - Printa a tela do jogo (apenas AQW e AQLITE). Eles são salvos na mesma pasta que a executável.\n' +
+    'F12 - Printa a tela do jogo (apenas AQW e AQLITE). Eles são salvos em uma pasta separada dita abaixo.\n' +
     'Shift + F5 - Limpa todo o cachê do jogo, alguns cookies, e recarrega a página (pode consertar bugs dentro do jogo).\n\n' +
-    'Para um aqlite antigo/customizado, por favor nomeie ele para "aqlite_old.swf" e o coloque na mesma pasta da executável!\n\n' +
+    'Para um aqlite antigo/customizado, por favor nomeie ele para "aqlite_old.swf" e o coloque na mesma pasta da executável, dita abaixo!\n\n' +
     'Nota: F1, ou Cmd/Ctrl + H, ou Alt + H Mostra esta mensagem.';
+
+exports.helpScreenshot = "Pasta dos prints:"
+exports.helpAqliteOld  = "Pasta do app para o aqlite_old (Pode mudar se o usuário mover o aplicativo):"
 
 exports.aboutTitle = 'Sobre o AquaStar, versão: '
 exports.aboutMessage = "Aquastar não seria possível sem a ajuda de:";

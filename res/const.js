@@ -41,7 +41,9 @@ function showHelpMessage(){
         buttons: ['Ok'],
         title:   locale.getHelpTitle,
         message: locale.getHelpMessage,
-        detail:  locale.getHelpDetail,
+        detail:  locale.getHelpDetail + "\n\n" +
+            locale.getHelpScreenshot + sshotPath + "\n" + 
+            locale.getHelpAqliteOld + appCurrentDirectory 
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
@@ -53,7 +55,7 @@ function showAboutMessage(){
         buttons: ['Ok'],
         title:   locale.getAboutTitle + appVersion,
         message: locale.getAboutMessage,
-        detail:  locale.getAboutDetail + 'https://github.com/aquaspy/AquaStar',
+        detail:  locale.getAboutDetail + 'https://github.com/aquaspy/AquaStar\n\n'
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
