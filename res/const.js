@@ -1,20 +1,28 @@
 const path   = require("path");
+const {app}  = require("electron");
 const locale = require("./locale.js");
 const fs     = require("fs");
 
+/// Inside the app itself. Root of the project
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
+/// Where app is ran from.
+const appCurrentDirectory = process.cwd();
+/// Pictures save location.
+const sshotPath = path.join(app.getPath("pictures"),"AquaStar Screenshots");
 const appVersion = require('electron').app.getVersion();
 const appName = "AquaStar";
 
 exports.appName = appName;
 exports.appVersion = appVersion;
 exports.appRootPath = appRoot;
+exports.appDirectoryPath = appCurrentDirectory;
+exports.sshotPath = sshotPath;
 exports.iconPath = path.join(appRoot, 'Icon', 'Icon.png');
 
-exports.aqlitePath = fs.existsSync(path.join(appRoot,'aqlite_old.swf'))? 
-            'file://'+ path.join(appRoot, 'aqlite_old.swf') : 
+exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf'))? 
+            'file://'+ path.join(appCurrentDirectory, 'aqlite_old.swf') : 
             'file://'+ path.join(appRoot, 'aqlite.swf');
-exports.isOldAqlite = fs.existsSync(path.join(appRoot,'aqlite_old.swf'));
+exports.isOldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 
 exports.vanillaAQW = 'http://aq.com/game/gamefiles/Loader.swf'
 exports.pagesPath = 'file://'+ path.join(appRoot, 'pages', 'pages.html');

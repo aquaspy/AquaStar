@@ -1,14 +1,14 @@
-const {app, BrowserWindow} = require('electron')
+const {app, BrowserWindow}  = require('electron')
 const path                  = require('path')
 
 const flash    = require('./res/flash.js');
-const keyb  = require('./res/keybindings.js');
+const keyb     = require('./res/keybindings.js');
 const inst     = require('./res/instances.js');
 // Important Variables - in const.js
 const constant = require('./res/const.js');
 
 // Flash stuff is isolated in flash.js
-flash.flashManager(app,__dirname,constant.appName);
+flash.flashManager(app,__dirname,constant.aqlitePath,constant.appName);
 
 function createWindow () {
     // Lang setup. Has to be after Ready event.

@@ -4,9 +4,10 @@
   "description": "A custom aqlite launcher",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "start":   "electron .",
+    "pack":    "electron-builder --dir",
+    "dist":    "electron-builder",
+    "dist-wl": "electron-builder -wl"
   },
   "keywords": [
     "aqw;",

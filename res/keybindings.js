@@ -59,9 +59,8 @@ const addBinds = function (targetWin, ses){
             focusedWindow.webContents.capturePage(
                 (sshot) => {
                     console.log("Screenshotting it...");
-                    
                     // Create SS directory if doesnt exist
-                    var ssfolder = path.join(constant.appRootPath.toString(), "AquaStar Screenshots");
+                    var ssfolder = constant.sshotPath;
                     _mkdir(ssfolder);
                     
                     // SORT FILENAME BEFORE SAVING
