@@ -30,18 +30,18 @@ const addBinds = function (targetWin, ses){
     addKeybind('Alt+A', ()=>{inst.newBrowserWindow(constant.accountAq)});
     addKeybind('Alt+P', ()=>{inst.newBrowserWindow(constant.charLookup)});
 
-    addKeybind('Alt+Y',  ()=>{inst.newTabbedWindow()});
+    addKeybind('Alt+Y', ()=>{inst.newTabbedWindow()});
     
     // Open new Aqlite window (usefull for alts)
-    addKeybind('Alt+N',  ()=>{inst.newBrowserWindow(constant.aqlitePath)});
-    addKeybind('Alt+Q',  ()=>{inst.newBrowserWindow(constant.vanillaAQW)});
+    addKeybind('Alt+N', ()=>{inst.newBrowserWindow(constant.aqlitePath)});
+    addKeybind('Alt+Q', ()=>{inst.newBrowserWindow(constant.vanillaAQW)});
     
     // Show help message
     addKeybind('Alt+H',              ()=>{constant.showHelpMessage()});
     addKeybind('F1',                 ()=>{constant.showHelpMessage()});
     addKeybind('CommandOrControl+H', ()=>{constant.showHelpMessage()});
     // Show About
-    addKeybind('F9',  ()=>{constant.showAboutMessage()});
+    addKeybind('F9',    ()=>{constant.showAboutMessage()});
 
     // Toggle Fullscreen
     var toggle = function(focusedWin){
@@ -63,29 +63,14 @@ const addBinds = function (targetWin, ses){
                     var ssfolder = constant.sshotPath;
                     _mkdir(ssfolder);
                     
-                    // SORT FILENAME BEFORE SAVING
-                    var today = new Date();
-                    var sshotFileName = "Screenshot-"+
-                        today.getFullYear() + "-" +
-                        (today.getMonth() + 1) + "-" +
-                        today.getDate() + "_";
+                    // Figure out the filename
+                    var sshotFileName = _sshotFileName(ssfolder);
                     
-                    var extraNumberName = 1;
-                    for (;;extraNumberName++){
-                        if (fs.existsSync( path.join( ssfolder, sshotFileName + extraNumberName + ".png"))){
-                            if (extraNumberName === 10000) {
-                                console.log("10000 prints per day...? wow! Thats a lot!");
-                            }
-                            continue;
-                        }
-                        else {
-                            sshotFileName += extraNumberName + ".png";
-                            fs.writeFileSync(path.join(ssfolder, sshotFileName), sshot.toPNG());
-                            console.log("Done! Saved in" + path.join(ssfolder, sshotFileName));
-                            break;
-                        }
-                    }// Fim for
-                })
+                    // Save it.
+                    fs.writeFileSync(path.join(ssfolder, sshotFileName), sshot.toPNG());
+                    console.log("Done! Saved in " + path.join(ssfolder, sshotFileName));
+                }
+            );
         })
     });
     
@@ -117,5 +102,27 @@ function _mkdir (filepath){
     }
 }
 
+function _sshotFileName (ssfolder) {
+    var today = new Date();
+    var pre_name = "Screenshot-" +
+        today.getFullYear() + "-" +
+        (today.getMonth() + 1) + "-" +
+        today.getDate() + "_";
+    
+    // Find the number for it
+    var extraNumberName = 1;
+    for (;;extraNumberName++){
+        if (fs.existsSync( path.join( ssfolder, pre_name + extraNumberName + ".png"))){
+            if (extraNumberName === 10000) {
+                console.log("10000 prints per day...? wow! Thats a lot!");
+            }
+            continue;
+        }
+        else {
+            break;
+        }
+    }
+    return pre_name + extraNumberName + ".png";
+}
 
 exports.addKeybinding = addBinds;
