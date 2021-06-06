@@ -11,16 +11,7 @@ let win;
 
 const addKeybind = function(keybind, func, considerDF = false){
     electronLocalshortcut.register(keybind,()=>{
-        inst.executeOnFocused(win, func, considerDF)/*
-        if (inst.testForFocus() ) func();
-        try{
-            if (win.isFocused())
-                func();
-        }
-        catch (ex){
-            // Do nothing with it. if the main window does not exist anymore, it would do nothing anyway.
-            // This is to avoid error.
-        }*/
+        inst.executeOnFocused(win, func, considerDF);
     });
 }
 
@@ -45,40 +36,35 @@ const addBinds = function (targetWin, ses){
     addKeybind('F9',    ()=>{constant.showAboutMessage()});
 
     // Toggle Fullscreen
-    var toggle = function(focusedWin){
+    addKeybind('F11', (focusedWin) => {
         focusedWin.setFullScreen(!focusedWin.isFullScreen());
         focusedWin.setMenuBarVisibility(false);
         // FIXME TODO - not working on alt A and usual browsers when comming back from Fullscreen (test only for now) 
-    };
-    addKeybind('F11', ()=>{inst.executeOnFocused(win,toggle)});
+    });
 
     // Print Screen 
-    addKeybind('F12', ()=>{
-        inst.executeOnFocused(win,(focusedWindow) => {
-            // Check to see if we do have an window.
-            if (focusedWindow == null || focusedWindow == undefined) return;
-            focusedWindow.webContents.capturePage(
-                (sshot) => {
-                    console.log("Screenshotting it...");
-                    // Create SS directory if doesnt exist
-                    var ssfolder = constant.sshotPath;
-                    _mkdir(ssfolder);
-                    
-                    // Figure out the filename
-                    var sshotFileName = _sshotFileName(ssfolder);
-                    
-                    // Save it.
-                    fs.writeFileSync(path.join(ssfolder, sshotFileName), sshot.toPNG());
-                    console.log("Done! Saved in " + path.join(ssfolder, sshotFileName));
-                }
-            );
-        }, true); // So dragonfable has SS
-    });
+    addKeybind('F12', (focusedWin)=>{
+        focusedWin.webContents.capturePage(
+            (sshot) => {
+                console.log("Screenshotting it...");
+                // Create SS directory if doesnt exist
+                var ssfolder = constant.sshotPath;
+                _mkdir(ssfolder);
+                
+                // Figure out the filename
+                var sshotFileName = _sshotFileName(ssfolder);
+                
+                // Save it.
+                fs.writeFileSync(path.join(ssfolder, sshotFileName), sshot.toPNG());
+                console.log("Done! Saved in " + path.join(ssfolder, sshotFileName));
+            }
+        );
+    }, true); // So dragonfable has SS
     
     // Reload
     var reloadPage = function(focusedWin){focusedWin.reload()};
-    addKeybind('F5',                 ()=>{inst.executeOnFocused(win,reloadPage)});
-    addKeybind('CommandOrControl+R', ()=>{inst.executeOnFocused(win,reloadPage)});
+    addKeybind('F5',                reloadPage);
+    addKeybind('CommandOrControl+R',reloadPage);
     // Reload and Clear cache
     addKeybind('Shift+F5', () => {
         ses.flushStorageData() //writing some data from memory to disk before cleaning
