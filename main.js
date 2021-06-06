@@ -8,28 +8,14 @@ const inst     = require('./res/instances.js');
 const constant = require('./res/const.js');
 
 // Flash stuff is isolated in flash.js
-flash.flashManager(app,__dirname,constant.aqlitePath,constant.appName);
+flash.flashManager(app, __dirname, constant.aqlitePath, constant.appName);
 
 function createWindow () {
     // Lang setup. Has to be after Ready event.
     constant.setLocale(app.getLocale());
     //console.log(app.getLocale());
     // Create the browser window.
-    let win = new BrowserWindow({
-        width: 960,
-        height: 550,
-        icon: constant.iconPath,
-        title: constant.appName,
-        webPreferences: {
-            nodeIntegration: false,
-            webviewTag: false,
-            plugins: true,
-            javascript: true,
-            contextIsolation: true,
-            enableRemoteModule: false,
-            nodeIntegrationInWorker: false //maybe better performance for more instances in future... Neends testing.
-        }
-    })
+    let win = new BrowserWindow(constant.mainConfig);
     const ses = win.webContents.session //creating session for cache cleaning later.
 
     win.loadURL(constant.aqlitePath);

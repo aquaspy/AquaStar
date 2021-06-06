@@ -1,31 +1,12 @@
 const constant        = require('./const.js');
 const {BrowserWindow} = require('electron');
 
-let aqliteWindowArray = []; // Store the alt windows
 let usedAltPagesNumbers = [];
 
 // New page function
 function newBrowserWindow(new_path){
-    const newWin = new BrowserWindow({
-        'width': 960,
-        'height': 550,
-        'webPreferences': {
-            'plugins': true,
-            'nodeIntegration': false,
-            'webviewTag': false,
-            'javascript': true,
-            'contextIsolation': true,
-            //'preload': __dirname + '/../preload.js',
-            'enableRemoteModule': false,
-            'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
-        },
-        'icon': constant.iconPath
-    });
+    const newWin = new BrowserWindow(constant.winConfig);
     newWin.setMenuBarVisibility(false); //Remove default electron menu
-    /*
-    console.log(new_path);
-    console.log( __dirname + '/../preload.js');
-    */
     newWin.loadURL(new_path);
 
     if (new_path == constant.aqlitePath || 
@@ -49,66 +30,42 @@ function newBrowserWindow(new_path){
         
         newWin.setTitle(winTitle);
 
-        // ...and add them in the arrays
-        aqliteWindowArray.push(newWin);
+        // Storing and Removing the window number from a list.
         usedAltPagesNumbers.push(windowNumber);
-
         newWin.on('closed', () => {
-            // Remove it from array! Will cause problems if not!
-            for( var i = 0; i < aqliteWindowArray.length; i++){
-                if ( aqliteWindowArray[i] === newWin) {
-                    aqliteWindowArray.splice(i, 1);
-                    // For numbering, as the order in both arrays should be the same
-                    usedAltPagesNumbers.splice(i, 1);
-                }
-            }
+            usedAltPagesNumbers.splice(
+                usedAltPagesNumbers.indexOf(windowNumber), 1);
         });
+    }
+    if (new_path == constant.df_url) {
+        newWin.setTitle("AquaStar - DragonFable");
     }
 }
 
 function newTabbedWindow(){
-    const newWin = new BrowserWindow({
-        'width': 960,
-        'height': 550,
-        'webPreferences': {
-            'plugins': true,
-            'nodeIntegration': false,
-            'webviewTag': true,
-            'javascript': true,
-            'contextIsolation': true,
-            'enableRemoteModule': false,
-            'nodeIntegrationInWorker': true //maybe better performance for more instances in future... Neends testing.
-        },
-        'icon': constant.iconPath
-    });
+    const newWin = new BrowserWindow(constant.tabbedConfig);
     newWin.setMenuBarVisibility(false) //Remove default electron menu
     newWin.loadURL(constant.pagesPath);
 }
 
-function executeOnFocused(mainWin, funcForWindow){
-    // First the alt windows
-    for (var i = 0; i < aqliteWindowArray.length; i++){
-        if (aqliteWindowArray[i].isFocused()){
-            funcForWindow(aqliteWindowArray[i]);
-            break;
-        }
+function executeOnFocused(mainWin, funcForWindow, considerDF = false){
+    // Friendly reminder for BrowserWindow.getAllWindows() existing
+
+    var focusedWindow = BrowserWindow.getFocusedWindow();
+    if (focusedWindow === null) {
+        // No AquaStar Windows are focused. Do nothing.
+        return;
     }
     
-    // Now the test for the main one... if doesnt exist it could crash (S.A. keybinding's add keybind func.
-    try{
-        if (mainWin.isFocused()){
-            try{
-                funcForWindow(mainWin);    
-            }
-            catch (ex)  {
-                console.log(ex);
-            }
-        }
+    // Test Time! Only game windows can have keybindings
+    var u = focusedWindow.webContents.getURL();
+    if (u == constant.aqlitePath || u == constant.vanillaAQW) {
+        funcForWindow(focusedWindow);
     }
-    catch (ex){
-        // Do nothing with it. if the main window does not exist anymore, it would do nothing anyway.
-        // This is to avoid error.
+    else if (considerDF && u === constant.df_url) {
+        funcForWindow(focusedWindow);
     }
+    // Every other URL are websites. Keep that in mind...
 }
 
 // Test if the window focused is a Aqlite window (more like if
