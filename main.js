@@ -15,21 +15,7 @@ function createWindow () {
     constant.setLocale(app.getLocale());
     //console.log(app.getLocale());
     // Create the browser window.
-    let win = new BrowserWindow({
-        width: 960,
-        height: 550,
-        icon: constant.iconPath,
-        title: constant.appName,
-        webPreferences: {
-            nodeIntegration: false,
-            webviewTag: false,
-            plugins: true,
-            javascript: true,
-            contextIsolation: true,
-            enableRemoteModule: false,
-            nodeIntegrationInWorker: false //maybe better performance for more instances in future... Neends testing.
-        }
-    })
+    let win = new BrowserWindow(constant.mainConfig);
     const ses = win.webContents.session //creating session for cache cleaning later.
 
     win.loadURL(constant.aqlitePath);

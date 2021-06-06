@@ -3,6 +3,7 @@ const {BrowserWindow} = require('electron');
 
 let aqliteWindowArray = []; // Store the alt windows
 let usedAltPagesNumbers = [];
+let dfWindowArray = []; // Yeah... forgot about DF
 
 // New page function
 function newBrowserWindow(new_path){
@@ -67,20 +68,7 @@ function newBrowserWindow(new_path){
 }
 
 function newTabbedWindow(){
-    const newWin = new BrowserWindow({
-        'width': 960,
-        'height': 550,
-        'webPreferences': {
-            'plugins': true,
-            'nodeIntegration': false,
-            'webviewTag': true,
-            'javascript': true,
-            'contextIsolation': true,
-            'enableRemoteModule': false,
-            'nodeIntegrationInWorker': true //maybe better performance for more instances in future... Neends testing.
-        },
-        'icon': constant.iconPath
-    });
+    const newWin = new BrowserWindow(constant.tabbedConfig);
     newWin.setMenuBarVisibility(false) //Remove default electron menu
     newWin.loadURL(constant.pagesPath);
 }

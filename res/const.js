@@ -11,13 +11,14 @@ const appCurrentDirectory = process.cwd();
 const sshotPath = path.join(app.getPath("pictures"),"AquaStar Screenshots");
 const appVersion = require('electron').app.getVersion();
 const appName = "AquaStar";
+const iconPath = path.join(appRoot, 'Icon', 'Icon.png');
 
 exports.appName = appName;
 exports.appVersion = appVersion;
 exports.appRootPath = appRoot;
 exports.appDirectoryPath = appCurrentDirectory;
 exports.sshotPath = sshotPath;
-exports.iconPath = path.join(appRoot, 'Icon', 'Icon.png');
+exports.iconPath = iconPath;
 
 exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf'))? 
             'file://'+ path.join(appCurrentDirectory, 'aqlite_old.swf') : 
@@ -33,7 +34,53 @@ exports.designNotes = 'https://www.aq.com/gamedesignnotes/'
 //exports.charLookup = 'https://www.aq.com/character.asp';
 exports.charLookup = 'https://account.aq.com/CharPage';
 
+// For customizing windows themselfs
+exports.tabbedConfig = {
+    'width': 960,
+    'height': 550,
+    'webPreferences': {
+        'plugins': true,
+        'nodeIntegration': false,
+        'webviewTag': true,
+        'javascript': true,
+        'contextIsolation': true,
+        'enableRemoteModule': false,
+        'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
+    },
+    'icon': iconPath
+}
 
+exports.winConfig = {
+    'width': 960,
+    'height': 550,
+    'webPreferences': {
+        'plugins': true,
+        'nodeIntegration': false,
+        'webviewTag': false,
+        'javascript': true,
+        'contextIsolation': true,
+        //'preload': __dirname + '/../preload.js',
+        'enableRemoteModule': false,
+        'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
+    },
+    'icon': iconPath
+}
+
+exports.mainConfig = {
+    width: 960,
+    height: 550,
+    icon: iconPath,
+    title: appName,
+    webPreferences: {
+        nodeIntegration: false,
+        webviewTag: false,
+        plugins: true,
+        javascript: true,
+        contextIsolation: true,
+        enableRemoteModule: false,
+        nodeIntegrationInWorker: false //maybe better performance for more instances in future... Neends testing.
+    }
+    }
 // Show help Function ----------------------------------------------------------------
 function showHelpMessage(){
     const { dialog } = require('electron')
