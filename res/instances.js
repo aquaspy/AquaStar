@@ -37,6 +37,9 @@ function newBrowserWindow(new_path){
                 usedAltPagesNumbers.indexOf(windowNumber), 1);
         });
     }
+    if (new_path == constant.df_url) {
+        newWin.setTitle("AquaStar - DragonFable");
+    }
 }
 
 function newTabbedWindow(){
@@ -56,12 +59,10 @@ function executeOnFocused(mainWin, funcForWindow, considerDF = false){
     
     // Test Time! Only game windows can have keybindings
     var u = focusedWindow.webContents.getURL();
-    console.log(u);
     if (u == constant.aqlitePath || u == constant.vanillaAQW) {
         funcForWindow(focusedWindow);
     }
     else if (considerDF && u === constant.df_url) {
-        console.log("tried");
         funcForWindow(focusedWindow);
     }
     // Every other URL are websites. Keep that in mind...
