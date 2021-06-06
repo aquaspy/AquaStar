@@ -26,7 +26,8 @@ exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf
 exports.isOldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 
 exports.vanillaAQW = 'http://aq.com/game/gamefiles/Loader.swf'
-exports.pagesPath = 'file://'+ path.join(appRoot, 'pages', 'pages.html');
+exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf'
+exports.pagesPath  = 'file://'+ path.join(appRoot, 'pages', 'pages.html');
 
 exports.wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 exports.accountAq = 'https://account.aq.com/'

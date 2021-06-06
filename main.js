@@ -8,7 +8,7 @@ const inst     = require('./res/instances.js');
 const constant = require('./res/const.js');
 
 // Flash stuff is isolated in flash.js
-flash.flashManager(app,__dirname,constant.aqlitePath,constant.appName);
+flash.flashManager(app, __dirname, constant.aqlitePath, constant.appName);
 
 function createWindow () {
     // Lang setup. Has to be after Ready event.

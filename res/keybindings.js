@@ -9,8 +9,9 @@ const path     = require('path');
 // Store window info here.
 let win;
 
-const addKeybind = function(keybind, func){
+const addKeybind = function(keybind, func, considerDF = false){
     electronLocalshortcut.register(keybind,()=>{
+        inst.executeOnFocused(win, func, considerDF)/*
         if (inst.testForFocus() ) func();
         try{
             if (win.isFocused())
@@ -19,7 +20,7 @@ const addKeybind = function(keybind, func){
         catch (ex){
             // Do nothing with it. if the main window does not exist anymore, it would do nothing anyway.
             // This is to avoid error.
-        }
+        }*/
     });
 }
 
@@ -71,7 +72,7 @@ const addBinds = function (targetWin, ses){
                     console.log("Done! Saved in " + path.join(ssfolder, sshotFileName));
                 }
             );
-        })
+        }, true); // So dragonfable has SS
     });
     
     // Reload
@@ -86,8 +87,7 @@ const addBinds = function (targetWin, ses){
     })
     
     // Yay, AquaSP can have his DF too!
-    addKeybind('Alt+1', () => inst.newBrowserWindow('https://play.dragonfable.com/game/DFLoader.swf'));
-    // This is a easter egg BTW, congratulations if you found it!
+    addKeybind('Alt+1', () => inst.newBrowserWindow(constant.df_url));
 }
 
 function _mkdir (filepath){ 

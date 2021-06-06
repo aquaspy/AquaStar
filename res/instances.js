@@ -1,27 +1,12 @@
 const constant        = require('./const.js');
 const {BrowserWindow} = require('electron');
 
-let aqliteWindowArray = []; // Store the alt windows
+let aqliteWindowArray   = []; // Store the alt windows
 let usedAltPagesNumbers = [];
-let dfWindowArray = []; // Yeah... forgot about DF
 
 // New page function
 function newBrowserWindow(new_path){
-    const newWin = new BrowserWindow({
-        'width': 960,
-        'height': 550,
-        'webPreferences': {
-            'plugins': true,
-            'nodeIntegration': false,
-            'webviewTag': false,
-            'javascript': true,
-            'contextIsolation': true,
-            //'preload': __dirname + '/../preload.js',
-            'enableRemoteModule': false,
-            'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
-        },
-        'icon': constant.iconPath
-    });
+    const newWin = new BrowserWindow(constant.winConfig);
     newWin.setMenuBarVisibility(false); //Remove default electron menu
     /*
     console.log(new_path);
@@ -73,13 +58,16 @@ function newTabbedWindow(){
     newWin.loadURL(constant.pagesPath);
 }
 
-function executeOnFocused(mainWin, funcForWindow){
+function executeOnFocused(mainWin, funcForWindow, considerDF = false){
     // First the alt windows
     for (var i = 0; i < aqliteWindowArray.length; i++){
         if (aqliteWindowArray[i].isFocused()){
             funcForWindow(aqliteWindowArray[i]);
             break;
         }
+    }
+    if (considerDF) {
+        
     }
     
     // Now the test for the main one... if doesnt exist it could crash (S.A. keybinding's add keybind func.
