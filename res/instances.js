@@ -1,14 +1,15 @@
 const constant        = require('./const.js');
-const {BrowserWindow} = require('electron');
+const {BrowserWindow, Menu} = require('electron');
 
 let usedAltPagesNumbers = [];
 
 // New page function
 function newBrowserWindow(new_path){
-    const newWin = new BrowserWindow(constant.winConfig);
+    const config = (new_path == constant.pagesPath)? constant.tabbedConfig : constant.winConfig;
+    const newWin = new BrowserWindow(config);
     newWin.setMenuBarVisibility(false); //Remove default electron menu
     newWin.loadURL(new_path);
-
+    
     if (new_path == constant.aqlitePath || 
         new_path == constant.vanillaAQW) {
         // Its alt window, Put the aqlite/Aqw title...
@@ -37,18 +38,21 @@ function newBrowserWindow(new_path){
                 usedAltPagesNumbers.indexOf(windowNumber), 1);
         });
     }
-    if (new_path == constant.df_url) {
+    else if (new_path == constant.df_url) {
         newWin.setTitle("AquaStar - DragonFable");
+    }
+    else if (new_path != constant.pagesPath) {
+        /// Its a usual HTML page window then! features incomming
+        /// ... but only if its win or lunix. Mac doesnt have the feature -_-
+        /// Mac still get keybinds tho, just not the menu.
+        newWin.setMenuBarVisibility(true);
+        
+        /// Keybinds are on the keybinds file.
     }
 }
 
-function newTabbedWindow(){
-    const newWin = new BrowserWindow(constant.tabbedConfig);
-    newWin.setMenuBarVisibility(false) //Remove default electron menu
-    newWin.loadURL(constant.pagesPath);
-}
-
-function executeOnFocused(mainWin, funcForWindow, considerDF = false){
+/// GAME WINDOW ONLY
+function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
     // Friendly reminder for BrowserWindow.getAllWindows() existing
 
     var focusedWindow = BrowserWindow.getFocusedWindow();
@@ -56,16 +60,23 @@ function executeOnFocused(mainWin, funcForWindow, considerDF = false){
         // No AquaStar Windows are focused. Do nothing.
         return;
     }
+    // Is it a game or is it a HTML..?
+    var isGame = _isGameWindow(focusedWindow.webContents.getURL(), considerDF);
     
-    // Test Time! Only game windows can have keybindings
-    var u = focusedWindow.webContents.getURL();
-    if (u == constant.aqlitePath || u == constant.vanillaAQW) {
-        funcForWindow(focusedWindow);
+    // Compacting of the XOR gave me this... LOOL
+    if (onlyHtml == !isGame) funcForWindow(focusedWindow);
+    
+}
+
+/// ANY APP WINDOW WILL DO
+function executeOnAnyFocused(funcForWindow){
+    // NO FUNCTION USES IT, HERE FOR THE FUTURE!
+    var focusedWindow = BrowserWindow.getFocusedWindow();
+    if (focusedWindow === null) {
+        // No AquaStar Windows are focused. Do nothing.
+        return;
     }
-    else if (considerDF && u === constant.df_url) {
-        funcForWindow(focusedWindow);
-    }
-    // Every other URL are websites. Keep that in mind...
+    funcForWindow(focusedWindow);
 }
 
 // Test if the window focused is a Aqlite window (more like if
@@ -77,8 +88,26 @@ function testForFocus(){
     return false;
 }
 
-exports.newTabbedWindow = newTabbedWindow;
+function _isGameWindow(url, considerDF = true){
+    if (url == constant.aqlitePath) return true;
+    if (url == constant.vanillaAQW) return true;
+    if (considerDF && u === constant.df_url) {
+        return true;
+    }
+    
+    return false;
+}
+
+exports.navFunction = (isFoward) => {
+    if (!isFoward) executeOnFocused((focusedWindow) => {
+        if (focusedWindow.webContents.canGoBack()) focusedWindow.webContents.goBack();
+    },true);
+    else executeOnFocused((focusedWindow) => {
+        if (focusedWindow.webContents.canGoForward()) focusedWindow.webContents.goForward();
+    },true);
+}
+
 exports.newBrowserWindow = newBrowserWindow;
 
-exports.testForFocus = testForFocus;
-exports.executeOnFocused = executeOnFocused;
+exports.testForFocus        = testForFocus;
+exports.executeOnFocused    = executeOnFocused;

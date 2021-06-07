@@ -6,23 +6,21 @@ const constant = require('./const.js');
 const fs       = require('fs');
 const path     = require('path');
 
-// Store window info here.
-let win;
-
-const addKeybind = function(keybind, func, considerDF = false){
-    electronLocalshortcut.register(keybind,()=>{
-        inst.executeOnFocused(win, func, considerDF);
+const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false){
+    electronLocalshortcut.register(keybind,() => {
+        inst.executeOnFocused(func, onlyHTML, considerDF);
     });
 }
 
-const addBinds = function (targetWin, ses){
-    win = targetWin;
+const addBinds = function (){
+    // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
     addKeybind('Alt+W', ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind('Alt+D', ()=>{inst.newBrowserWindow(constant.designNotes)});
     addKeybind('Alt+A', ()=>{inst.newBrowserWindow(constant.accountAq)});
     addKeybind('Alt+P', ()=>{inst.newBrowserWindow(constant.charLookup)});
 
-    addKeybind('Alt+Y', ()=>{inst.newTabbedWindow()});
+    // Function knows how to load it.
+    addKeybind('Alt+Y', ()=>{inst.newBrowserWindow(constant.pagesPath)});
     
     // Open new Aqlite window (usefull for alts)
     addKeybind('Alt+N', ()=>{inst.newBrowserWindow(constant.aqlitePath)});
@@ -33,13 +31,14 @@ const addBinds = function (targetWin, ses){
     addKeybind('F1',                 ()=>{constant.showHelpMessage()});
     addKeybind('CommandOrControl+H', ()=>{constant.showHelpMessage()});
     // Show About
-    addKeybind('F9',    ()=>{constant.showAboutMessage()});
+    addKeybind('F9',                 ()=>{constant.showAboutMessage()});
 
     // Toggle Fullscreen
     addKeybind('F11', (focusedWin) => {
         focusedWin.setFullScreen(!focusedWin.isFullScreen());
-        focusedWin.setMenuBarVisibility(false);
-        // FIXME TODO - not working on alt A and usual browsers when comming back from Fullscreen (test only for now) 
+        
+        if (process.platform != 'darwin') focusedWin.setMenuBarVisibility(false);
+        // As only wiki and so should have menubars, do not show them on game windows (that can be Fullscreen)
     });
 
     // Print Screen 
@@ -59,21 +58,28 @@ const addBinds = function (targetWin, ses){
                 console.log("Done! Saved in " + path.join(ssfolder, sshotFileName));
             }
         );
-    }, true); // So dragonfable has SS
+    },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
     
     // Reload
     var reloadPage = function(focusedWin){focusedWin.reload()};
     addKeybind('F5',                reloadPage);
     addKeybind('CommandOrControl+R',reloadPage);
     // Reload and Clear cache
-    addKeybind('Shift+F5', () => {
+    addKeybind('Shift+F5', (focusedWin) => {
+        var ses = focusedWin.webContents.session;
         ses.flushStorageData() //writing some data from memory to disk before cleaning
         ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
-        inst.executeOnFocused(win,reloadPage)
+        focusedWin.reload();
     })
     
     // Yay, AquaSP can have his DF too!
     addKeybind('Alt+1', () => inst.newBrowserWindow(constant.df_url));
+    
+    // FORCED KEYBINDS FOR MAC. NEEDS TESTING
+    if (process.platform == 'darwin'){
+        addKeybind('Alt+B', inst.navFunction(false), true);
+        addKeybind('Alt+F', inst.navFunction(true ), true);
+    }
 }
 
 function _mkdir (filepath){ 

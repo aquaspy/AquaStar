@@ -25,7 +25,7 @@ exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf
             'file://'+ path.join(appRoot, 'aqlite.swf');
 exports.isOldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 
-exports.vanillaAQW = 'http://aq.com/game/gamefiles/Loader.swf'
+exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf'
 exports.pagesPath  = 'file://'+ path.join(appRoot, 'pages', 'pages.html');
 
@@ -50,7 +50,6 @@ exports.tabbedConfig = {
     },
     'icon': iconPath
 }
-
 exports.winConfig = {
     'width': 960,
     'height': 550,
@@ -66,7 +65,6 @@ exports.winConfig = {
     },
     'icon': iconPath
 }
-
 exports.mainConfig = {
     width: 960,
     height: 550,
@@ -81,7 +79,31 @@ exports.mainConfig = {
         enableRemoteModule: false,
         nodeIntegrationInWorker: false //maybe better performance for more instances in future... Neends testing.
     }
-    }
+}
+
+exports.getMenu = (navFunc) => {
+    // needs to be like that as the function is located on instances... arg is isFoward
+    // Mac uses a forced keybind here, while the others can use the & symbol and have the same keybind NATIVE to the app.
+    if (process.platform == 'darwin') return null;
+    return [
+        {
+            label: '<<< &Backward',
+            click() {
+                navFunc(false);
+            } 
+
+        },
+        {
+            label: '>>> &Forward',
+            click() {
+                navFunc(true);
+            }
+        }
+    ];
+}
+
+
+
 // Show help Function ----------------------------------------------------------------
 function showHelpMessage(){
     const { dialog } = require('electron')
