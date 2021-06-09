@@ -21,6 +21,8 @@ rm -rf dist
 cd ..
 
 #WINDOWS TIME
+# first, lets delete old FlashPlayer
+rm -f ${buildfolder}/FlashPlayer/*
 cp FlashPlayer/pepflashplayer.dll ${buildfolder}/FlashPlayer/
 cd ${buildfolder}
 npm run dist-w
