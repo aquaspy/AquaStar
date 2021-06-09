@@ -5,7 +5,7 @@ AquaStar Screenshots/*
 aqlite_old*.swf
 # If it's necessary in the future:
 releases/
-build/
+out/
 dist/
 
 # dont ask... just personal stuff

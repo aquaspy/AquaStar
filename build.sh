@@ -3,15 +3,17 @@
 # MADE BY DOUBLE STAR FOR PERSONAL COMPILING USAGE. COULD BE MADE BETTER ONE DAY... (makefile)
 # 64BITS ONLY SCRIPT
 
-rm -rf ./build
-mkdir -p ./build
-cp -r Icon/ LICENSE.md node_modules pages res aqlite.swf main.js package*.json build/
+buildfolder="out"
+
+rm -rf ./${buildfolder}
+mkdir -p ./${buildfolder}
+cp -r Icon/ LICENSE.md node_modules pages res aqlite.swf main.js package*.json ${buildfolder}/
 
 # First Lunix
-mkdir -p ./build/FlashPlayer
-cp FlashPlayer/libpepflashplayer.so build/FlashPlayer/
+mkdir -p ./${buildfolder}/FlashPlayer
+cp FlashPlayer/libpepflashplayer.so ${buildfolder}/FlashPlayer/
 # BUILD
-cd build
+cd ${buildfolder}
 npm run dist-l
 cp dist/AquaStar*.AppImage ../
 rm -rf dist

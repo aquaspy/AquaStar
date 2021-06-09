@@ -11,13 +11,19 @@ const appCurrentDirectory = process.cwd();
 const sshotPath = path.join(app.getPath("pictures"),"AquaStar Screenshots");
 const appVersion = require('electron').app.getVersion();
 const appName = "AquaStar";
-const iconPath = path.join(appRoot, 'Icon', 'Icon.png');
+const iconPath = path.join(appRoot, 'Icon', 'Icon_1024.png');
 
 exports.appName = appName;
 exports.appVersion = appVersion;
 exports.appRootPath = appRoot;
 exports.appDirectoryPath = appCurrentDirectory;
 exports.sshotPath = sshotPath;
+
+/// Icon Stuff
+const nativeImage = require('electron').nativeImage;
+var iconImage = nativeImage.createFromPath(iconPath);
+    iconImage.setTemplateImage(true);
+    
 exports.iconPath = iconPath;
 
 exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf'))? 
@@ -48,7 +54,7 @@ exports.tabbedConfig = {
         'enableRemoteModule': false,
         'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
     },
-    'icon': iconPath
+    'icon': iconImage
 }
 exports.winConfig = {
     'width': 960,
@@ -63,12 +69,12 @@ exports.winConfig = {
         'enableRemoteModule': false,
         'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
     },
-    'icon': iconPath
+    'icon': iconImage
 }
 exports.mainConfig = {
     width: 960,
     height: 550,
-    icon: iconPath,
+    icon: iconImage,
     title: appName,
     webPreferences: {
         nodeIntegration: false,
