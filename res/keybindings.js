@@ -1,4 +1,4 @@
-const electronLocalshortcut = require('electron-localshortcut');
+const {globalShortcut} = require('electron');
 const inst     = require('./instances.js');
 const constant = require('./const.js');
 
@@ -7,9 +7,10 @@ const fs       = require('fs');
 const path     = require('path');
 
 const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false){
-    electronLocalshortcut.register(keybind,() => {
+    var ret = globalShortcut.register(keybind, () => {
         inst.executeOnFocused(func, onlyHTML, considerDF);
-    });
+    })
+    if (!ret) console.log("WARNING: failed to bind " + keybind);
 }
 
 const addBinds = function (){
@@ -42,7 +43,7 @@ const addBinds = function (){
     });
 
     // Print Screen 
-    addKeybind('F12', (focusedWin)=>{
+    addKeybind('F2', (focusedWin)=>{
         focusedWin.webContents.capturePage(
             (sshot) => {
                 console.log("Screenshotting it...");
