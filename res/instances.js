@@ -62,10 +62,9 @@ function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
     }
     // Is it a game or is it a HTML..?
     var isGame = _isGameWindow(focusedWindow.webContents.getURL(), considerDF);
-    
+
     // Compacting of the XOR gave me this... LOOL
     if (onlyHtml == !isGame) funcForWindow(focusedWindow);
-    
 }
 
 /// ANY APP WINDOW WILL DO
@@ -89,22 +88,19 @@ function testForFocus(){
 }
 
 function _isGameWindow(url, considerDF = true){
-    if (url == constant.aqlitePath) return true;
-    if (url == constant.vanillaAQW) return true;
-    if (considerDF && u === constant.df_url) {
-        return true;
+    
+    var aqliteValue = constant.aqlitePath;
+    if(process.platform == "win32") {
+        // I so want to swear RN... just WHY???
+        // Now when comparing to the file:///, its the same rules as URL.
+        aqliteValue = constant.aqlitePath.replace(/\\/g,"/");
     }
     
+    if (url == aqliteValue || url == constant.vanillaAQW) return true;
+    if (considerDF && url === constant.df_url) {
+        return true;
+    }
     return false;
-}
-
-exports.navFunction = (isFoward) => {
-    if (!isFoward) executeOnFocused((focusedWindow) => {
-        if (focusedWindow.webContents.canGoBack()) focusedWindow.webContents.goBack();
-    },true);
-    else executeOnFocused((focusedWindow) => {
-        if (focusedWindow.webContents.canGoForward()) focusedWindow.webContents.goForward();
-    },true);
 }
 
 exports.newBrowserWindow = newBrowserWindow;

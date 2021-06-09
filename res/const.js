@@ -1,7 +1,9 @@
+const {app, BrowserWindow}  = require("electron");
+
 const path   = require("path");
-const {app}  = require("electron");
 const locale = require("./locale.js");
 const fs     = require("fs");
+const url    = require("url");
 
 /// Inside the app itself. Root of the project
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
@@ -27,19 +29,27 @@ var iconImage = nativeImage.createFromPath(iconPath);
 exports.iconPath = iconPath;
 
 exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf'))? 
-            'file://'+ path.join(appCurrentDirectory, 'aqlite_old.swf') : 
-            'file://'+ path.join(appRoot, 'aqlite.swf');
+            _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
+            _getFileUrl(path.join(appRoot, 'aqlite.swf'))
 exports.isOldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 
 exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf'
-exports.pagesPath  = 'file://'+ path.join(appRoot, 'pages', 'pages.html');
+exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
 
 exports.wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 exports.accountAq = 'https://account.aq.com/'
 exports.designNotes = 'https://www.aq.com/gamedesignnotes/'
-//exports.charLookup = 'https://www.aq.com/character.asp';
 exports.charLookup = 'https://account.aq.com/CharPage';
+
+// Fixing file:// urls
+function _getFileUrl(path) {
+    return url.format({
+        pathname: path,
+        protocol: 'file:',
+        slashes: true
+    })
+}
 
 // For customizing windows themselfs
 exports.tabbedConfig = {
@@ -87,7 +97,7 @@ exports.mainConfig = {
     }
 }
 
-exports.getMenu = (navFunc) => {
+exports.getMenu = () => {
     // needs to be like that as the function is located on instances... arg is isFoward
     // Mac uses a forced keybind here, while the others can use the & symbol and have the same keybind NATIVE to the app.
     if (process.platform == 'darwin') return null;
@@ -95,14 +105,16 @@ exports.getMenu = (navFunc) => {
         {
             label: '<<< &Backward',
             click() {
-                navFunc(false);
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                if (br.canGoBack()) br.goBack();
             } 
 
         },
         {
             label: '>>> &Forward',
             click() {
-                navFunc(true);
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                if (br.canGoForward()) br.goForward();
             }
         }
     ];
