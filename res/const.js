@@ -15,6 +15,11 @@ const appVersion = require('electron').app.getVersion();
 const appName = "AquaStar";
 const iconPath = path.join(appRoot, 'Icon', 'Icon_1024.png');
 
+const charLookup   = 'https://account.aq.com/CharPage';
+const designNotes  = 'https://www.aq.com/gamedesignnotes/';
+const accountAq    = 'https://account.aq.com/';
+const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
+
 exports.appName = appName;
 exports.appVersion = appVersion;
 exports.appRootPath = appRoot;
@@ -37,10 +42,10 @@ exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf'
 exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
 
-exports.wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
-exports.accountAq = 'https://account.aq.com/'
-exports.designNotes = 'https://www.aq.com/gamedesignnotes/'
-exports.charLookup = 'https://account.aq.com/CharPage';
+exports.wikiReleases = wikiReleases;
+exports.accountAq = accountAq;
+exports.designNotes = designNotes;
+exports.charLookup = charLookup;
 
 // Fixing file:// urls
 function _getFileUrl(path) {
@@ -115,6 +120,34 @@ exports.getMenu = () => {
             click() {
                 var br = BrowserWindow.getFocusedWindow().webContents;
                 if (br.canGoForward()) br.goForward();
+            }
+        }, // Sorry Mac, you cant have those next ones as its not worth it.
+        {
+            label: 'Wiki (New Releases)',
+            click() {
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                br.loadURL(wikiReleases);
+            }
+        },
+        {
+            label: 'Design notes',
+            click() {
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                br.loadURL(designNotes);
+            }
+        },
+        {
+            label: 'Char pages',
+            click() {
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                br.loadURL(charLookup);
+            }
+        },
+        {
+            label: 'AQW Account',
+            click() {
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                br.loadURL(accountAq);
             }
         }
     ];
