@@ -21,8 +21,8 @@ rm -rf dist
 cd ..
 
 #WINDOWS TIME
-cp FlashPlayer/pepflashplayer.dll build/FlashPlayer/
-cd build
+cp FlashPlayer/pepflashplayer.dll ${buildfolder}/FlashPlayer/
+cd ${buildfolder}
 npm run dist-w
 cp dist/AquaStar*.exe ../
 cd ..
