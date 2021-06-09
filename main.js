@@ -1,6 +1,6 @@
-const {app, BrowserWindow, session}  = require('electron')
-const path                           = require('path')
+const {app, BrowserWindow, session, Menu}  = require('electron')
 
+//const path     = require('path')
 const flash    = require('./res/flash.js');
 const keyb     = require('./res/keybindings.js');
 const inst     = require('./res/instances.js');
@@ -16,16 +16,23 @@ function createWindow () {
     //console.log(app.getLocale());
     // Create the browser window.
     let win = new BrowserWindow(constant.mainConfig);
-    const ses = win.webContents.session //creating session for cache cleaning later.
 
     win.loadURL(constant.aqlitePath);
     win.setTitle("AquaStar - AQLite " + (constant.isOldAqlite ? '(Older/Custom AQLite Version)' : ""));
 
     // Keybindings now in keybindings.js
-    keyb.addKeybinding(win, ses);
-
+    keyb.addKeybinding();
+    
+    if (process.platform == 'darwin'){
+        Menu.setApplicationMenu(null);
+    }
+    else {
+        Menu.setApplicationMenu(
+            Menu.buildFromTemplate(constant.getMenu(inst.navFunction)));
+        win.setMenuBarVisibility(false); //Remove menu so only wiki shows it
+    }
+    
     win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
-    win.setMenuBarVisibility(false);                //Remove default electron menu
 
     win.on('closed', () => {
         // Dereference the window object, usually you would store windows

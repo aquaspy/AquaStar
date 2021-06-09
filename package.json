@@ -1,6 +1,6 @@
 {
   "name": "AquaStar",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "A custom aqlite launcher",
   "main": "main.js",
   "scripts": {
@@ -13,14 +13,14 @@
   },
   "keywords": [
     "aqw;",
-    "aqlite2;"
+    "aquastar;",
+    "aqlite;"
   ],
   "author": "aquastar",
   "license": "MIT",
   "devDependencies": {
     "electron": "^4.2.12",
     "electron-builder": "^22.8.1",
-    "electron-localshortcut": "^3.2.1",
     "nw-flash-trust": "^0.3.0"
   },
   "build": {
@@ -53,7 +53,6 @@
     "icon": "Icon/Icon.png"
   },
   "dependencies": {
-    "electron-localshortcut": "^3.2.1",
     "nw-flash-trust": "^0.3.0"
   }
 }

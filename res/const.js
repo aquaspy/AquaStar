@@ -1,7 +1,9 @@
+const {app, BrowserWindow}  = require("electron");
+
 const path   = require("path");
-const {app}  = require("electron");
 const locale = require("./locale.js");
 const fs     = require("fs");
+const url    = require("url");
 
 /// Inside the app itself. Root of the project
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
@@ -11,29 +13,48 @@ const appCurrentDirectory = process.cwd();
 const sshotPath = path.join(app.getPath("pictures"),"AquaStar Screenshots");
 const appVersion = require('electron').app.getVersion();
 const appName = "AquaStar";
-const iconPath = path.join(appRoot, 'Icon', 'Icon.png');
+const iconPath = path.join(appRoot, 'Icon', 'Icon_1024.png');
+
+const charLookup   = 'https://account.aq.com/CharPage';
+const designNotes  = 'https://www.aq.com/gamedesignnotes/';
+const accountAq    = 'https://account.aq.com/';
+const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 
 exports.appName = appName;
 exports.appVersion = appVersion;
 exports.appRootPath = appRoot;
 exports.appDirectoryPath = appCurrentDirectory;
 exports.sshotPath = sshotPath;
+
+/// Icon Stuff
+const nativeImage = require('electron').nativeImage;
+var iconImage = nativeImage.createFromPath(iconPath);
+    iconImage.setTemplateImage(true);
+    
 exports.iconPath = iconPath;
 
 exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf'))? 
-            'file://'+ path.join(appCurrentDirectory, 'aqlite_old.swf') : 
-            'file://'+ path.join(appRoot, 'aqlite.swf');
+            _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
+            _getFileUrl(path.join(appRoot, 'aqlite.swf'))
 exports.isOldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 
-exports.vanillaAQW = 'http://aq.com/game/gamefiles/Loader.swf'
+exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf'
-exports.pagesPath  = 'file://'+ path.join(appRoot, 'pages', 'pages.html');
+exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
 
-exports.wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
-exports.accountAq = 'https://account.aq.com/'
-exports.designNotes = 'https://www.aq.com/gamedesignnotes/'
-//exports.charLookup = 'https://www.aq.com/character.asp';
-exports.charLookup = 'https://account.aq.com/CharPage';
+exports.wikiReleases = wikiReleases;
+exports.accountAq = accountAq;
+exports.designNotes = designNotes;
+exports.charLookup = charLookup;
+
+// Fixing file:// urls
+function _getFileUrl(path) {
+    return url.format({
+        pathname: path,
+        protocol: 'file:',
+        slashes: true
+    })
+}
 
 // For customizing windows themselfs
 exports.tabbedConfig = {
@@ -48,9 +69,8 @@ exports.tabbedConfig = {
         'enableRemoteModule': false,
         'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
     },
-    'icon': iconPath
+    'icon': iconImage
 }
-
 exports.winConfig = {
     'width': 960,
     'height': 550,
@@ -64,13 +84,12 @@ exports.winConfig = {
         'enableRemoteModule': false,
         'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
     },
-    'icon': iconPath
+    'icon': iconImage
 }
-
 exports.mainConfig = {
     width: 960,
     height: 550,
-    icon: iconPath,
+    icon: iconImage,
     title: appName,
     webPreferences: {
         nodeIntegration: false,
@@ -81,7 +100,61 @@ exports.mainConfig = {
         enableRemoteModule: false,
         nodeIntegrationInWorker: false //maybe better performance for more instances in future... Neends testing.
     }
-    }
+}
+
+exports.getMenu = () => {
+    // needs to be like that as the function is located on instances... arg is isFoward
+    // Mac uses a forced keybind here, while the others can use the & symbol and have the same keybind NATIVE to the app.
+    if (process.platform == 'darwin') return null;
+    return [
+        {
+            label: '<<< &Backward',
+            click() {
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                if (br.canGoBack()) br.goBack();
+            } 
+
+        },
+        {
+            label: '>>> &Forward',
+            click() {
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                if (br.canGoForward()) br.goForward();
+            }
+        }, // Sorry Mac, you cant have those next ones as its not worth it.
+        {
+            label: 'Wiki (New Releases)',
+            click() {
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                br.loadURL(wikiReleases);
+            }
+        },
+        {
+            label: 'Design notes',
+            click() {
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                br.loadURL(designNotes);
+            }
+        },
+        {
+            label: 'Char pages',
+            click() {
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                br.loadURL(charLookup);
+            }
+        },
+        {
+            label: 'AQW Account',
+            click() {
+                var br = BrowserWindow.getFocusedWindow().webContents;
+                br.loadURL(accountAq);
+            }
+        }
+    ];
+}
+
+
+
 // Show help Function ----------------------------------------------------------------
 function showHelpMessage(){
     const { dialog } = require('electron')
