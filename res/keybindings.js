@@ -112,10 +112,8 @@ function _takeSS(focusedWin){
                     // Save if needed
                     winNames[focusedWin.id] = focusedWin.getTitle();
             }
-            
-            clearTimeout(winTimeRef);
+            clearTimeout(winTimeRef); // Reset timer, as each SS needs to have a time to show
             focusedWin.setTitle(notif);
-            console.log(winNames[focusedWin.id]);
             winTimeRef = setTimeout(() => {
                 focusedWin.setTitle(winNames[focusedWin.id]);
             },2200);
