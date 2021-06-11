@@ -60,11 +60,55 @@ function newBrowserWindow(new_path){
 
 // Weird char page config
 function charPagePrint(){
+    // Check if its valid keybind.
+    var focusedWindow = BrowserWindow.getFocusedWindow();
+    var url = focusedWindow.webContents.getURL();
+    
+    if( !url.includes(constant.charLookup + "?id=")) {
+        // INVALID PLACE, CANCEL!
+        // TODO - test for invalid place (AKA - no flash file)
+        return
+    }
+        
     const newWin = new BrowserWindow(constant.charConfig);
     newWin.setMenuBarVisibility(false);
-    newWin.maximize();
-    newWin.loadURL("https://account.aq.com/CharPage?id=dstar");
-    setTimeout(()=>{takeSS(newWin)},2000);
+    //newWin.maximize();
+    newWin.loadURL(url);
+
+    // Lets figure it out how to take the sizes
+    const wOri = 715;
+    const hOri = 455;
+    var rect = null;
+    
+    // Page needs its time to load and resize...
+    setTimeout(()=>{ 
+        const siz = constant.getSizes();
+        console.log(constant.getSizes())
+        if ( (siz[0]/siz[1]) > (wOri/hOri) ){
+            // Window has bigger Width ratio than the original
+            // Scale using Height! reduction is to account for window bar.
+            var h = siz[1]
+            var nw = wOri*(h/hOri)
+            rect = {
+                x: Math.round((siz[0]-nw)/2),
+                y: 0,
+                width:  Math.round(nw),
+                height: h
+            }
+        }
+        else {
+            var w = siz[0]
+            var nh = hOri*(w/wOri)
+            rect = {
+                x: 0,
+                y: 0,
+                width:  w,
+                height: Math.round(nh)
+            }
+        }
+        
+        takeSS(newWin,rect);
+    },3000);
 }
 
 /// GAME WINDOW ONLY
@@ -94,15 +138,6 @@ function executeOnAnyFocused(funcForWindow){
     funcForWindow(focusedWindow);
 }
 
-// Test if the window focused is a Aqlite window (more like if
-//  one of the aqlite windows is focused) so it can use keybinds
-function testForFocus(){
-    for (var i = 0; i < aqliteWindowArray.length; i++){
-        if (aqliteWindowArray[i].isFocused()) return true;
-    }
-    return false;
-}
-
 function _isGameWindow(url, considerDF = true){
     
     var aqliteValue = constant.aqlitePath;
@@ -120,8 +155,22 @@ function _isGameWindow(url, considerDF = true){
 }
 
 
-function takeSS(focusedWin){
+function takeSS(focusedWin, ret = null){
+    // If ret is passed, we figure how to take the SS.
+    // Format is the rectangle one;
+    var rect = null;
+    if (ret == null || ret == undefined){
+        rect = {
+            x: 0,
+            y: 0,
+            width:  focusedWin.getContentSize()[0],
+            height: focusedWin.getContentSize()[1]
+        }
+    }
+    else { rect = ret;}
+    
     focusedWin.webContents.capturePage(
+        rect,
         (sshot) => {
             console.log("Screenshotting it...");
             // Create SS directory if doesnt exist
@@ -186,6 +235,5 @@ function _mkdir (filepath){
 exports.newBrowserWindow    = newBrowserWindow;
 exports.charPagePrint       = charPagePrint;
 
-exports.testForFocus        = testForFocus;
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;

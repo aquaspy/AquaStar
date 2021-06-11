@@ -19,7 +19,7 @@ function createWindow () {
 
     win.setTitle("AquaStar - AQLite " + (constant.isOldAqlite ? '(Older/Custom AQLite Version)' : ""));
     win.loadURL(constant.aqlitePath);
-
+    
     // Keybindings now in keybindings.js
     keyb.addKeybinding();
     

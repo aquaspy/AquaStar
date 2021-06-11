@@ -4,6 +4,15 @@ const locale = require("./locale.js");
 const fs     = require("fs");
 const url    = require("url");
 
+// Window size. for custom SS cheat.
+var winX;
+var winY;
+exports.setSizes = (size)=>{
+    winX = size[0];
+    winY = size[1];
+};
+exports.getSizes = () =>{ return [winX, winY];};
+
 /// Inside the app itself. Root of the project
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
 /// Where app is ran from.
@@ -80,7 +89,7 @@ function _getWinConfig(type){
     {
         width: 1000,
         height: 500,
-        //show: false,
+        show: false,
         webPreferences: {
             nodeIntegration: false,
             plugins: true,
