@@ -1,5 +1,4 @@
 const {app, BrowserWindow}  = require("electron");
-
 const path   = require("path");
 const locale = require("./locale.js");
 const fs     = require("fs");
@@ -43,9 +42,9 @@ exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf'
 exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
 
 exports.wikiReleases = wikiReleases;
-exports.accountAq = accountAq;
-exports.designNotes = designNotes;
-exports.charLookup = charLookup;
+exports.accountAq    = accountAq;
+exports.designNotes  = designNotes;
+exports.charLookup   = charLookup;
 
 // Fixing file:// urls
 function _getFileUrl(path) {
@@ -57,50 +56,47 @@ function _getFileUrl(path) {
 }
 
 // For customizing windows themselfs
-exports.tabbedConfig = {
-    'width': 960,
-    'height': 550,
-    'webPreferences': {
-        'plugins': true,
-        'nodeIntegration': false,
-        'webviewTag': true,
-        'javascript': true,
-        'contextIsolation': true,
-        'enableRemoteModule': false,
-        'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
-    },
-    'icon': iconImage
-}
-exports.winConfig = {
-    'width': 960,
-    'height': 550,
-    'webPreferences': {
-        'plugins': true,
-        'nodeIntegration': false,
-        'webviewTag': false,
-        'javascript': true,
-        'contextIsolation': true,
-        //'preload': __dirname + '/../preload.js',
-        'enableRemoteModule': false,
-        'nodeIntegrationInWorker': false //maybe better performance for more instances in future... Neends testing.
-    },
-    'icon': iconImage
-}
-exports.mainConfig = {
-    width: 960,
-    height: 550,
-    icon: iconImage,
-    title: appName,
-    webPreferences: {
-        nodeIntegration: false,
-        webviewTag: false,
-        plugins: true,
-        javascript: true,
-        contextIsolation: true,
-        enableRemoteModule: false,
-        nodeIntegrationInWorker: false //maybe better performance for more instances in future... Neends testing.
+function _getWinConfig(type){
+    //tab
+    //win
+    //main
+    //cprint
+    //const {width, height} = require("electron").screen.getPrimaryDisplay().workAreaSize; 
+    return (type != "cprint")? 
+    {
+        width: 960,
+        height: 550,
+        icon: iconImage,
+        webPreferences: {
+            nodeIntegration: false,
+            webviewTag: ((type == "tab")? true : false),
+            plugins: true,
+            javascript: true,
+            contextIsolation: true,
+            enableRemoteModule: false,
+            nodeIntegrationInWorker: false //maybe better performance for more instances in future... Needs testing.
+        }
+    }:
+    {
+        width: 1000,
+        height: 500,
+        //show: false,
+        webPreferences: {
+            nodeIntegration: false,
+            plugins: true,
+            javascript: true,
+            contextIsolation: true,
+            enableRemoteModule: false,
+            nodeIntegrationInWorker: false,
+            preload: path.join(appRoot,'res','preload_charpage.js'),
+        }
     }
 }
+
+exports.tabbedConfig = _getWinConfig("tab");
+exports.winConfig    = _getWinConfig("win");
+exports.mainConfig   = _getWinConfig("main");
+exports.charConfig   = _getWinConfig("cprint");
 
 exports.getMenu = () => {
     // needs to be like that as the function is located on instances... arg is isFoward

@@ -1,7 +1,14 @@
-const constant        = require('./const.js');
+const constant              = require('./const.js');
 const {BrowserWindow, Menu} = require('electron');
 
 let usedAltPagesNumbers = [];
+
+// SS asks for them....
+const fs       = require('fs');
+const path     = require('path');
+let winTimeRef = null;
+let winNames   = {}; // Fake dictionary
+
 
 // New page function
 function newBrowserWindow(new_path){
@@ -49,6 +56,15 @@ function newBrowserWindow(new_path){
         
         /// Keybinds are on the keybinds file.
     }
+}
+
+// Weird char page config
+function charPagePrint(){
+    const newWin = new BrowserWindow(constant.charConfig);
+    newWin.setMenuBarVisibility(false);
+    newWin.maximize();
+    newWin.loadURL("https://account.aq.com/CharPage?id=dstar");
+    setTimeout(()=>{takeSS(newWin)},2000);
 }
 
 /// GAME WINDOW ONLY
@@ -103,7 +119,73 @@ function _isGameWindow(url, considerDF = true){
     return false;
 }
 
-exports.newBrowserWindow = newBrowserWindow;
+
+function takeSS(focusedWin){
+    focusedWin.webContents.capturePage(
+        (sshot) => {
+            console.log("Screenshotting it...");
+            // Create SS directory if doesnt exist
+            var ssfolder = constant.sshotPath;
+            _mkdir(ssfolder);
+
+            // Figure out the filename ----------
+            var today = new Date();
+            var pre_name = "Screenshot-" +
+                today.getFullYear() + "-" +
+                (today.getMonth() + 1) + "-" +
+                today.getDate() + "_";
+    
+            // Find the number for it
+            var extraNumberName = 1;
+            for (;;extraNumberName++){
+                if (fs.existsSync( path.join( ssfolder, pre_name + extraNumberName + ".png"))){
+                    if (extraNumberName === 10000) {
+                        console.log("10000 prints per day...? wow! Thats a lot!");
+                    }
+                    continue;
+                }
+                else break;
+            }
+            var sshotFileName = pre_name + extraNumberName + ".png";
+            
+            // Save it. ----------------
+            fs.writeFileSync(path.join(ssfolder, sshotFileName), sshot.toPNG());
+            console.log("Done! Saved in " + path.join(ssfolder, sshotFileName));
+            
+            // WINDOW NOTIFICATION
+            
+            // Setup for it
+            var notif = "DONE! Saved as " + sshotFileName;
+            if (winNames[focusedWin.id] == null || 
+                winNames[focusedWin.id] == undefined ){
+                    // Save if needed
+                    winNames[focusedWin.id] = focusedWin.getTitle();
+            }
+            clearTimeout(winTimeRef); // Reset timer, as each SS needs to have a time to show
+            focusedWin.setTitle(notif);
+            winTimeRef = setTimeout(() => {
+                focusedWin.setTitle(winNames[focusedWin.id]);
+            },2200);
+        }
+    );
+}
+
+function _mkdir (filepath){ 
+    try { fs.lstatSync(filepath).isDirectory() }
+    catch (ex) {
+        if (ex.code == 'ENOENT') {
+            fs.mkdir(filepath, (err) =>{
+                console.log(err);
+            })
+        }
+        else console.log(ex);
+    }
+}
+
+
+exports.newBrowserWindow    = newBrowserWindow;
+exports.charPagePrint       = charPagePrint;
 
 exports.testForFocus        = testForFocus;
 exports.executeOnFocused    = executeOnFocused;
+exports.takeSS              = takeSS;

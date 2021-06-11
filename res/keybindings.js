@@ -2,14 +2,6 @@ const {globalShortcut} = require('electron');
 const inst     = require('./instances.js');
 const constant = require('./const.js');
 
-// SS asks for them....
-const fs       = require('fs');
-const path     = require('path');
-
-let winTimeRef = null;
-let winNames   = {}; // Fake dictionary
-
-
 const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false){
     var ret = globalShortcut.register(keybind, () => {
         inst.executeOnFocused(func, onlyHTML, considerDF);
@@ -19,6 +11,10 @@ const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false)
 
 const addBinds = function (){
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
+    // DEBUG ONLY, DO NOT SEND IN PRODUCTION
+    addKeybind('Alt+I', (fw)=>{fw.webContents.openDevTools()},true);
+    addKeybind('Alt+K', ()=>{inst.charPagePrint()})//,true)
+    
     addKeybind('Alt+W', ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind('Alt+D', ()=>{inst.newBrowserWindow(constant.designNotes)});
     addKeybind('Alt+A', ()=>{inst.newBrowserWindow(constant.accountAq)});
@@ -47,7 +43,7 @@ const addBinds = function (){
     });
 
     // Print Screen 
-    addKeybind('F2', (focusedWin) => { _takeSS(focusedWin); },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
+    addKeybind('F2', (focusedWin) => { inst.takeSS(focusedWin); },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
     
     // Reload
     var reloadPage = function(focusedWin){focusedWin.reload()};
@@ -68,68 +64,6 @@ const addBinds = function (){
     if (process.platform == 'darwin'){
         addKeybind('Alt+B', inst.navFunction(false), true);
         addKeybind('Alt+F', inst.navFunction(true ), true);
-    }
-}
-
-function _takeSS(focusedWin){
-    focusedWin.webContents.capturePage(
-        (sshot) => {
-            console.log("Screenshotting it...");
-            // Create SS directory if doesnt exist
-            var ssfolder = constant.sshotPath;
-            _mkdir(ssfolder);
-
-            // Figure out the filename ----------
-            var today = new Date();
-            var pre_name = "Screenshot-" +
-                today.getFullYear() + "-" +
-                (today.getMonth() + 1) + "-" +
-                today.getDate() + "_";
-    
-            // Find the number for it
-            var extraNumberName = 1;
-            for (;;extraNumberName++){
-                if (fs.existsSync( path.join( ssfolder, pre_name + extraNumberName + ".png"))){
-                    if (extraNumberName === 10000) {
-                        console.log("10000 prints per day...? wow! Thats a lot!");
-                    }
-                    continue;
-                }
-                else break;
-            }
-            var sshotFileName = pre_name + extraNumberName + ".png";
-            
-            // Save it. ----------------
-            fs.writeFileSync(path.join(ssfolder, sshotFileName), sshot.toPNG());
-            console.log("Done! Saved in " + path.join(ssfolder, sshotFileName));
-            
-            // WINDOW NOTIFICATION
-            
-            // Setup for it
-            var notif = "DONE! Saved as " + sshotFileName;
-            if (winNames[focusedWin.id] == null || 
-                winNames[focusedWin.id] == undefined ){
-                    // Save if needed
-                    winNames[focusedWin.id] = focusedWin.getTitle();
-            }
-            clearTimeout(winTimeRef); // Reset timer, as each SS needs to have a time to show
-            focusedWin.setTitle(notif);
-            winTimeRef = setTimeout(() => {
-                focusedWin.setTitle(winNames[focusedWin.id]);
-            },2200);
-        }
-    );
-}
-
-function _mkdir (filepath){ 
-    try { fs.lstatSync(filepath).isDirectory() }
-    catch (ex) {
-        if (ex.code == 'ENOENT') {
-            fs.mkdir(filepath, (err) =>{
-                console.log(err);
-            })
-        }
-        else console.log(ex);
     }
 }
 
