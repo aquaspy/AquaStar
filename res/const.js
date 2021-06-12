@@ -129,30 +129,26 @@ exports.getMenu = (funcTakeSS) => {
             submenu: [
                 {
                     label: 'Wiki (New Releases)',
-                    click() {
-                        BrowserWindow.getFocusedWindow()
-                            .webContents.loadURL(wikiReleases);
+                    click(menuItem,focusedWin) {
+                        focusedWin.webContents.loadURL(wikiReleases);
                     }
                 },
                 {
                     label: 'Design notes',
-                    click() {
-                        BrowserWindow.getFocusedWindow()
-                            .webContents.loadURL(designNotes);
+                    click(menuItem,focusedWin) {
+                        focusedWin.webContents.loadURL(designNotes);
                     }
                 },
                 {
                     label: 'AQW Account',
-                    click() {
-                        BrowserWindow.getFocusedWindow()
-                            .webContents.loadURL(accountAq);
+                    click(menuItem,focusedWin) {
+                        focusedWin.webContents.loadURL(accountAq);
                     }
                 },
                 {
                     label: 'Char pages',
-                    click() {
-                        BrowserWindow.getFocusedWindow()
-                            .webContents.loadURL(charLookup);
+                    click(menuItem,focusedWin) {
+                        focusedWin.webContents.loadURL(focusedWin);
                     }
                 }
             ]
