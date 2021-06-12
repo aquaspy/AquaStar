@@ -8,13 +8,6 @@
         // Get necessary data first---------------
         // CP Exists
         var flash = document.getElementsByTagName("object")[0].parentElement;
-        // Not found
-        var serverAlertIself = document.getElementById("serveralert");
-        var serverAlert = (_isnull(serverAlertIself))? 
-            null : serverAlertIself.parentElement;
-        // Cheating/Wandering in void
-        var card = document.getElementsByClassName("card")[0];
-        // Window sizes
         var w = window.innerWidth;
         var h = window.innerHeight;
         
@@ -23,25 +16,7 @@
         body.innerHTML = "";
         body.style.backgroundColor = "#FEF1C5";
         
-        if (_isnull(flash)){
-            // Test for "Not found"
-            if (serverAlert != undefined && serverAlert != null){
-                // It IS the not found. Do what you need to.
-                serverAlert.classList.add("text-center");
-                serverAlert.style.paddingTop(0.4*h);
-                //serverAlert.style.height = h*0.8
-                body.appendChild(serverAlert);
-            }
-            else {
-                // Not the "not found". So it must be cheating/wandering.
-                card.classList.add("text-center");
-                card.style.paddingTop(0.4*h);
-                body.appendChild(card);
-            }
-        
-            
-        }
-        else {
+        if (!_isnull(flash)) {
             // VALID FLASH PAAAGE! Lets go!
             // Make flash be the whole page
             body.appendChild(flash);
@@ -69,6 +44,7 @@
                 embed.setAttribute("height",hOri*(w/wOri)); // Dont ask how i got this... maths...
             }
         }
+        return;
     }
     
     window.onload= onLoading;

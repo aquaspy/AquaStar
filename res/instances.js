@@ -64,54 +64,59 @@ function charPagePrint(){
     var focusedWindow = BrowserWindow.getFocusedWindow();
     if (focusedWindow == null) return;
     var url = focusedWindow.webContents.getURL();
-    
-    if( !url.includes(constant.charLookup + "?id=")) {
-        // INVALID PLACE, CANCEL!
-        // TODO - test for invalid place (AKA - no flash file)
-        return
-    }
+    if( !url.includes(constant.charLookup + "?id=")) { return };
 
-    const newWin = new BrowserWindow(constant.charConfig);
-    newWin.setMenuBarVisibility(false);
-    newWin.loadURL(url);
-
-    // Lets figure it out how to take the sizes
-    const wOri = 715;
-    const hOri = 455;
-    var rect = null;
-    
-    // Page needs its time to load and resize...
-    _notifyWindow(focusedWindow,"Building scenario... Please wait", false);
-    
-    setTimeout(()=>{ 
-        const siz = newWin.getSize();
-        if ( (siz[0]/siz[1]) > (wOri/hOri) ){
-            // Window has bigger Width ratio than the original
-            // Scale using Height! reduction is to account for window bar.
-            var h = siz[1]
-            var nw = wOri*(h/hOri)
-            rect = {
-                x: Math.round((siz[0]-nw)/2),
-                y: 0,
-                width:  Math.round(nw),
-                height: h
-            }
+    let code = `(document.getElementsByTagName("object")[0] == undefined)? false : true;`;
+    focusedWindow.webContents.executeJavaScript(code)
+    .then( (flashExists) =>{
+        if(!flashExists){
+            _notifyWindow(focusedWindow,"Not valid Char Page window!");
         }
         else {
-            var w = siz[0]
-            var nh = hOri*(w/wOri)
-            rect = {
-                x: 0,
-                y: 0,
-                width:  w,
-                height: Math.round(nh)
-            }
-        }
-        takeSS(newWin,rect)//,true);
-        _notifyWindow(focusedWindow,"DONE! Saved CP in Screenshot folder");
+            //VALID! Lets start...
+            const newWin = new BrowserWindow(constant.charConfig);
+            newWin.setMenuBarVisibility(false);
+            newWin.loadURL(url);
 
-    },5000);
-    //TODO - find a way to detect flash being done loading!
+            // Lets figure it out how to take the sizes
+            const wOri = 715;
+            const hOri = 455;
+            var rect = null;
+            
+            // Page needs its time to load and resize...
+            _notifyWindow(focusedWindow,"Building scenario... Please wait", false);
+            
+            setTimeout(()=>{ 
+                const siz = newWin.getSize();
+                if ( (siz[0]/siz[1]) > (wOri/hOri) ){
+                    // Window has bigger Width ratio than the original
+                    // Scale using Height! reduction is to account for window bar.
+                    var h = siz[1]
+                    var nw = wOri*(h/hOri)
+                    rect = {
+                        x: Math.round((siz[0]-nw)/2),
+                        y: 0,
+                        width:  Math.round(nw),
+                        height: h
+                    }
+                }
+                else {
+                    var w = siz[0]
+                    var nh = hOri*(w/wOri)
+                    rect = {
+                        x: 0,
+                        y: 0,
+                        width:  w,
+                        height: Math.round(nh)
+                    }
+                }
+                takeSS(newWin,rect,true);
+                _notifyWindow(focusedWindow,"DONE! Saved CP in Screenshot folder");
+
+            },5000);
+        }
+    });
+//TODO - find a way to detect when flash is done loading!
 }
 
 /// GAME WINDOW ONLY

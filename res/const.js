@@ -85,7 +85,7 @@ function _getWinConfig(type){
         
         width: 3840,
         height: 2160,
-        //show: false,
+        show: false,
         resizable: false,
         webPreferences: {
             nodeIntegration: false,
