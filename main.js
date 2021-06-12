@@ -17,9 +17,9 @@ function createWindow () {
     // Create the browser window.
     let win = new BrowserWindow(constant.mainConfig);
 
-    win.loadURL(constant.aqlitePath);
     win.setTitle("AquaStar - AQLite " + (constant.isOldAqlite ? '(Older/Custom AQLite Version)' : ""));
-
+    win.loadURL(constant.aqlitePath);
+    
     // Keybindings now in keybindings.js
     keyb.addKeybinding();
     
@@ -28,7 +28,7 @@ function createWindow () {
     }
     else {
         Menu.setApplicationMenu(
-            Menu.buildFromTemplate(constant.getMenu(inst.navFunction)));
+            Menu.buildFromTemplate(constant.getMenu(inst.charPagePrint)));
         win.setMenuBarVisibility(false); //Remove menu so only wiki shows it
     }
     

@@ -5,12 +5,13 @@ exports.helpDetail =
     'Alt + D - AQW Design notes\n' +
     'Alt + A - Account page\n' +
     'Alt + P - Character (Player) lookup. Você também pode utilizar o interno do jogo.\n' +
+    'Alt + K - (Apenas char pages!) Printa a tela do char page atual.\n' +
     'Alt + N - Abre uma nova instância do Aqlite.\n' +
     'Alt + Q - Abre uma instância padrão do AQW como a de aq.com/game/ (keybind sujeita a mudanças por ser temporária)\n' +
     'Alt + Y - Abre uma janela com abas de browser uteis, agrupadas para não abrir muitas janelas. Usa mais memória por consequência. (300mb)\n' +
     'F9 - Sobre AquaStar.\n' +
     'F11 - Ativa/Desativa Fullscreen\n' +
-    'F12 - Printa a tela do jogo (apenas AQW e AQLITE). Eles são salvos em uma pasta separada dita abaixo.\n' +
+    'F2 - Printa a tela do jogo (apenas AQW e AQLITE). Eles são salvos em uma pasta separada dita abaixo.\n' +
     'Shift + F5 - Limpa todo o cachê do jogo, alguns cookies, e recarrega a página (pode consertar bugs dentro do jogo).\n\n' +
     'Para um aqlite antigo/customizado, por favor nomeie ele para "aqlite_old.swf" e o coloque na mesma pasta da executável, dita abaixo!\n\n' +
     'Nota: F1, ou Cmd/Ctrl + H, ou Alt + H Mostra esta mensagem.';
