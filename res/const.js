@@ -85,7 +85,7 @@ function _getWinConfig(type){
         
         width: 3840,
         height: 2160,
-        show: false,
+        //show: false,
         resizable: false,
         webPreferences: {
             nodeIntegration: false,
@@ -125,32 +125,37 @@ exports.getMenu = (funcTakeSS) => {
             }
         }, // Sorry Mac, you cant have those next ones as its not worth it.
         {
-            label: 'Wiki (New Releases)',
-            click() {
-                BrowserWindow.getFocusedWindow()
-                    .webContents.loadURL(wikiReleases);
-            }
-        },
-        {
-            label: 'Design notes',
-            click() {
-                BrowserWindow.getFocusedWindow()
-                    .webContents.loadURL(designNotes);
-            }
-        },
-        {
-            label: 'AQW Account',
-            click() {
-                BrowserWindow.getFocusedWindow()
-                    .webContents.loadURL(accountAq);
-            }
-        },
-        {
-            label: 'Char pages',
-            click() {
-                BrowserWindow.getFocusedWindow()
-                    .webContents.loadURL(charLookup);
-            }
+            label: "Other Usefull Pages",
+            submenu: [
+                {
+                    label: 'Wiki (New Releases)',
+                    click() {
+                        BrowserWindow.getFocusedWindow()
+                            .webContents.loadURL(wikiReleases);
+                    }
+                },
+                {
+                    label: 'Design notes',
+                    click() {
+                        BrowserWindow.getFocusedWindow()
+                            .webContents.loadURL(designNotes);
+                    }
+                },
+                {
+                    label: 'AQW Account',
+                    click() {
+                        BrowserWindow.getFocusedWindow()
+                            .webContents.loadURL(accountAq);
+                    }
+                },
+                {
+                    label: 'Char pages',
+                    click() {
+                        BrowserWindow.getFocusedWindow()
+                            .webContents.loadURL(charLookup);
+                    }
+                }
+            ]
         },
         {
             label: 'Ta&ke a SShot of CP (CP ONLY!)',

@@ -107,7 +107,7 @@ function charPagePrint(){
                 height: Math.round(nh)
             }
         }
-        takeSS(newWin,rect,true);
+        takeSS(newWin,rect)//,true);
         _notifyWindow(focusedWindow,"DONE! Saved CP in Screenshot folder");
 
     },5000);
