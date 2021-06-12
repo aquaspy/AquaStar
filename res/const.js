@@ -4,15 +4,6 @@ const locale = require("./locale.js");
 const fs     = require("fs");
 const url    = require("url");
 
-// Window size. for custom SS cheat.
-var winX;
-var winY;
-exports.setSizes = (size)=>{
-    winX = size[0];
-    winY = size[1];
-};
-exports.getSizes = () =>{ return [winX, winY];};
-
 /// Inside the app itself. Root of the project
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
 /// Where app is ran from.
@@ -86,10 +77,18 @@ function _getWinConfig(type){
             nodeIntegrationInWorker: false //maybe better performance for more instances in future... Needs testing.
         }
     }:
-    {
-        width: 1000,
-        height: 500,
+    {   
+        // First off, yes, this is 4K res, no, it wont be your print size.
+        // The window caps (in Cinnamon's Muffin at least) at your window size
+        // And bc of that, i setted the number as high as i imagined w/o having the chance
+        // of the OS complain about the 1 billion window size. I think 4k is a nice number...
+        // Sec. YES, it NEEDS both Show off (so doesnt show in user's face) and
+        // resizable false, so it stays "maxed size";
+        
+        width: 3840,
+        height: 2160,
         show: false,
+        resizable: false,
         webPreferences: {
             nodeIntegration: false,
             plugins: true,
@@ -157,8 +156,6 @@ exports.getMenu = () => {
         }
     ];
 }
-
-
 
 // Show help Function ----------------------------------------------------------------
 function showHelpMessage(){

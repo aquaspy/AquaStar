@@ -69,10 +69,9 @@ function charPagePrint(){
         // TODO - test for invalid place (AKA - no flash file)
         return
     }
-        
+
     const newWin = new BrowserWindow(constant.charConfig);
     newWin.setMenuBarVisibility(false);
-    //newWin.maximize();
     newWin.loadURL(url);
 
     // Lets figure it out how to take the sizes
@@ -81,9 +80,10 @@ function charPagePrint(){
     var rect = null;
     
     // Page needs its time to load and resize...
+    _notifyWindow(focusedWindow,"Building scenario... Please wait", false);
+    
     setTimeout(()=>{ 
-        const siz = constant.getSizes();
-        console.log(constant.getSizes())
+        const siz = newWin.getSize();
         if ( (siz[0]/siz[1]) > (wOri/hOri) ){
             // Window has bigger Width ratio than the original
             // Scale using Height! reduction is to account for window bar.
@@ -106,8 +106,9 @@ function charPagePrint(){
                 height: Math.round(nh)
             }
         }
-        
-        takeSS(newWin,rect);
+        takeSS(newWin,rect,true);
+        _notifyWindow(focusedWindow,"DONE! Saved CP in Screenshot folder");
+
     },3000);
 }
 
@@ -154,8 +155,8 @@ function _isGameWindow(url, considerDF = true){
     return false;
 }
 
-
-function takeSS(focusedWin, ret = null){
+/// Return null or the filename
+function takeSS(focusedWin, ret = null, destroyWindow = false){
     // If ret is passed, we figure how to take the SS.
     // Format is the rectangle one;
     var rect = null;
@@ -168,7 +169,6 @@ function takeSS(focusedWin, ret = null){
         }
     }
     else { rect = ret;}
-    
     focusedWin.webContents.capturePage(
         rect,
         (sshot) => {
@@ -196,27 +196,37 @@ function takeSS(focusedWin, ret = null){
                 else break;
             }
             var sshotFileName = pre_name + extraNumberName + ".png";
-            
+            var savePath = path.join(ssfolder, sshotFileName);
             // Save it. ----------------
             fs.writeFileSync(path.join(ssfolder, sshotFileName), sshot.toPNG());
-            console.log("Done! Saved in " + path.join(ssfolder, sshotFileName));
-            
-            // WINDOW NOTIFICATION
-            
-            // Setup for it
-            var notif = "DONE! Saved as " + sshotFileName;
-            if (winNames[focusedWin.id] == null || 
-                winNames[focusedWin.id] == undefined ){
-                    // Save if needed
-                    winNames[focusedWin.id] = focusedWin.getTitle();
+            console.log("Done! Saved as " + savePath);
+            if (!destroyWindow){
+                // Usefull for char page builds
+                _notifyWindow(focusedWin,"Done! Saved as " + savePath);
             }
-            clearTimeout(winTimeRef); // Reset timer, as each SS needs to have a time to show
-            focusedWin.setTitle(notif);
-            winTimeRef = setTimeout(() => {
-                focusedWin.setTitle(winNames[focusedWin.id]);
-            },2200);
+            else {
+                focusedWin.close();
+            }
         }
     );
+}
+
+function _notifyWindow(targetWin, notif, resetAfter = true){
+    // Setup for it
+    if (winNames[targetWin.id] == null || 
+        winNames[targetWin.id] == undefined ){
+            // Save if needed
+            winNames[targetWin.id] = targetWin.getTitle();
+    }
+
+    targetWin.setTitle(notif);
+
+    if (resetAfter) {
+        clearTimeout(winTimeRef); // Reset timer, as each SS needs to have a time to show
+        winTimeRef = setTimeout(() => {
+            targetWin.setTitle(winNames[targetWin.id]);
+        },3200);
+    }
 }
 
 function _mkdir (filepath){ 
@@ -237,3 +247,4 @@ exports.charPagePrint       = charPagePrint;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;
+exports.notifyWin           = _notifyWindow;
