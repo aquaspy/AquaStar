@@ -62,6 +62,7 @@ function newBrowserWindow(new_path){
 function charPagePrint(){
     // Check if its valid keybind.
     var focusedWindow = BrowserWindow.getFocusedWindow();
+    if (focusedWindow == null) return;
     var url = focusedWindow.webContents.getURL();
     
     if( !url.includes(constant.charLookup + "?id=")) {
@@ -109,7 +110,8 @@ function charPagePrint(){
         takeSS(newWin,rect,true);
         _notifyWindow(focusedWindow,"DONE! Saved CP in Screenshot folder");
 
-    },3000);
+    },5000);
+    //TODO - find a way to detect flash being done loading!
 }
 
 /// GAME WINDOW ONLY

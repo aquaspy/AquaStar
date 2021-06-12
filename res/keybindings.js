@@ -13,7 +13,6 @@ const addBinds = function (){
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
     // DEBUG ONLY, DO NOT SEND IN PRODUCTION
     //addKeybind('Alt+I', (fw)=>{fw.webContents.openDevTools()},true);
-    addKeybind('Alt+K', ()=>{inst.charPagePrint()},true)
     
     addKeybind('Alt+W', ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind('Alt+D', ()=>{inst.newBrowserWindow(constant.designNotes)});
@@ -44,6 +43,7 @@ const addBinds = function (){
 
     // Print Screen 
     addKeybind('F2', (focusedWin) => { inst.takeSS(focusedWin); },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
+    addKeybind('Alt+K', ()=>{inst.charPagePrint()},true)
     
     // Reload
     var reloadPage = function(focusedWin){focusedWin.reload()};

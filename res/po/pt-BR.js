@@ -5,6 +5,7 @@ exports.helpDetail =
     'Alt + D - AQW Design notes\n' +
     'Alt + A - Account page\n' +
     'Alt + P - Character (Player) lookup. Você também pode utilizar o interno do jogo.\n' +
+    'Alt + K - (Apenas char pages!) Printa a tela do char page atual.\n' +
     'Alt + N - Abre uma nova instância do Aqlite.\n' +
     'Alt + Q - Abre uma instância padrão do AQW como a de aq.com/game/ (keybind sujeita a mudanças por ser temporária)\n' +
     'Alt + Y - Abre uma janela com abas de browser uteis, agrupadas para não abrir muitas janelas. Usa mais memória por consequência. (300mb)\n' +

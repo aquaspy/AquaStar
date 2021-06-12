@@ -28,7 +28,7 @@ function createWindow () {
     }
     else {
         Menu.setApplicationMenu(
-            Menu.buildFromTemplate(constant.getMenu(inst.navFunction)));
+            Menu.buildFromTemplate(constant.getMenu(inst.charPagePrint)));
         win.setMenuBarVisibility(false); //Remove menu so only wiki shows it
     }
     

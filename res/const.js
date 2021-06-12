@@ -29,7 +29,6 @@ exports.sshotPath = sshotPath;
 const nativeImage = require('electron').nativeImage;
 var iconImage = nativeImage.createFromPath(iconPath);
     iconImage.setTemplateImage(true);
-    
 exports.iconPath = iconPath;
 
 exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf'))? 
@@ -61,7 +60,6 @@ function _getWinConfig(type){
     //win
     //main
     //cprint
-    //const {width, height} = require("electron").screen.getPrimaryDisplay().workAreaSize; 
     return (type != "cprint")? 
     {
         width: 960,
@@ -106,7 +104,7 @@ exports.winConfig    = _getWinConfig("win");
 exports.mainConfig   = _getWinConfig("main");
 exports.charConfig   = _getWinConfig("cprint");
 
-exports.getMenu = () => {
+exports.getMenu = (funcTakeSS) => {
     // needs to be like that as the function is located on instances... arg is isFoward
     // Mac uses a forced keybind here, while the others can use the & symbol and have the same keybind NATIVE to the app.
     if (process.platform == 'darwin') return null;
@@ -129,29 +127,35 @@ exports.getMenu = () => {
         {
             label: 'Wiki (New Releases)',
             click() {
-                var br = BrowserWindow.getFocusedWindow().webContents;
-                br.loadURL(wikiReleases);
+                BrowserWindow.getFocusedWindow()
+                    .webContents.loadURL(wikiReleases);
             }
         },
         {
             label: 'Design notes',
             click() {
-                var br = BrowserWindow.getFocusedWindow().webContents;
-                br.loadURL(designNotes);
-            }
-        },
-        {
-            label: 'Char pages',
-            click() {
-                var br = BrowserWindow.getFocusedWindow().webContents;
-                br.loadURL(charLookup);
+                BrowserWindow.getFocusedWindow()
+                    .webContents.loadURL(designNotes);
             }
         },
         {
             label: 'AQW Account',
             click() {
-                var br = BrowserWindow.getFocusedWindow().webContents;
-                br.loadURL(accountAq);
+                BrowserWindow.getFocusedWindow()
+                    .webContents.loadURL(accountAq);
+            }
+        },
+        {
+            label: 'Char pages',
+            click() {
+                BrowserWindow.getFocusedWindow()
+                    .webContents.loadURL(charLookup);
+            }
+        },
+        {
+            label: 'Ta&ke a SShot of CP (CP ONLY!)',
+            click() {
+                funcTakeSS();
             }
         }
     ];
