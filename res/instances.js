@@ -6,6 +6,7 @@ let usedAltPagesNumbers = [];
 // SS asks for them....
 const fs       = require('fs');
 const path     = require('path');
+// For notify Window's original names.
 let winTimeRef = null;
 let winNames   = {}; // Fake dictionary
 
@@ -53,8 +54,15 @@ function newBrowserWindow(new_path){
         /// ... but only if its win or lunix. Mac doesnt have the feature -_-
         /// Mac still get keybinds tho, just not the menu.
         newWin.setMenuBarVisibility(true);
-        
-        /// Keybinds are on the keybinds file.
+        var contextMenu = Menu.buildFromTemplate(constant.getMenu());
+
+        newWin.webContents.on("context-menu",(e,param)=>{
+            contextMenu.popup({
+                window: newWin,
+                x: param.x,
+                y: param.y
+            });
+        })
     }
 }
 
@@ -246,7 +254,6 @@ function _mkdir (filepath){
         else console.log(ex);
     }
 }
-
 
 exports.newBrowserWindow    = newBrowserWindow;
 exports.charPagePrint       = charPagePrint;
