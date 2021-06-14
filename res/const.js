@@ -106,23 +106,25 @@ exports.winConfig    = _getWinConfig("win");
 exports.mainConfig   = _getWinConfig("main");
 exports.charConfig   = _getWinConfig("cprint");
 
-exports.getMenu = (funcTakeSS) => {
+exports.getMenu = (funcTakeSS, isContext = false) => {
     // needs to be like that as the function is located on instances... arg is isFoward
     // Mac uses a forced keybind here, while the others can use the & symbol and have the same keybind NATIVE to the app.
     if (process.platform == 'darwin') return null;
-    return [
+    
+    var links = 
+    [
         {
+            //TODO - change for accelerator instead of &. better for translations!
             label: '<<< &Backward',
-            click() {
-                var br = BrowserWindow.getFocusedWindow().webContents;
+            click(menuItem,focusedWin) {
+                var br = focusedWin.webContents;
                 if (br.canGoBack()) br.goBack();
             } 
-
         },
         {
             label: '>>> &Forward',
-            click() {
-                var br = BrowserWindow.getFocusedWindow().webContents;
+            click(menuItem,focusedWin) {
+                var br = focusedWin.webContents;
                 if (br.canGoForward()) br.goForward();
             }
         }, // Sorry Mac, you cant have those next ones as its not worth it.
@@ -150,14 +152,14 @@ exports.getMenu = (funcTakeSS) => {
                 {
                     label: 'Char pages',
                     click(menuItem,focusedWin) {
-                        focusedWin.webContents.loadURL(focusedWin);
+                        focusedWin.webContents.loadURL(charLookup);
                     }
                 },
                 {
                     // Just a bonus. no keybind or anything.
                     label: 'AQWGuides',
                     click(menuItem,focusedWin) {
-                        focusedWin.webContents.loadURL(focusedWin);
+                        focusedWin.webContents.loadURL(aqwg);
                     }
                 }
             ]
@@ -169,6 +171,24 @@ exports.getMenu = (funcTakeSS) => {
             }
         }
     ];
+    var ret;
+    if (isContext){
+        ret = [
+           {
+                label: 'Copy this page\'s URL',
+                click(menuItem,focusedWin) {
+                    require('electron').clipboard.writeText(
+                        focusedWin.webContents.getURL(),'clipboard');
+                }
+           }
+        ];
+        ret.push({ type: 'separator' });
+        links.forEach((e) => {
+            ret.push(e);
+        });
+        return ret;
+    }
+    else return links;
 }
 
 // Show help Function ----------------------------------------------------------------

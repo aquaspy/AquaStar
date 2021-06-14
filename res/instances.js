@@ -54,7 +54,7 @@ function newBrowserWindow(new_path){
         /// ... but only if its win or lunix. Mac doesnt have the feature -_-
         /// Mac still get keybinds tho, just not the menu.
         newWin.setMenuBarVisibility(true);
-        var contextMenu = Menu.buildFromTemplate(constant.getMenu());
+        var contextMenu = Menu.buildFromTemplate(constant.getMenu(takeSS,true));
 
         newWin.webContents.on("context-menu",(e,param)=>{
             contextMenu.popup({
