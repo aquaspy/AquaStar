@@ -18,12 +18,13 @@ const charLookup   = 'https://account.aq.com/CharPage';
 const designNotes  = 'https://www.aq.com/gamedesignnotes/';
 const accountAq    = 'https://account.aq.com/';
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
+const aqwg         = 'https://aqwg.weebly.com/';
 
-exports.appName = appName;
-exports.appVersion = appVersion;
-exports.appRootPath = appRoot;
+exports.appName          = appName;
+exports.appVersion       = appVersion;
+exports.appRootPath      = appRoot;
 exports.appDirectoryPath = appCurrentDirectory;
-exports.sshotPath = sshotPath;
+exports.sshotPath        = sshotPath;
 
 /// Icon Stuff
 const nativeImage = require('electron').nativeImage;
@@ -44,6 +45,7 @@ exports.wikiReleases = wikiReleases;
 exports.accountAq    = accountAq;
 exports.designNotes  = designNotes;
 exports.charLookup   = charLookup;
+exports.aqwg         = aqwg;
 
 // Fixing file:// urls
 function _getFileUrl(path) {
@@ -147,6 +149,13 @@ exports.getMenu = (funcTakeSS) => {
                 },
                 {
                     label: 'Char pages',
+                    click(menuItem,focusedWin) {
+                        focusedWin.webContents.loadURL(focusedWin);
+                    }
+                },
+                {
+                    // Just a bonus. no keybind or anything.
+                    label: 'AQWGuides',
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(focusedWin);
                     }
