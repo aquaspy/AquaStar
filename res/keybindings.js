@@ -20,21 +20,21 @@ const addBinds = function (){
     addKeybind(k.charpage, ()=>{inst.newBrowserWindow(constant.charLookup)});
 
     // Function knows how to load it.
-    addKeybind('Alt+Y', ()=>{inst.newBrowserWindow(constant.pagesPath)});
+    addKeybind(k.newTabbed,()=>{inst.newBrowserWindow(constant.pagesPath)});
     
     // Open new Aqlite window (usefull for alts)
-    addKeybind('Alt+N', ()=>{inst.newBrowserWindow(constant.aqlitePath)});
-    addKeybind('Alt+Q', ()=>{inst.newBrowserWindow(constant.vanillaAQW)});
+    addKeybind(k.newAqlite,()=>{inst.newBrowserWindow(constant.aqlitePath)});
+    addKeybind(k.newAqw,   ()=>{inst.newBrowserWindow(constant.vanillaAQW)});
     
     // Show help message
-    addKeybind('Alt+H',              ()=>{constant.showHelpMessage()});
-    addKeybind('F1',                 ()=>{constant.showHelpMessage()});
-    addKeybind('CommandOrControl+H', ()=>{constant.showHelpMessage()});
+    k.help.forEach((opt)=> {
+        addKeybind(opt,    ()=>{constant.showHelpMessage()});
+    });
     // Show About
-    addKeybind('F9',                 ()=>{constant.showAboutMessage()});
+    addKeybind(k.about,    ()=>{constant.showAboutMessage()});
 
     // Toggle Fullscreen
-    addKeybind('F11', (focusedWin) => {
+    addKeybind(k.fullscreen,(focusedWin) => {
         focusedWin.setFullScreen(!focusedWin.isFullScreen());
         
         if (process.platform != 'darwin') focusedWin.setMenuBarVisibility(false);
@@ -42,14 +42,15 @@ const addBinds = function (){
     });
 
     // Print Screen 
-    addKeybind('F2', (focusedWin) => { inst.takeSS(focusedWin); },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
+    addKeybind(k.sshot,    (focusedWin) => { inst.takeSS(focusedWin); },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
     
     // Reload
-    var reloadPage = function(focusedWin){focusedWin.reload()};
-    addKeybind('F5',                reloadPage);
-    addKeybind('CommandOrControl+R',reloadPage);
+    k.re
+    var reloadPage = (focusedWin) => {focusedWin.reload()};
+    addKeybind(k.reload, reloadPage);
+    addKeybind(k.reload2,reloadPage);
     // Reload and Clear cache
-    addKeybind('Shift+F5', (focusedWin) => {
+    addKeybind(k.reloadCache, (focusedWin) => {
         var ses = focusedWin.webContents.session;
         ses.flushStorageData() //writing some data from memory to disk before cleaning
         ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
@@ -57,18 +58,18 @@ const addBinds = function (){
     })
     
     // Yay, AquaSP can have his DF too!
-    addKeybind('Alt+1', () => inst.newBrowserWindow(constant.df_url));
+    addKeybind(k.dragon, () => inst.newBrowserWindow(constant.df_url));
     
     // FORCED KEYBINDS FOR MAC. NEEDS TESTING
     if (process.platform == 'darwin'){
-        addKeybind('Alt+K', ()=>{inst.charPagePrint()},true)
-        addKeybind('Alt+B', 
+        addKeybind(k.cpSshot, ()=>{inst.charPagePrint()},true)
+        addKeybind(k.macBackward, 
             (fw) => {
                 var br = fw.webContents;
                 if (br.canGoBack()) br.goBack();
             },
         true);
-        addKeybind('Alt+F',
+        addKeybind(k.macFoward,
             (fw) => {
                 var br = fw.webContents;
                 if (br.canGoForward()) br.goForward();

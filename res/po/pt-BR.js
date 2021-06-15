@@ -12,7 +12,7 @@ exports.helpDetail = (k) => {return k.wiki + ' - AQW Wiki\n' +
     k.about     + ' - Sobre AquaStar.\n' +
     k.fullscreen+ ' - Ativa/Desativa Fullscreen\n' +
     k.sshot     + ' - Printa a tela do jogo (apenas AQW e AQLITE). Eles são salvos em uma pasta separada dita abaixo.\n' +
-    k.ccache    + ' - Limpa todo o cachê do jogo, alguns cookies, e recarrega a página (pode consertar bugs dentro do jogo).\n\n' +
+    k.reloadcache+' - Limpa todo o cachê do jogo, alguns cookies, e recarrega a página (pode consertar bugs dentro do jogo).\n\n' +
     'Para um aqlite antigo/customizado, por favor nomeie ele para "aqlite_old.swf" e o coloque na mesma pasta da executável, dita abaixo!\n\n' +
     'Nota: ' + k.help.join(', ') + ' Mostra esta mensagem.';
 }
