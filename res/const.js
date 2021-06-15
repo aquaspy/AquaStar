@@ -8,17 +8,27 @@ const url    = require("url");
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
 /// Where app is ran from.
 const appCurrentDirectory = process.cwd();
+const appVersion  = require('electron').app.getVersion();
+const appName     = "AquaStar";
+
 /// Pictures save location.
 const sshotPath = path.join(app.getPath("pictures"),"AquaStar Screenshots");
-const appVersion = require('electron').app.getVersion();
-const appName = "AquaStar";
-const iconPath = path.join(appRoot, 'Icon', 'Icon_1024.png');
+const iconPath  = path.join(appRoot, 'Icon', 'Icon_1024.png');
 
 const charLookup   = 'https://account.aq.com/CharPage';
 const designNotes  = 'https://www.aq.com/gamedesignnotes/';
 const accountAq    = 'https://account.aq.com/';
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 const aqwg         = 'https://aqwg.weebly.com/';
+exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
+exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf'
+exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
+
+exports.wikiReleases     = wikiReleases;
+exports.accountAq        = accountAq;
+exports.designNotes      = designNotes;
+exports.charLookup       = charLookup;
+exports.aqwg             = aqwg;
 
 exports.appName          = appName;
 exports.appVersion       = appVersion;
@@ -26,26 +36,18 @@ exports.appRootPath      = appRoot;
 exports.appDirectoryPath = appCurrentDirectory;
 exports.sshotPath        = sshotPath;
 
-/// Icon Stuff
-const nativeImage = require('electron').nativeImage;
-var iconImage = nativeImage.createFromPath(iconPath);
-    iconImage.setTemplateImage(true);
-exports.iconPath = iconPath;
 
 exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf'))? 
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
             _getFileUrl(path.join(appRoot, 'aqlite.swf'))
 exports.isOldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 
-exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
-exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf'
-exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
 
-exports.wikiReleases = wikiReleases;
-exports.accountAq    = accountAq;
-exports.designNotes  = designNotes;
-exports.charLookup   = charLookup;
-exports.aqwg         = aqwg;
+/// Icon Stuff
+//const nativeImage = require('electron').nativeImage;
+//var iconImage = nativeImage.createFromPath(iconPath);
+//    iconImage.setTemplateImage(true);
+exports.iconPath = iconPath;
 
 // Fixing file:// urls
 function _getFileUrl(path) {
@@ -109,7 +111,7 @@ exports.charConfig   = _getWinConfig("cprint");
 exports.getMenu = (funcTakeSS, isContext = false) => {
     // needs to be like that as the function is located on instances... arg is isFoward
     // Mac uses a forced keybind here, while the others can use the & symbol and have the same keybind NATIVE to the app.
-    if (process.platform == 'darwin') return null;
+    if (isContext == false && process.platform == 'darwin') return null;
 
     var links = 
     [
