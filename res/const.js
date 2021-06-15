@@ -3,6 +3,7 @@ const path   = require("path");
 const locale = require("./locale.js");
 const fs     = require("fs");
 const url    = require("url");
+const { aboutDetail } = require("./po/template.js");
 
 /// Inside the app itself. Root of the project
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
@@ -36,12 +37,34 @@ exports.appRootPath      = appRoot;
 exports.appDirectoryPath = appCurrentDirectory;
 exports.sshotPath        = sshotPath;
 
+const keyBinds = {
+    wiki:        "Alt+W",
+    account:     "Alt+A",
+    design:      "Alt+D",
+    charpage:    "Alt+P",
+    cpSshot:     "Alt+K",
+    newAqlite:   "Alt+N",
+    newAqw:      "Alt+Q",
+    newTabbed:   "Alt+Y",
+    about:       "F9",
+    fullscreen:  "F11",
+    sshot:       "F2",
+    ccache:      "Shift+F5",
+    dragon:      "Alt+1",
+    macFoward:   "Alt+F",
+    macBackward: "Alt+B",
+    help : [
+        "Alt+H",
+        "CommandOrControl+H",
+        "F1"
+    ]
+}
+exports.keyBinds = keyBinds;
 
 exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf'))? 
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
             _getFileUrl(path.join(appRoot, 'aqlite.swf'))
 exports.isOldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
-
 
 /// Icon Stuff
 //const nativeImage = require('electron').nativeImage;
@@ -193,7 +216,6 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
     else return links;
 }
 
-// Show help Function ----------------------------------------------------------------
 function showHelpMessage(){
     const { dialog } = require('electron')
     const dialog_options = {
@@ -221,4 +243,4 @@ function showAboutMessage(){
 
 exports.showHelpMessage  = showHelpMessage;
 exports.showAboutMessage = showAboutMessage;
-exports.setLocale = () => {locale.detectLang()};
+exports.setLocale        = locale.detectLang;

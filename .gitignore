@@ -10,3 +10,4 @@ dist/
 
 # dont ask... just personal stuff
 launch.sh
+TEMP-*.txt

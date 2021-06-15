@@ -13,11 +13,11 @@ const addBinds = function (){
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
     // DEBUG ONLY, DO NOT SEND IN PRODUCTION
     //addKeybind('Alt+I', (fw)=>{fw.webContents.openDevTools()},true);
-    
-    addKeybind('Alt+W', ()=>{inst.newBrowserWindow(constant.wikiReleases)});
-    addKeybind('Alt+D', ()=>{inst.newBrowserWindow(constant.designNotes)});
-    addKeybind('Alt+A', ()=>{inst.newBrowserWindow(constant.accountAq)});
-    addKeybind('Alt+P', ()=>{inst.newBrowserWindow(constant.charLookup)});
+    const k = constant.keyBinds;
+    addKeybind(k.wiki    , ()=>{inst.newBrowserWindow(constant.wikiReleases)});
+    addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
+    addKeybind(k.account , ()=>{inst.newBrowserWindow(constant.accountAq)});
+    addKeybind(k.charpage, ()=>{inst.newBrowserWindow(constant.charLookup)});
 
     // Function knows how to load it.
     addKeybind('Alt+Y', ()=>{inst.newBrowserWindow(constant.pagesPath)});
