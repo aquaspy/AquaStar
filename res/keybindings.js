@@ -60,22 +60,22 @@ const addBinds = function (){
     // Yay, AquaSP can have his DF too!
     addKeybind(k.dragon, () => inst.newBrowserWindow(constant.df_url));
     
-    // FORCED KEYBINDS FOR MAC. NEEDS TESTING
-    /*if (process.platform == 'darwin'){
+    //FORCED KEYBINDS FOR MAC. NEEDS TESTING
+    if (process.platform == 'darwin'){
         addKeybind(k.cpSshot, ()=>{inst.charPagePrint()},true)
-        addKeybind(k.macBackward, 
+        addKeybind(k.backward, 
             (fw) => {
                 var br = fw.webContents;
                 if (br.canGoBack()) br.goBack();
             },
         true);
-        addKeybind(k.macFoward,
+        addKeybind(k.foward,
             (fw) => {
                 var br = fw.webContents;
                 if (br.canGoForward()) br.goForward();
             },
         true);
-    }*/
+    }
 }
 
 exports.addKeybinding = addBinds;
