@@ -74,19 +74,21 @@ function charPagePrint(){
     var url = focusedWindow.webContents.getURL();
     if( !url.includes(constant.charLookup + "?id=")) { return };
 
+    console.log(constant.titleMessages)
+
     let code = `(document.getElementsByTagName("object")[0] == undefined)? false : true;`;
     focusedWindow.webContents.executeJavaScript(code).then((flashExists) =>{
         if(!flashExists){
-            _notifyWindow(focusedWindow,"Not valid Char Page window!");
+            _notifyWindow(focusedWindow,constant.titleMessages.invalidCharpage);
         }
         else {
             //VALID! Lets start...
             const newWin = new BrowserWindow(constant.charConfig);
             newWin.setMenuBarVisibility(false);
-            _notifyWindow(focusedWindow,"Loading Char Page...", false);
+            _notifyWindow(focusedWindow,constant.titleMessages.loadingCharpage, false);
             newWin.loadURL(url);
             newWin.webContents.on("did-finish-load", () => {
-                _notifyWindow(focusedWindow,"Building scenario. Please wait some seconds...", false);
+                _notifyWindow(focusedWindow,constant.titleMessages.buildingCharpage, false);
     
                 // Lets figure it out how to take the sizes
                 const wOri = 715;
@@ -117,7 +119,7 @@ function charPagePrint(){
                         }
                     }
                     takeSS(newWin,rect,true);
-                    _notifyWindow(focusedWindow,"DONE! Saved CP in Screenshot folder");
+                    _notifyWindow(focusedWindow,constant.titleMessages.cpDone);
     
                 },5000);
             });
@@ -213,10 +215,10 @@ function takeSS(focusedWin, ret = null, destroyWindow = false){
             var savePath = path.join(ssfolder, sshotFileName);
             // Save it. ----------------
             fs.writeFileSync(path.join(ssfolder, sshotFileName), sshot.toPNG());
-            console.log("Done! Saved as " + savePath);
+            console.log(constant.titleMessages.doneSavedAs + savePath);
             if (!destroyWindow){
                 // Usefull for char page builds
-                _notifyWindow(focusedWin,"Done! Saved as " + savePath);
+                _notifyWindow(focusedWin,constant.titleMessages.doneSavedAs + savePath);
             }
             else {
                 focusedWin.close();

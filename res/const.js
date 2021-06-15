@@ -3,7 +3,6 @@ const path   = require("path");
 const locale = require("./locale.js");
 const fs     = require("fs");
 const url    = require("url");
-const { aboutDetail } = require("./po/template.js");
 
 /// Inside the app itself. Root of the project
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
@@ -245,4 +244,13 @@ function showAboutMessage(){
 
 exports.showHelpMessage  = showHelpMessage;
 exports.showAboutMessage = showAboutMessage;
-exports.setLocale        = locale.detectLang;
+exports.setLocale        = (loc, keyb)=> {
+    locale.detectLang(loc,keyb);
+    exports.titleMessages = {
+        invalidCharpage:  locale.getInvalidCharpage,
+        loadingCharpage:  locale.getLoadingCharpage,
+        buildingCharpage: locale.getBuildingCharpage,
+        cpDone:           locale.getCPDone,
+        doneSavedAs :     locale.getDoneSavedAs
+    }    
+}

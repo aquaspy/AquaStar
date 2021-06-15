@@ -19,6 +19,13 @@ exports.helpDetail = (k) => {return k.wiki + ' - \n' +
 }
 exports.helpScreenshot = ""
 exports.helpAqliteOld  = ""
-exports.aboutTitle = ""
-exports.aboutMessage = ""
-exports.aboutDetail = ""
+exports.aboutTitle     = ""
+exports.aboutMessage   = ""
+exports.aboutDetail    = ""
+
+
+exports.invalidCharpage  = "";
+exports.loadingCharpage  = "";
+exports.buildingCharpage = "";
+exports.cpDone           = "";
+exports.doneSavedAs      = "";

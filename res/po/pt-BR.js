@@ -33,3 +33,8 @@ exports.aboutDetail  =
     'Nota: Este não é um produto oficial da Artix. Artix Entertainment não recomenda o uso por qualquer motivo. Você está usando por sua conta e risco.\n\n' +
     'Você pode dar suas opiniões, contribuir, e seguir o projeto em: '
 
+exports.invalidCharpage  = "Janela de Char Page inválida";
+exports.loadingCharpage  = "Carregando Char Page...";
+exports.buildingCharpage = "Construindo cenário. Por favor aguarde uns segundos...";
+exports.cpDone           = "PRONTO! Salvo a CP na pasta de Screenshots";
+exports.doneSavedAs      = "Pronto! Salvo como ";

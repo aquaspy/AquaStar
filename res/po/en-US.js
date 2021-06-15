@@ -31,3 +31,8 @@ exports.aboutDetail =
     'Note: This is NOT an official Artix product. Artix Entertainment does not recommends it by any means. You are at your own risk using it.\n\n' +
     'You can give your opinion, contribute and follow the project here: '
 
+exports.invalidCharpage  = "Not valid Char Page window!";
+exports.loadingCharpage  = "Loading Char Page...";
+exports.buildingCharpage = "Building scenario. Please wait some seconds...";
+exports.cpDone           = "DONE! Saved CP in Screenshot folder";
+exports.doneSavedAs      = "Done! Saved as ";
