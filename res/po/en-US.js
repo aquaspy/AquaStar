@@ -36,3 +36,14 @@ exports.loadingCharpage  = "Loading Char Page...";
 exports.buildingCharpage = "Building scenario. Please wait some seconds...";
 exports.cpDone           = "DONE! Saved CP in Screenshot folder";
 exports.doneSavedAs      = "Done! Saved as ";
+
+exports.menuBackward     = "Backward";
+exports.menuFoward       = "Foward";
+exports.menuOtherPages   = "Other Usefull Pages";
+exports.menuWiki         = "AQW Wiki";
+exports.menuDesign       = "Design Notes";
+exports.menuAccount      = "AQW Account";
+exports.menuCharpage     = "Charpages";
+exports.menuGuide        = "AQW Guides (old but relevant)";
+exports.menuTakeShot     = "Take a SShot of CP (CP ONLY!)";
+exports.menuCopyURL      = "Copy this page's URL";

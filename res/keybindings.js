@@ -61,7 +61,7 @@ const addBinds = function (){
     addKeybind(k.dragon, () => inst.newBrowserWindow(constant.df_url));
     
     // FORCED KEYBINDS FOR MAC. NEEDS TESTING
-    if (process.platform == 'darwin'){
+    /*if (process.platform == 'darwin'){
         addKeybind(k.cpSshot, ()=>{inst.charPagePrint()},true)
         addKeybind(k.macBackward, 
             (fw) => {
@@ -75,7 +75,7 @@ const addBinds = function (){
                 if (br.canGoForward()) br.goForward();
             },
         true);
-    }
+    }*/
 }
 
 exports.addKeybinding = addBinds;

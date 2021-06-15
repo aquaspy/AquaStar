@@ -74,8 +74,6 @@ function charPagePrint(){
     var url = focusedWindow.webContents.getURL();
     if( !url.includes(constant.charLookup + "?id=")) { return };
 
-    console.log(constant.titleMessages)
-
     let code = `(document.getElementsByTagName("object")[0] == undefined)? false : true;`;
     focusedWindow.webContents.executeJavaScript(code).then((flashExists) =>{
         if(!flashExists){

@@ -23,9 +23,19 @@ exports.aboutTitle     = ""
 exports.aboutMessage   = ""
 exports.aboutDetail    = ""
 
-
 exports.invalidCharpage  = "";
 exports.loadingCharpage  = "";
 exports.buildingCharpage = "";
 exports.cpDone           = "";
 exports.doneSavedAs      = "";
+
+exports.menuBackward     = "";
+exports.menuFoward       = "";
+exports.menuOtherPages   = "";
+exports.menuWiki         = "";
+exports.menuDesign       = "";
+exports.menuAccount      = "";
+exports.menuCharpage     = "";
+exports.menuGuide        = "";
+exports.menuTakeShot     = "";
+exports.menuCopyURL      = "";

@@ -25,11 +25,24 @@ function detectLang(systemLang,keyb){
     exports.getAboutTitle       = langFile.aboutTitle;
     exports.getAboutMessage     = langFile.aboutMessage;
     exports.getAboutDetail      = langFile.aboutDetail;
+
     exports.getInvalidCharpage  = langFile.invalidCharpage;
     exports.getLoadingCharpage  = langFile.loadingCharpage;
     exports.getBuildingCharpage = langFile.buildingCharpage;
     exports.getCPDone           = langFile.cpDone;
     exports.getDoneSavedAs      = langFile.doneSavedAs;
+
+    exports.getMenuBackward     = langFile.menuBackward;
+    exports.getMenuFoward       = langFile.menuFoward;
+    exports.getMenuOtherPages   = langFile.menuOtherPages;
+    exports.getMenuWiki         = langFile.menuWiki;
+    exports.getMenuDesign       = langFile.menuDesign;
+    exports.getMenuAccount      = langFile.menuAccount;
+    exports.getMenuCharpage     = langFile.menuCharpage;
+    exports.getMenuGuide        = langFile.menuGuide;
+    exports.getMenuTakeShot     = langFile.menuTakeShot;
+    exports.getMenuCopyURL      = langFile.menuCopyURL;
+
     return lang;
 }
 

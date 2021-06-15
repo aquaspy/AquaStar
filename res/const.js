@@ -49,14 +49,14 @@ const keyBinds = {
     sshot:       "F2",
     cpSshot:     "Alt+K",
     reload:      "F5",
-    reload2:     "CommandOrControl+R", // Here bc FireFox uses it.
+    reload2:     "CmdOrCtrl+R", // Here bc FireFox uses it.
     reloadCache: "Shift+F5",
     dragon:      "Alt+1",
-    macFoward:   "Alt+F",
-    macBackward: "Alt+B",
+    foward:      "Alt+F",
+    backward:    "Alt+B",
     help : [
         "Alt+H",
-        "CommandOrControl+H",
+        "CmdOrCtrl+H",
         "F1"
     ]
 }
@@ -141,49 +141,51 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
     [
         {
             //TODO - change for accelerator instead of &. better for translations!
-            label: '<<< &Backward',
+            label: '<<< ' + menuMessages.backward,
+            accelerator: keyBinds.backward,
             click(menuItem,focusedWin) {
                 var br = focusedWin.webContents;
                 if (br.canGoBack()) br.goBack();
             } 
         },
         {
-            label: '>>> &Forward',
+            label: '>>> ' + menuMessages.foward,
+            accelerator: keyBinds.foward,
             click(menuItem,focusedWin) {
                 var br = focusedWin.webContents;
                 if (br.canGoForward()) br.goForward();
             }
         }, // Sorry Mac, you cant have those next ones as its not worth it.
         {
-            label: "Other Usefull Pages",
+            label: menuMessages.otherPages,
             submenu: [
                 {
-                    label: 'Wiki (New Releases)',
+                    label: menuMessages.wiki,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(wikiReleases);
                     }
                 },
                 {
-                    label: 'Design notes',
+                    label: menuMessages.design,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(designNotes);
                     }
                 },
                 {
-                    label: 'AQW Account',
+                    label: menuMessages.account,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(accountAq);
                     }
                 },
                 {
-                    label: 'Char pages',
+                    label: menuMessages.charpage,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(charLookup);
                     }
                 },
                 {
                     // Just a bonus. no keybind or anything.
-                    label: 'AQWGuides',
+                    label: menuMessages.aqwg,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(aqwg);
                     }
@@ -191,7 +193,8 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
             ]
         },
         {
-            label: 'Ta&ke a SShot of CP (CP ONLY!)',
+            label: menuMessages.takeCPSshot,
+            accelerator: keyBinds.cpSshot,
             click() {
                 funcTakeSS();
             }
@@ -201,7 +204,7 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
     if (isContext){
         ret = [
            {
-                label: 'Copy this page\'s URL',
+                label: menuMessages.copyPageURL,
                 click(menuItem,focusedWin) {
                     require('electron').clipboard.writeText(
                         focusedWin.webContents.getURL(),'clipboard');
@@ -229,8 +232,6 @@ function showHelpMessage(){
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
-
-// About function
 function showAboutMessage(){
     const { dialog } = require('electron')
     const dialog_options = {
@@ -241,9 +242,11 @@ function showAboutMessage(){
     };
     const response = dialog.showMessageBox(null,dialog_options);
 }
-
 exports.showHelpMessage  = showHelpMessage;
 exports.showAboutMessage = showAboutMessage;
+
+let menuMessages;
+// LOCALE SETUP
 exports.setLocale        = (loc, keyb)=> {
     locale.detectLang(loc,keyb);
     exports.titleMessages = {
@@ -253,4 +256,17 @@ exports.setLocale        = (loc, keyb)=> {
         cpDone:           locale.getCPDone,
         doneSavedAs :     locale.getDoneSavedAs
     }    
+    menuMessages = {
+        backward:     locale.getMenuBackward,
+        foward:       locale.getMenuFoward,
+        otherPages:   locale.getMenuOtherPages,
+        wiki:         locale.getMenuWiki,
+        design:       locale.getMenuDesign,
+        account:      locale.getMenuAccount,
+        charpage:     locale.getMenuCharpage,
+        aqwg:         locale.getMenuGuide,
+        takeCPSshot:  locale.getMenuTakeShot,
+        copyPageURL:  locale.getMenuCopyURL
+    }
+    exports.menuMessages = menuMessages;
 }

@@ -38,3 +38,14 @@ exports.loadingCharpage  = "Carregando Char Page...";
 exports.buildingCharpage = "Construindo cenário. Por favor aguarde uns segundos...";
 exports.cpDone           = "PRONTO! Salvo a CP na pasta de Screenshots";
 exports.doneSavedAs      = "Pronto! Salvo como ";
+
+exports.menuBackward     = "Voltar";
+exports.menuFoward       = "Avançar";
+exports.menuOtherPages   = "Outras páginas úteis";
+exports.menuWiki         = "AQW Wiki";
+exports.menuDesign       = "Design Notes";
+exports.menuAccount      = "AQW Account";
+exports.menuCharpage     = "Charpages";
+exports.menuGuide        = "Guia AQW (antigo mas relevante)";
+exports.menuTakeShot     = "Printa a Charpage (somente CP!)";
+exports.menuCopyURL      = "Copiar o link da página";
