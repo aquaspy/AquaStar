@@ -66,7 +66,7 @@ function _getWinConfig(type){
     {
         width: 960,
         height: 550,
-        icon: iconImage,
+        icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
             webviewTag: ((type == "tab")? true : false),
@@ -110,7 +110,7 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
     // needs to be like that as the function is located on instances... arg is isFoward
     // Mac uses a forced keybind here, while the others can use the & symbol and have the same keybind NATIVE to the app.
     if (process.platform == 'darwin') return null;
-    
+
     var links = 
     [
         {
