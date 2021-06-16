@@ -4,8 +4,8 @@ const path = require("path");
 let   lang       = "en-US";
 const langFolder = "po";
 
-function detectLang(){
-    lang       = require('electron').app.getLocale();
+function detectLang(systemLang,keyb){
+    lang       = systemLang;
     pathToFile = path.join(__dirname, langFolder, lang + ".js");
     let langFile;
     if(require('fs').existsSync(pathToFile)){
@@ -19,12 +19,29 @@ function detectLang(){
 
     exports.getHelpTitle        = langFile.helpTitle;
     exports.getHelpMessage      = langFile.helpMessage;
-    exports.getHelpDetail       = langFile.helpDetail;
+    exports.getHelpDetail       = langFile.helpDetail(keyb);
     exports.getHelpScreenshot   = langFile.helpScreenshot;
     exports.getHelpAqliteOld    = langFile.helpAqliteOld;
     exports.getAboutTitle       = langFile.aboutTitle;
     exports.getAboutMessage     = langFile.aboutMessage;
     exports.getAboutDetail      = langFile.aboutDetail;
+
+    exports.getInvalidCharpage  = langFile.invalidCharpage;
+    exports.getLoadingCharpage  = langFile.loadingCharpage;
+    exports.getBuildingCharpage = langFile.buildingCharpage;
+    exports.getCPDone           = langFile.cpDone;
+    exports.getDoneSavedAs      = langFile.doneSavedAs;
+
+    exports.getMenuBackward     = langFile.menuBackward;
+    exports.getMenuFoward       = langFile.menuFoward;
+    exports.getMenuOtherPages   = langFile.menuOtherPages;
+    exports.getMenuWiki         = langFile.menuWiki;
+    exports.getMenuDesign       = langFile.menuDesign;
+    exports.getMenuAccount      = langFile.menuAccount;
+    exports.getMenuCharpage     = langFile.menuCharpage;
+    exports.getMenuGuide        = langFile.menuGuide;
+    exports.getMenuTakeShot     = langFile.menuTakeShot;
+    exports.getMenuCopyURL      = langFile.menuCopyURL;
 
     return lang;
 }

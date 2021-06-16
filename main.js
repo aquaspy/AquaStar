@@ -12,7 +12,7 @@ flash.flashManager(app, __dirname, constant.aqlitePath, constant.appName);
 
 function createWindow () {
     // Lang setup. Has to be after Ready event.
-    constant.setLocale(app.getLocale());
+    constant.setLocale(app.getLocale(),constant.keyBinds);
     //console.log(app.getLocale());
     // Create the browser window.
     let win = new BrowserWindow(constant.mainConfig);
