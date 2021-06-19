@@ -1,12 +1,11 @@
-const {globalShortcut} = require('electron');
 const inst     = require('./instances.js');
 const constant = require('./const.js');
+const electronLocalshortcut = require('electron-localshortcut');
 
 const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false){
-    var ret = globalShortcut.register(keybind, () => {
+    electronLocalshortcut.register(keybind, () => {
         inst.executeOnFocused(func, onlyHTML, considerDF);
     })
-    if (!ret) console.log("WARNING: failed to bind " + keybind);
 }
 
 const addBinds = function (){

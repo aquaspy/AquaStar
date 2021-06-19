@@ -48,9 +48,9 @@ const keyBinds = {
     fullscreen:  "F11",
     sshot:       "F2",
     cpSshot:     "Alt+K",
-    reload:      "F5",
+    reload:      "CmdOrCtrl+F5",
     reload2:     "CmdOrCtrl+R", // Here bc FireFox uses it.
-    reloadCache: "Shift+F5",
+    reloadCache: "CmdOrCtrl+Shift+F5",
     dragon:      "Alt+1",
     foward:      "Alt+F",
     backward:    "Alt+B",

@@ -11,7 +11,8 @@ exports.helpDetail = (k) => {return k.wiki + ' - AQW Wiki\n' +
     k.about     + ' - About AquaStar.\n' +
     k.fullscreen+ ' - Toggles Fullscreen\n' +
     k.sshot     + ' - Screenshot the game window (AQW and AQLITE only). They are saved in another folder as detailed below.\n' +
-    k.reloadcache+' - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
+    k.reload + ' or ' + k.reload2 + " - Reload the pages, like in a browser\n" +
+    k.reloadCache+' - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
     'For an older/custom aqlite file, please name it "aqlite_old.swf" and put it in the same folder as the executable, as said below!\n\n' +
     'Note:' + k.help.join(', ') + ' Shows this message.';
 }
