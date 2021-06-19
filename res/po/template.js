@@ -12,8 +12,9 @@ exports.helpDetail = (k) => {return k.wiki + ' - \n' +
     k.newTabbed + ' - \n' +
     k.about + ' - \n' +
     k.fullscreen + ' - \n' +
-    k.sshot + ' - \n' +
-    k.ccache + ' - \n\n' +
+    k.sshot + ' - \n' + 
+    k.reload + ' or ' + k.reload2 + " - \n" +
+    k.reloadCache + ' - \n\n' +
     "<Older AQLite instructions>. "+
     'Note:' + k.help.join(', ') + ' Shows this message.';
 }
