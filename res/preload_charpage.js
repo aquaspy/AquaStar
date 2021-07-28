@@ -83,19 +83,6 @@
         
         //TODO - VW is only for bigger width ratio. change for VH later if needed
         
-        // Yeah, had to be like this bc of some bugs....? it was WEEEIRD
-        /*
-        var parentDivStart = '<div style="'+ 
-            'width:' + w + 'px;' +
-            'height:' + h + 'px;' +
-            'left:' + ((window.innerWidth - w)/2) + 'px;' +
-            'top:' + ((window.innerHeight - h)/2) + 'px;' +
-            'position:' + "fixed" + ';' +
-            'z-index:' + 50 + ';' +
-            'background-color:' + "#FF000099" + ';' +
-            '"></div>';
-            */
-        
         var flashFrame = document.createElement("div");
         flashFrame.style.width = w + "px"
         flashFrame.style.height = h + "px"
@@ -111,10 +98,12 @@
         CCContainer.style.width = 0.3*w + "px";
         CCContainer.style.height = 0.15*h + "px";
         CCContainer.style.zIndex = 51;
-        CCContainer.style.left = 5 + "px";
-        CCContainer.style.bottom = 35 + "px";
+        CCContainer.style.left = 0.005*w + "px";
+        CCContainer.style.bottom = 0.07*h + "px";
         CCContainer.style.backgroundColor = "blue";
         flashFrame.appendChild(CCContainer);
+        
+        
         
         document.body.appendChild(flashFrame);
     }
