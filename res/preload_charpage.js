@@ -11,6 +11,8 @@
         var w = window.innerWidth;
         var h = window.innerHeight;
         
+        getCC(flash);
+        
         // POLISHING PAGE
         var body = document.body;
         body.innerHTML = "";
@@ -45,6 +47,32 @@
             }
         }
         return;
+    }
+    
+    function getCC(flashDiv){
+        const sourceFlash = flashDiv.outerHTML
+        const extractIntFromCP = (attributeName) => {
+            // Ex: ...smthsmth&intEyesCC=443322&smthsmth...
+            // We want the numbers for the intEyes in the ex.
+            var a = sourceFlash.split(attributeName + "=")[1].split('&')[0];
+            // TESTING
+            console.log(attributeName + ": " + a + "\n");
+            return a;
+        }
+        
+        const ccHair = extractIntFromCP("intColorHair")
+        const ccEyes = extractIntFromCP("intColorEye")
+        const ccSkin = extractIntFromCP("intColorSkin")
+        const ccBase = extractIntFromCP("intColorBase")
+        const ccTrim = extractIntFromCP("intColorTrim")
+        const ccAces = extractIntFromCP("intColorAccessory")
+        console.log("\n\n")
+        console.log(flashDiv)
+        
+        
+        // Healerbounty - Main set with Naval DK for example
+        // intColorHair=2236962&intColorSkin=15448438&intColorEye=6684672&intColorTrim=15726591&intColorBase=2368548&intColorAccessory=2368548
+
     }
     
     window.onload= onLoading;
