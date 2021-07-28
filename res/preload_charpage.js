@@ -5,7 +5,8 @@
     }
     // Thanks google
     function _getHexColor(int){
-        return "#"+((int)>>>0).toString(16).slice(-6);
+        return "#"+ ('000000' + ((int)>>>0).toString(16)).slice(-6);
+        //return "#"+((int)>>>0).toString(16).slice(-6);
     }
     
     function onLoading () {
@@ -82,8 +83,6 @@
     
     // @params Div with flash, width and height
     function renderCC(flash, w, h, isWidth = true){
-        
-        //TODO - VW is only for bigger width ratio. change for VH later if needed
         
         // Same size as flash, over it, to serve as guide
         var flashFrame = document.createElement("div");
