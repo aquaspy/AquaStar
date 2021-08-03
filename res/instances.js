@@ -156,13 +156,15 @@ function executeOnAnyFocused(funcForWindow){
 function _isGameWindow(url, considerDF = true){
     
     var aqliteValue = constant.aqlitePath;
+    var vanilla     = constant.vanillaAQW;
     if(process.platform == "win32") {
         // I so want to swear RN... just WHY???
         // Now when comparing to the file:///, its the same rules as URL.
         aqliteValue = constant.aqlitePath.replace(/\\/g,"/");
+        vanilla     = constant.vanillaAQW.replace(/\\/g,"/");
     }
     
-    if (url == aqliteValue || url == constant.vanillaAQW) return true;
+    if (url == aqliteValue || url == vanilla) return true;
     if (considerDF && url === constant.df_url) {
         return true;
     }

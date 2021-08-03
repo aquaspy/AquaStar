@@ -62,10 +62,12 @@ const keyBinds = {
 }
 exports.keyBinds = keyBinds;
 
-exports.aqlitePath = fs.existsSync(path.join(appCurrentDirectory,'aqlite_old.swf'))? 
+var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
+exports.aqlitePath = oldAqlite ? 
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
-            _getFileUrl(path.join(appRoot, 'aqlite.swf'))
-exports.isOldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
+            //_getFileUrl(path.join(appRoot, 'aqlite.swf'))
+            'https://game.aq.com/game/gamefiles/Loader_Spider.swf';
+exports.isOldAqlite = oldAqlite;
 
 /// Icon Stuff
 //const nativeImage = require('electron').nativeImage;
