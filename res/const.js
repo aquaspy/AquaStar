@@ -15,6 +15,8 @@ const appName     = "AquaStar";
 const sshotPath = path.join(app.getPath("pictures"),"AquaStar Screenshots");
 const iconPath  = path.join(appRoot, 'Icon', 'Icon_1024.png');
 
+const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
+
 const charLookup   = 'https://account.aq.com/CharPage';
 const designNotes  = 'https://www.aq.com/gamedesignnotes/';
 const accountAq    = 'https://account.aq.com/';
@@ -24,6 +26,7 @@ exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf'
 exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
 
+exports.githubPage       = githubPage;
 exports.wikiReleases     = wikiReleases;
 exports.accountAq        = accountAq;
 exports.designNotes      = designNotes;
@@ -222,7 +225,7 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
     else return links;
 }
 
-function showHelpMessage(){
+function showHelpMessage(win){
     const { dialog } = require('electron')
     const dialog_options = {
         buttons: ['Ok'],
@@ -232,18 +235,33 @@ function showHelpMessage(){
             locale.getHelpScreenshot + sshotPath + "\n" + 
             locale.getHelpAqliteOld + appCurrentDirectory 
     };
-    const response = dialog.showMessageBox(null,dialog_options);
+    dialog.showMessageBox(win,dialog_options);
 }
-function showAboutMessage(){
+function showAboutMessage(win) {
     const { dialog } = require('electron')
     const dialog_options = {
-        buttons: ['Ok'],
+        buttons: ['AquaStar Releases page','Close this window'],
         title:   locale.getAboutTitle + appVersion,
         message: locale.getAboutMessage,
-        detail:  locale.getAboutDetail + 'https://github.com/aquaspy/AquaStar\n\n'
+        detail:  locale.getAboutDetail + githubPage +'\n\n\n' +
+        "About:\n" +
+        "OS   - " + process.platform + "\n" +
+        "ARCH - " + process.arch     + "\n"
     };
-    const response = dialog.showMessageBox(null,dialog_options);
+    
+    // I wish the worse for who created Promisses and async stuff with such poor way to deal with them.
+    // Now i have to do ugly and messy code. Good job. ASSHOLE
+    // and no, sync version isnt available on our version. Freaking flash....
+    dialog.showMessageBox(win,dialog_options, (response) => {
+        if (response != 0) return;
+
+        // Cant pull instances or else would be cyclical.
+        const newWin = new BrowserWindow(_getWinConfig("win"));
+        newWin.setMenuBarVisibility(true);
+        newWin.loadURL(githubPage);
+    });
 }
+
 exports.showHelpMessage  = showHelpMessage;
 exports.showAboutMessage = showAboutMessage;
 

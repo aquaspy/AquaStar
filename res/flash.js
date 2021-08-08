@@ -6,10 +6,10 @@ function getPluginName() {
     switch (process.platform) {
     case 'win32':
         if (process.arch == "x86"){
-        pluginName = 'pepflashplayer32bits.dll'
+            pluginName = 'pepflashplayer32bits.dll'
         }
         else {
-        pluginName = 'pepflashplayer.dll'
+            pluginName = 'pepflashplayer.dll'
         }
         break
     case 'darwin':
@@ -19,10 +19,10 @@ function getPluginName() {
     case 'linux':
         // Can be arm too...
         if (process.arch == "x86"){
-        pluginName = 'libpepflashplayer32bits.so'
+            pluginName = 'libpepflashplayer32bits.so'
         }
         else if (process.arch == "arm") {
-        pluginName = 'libpepflashplayerARM.so'
+            pluginName = 'libpepflashplayerARM.so'
         }
         else {
             pluginName = 'libpepflashplayer.so'

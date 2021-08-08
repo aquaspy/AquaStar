@@ -27,10 +27,10 @@ const addBinds = function (){
     
     // Show help message
     k.help.forEach((opt)=> {
-        addKeybind(opt,    ()=>{constant.showHelpMessage()});
+        addKeybind(opt,    (focusedWin)=>{constant.showHelpMessage(focusedWin)});
     });
     // Show About
-    addKeybind(k.about,    ()=>{constant.showAboutMessage()});
+    addKeybind(k.about,    (focusedWin)=>{constant.showAboutMessage(focusedWin)});
 
     // Toggle Fullscreen
     addKeybind(k.fullscreen,(focusedWin) => {
