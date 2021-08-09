@@ -63,7 +63,7 @@ function createWindow () {
 
     // Enable Flash swf in official char pages. Thanks for /u/gulag1337 for finding this info and posting in reddit. I almost found it myself by accident... oof.
     const agentTagetFilter = {
-        urls: ['*://*.aq.com/*','*://*.aq.com', '*://aq.com(/*)?','*://game.aq.com']
+        urls: ['*://*.aq.com/*','*://*.aq.com', '*://aq.com(/*)?','*://game.aq.com', '*://play.dragonfable.com/*']
     }
     session.defaultSession.webRequest.onBeforeSendHeaders(agentTagetFilter, (details, callback) => {
         details.requestHeaders['User-Agent'] = 

@@ -23,7 +23,7 @@ const accountAq    = 'https://account.aq.com/';
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 const aqwg         = 'https://aqwg.weebly.com/';
 exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
-exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf'
+exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=2'
 exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
 
 exports.githubPage       = githubPage;
