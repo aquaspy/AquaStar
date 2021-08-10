@@ -32,6 +32,11 @@ exports.aboutDetail =
     'Note: This is NOT an official Artix product. Artix Entertainment does not recommends it by any means. You are at your own risk using it.\n\n' +
     'You can give your opinion, contribute and follow the project here: '
 
+exports.aboutDebug       = "Debug Info"
+
+exports.aboutGithubPrompt = "AquaStar Releases page"
+exports.aboutClosePrompt  = "Close this Popup"
+
 exports.invalidCharpage  = "Not valid Char Page window!";
 exports.loadingCharpage  = "Loading Char Page...";
 exports.buildingCharpage = "Building scenario. Please wait some seconds...";
@@ -40,10 +45,14 @@ exports.doneSavedAs      = "Done! Saved as ";
 
 exports.menuBackward     = "Backward";
 exports.menuFoward       = "Foward";
-exports.menuOtherPages   = "Other Usefull Pages";
+exports.menuOtherPages   = "Usefull Pages"
+exports.menuOtherPages2  = "Other usefull Pages";
 exports.menuWiki         = "AQW Wiki";
 exports.menuDesign       = "Design Notes";
 exports.menuAccount      = "AQW Account";
+exports.menuPortal       = "Portal Battleon";
+exports.menuHeromart     = "Heromart";
+exports.menuCalendar     = "Calendar of Events";
 exports.menuCharpage     = "Charpages";
 exports.menuGuide        = "AQW Guides (old but relevant)";
 exports.menuTakeShot     = "Take a SShot of CP (CP ONLY!)";

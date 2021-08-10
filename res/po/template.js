@@ -23,6 +23,10 @@ exports.helpAqliteOld  = ""
 exports.aboutTitle     = ""
 exports.aboutMessage   = ""
 exports.aboutDetail    = ""
+exports.aboutDebug     = ""
+
+exports.aboutGithubPrompt = ""
+exports.aboutClosePrompt  = ""
 
 exports.invalidCharpage  = "";
 exports.loadingCharpage  = "";
@@ -33,9 +37,13 @@ exports.doneSavedAs      = "";
 exports.menuBackward     = "";
 exports.menuFoward       = "";
 exports.menuOtherPages   = "";
+exports.menuOtherPages2  = "";
 exports.menuWiki         = "";
 exports.menuDesign       = "";
 exports.menuAccount      = "";
+exports.menuPortal       = "";
+exports.menuHeromart     = "";
+exports.menuCalendar     = "";
 exports.menuCharpage     = "";
 exports.menuGuide        = "";
 exports.menuTakeShot     = "";

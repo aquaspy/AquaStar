@@ -21,7 +21,12 @@ const charLookup   = 'https://account.aq.com/CharPage';
 const designNotes  = 'https://www.aq.com/gamedesignnotes/';
 const accountAq    = 'https://account.aq.com/';
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
+
 const aqwg         = 'https://aqwg.weebly.com/';
+const heromart     = 'https://www.heromart.com/';
+const battleon     = 'https://portal.battleon.com/';
+const calendar     = 'https://www.aq.com/lore/calendar';
+
 exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=2'
 exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
@@ -188,12 +193,35 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
                         focusedWin.webContents.loadURL(charLookup);
                     }
                 },
+                // No keybind now...
                 {
-                    // Just a bonus. no keybind or anything.
-                    label: menuMessages.aqwg,
-                    click(menuItem,focusedWin) {
-                        focusedWin.webContents.loadURL(aqwg);
-                    }
+                    label: menuMessages.otherPages2,
+                    submenu: [
+                        {
+                            label: menuMessages.calendar,
+                            click(menuItem,focusedWin) {
+                                focusedWin.webContents.loadURL(calendar);
+                            }
+                        },
+                        {
+                            label: menuMessages.aqwg,
+                            click(menuItem,focusedWin) {
+                                focusedWin.webContents.loadURL(aqwg);
+                            }
+                        },
+                        {
+                            label: menuMessages.heromart,
+                            click(menuItem,focusedWin) {
+                                focusedWin.webContents.loadURL(heromart);
+                            }
+                        },
+                        {
+                            label: menuMessages.portal,
+                            click(menuItem,focusedWin) {
+                                focusedWin.webContents.loadURL(battleon);
+                            }
+                        }
+                    ]
                 }
             ]
         },
@@ -240,11 +268,11 @@ function showHelpMessage(win){
 function showAboutMessage(win) {
     const { dialog } = require('electron')
     const dialog_options = {
-        buttons: ['AquaStar Releases page','Close this window'],
+        buttons: [locale.getGithubPage,locale.getCloseWindow],
         title:   locale.getAboutTitle + appVersion,
         message: locale.getAboutMessage,
         detail:  locale.getAboutDetail + githubPage +'\n\n\n' +
-        "About:\n" +
+        locale.getDebug + ":\n" +
         "OS   - " + process.platform + "\n" +
         "ARCH - " + process.arch     + "\n"
     };
@@ -255,7 +283,7 @@ function showAboutMessage(win) {
     dialog.showMessageBox(win,dialog_options, (response) => {
         if (response != 0) return;
 
-        // Cant pull instances or else would be cyclical.
+        // Cant pull instances module or else would be cyclical.
         const newWin = new BrowserWindow(_getWinConfig("win"));
         newWin.setMenuBarVisibility(true);
         newWin.loadURL(githubPage);
@@ -280,11 +308,15 @@ exports.setLocale        = (loc, keyb)=> {
         backward:     locale.getMenuBackward,
         foward:       locale.getMenuFoward,
         otherPages:   locale.getMenuOtherPages,
+        otherPages2:  locale.getMenuOtherPages2,
         wiki:         locale.getMenuWiki,
         design:       locale.getMenuDesign,
         account:      locale.getMenuAccount,
         charpage:     locale.getMenuCharpage,
         aqwg:         locale.getMenuGuide,
+        portal:       locale.getMenuPortal,
+        heromart:     locale.getMenuHeromart,
+        calendar:     locale.getMenuCalendar,
         takeCPSshot:  locale.getMenuTakeShot,
         copyPageURL:  locale.getMenuCopyURL
     }
