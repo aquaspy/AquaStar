@@ -30,6 +30,8 @@ sudo apt install libnss3
 ```
 - Then, on the appimage file, add a shortcut to ChromeOS or make it executable by double clicking, and its done!
 
+If you want a suggestion for making appimage shortcuts on ChromeOS, Primal_Majin also suggested ![menulibre](https://bluesabre.org/menulibre/), to make it.
+
 ## Why?
 
 Update: Following comments are from before Spider got hired into AE.
