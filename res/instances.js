@@ -14,6 +14,7 @@ let winNames   = {}; // Fake dictionary
 // New page function
 function newBrowserWindow(new_path){
     const config = (new_path == constant.pagesPath)? constant.tabbedConfig : constant.winConfig;
+    
     const newWin = new BrowserWindow(config);
     newWin.setMenuBarVisibility(false); //Remove default electron menu
     newWin.loadURL(new_path);
@@ -54,16 +55,31 @@ function newBrowserWindow(new_path){
         /// ... but only if its win or lunix. Mac doesnt have the feature -_-
         /// Mac still get keybinds tho, just not the menu.
         newWin.setMenuBarVisibility(true);
-        var contextMenu = Menu.buildFromTemplate(constant.getMenu(takeSS,true));
-
-        newWin.webContents.on("context-menu",(e,param)=>{
-            contextMenu.popup({
-                window: newWin,
-                x: param.x,
-                y: param.y
-            });
-        })
+        
+        _windowAddContext(newWin);
     }
+}
+
+// Now, every window created with actions like CTRL + click, can have the right click menu too.
+function _windowAddContext(newWin){
+    var contextMenu = Menu.buildFromTemplate( 
+        constant.getMenu( takeSS,true));
+    
+    newWin.webContents.on("context-menu",(e,param)=>{
+        contextMenu.popup({
+            window: newWin,
+            x: param.x,
+            y: param.y
+        });
+    })
+    
+    newWin.webContents.on('new-window', (event, url, frameName, disposition, options, additionalFeatures) => {
+        event.preventDefault()
+        childWin = new BrowserWindow(constant.winConfig);
+        childWin.loadURL(url);
+        _windowAddContext(childWin);
+        event.newGuest = childWin;
+    })
 }
 
 // Weird char page config
