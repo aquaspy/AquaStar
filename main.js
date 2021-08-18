@@ -77,6 +77,12 @@ function createWindow () {
     //win.webContents.openDevTools()
 }
 
+// For anyone looking why we arent sandboxed and neither is AE...
+// To look in the filesystem for the flash plugin, it needs the "no sandbox" part.
+// If anyone out there think we just dont know about it, uncomment here and see for yourself...
+// We do enable sandbox for each created window just for safety. Check const.js's config function
+//app.enableSandbox();
+
 app.on('ready', createWindow)
 app.on('window-all-closed', () => {
   // On macOS it is common for applications and their menu bar

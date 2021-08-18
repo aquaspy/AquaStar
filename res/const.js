@@ -20,7 +20,7 @@ const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
 const charLookup   = 'https://account.aq.com/CharPage';
 const designNotes  = 'https://www.aq.com/gamedesignnotes/';
 const accountAq    = 'https://account.aq.com/';
-const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
+const wikiReleases = 'https://aqwwiki.wikidot.com/new-releases';
 
 const aqwg         = 'https://aqwg.weebly.com/';
 const heromart     = 'https://www.heromart.com/';
@@ -105,6 +105,7 @@ function _getWinConfig(type){
         icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
+            sandbox: true,
             webviewTag: ((type == "tab")? true : false),
             plugins: true,
             javascript: true,
@@ -127,6 +128,7 @@ function _getWinConfig(type){
         resizable: false,
         webPreferences: {
             nodeIntegration: false,
+            sandbox: true,
             plugins: true,
             javascript: true,
             contextIsolation: true,
