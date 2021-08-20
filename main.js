@@ -67,14 +67,16 @@ function createWindow () {
     }
     session.defaultSession.webRequest.onBeforeSendHeaders(agentTagetFilter, (details, callback) => {
         details.requestHeaders['User-Agent'] = 
-                //'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ArtixGameLauncher/2.0.4 Chrome/73.0.3683.121 Electron/5.0.11 Safari/537.36'
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ArtixGameLauncher/2.0.9 Chrome/80.0.3987.163 Electron/8.5.5 Safari/537.36'
         //details.requestHeaders['Referer'] = 'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=1'
         callback({ requestHeaders: details.requestHeaders })
     })
     
     //Console
-    //win.webContents.openDevTools()
+    if (constant.isDebugBuild){
+        win.webContents.openDevTools()
+    }
+    
 }
 
 // For anyone looking why we arent sandboxed and neither is AE...

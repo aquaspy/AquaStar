@@ -4,6 +4,10 @@ const locale = require("./locale.js");
 const fs     = require("fs");
 const url    = require("url");
 
+// WARNING - ENABLES DEBUG MODE:
+exports.isDebugBuild = false;
+//exports.isDebugBuild = true;
+
 /// Inside the app itself. Root of the project
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
 /// Where app is ran from.

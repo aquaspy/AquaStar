@@ -10,8 +10,11 @@ const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false)
 
 const addBinds = function (){
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
-    // DEBUG ONLY, DO NOT SEND IN PRODUCTION
-    //addKeybind('Alt+I', (fw)=>{fw.webContents.openDevTools()},true);
+    
+    if(constant.isDebugBuild){
+        addKeybind('Alt+I', (fw)=>{fw.webContents.openDevTools()},true);        
+    }
+    
     const k = constant.keyBinds;
     addKeybind(k.wiki    , ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
