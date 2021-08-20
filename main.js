@@ -15,11 +15,8 @@ function createWindow () {
     constant.setLocale(app.getLocale(),constant.keyBinds);
     //console.log(app.getLocale());
     // Create the browser window.
-    let win = new BrowserWindow(constant.mainConfig);
+    let win = inst.newBrowserWindow(constant.aqlitePath,true);
 
-    win.setTitle("AquaStar - AQLite " + (constant.isOldAqlite ? '(Older/Custom AQLite Version)' : ""));
-    win.loadURL(constant.aqlitePath);
-    
     // Keybindings now in keybindings.js
     keyb.addKeybinding();
     

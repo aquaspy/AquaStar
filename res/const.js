@@ -64,7 +64,7 @@ const keyBinds = {
     reload2:     "CmdOrCtrl+R", // Here bc FireFox uses it.
     reloadCache: "CmdOrCtrl+Shift+F5",
     dragon:      "Alt+1",
-    foward:      "Alt+F",
+    forward:     "Alt+F",
     backward:    "Alt+B",
     help : [
         "Alt+H",
@@ -149,14 +149,12 @@ exports.mainConfig   = _getWinConfig("main");
 exports.charConfig   = _getWinConfig("cprint");
 
 exports.getMenu = (funcTakeSS, isContext = false) => {
-    // needs to be like that as the function is located on instances... arg is isFoward
-    // Mac uses a forced keybind here, while the others can use the & symbol and have the same keybind NATIVE to the app.
+    // needs to be like that as the function is located on instances...
     if (isContext == false && process.platform == 'darwin') return null;
 
     var links = 
     [
         {
-            //TODO - change for accelerator instead of &. better for translations!
             label: '<<< ' + menuMessages.backward,
             accelerator: keyBinds.backward,
             click(menuItem,focusedWin) {
@@ -166,35 +164,39 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
         },
         {
             label: '>>> ' + menuMessages.foward,
-            accelerator: keyBinds.foward,
+            accelerator: keyBinds.forward,
             click(menuItem,focusedWin) {
                 var br = focusedWin.webContents;
                 if (br.canGoForward()) br.goForward();
             }
-        }, // Sorry Mac, you cant have those next ones as its not worth it.
+        }, // Sorry Mac, you cant have those next ones as its not worth it... There is still right click tho
         {
             label: menuMessages.otherPages,
             submenu: [
                 {
                     label: menuMessages.wiki,
+                    accelerator: keyBinds.wiki,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(wikiReleases);
                     }
                 },
                 {
                     label: menuMessages.design,
+                    accelerator: keyBinds.design,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(designNotes);
                     }
                 },
                 {
                     label: menuMessages.account,
+                    accelerator: keyBinds.account,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(accountAq);
                     }
                 },
                 {
                     label: menuMessages.charpage,
+                    accelerator: keyBinds.charpage,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(charLookup);
                     }

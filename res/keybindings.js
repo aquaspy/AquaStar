@@ -71,7 +71,7 @@ const addBinds = function (){
                 if (br.canGoBack()) br.goBack();
             },
         true);
-        addKeybind(k.foward,
+        addKeybind(k.forward,
             (fw) => {
                 var br = fw.webContents;
                 if (br.canGoForward()) br.goForward();
