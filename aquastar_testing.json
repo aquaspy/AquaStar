@@ -1,0 +1,20 @@
+{  
+    "wiki": "Alt+W",
+    "account": "Alt+A",
+    "design": "Alt+D",
+    "charpage": "Alt+P",
+    "newAqlite": "Alt+N",
+    "newAqw": "Alt+Q",
+    "newTabbed": "Alt+Y",
+    "about": "F9",
+    "fullscreen": "F11",
+    "sshot": "F2",
+    "cpSshot": "Alt+K",
+    "reload": ["CmdOrCtrl+F5","CmdOrCtrl+R"],
+    "reloadCache": "CmdOrCtrl+Shift+F5",
+    "dragon": "Alt+1",
+    "forward": "Alt+F",
+    "backward": "Alt+B",
+    "help": [ "Alt+H", "CmdOrCtrl+H", "F1" ] ,
+    "settings": "Alt+9"
+}

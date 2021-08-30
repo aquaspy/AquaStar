@@ -2,16 +2,27 @@ const inst     = require('./instances.js');
 const constant = require('./const.js');
 const electronLocalshortcut = require('electron-localshortcut');
 
+// Now, accepting Arrays as well...
 const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false){
-    electronLocalshortcut.register(keybind, () => {
-        inst.executeOnFocused(func, onlyHTML, considerDF);
-    })
+    if(Array.isArray(keybind)){
+        keybind.forEach((value) => {
+            addKeybind(value, func, onlyHTML, considerDF);
+        })
+    }
+    else {    
+        electronLocalshortcut.register(keybind, () => {
+            inst.executeOnFocused(func, onlyHTML, considerDF);
+        })
+    }
 }
 
 const addBinds = function (){
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
-    // DEBUG ONLY, DO NOT SEND IN PRODUCTION
-    //addKeybind('Alt+I', (fw)=>{fw.webContents.openDevTools()},true);
+    
+    if(constant.isDebugBuild){
+        addKeybind('Alt+I', (fw)=>{fw.webContents.openDevTools()},true);        
+    }
+    
     const k = constant.keyBinds;
     addKeybind(k.wiki    , ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
@@ -26,11 +37,9 @@ const addBinds = function (){
     addKeybind(k.newAqw,   ()=>{inst.newBrowserWindow(constant.vanillaAQW)});
     
     // Show help message
-    k.help.forEach((opt)=> {
-        addKeybind(opt,    ()=>{constant.showHelpMessage()});
-    });
-    // Show About
-    addKeybind(k.about,    ()=>{constant.showAboutMessage()});
+    addKeybind(k.help,     (focusedWin)=>{constant.showHelpMessage(focusedWin)});
+    
+    addKeybind(k.about,    (focusedWin)=>{constant.showAboutMessage(focusedWin)});
 
     // Toggle Fullscreen
     addKeybind(k.fullscreen,(focusedWin) => {
@@ -44,10 +53,7 @@ const addBinds = function (){
     addKeybind(k.sshot,    (focusedWin) => { inst.takeSS(focusedWin); },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
     
     // Reload
-    k.re
-    var reloadPage = (focusedWin) => {focusedWin.reload()};
-    addKeybind(k.reload, reloadPage);
-    addKeybind(k.reload2,reloadPage);
+    addKeybind(k.reload,   (focusedWin) => {focusedWin.reload()});
     // Reload and Clear cache
     addKeybind(k.reloadCache, (focusedWin) => {
         var ses = focusedWin.webContents.session;
@@ -68,7 +74,7 @@ const addBinds = function (){
                 if (br.canGoBack()) br.goBack();
             },
         true);
-        addKeybind(k.foward,
+        addKeybind(k.forward,
             (fw) => {
                 var br = fw.webContents;
                 if (br.canGoForward()) br.goForward();

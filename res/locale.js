@@ -4,7 +4,7 @@ const path = require("path");
 let   lang       = "en-US";
 const langFolder = "po";
 
-function detectLang(systemLang,keyb){
+function detectLang(systemLang, keyb){
     lang       = systemLang;
     pathToFile = path.join(__dirname, langFolder, lang + ".js");
     let langFile;
@@ -22,9 +22,13 @@ function detectLang(systemLang,keyb){
     exports.getHelpDetail       = langFile.helpDetail(keyb);
     exports.getHelpScreenshot   = langFile.helpScreenshot;
     exports.getHelpAqliteOld    = langFile.helpAqliteOld;
+    exports.getHelpCustomKeyPath= langFile.helpCustomKeyPath 
     exports.getAboutTitle       = langFile.aboutTitle;
     exports.getAboutMessage     = langFile.aboutMessage;
     exports.getAboutDetail      = langFile.aboutDetail;
+    exports.getGithubPage       = langFile.aboutGithubPrompt;
+    exports.getCloseWindow      = langFile.aboutClosePrompt;
+    exports.getDebug            = langFile.aboutDebug;
 
     exports.getInvalidCharpage  = langFile.invalidCharpage;
     exports.getLoadingCharpage  = langFile.loadingCharpage;
@@ -35,9 +39,13 @@ function detectLang(systemLang,keyb){
     exports.getMenuBackward     = langFile.menuBackward;
     exports.getMenuFoward       = langFile.menuFoward;
     exports.getMenuOtherPages   = langFile.menuOtherPages;
+    exports.getMenuOtherPages2  = langFile.menuOtherPages2;
     exports.getMenuWiki         = langFile.menuWiki;
     exports.getMenuDesign       = langFile.menuDesign;
     exports.getMenuAccount      = langFile.menuAccount;
+    exports.getMenuPortal       = langFile.menuPortal;
+    exports.getMenuHeromart     = langFile.menuHeromart;
+    exports.getMenuCalendar     = langFile.menuCalendar;
     exports.getMenuCharpage     = langFile.menuCharpage;
     exports.getMenuGuide        = langFile.menuGuide;
     exports.getMenuTakeShot     = langFile.menuTakeShot;

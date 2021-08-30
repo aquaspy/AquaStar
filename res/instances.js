@@ -12,8 +12,15 @@ let winNames   = {}; // Fake dictionary
 
 
 // New page function
-function newBrowserWindow(new_path){
-    const config = (new_path == constant.pagesPath)? constant.tabbedConfig : constant.winConfig;
+function newBrowserWindow(new_path, isMainWin=false){
+    var config = "";
+    if (isMainWin) config = constant.mainConfig;
+    else if (new_path == constant.pagesPath){
+         config = constant.tabbedConfig 
+    }
+    else config = constant.winConfig;
+    
+    
     const newWin = new BrowserWindow(config);
     newWin.setMenuBarVisibility(false); //Remove default electron menu
     newWin.loadURL(new_path);
@@ -22,10 +29,10 @@ function newBrowserWindow(new_path){
         new_path == constant.vanillaAQW) {
         // Its alt window, Put the aqlite/Aqw title...
         
-        var windowNumber = 2; // As the Main one is 1.
+        var windowNumber = 1;
         
         for (;usedAltPagesNumbers.includes(windowNumber);windowNumber++){
-             if (windowNumber === 20000) {
+             if (windowNumber === 2000) {
                 console.log("just how long is this opened!?!?");
                 break;
             };
@@ -33,10 +40,14 @@ function newBrowserWindow(new_path){
         
         // Deciding the new title name...
         var winTitle = "";
-        (new_path == constant.aqlitePath) ? 
-            winTitle = "AquaStar - AQLite " + (constant.isOldAqlite ? '(Older/Custom AQLite Version - ': "(") + "Window " + windowNumber + ")" : 
-            winTitle = "AquaStar - Adventure Quest Worlds (Window " + windowNumber + ")";
-        
+        if (new_path == constant.aqlitePath){
+            winTitle = "AquaStar - " + (constant.isOldAqlite ? "Older/Custom ":"") + "AQLite";
+        }
+        else {
+            winTitle = "AquaStar - Adventure Quest Worlds";
+        }
+        if (windowNumber > 1) winTitle += " (Window " + windowNumber + ")";
+            
         newWin.setTitle(winTitle);
 
         // Storing and Removing the window number from a list.
@@ -54,19 +65,88 @@ function newBrowserWindow(new_path){
         /// ... but only if its win or lunix. Mac doesnt have the feature -_-
         /// Mac still get keybinds tho, just not the menu.
         newWin.setMenuBarVisibility(true);
-        var contextMenu = Menu.buildFromTemplate(constant.getMenu(takeSS,true));
-
-        newWin.webContents.on("context-menu",(e,param)=>{
-            contextMenu.popup({
-                window: newWin,
-                x: param.x,
-                y: param.y
-            });
-        })
     }
+    _windowAddContext(newWin);
+    
+    return newWin;
 }
 
-// Weird char page config
+// Now, every window created with actions like CTRL + click, can have the right click menu too.
+function _windowAddContext(newWin){
+    // First, a security check. No more than 70 windows opened at once...
+    if (BrowserWindow.getAllWindows().length > 70){
+        Console.log("This is very problematic... If you are seeing this in terminal, do a CTRL + C on it and cancel the program!");
+        return;
+    }
+    
+    // Context Menu part
+    var contextMenu = Menu.buildFromTemplate( 
+        constant.getMenu( takeSS,true));
+    
+    newWin.webContents.on("context-menu",(e,param)=>{
+        contextMenu.popup({
+            window: newWin,
+            x: param.x,
+            y: param.y
+        });
+    })
+    
+    // "Child Windows follow the same rule" part
+    newWin.webContents.on('new-window', (event, url, frameName, disposition, options, additionalFeatures) => {
+        event.preventDefault()
+        childWin = new BrowserWindow(constant.winConfig);
+        childWin.loadURL(url);
+        _windowAddContext(childWin);
+        event.newGuest = childWin;
+    })
+}
+
+/// GAME WINDOW ONLY
+function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
+    // Friendly reminder for BrowserWindow.getAllWindows() existing
+
+    var focusedWindow = BrowserWindow.getFocusedWindow();
+    if (focusedWindow === null) {
+        // No AquaStar Windows are focused. Do nothing.
+        return;
+    }
+    // Is it a game or is it a HTML..?
+    var isGame = _isGameWindow(focusedWindow.webContents.getURL(), considerDF);
+
+    // Compacting of the XOR gave me this... LOOL
+    if (onlyHtml == !isGame) funcForWindow(focusedWindow);
+}
+
+/// ANY APP WINDOW WILL DO
+function executeOnAnyFocused(funcForWindow){
+    // NO FUNCTION USES IT, HERE FOR THE FUTURE!
+    var focusedWindow = BrowserWindow.getFocusedWindow();
+    if (focusedWindow === null) {
+        // No AquaStar Windows are focused. Do nothing.
+        return;
+    }
+    funcForWindow(focusedWindow);
+}
+
+function _isGameWindow(url, considerDF = true){
+    
+    var aqliteValue = constant.aqlitePath;
+    var vanilla     = constant.vanillaAQW;
+    if(process.platform == "win32") {
+        // I so want to swear RN... just WHY???
+        // Now when comparing to the file:///, its the same rules as URL.
+        aqliteValue = constant.aqlitePath.replace(/\\/g,"/");
+        vanilla     = constant.vanillaAQW.replace(/\\/g,"/");
+    }
+    
+    if (url == aqliteValue || url == vanilla) return true;
+    if (considerDF && url === constant.df_url) {
+        return true;
+    }
+    return false;
+}
+
+// Weird char page config - For Alt + K
 function charPagePrint(){
     // Check if its valid keybind.
     var focusedWindow = BrowserWindow.getFocusedWindow();
@@ -85,6 +165,7 @@ function charPagePrint(){
             newWin.setMenuBarVisibility(false);
             _notifyWindow(focusedWindow,constant.titleMessages.loadingCharpage, false);
             newWin.loadURL(url);
+            
             newWin.webContents.on("did-finish-load", () => {
                 _notifyWindow(focusedWindow,constant.titleMessages.buildingCharpage, false);
     
@@ -126,50 +207,8 @@ function charPagePrint(){
 //TODO - find a way to detect when flash is done loading!
 }
 
-/// GAME WINDOW ONLY
-function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
-    // Friendly reminder for BrowserWindow.getAllWindows() existing
-
-    var focusedWindow = BrowserWindow.getFocusedWindow();
-    if (focusedWindow === null) {
-        // No AquaStar Windows are focused. Do nothing.
-        return;
-    }
-    // Is it a game or is it a HTML..?
-    var isGame = _isGameWindow(focusedWindow.webContents.getURL(), considerDF);
-
-    // Compacting of the XOR gave me this... LOOL
-    if (onlyHtml == !isGame) funcForWindow(focusedWindow);
-}
-
-/// ANY APP WINDOW WILL DO
-function executeOnAnyFocused(funcForWindow){
-    // NO FUNCTION USES IT, HERE FOR THE FUTURE!
-    var focusedWindow = BrowserWindow.getFocusedWindow();
-    if (focusedWindow === null) {
-        // No AquaStar Windows are focused. Do nothing.
-        return;
-    }
-    funcForWindow(focusedWindow);
-}
-
-function _isGameWindow(url, considerDF = true){
-    
-    var aqliteValue = constant.aqlitePath;
-    if(process.platform == "win32") {
-        // I so want to swear RN... just WHY???
-        // Now when comparing to the file:///, its the same rules as URL.
-        aqliteValue = constant.aqlitePath.replace(/\\/g,"/");
-    }
-    
-    if (url == aqliteValue || url == constant.vanillaAQW) return true;
-    if (considerDF && url === constant.df_url) {
-        return true;
-    }
-    return false;
-}
-
-/// Return null or the filename
+// Take a screenshot of the screen. 
+// Customizable options in parameter are there for the charPagePrint function
 function takeSS(focusedWin, ret = null, destroyWindow = false){
     // If ret is passed, we figure how to take the SS.
     // Format is the rectangle one;
