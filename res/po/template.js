@@ -1,25 +1,26 @@
-// If you want to translate our program, thanks! Check out the english file for an example.
-
-exports.helpTitle = ""
+function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else return keyb;};
+exports.helpTitle = 'Help:'
 exports.helpMessage = ""
-exports.helpDetail = (k) => {return k.wiki + ' - \n' +
-    k.design   + ' - \n' +
-    k.account  + ' - \n' +
-    k.charpage + ' - \n' +
-    k.cpSshot + ' - \n' +
-    k.newAqlite + ' - \n' +
-    k.newAqw + ' - \n' +
-    k.newTabbed + ' - \n' +
-    k.about + ' - \n' +
-    k.fullscreen + ' - \n' +
-    k.sshot + ' - \n' + 
-    k.reload + ' or ' + k.reload2 + " - \n" +
-    k.reloadCache + ' - \n\n' +
-    "<Older AQLite instructions>. "+
-    'Note:' + k.help.join(', ') + ' Shows this message.';
+exports.helpDetail = (k) => {return expand(k.wiki) + ' - \n' +
+    expand(k.design)    + ' - \n' +
+    expand(k.account)   + ' - \n' +
+    expand(k.charpage)  + ' - \n' +
+    expand(k.cpSshot)   + ' - \n' +
+    expand(k.newAqlite) + ' - \n' +
+    expand(k.newAqw)    + ' - \n' +
+    expand(k.newTabbed) + ' - \n' +
+    expand(k.about)     + ' - \n' +
+    expand(k.fullscreen)+ ' - \n' +
+    expand(k.sshot)     + ' - \n' +
+    expand(k.reload)    + " - \n" +
+    expand(k.reloadCache)+' - .\n\n' +
+    '\n\n' +
+    ':' + expand(k.help) + ' .';
 }
-exports.helpScreenshot = ""
-exports.helpAqliteOld  = ""
+exports.helpScreenshot = ": "
+exports.helpAqliteOld  = ": "
+exports.helpCustomKeyPath  = ": "
+
 exports.aboutTitle     = ""
 exports.aboutMessage   = ""
 exports.aboutDetail    = ""

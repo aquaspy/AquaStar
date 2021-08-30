@@ -2,10 +2,18 @@ const inst     = require('./instances.js');
 const constant = require('./const.js');
 const electronLocalshortcut = require('electron-localshortcut');
 
+// Now, accepting Arrays as well...
 const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false){
-    electronLocalshortcut.register(keybind, () => {
-        inst.executeOnFocused(func, onlyHTML, considerDF);
-    })
+    if(Array.isArray(keybind)){
+        keybind.forEach((value) => {
+            addKeybind(value, func, onlyHTML, considerDF);
+        })
+    }
+    else {    
+        electronLocalshortcut.register(keybind, () => {
+            inst.executeOnFocused(func, onlyHTML, considerDF);
+        })
+    }
 }
 
 const addBinds = function (){
@@ -29,10 +37,8 @@ const addBinds = function (){
     addKeybind(k.newAqw,   ()=>{inst.newBrowserWindow(constant.vanillaAQW)});
     
     // Show help message
-    k.help.forEach((opt)=> {
-        addKeybind(opt,    (focusedWin)=>{constant.showHelpMessage(focusedWin)});
-    });
-    // Show About
+    addKeybind(k.help,     (focusedWin)=>{constant.showHelpMessage(focusedWin)});
+    
     addKeybind(k.about,    (focusedWin)=>{constant.showAboutMessage(focusedWin)});
 
     // Toggle Fullscreen
@@ -47,10 +53,7 @@ const addBinds = function (){
     addKeybind(k.sshot,    (focusedWin) => { inst.takeSS(focusedWin); },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
     
     // Reload
-    k.re
-    var reloadPage = (focusedWin) => {focusedWin.reload()};
-    addKeybind(k.reload, reloadPage);
-    addKeybind(k.reload2,reloadPage);
+    addKeybind(k.reload,   (focusedWin) => {focusedWin.reload()});
     // Reload and Clear cache
     addKeybind(k.reloadCache, (focusedWin) => {
         var ses = focusedWin.webContents.session;

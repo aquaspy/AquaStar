@@ -8,6 +8,10 @@ const url    = require("url");
 exports.isDebugBuild = false;
 //exports.isDebugBuild = true;
 
+/// -------------------------------
+/// Section 1 - Setup of URLs and files
+/// -------------------------------
+
 /// Inside the app itself. Root of the project
 const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
 /// Where app is ran from.
@@ -48,7 +52,28 @@ exports.appRootPath      = appRoot;
 exports.appDirectoryPath = appCurrentDirectory;
 exports.sshotPath        = sshotPath;
 
-const keyBinds = {
+/// Icon Stuff
+//const nativeImage = require('electron').nativeImage;
+//var iconImage = nativeImage.createFromPath(iconPath);
+//    iconImage.setTemplateImage(true);
+exports.iconPath = iconPath;
+
+
+// Fixing file:// urls
+function _getFileUrl(path) {
+    return url.format({
+        pathname: path,
+        protocol: 'file:',
+        slashes: true
+    })
+}
+
+/// -------------------------------
+/// Section 2 - KeyBindings and Custom swf stuff
+/// -------------------------------
+
+// Default values - Also present at aquastar_testing.json as a copy of easy access!
+const originalKeybinds = {
     wiki:        "Alt+W",
     account:     "Alt+A",
     design:      "Alt+D",
@@ -60,8 +85,10 @@ const keyBinds = {
     fullscreen:  "F11",
     sshot:       "F2",
     cpSshot:     "Alt+K",
-    reload:      "CmdOrCtrl+F5",
-    reload2:     "CmdOrCtrl+R", // Here bc FireFox uses it.
+    reload:      [
+        "CmdOrCtrl+F5",
+        "CmdOrCtrl+R"
+    ],
     reloadCache: "CmdOrCtrl+Shift+F5",
     dragon:      "Alt+1",
     forward:     "Alt+F",
@@ -70,10 +97,28 @@ const keyBinds = {
         "Alt+H",
         "CmdOrCtrl+H",
         "F1"
-    ]
+    ],
+    settings: "Alt+9" //TODO - Make a screen and do your stuff XD. This is for future proofing
 }
+
+// Finding out which one to load and if it should load... priority is first the local and after the appdata
+var appdataJsonPath = path.join(app.getPath("appData"), appName.toLocaleLowerCase() + '.json')
+var inPathJsonPath  = path.join(appCurrentDirectory, appName.toLocaleLowerCase() + '.json')
+const isKeyDataAvailable       = fs.existsSync(appdataJsonPath);
+const isKeyInPathAvailable = fs.existsSync(inPathJsonPath);
+
+var keyBinds;
+if (isKeyInPathAvailable) {
+    keyBinds = JSON.parse(fs.readFileSync(inPathJsonPath));
+}
+else if (isKeyDataAvailable) {
+    keyBinds = JSON.parse(fs.readFileSync(appdataJsonPath));
+}
+else keyBinds = originalKeybinds;
+
 exports.keyBinds = keyBinds;
 
+// Custom aqlite stuff
 var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 exports.aqlitePath = oldAqlite ? 
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
@@ -81,20 +126,9 @@ exports.aqlitePath = oldAqlite ?
             'https://game.aq.com/game/gamefiles/Loader_Spider.swf';
 exports.isOldAqlite = oldAqlite;
 
-/// Icon Stuff
-//const nativeImage = require('electron').nativeImage;
-//var iconImage = nativeImage.createFromPath(iconPath);
-//    iconImage.setTemplateImage(true);
-exports.iconPath = iconPath;
-
-// Fixing file:// urls
-function _getFileUrl(path) {
-    return url.format({
-        pathname: path,
-        protocol: 'file:',
-        slashes: true
-    })
-}
+/// -------------------------------
+/// Section 3 - Window and Menu configuration
+/// -------------------------------
 
 // For customizing windows themselfs
 function _getWinConfig(type){
@@ -261,13 +295,19 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
     else return links;
 }
 
+/// -------------------------------
+/// Section 4 - Help and About menus
+/// -------------------------------
+
+
 function showHelpMessage(win){
     const { dialog } = require('electron')
     const dialog_options = {
         buttons: ['Ok'],
         title:   locale.getHelpTitle,
         message: locale.getHelpMessage,
-        detail:  locale.getHelpDetail + "\n\n" +
+        detail:  locale.getHelpDetail + "\n" +
+            locale.getHelpCustomKeyPath + appdataJsonPath + "\n" +
             locale.getHelpScreenshot + sshotPath + "\n" + 
             locale.getHelpAqliteOld + appCurrentDirectory 
     };
@@ -300,6 +340,10 @@ function showAboutMessage(win) {
 
 exports.showHelpMessage  = showHelpMessage;
 exports.showAboutMessage = showAboutMessage;
+
+/// -------------------------------
+/// Section 5 - Locale stuff
+/// -------------------------------
 
 let menuMessages;
 // LOCALE SETUP

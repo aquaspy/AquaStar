@@ -22,6 +22,7 @@ function detectLang(systemLang, keyb){
     exports.getHelpDetail       = langFile.helpDetail(keyb);
     exports.getHelpScreenshot   = langFile.helpScreenshot;
     exports.getHelpAqliteOld    = langFile.helpAqliteOld;
+    exports.getHelpCustomKeyPath= langFile.helpCustomKeyPath 
     exports.getAboutTitle       = langFile.aboutTitle;
     exports.getAboutMessage     = langFile.aboutMessage;
     exports.getAboutDetail      = langFile.aboutDetail;

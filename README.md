@@ -32,6 +32,10 @@ sudo apt install libnss3
 
 If you want a suggestion for making appimage shortcuts on ChromeOS, Primal_Majin also suggested ![menulibre](https://bluesabre.org/menulibre/), to make it.
 
+## Searching for Custom Keybinding stuff? 
+
+Open Keybinding.MD in this repository!
+
 ## Why?
 
 Update: Following comments are from before Spider got hired into AE.
@@ -93,7 +97,7 @@ If you think its a Vanilla bug, try it out in the artix's game launcher before r
 
 The core is the same. You should thank 133spider instead of me for making all that amazing features. All I did was to write a simple code that uses his swf file and compile it for linux and mac, so linux and mac users can play too in a launcher. We also putted some sparkles on top of it as a fully browser only to run flash seems... wastefull :D
 
-After version 1.2: Now AQLite is "dead", as its merged into official game, so our launcher loads the AE 
+After version 1.2: Now that AQLite is "dead", as its merged into official game, our launcher loads the AE version instead. Older aqlite support is still there.
 
 ## Just some new features on AquaStar:
  - Screenshot button that grabs the game part only.
@@ -104,7 +108,8 @@ After version 1.2: Now AQLite is "dead", as its merged into official game, so ou
  - Saving your character from flash character page with high resolution (as high as you monitor can render) into a .png in your pc!
  - Colour customization is shown in char page when its saved.
  - And also a keybinding to save your char page!
- 
+ - Custom keybindings! just create a aquastar.json in the designed folder!
+
 # How to build
 
 ## Requirements:

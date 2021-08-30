@@ -1,23 +1,25 @@
+function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else return keyb;};
 exports.helpTitle = 'Help:'
 exports.helpMessage = "These are the keybindings added to the game."
-exports.helpDetail = (k) => {return k.wiki + ' - AQW Wiki\n' +
-    k.design    + ' - AQW Design notes\n' +
-    k.account   + ' - Account page\n' +
-    k.charpage  + ' - Character (Player) lookup. You can also just use the in-game lookup.\n' +
-    k.cpSshot   + ' - (Char pages only!) Take a screenshot of the current char page.\n' +
-    k.newAqlite + ' - Opens a new Aqlite instance.\n' +
-    k.newAqw    + ' - Opens a Vanilla AQW instance as in aq.com/game/ (keybind subject to change as its temporary)\n' +
-    k.newTabbed + ' - Opens a new Window with the usefull browser pages with tabs, being grouped up so doesnt spam windows. Uses more memory (300mb) tho.\n' +
-    k.about     + ' - About AquaStar.\n' +
-    k.fullscreen+ ' - Toggles Fullscreen\n' +
-    k.sshot     + ' - Screenshot the game window (AQW and AQLITE only). They are saved in another folder as detailed below.\n' +
-    k.reload + ' or ' + k.reload2 + " - Reload the pages, like in a browser\n" +
-    k.reloadCache+' - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
+exports.helpDetail = (k) => {return expand(k.wiki) + ' - AQW Wiki\n' +
+    expand(k.design)    + ' - AQW Design notes\n' +
+    expand(k.account)   + ' - Account page\n' +
+    expand(k.charpage)  + ' - Character (Player) lookup. You can also just use the in-game lookup.\n' +
+    expand(k.cpSshot)   + ' - (Char pages only!) Take a screenshot of the current char page.\n' +
+    expand(k.newAqlite) + ' - Opens a new Aqlite instance.\n' +
+    expand(k.newAqw)    + ' - Opens a Vanilla AQW instance as in aq.com/game/ (keybind subject to change as its temporary)\n' +
+    expand(k.newTabbed) + ' - Opens a new Window with the usefull browser pages with tabs, being grouped up so doesnt spam windows. Uses more memory (300mb) tho.\n' +
+    expand(k.about)     + ' - About AquaStar.\n' +
+    expand(k.fullscreen)+ ' - Toggles Fullscreen\n' +
+    expand(k.sshot)     + ' - Screenshot the game window (AQW and AQLITE only). They are saved in another folder as detailed below.\n' +
+    expand(k.reload) + " - Reload the pages, like in a browser\n" +
+    expand(k.reloadCache)+' - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
     'For an older/custom aqlite file, please name it "aqlite_old.swf" and put it in the same folder as the executable, as said below!\n\n' +
-    'Note:' + k.help.join(', ') + ' Shows this message.';
+    'Note:' + expand(k.help) + ' Shows this message.';
 }
 exports.helpScreenshot = "Screenshot folder: "
-exports.helpAqliteOld  = "App folder for aqlite_old (can change if user move the application): "
+exports.helpAqliteOld  = "App folder for aqlite_old and aquastar.json (can change if user move the application): "
+exports.helpCustomKeyPath  = "Another Location for aquastar.json with custom keybindings. Check Readme.md for help: "
 
 exports.aboutTitle = 'About AquaStar Version: '
 exports.aboutMessage = "Aquastar would not be possible without the help of:";
