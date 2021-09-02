@@ -123,7 +123,8 @@ var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 exports.aqlitePath = oldAqlite ? 
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
             //_getFileUrl(path.join(appRoot, 'aqlite.swf'))
-            'https://game.aq.com/game/gamefiles/Loader_Spider.swf';
+            //'https://game.aq.com/game/gamefiles/Loader_Spider.swf';           // not working since OMG 2.001
+            'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=2001'    // gamefiles/Loader_Spider.swf?ver=2001
 exports.isOldAqlite = oldAqlite;
 
 /// -------------------------------
