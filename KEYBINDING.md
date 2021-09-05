@@ -102,7 +102,7 @@ your last line of configuration may have a comma, check this out:
 
 ```
 
-### it says "missing comma at chatacter XXX
+### it says "missing comma at chatacter XXX"
 
 Well, the oposite mistake of the last one. JSON likes to separete elements using ',' but the very last one shouldnt have it!
 
@@ -119,5 +119,25 @@ Well, the oposite mistake of the last one. JSON likes to separete elements using
     "design": "Ctrl+D"
 }
 // Notice the ',' at the end of "wiki" missing!
+
+```
+
+### it says "Unexpected LETTER at position XXX"
+
+Forgot the quotes, didnt you? When you copy something from const.js like the original set of keybinds, you miss a detail. Javascript isnt the same syntax as JSON, as it doesnt need the Quotes, but JSON does!
+
+```
+// Good version, Valid in JSON and Javascript
+{  
+    "wiki" : "Alt+F",
+    "design": "Ctrl+D"
+}
+
+// Bad! this will give the error, but valid Javascript tho... so maybe your mistake came from this
+{  
+    wiki : "Alt+F",
+    design: "Ctrl+D"
+}
+// Notice the "" missing!
 
 ```

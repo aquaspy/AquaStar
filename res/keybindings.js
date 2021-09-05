@@ -25,8 +25,9 @@ function customKeybinds() {
                     title:   "Error",
                     message: e.message,
                     detail:  "Check out " + jsonPath + " for the mistake.\n"+
-                    "The program might continue as normal, but the custom keybings wont work.\n" +
-                    "Try a JSON validation website/program if you are lost!\n"
+                    "The program might continue as normal, but the custom keybings wont work.\n\n" +
+                    "Try checking out the KEYBINDING.MD file on github.\n" +
+                    "Also try a JSON validation website/program if you are lost!\n"
                 };
                 dialog.showMessageBox(null,dialog_options);
             }
