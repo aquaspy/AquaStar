@@ -68,6 +68,7 @@ build_images "libpepflashplayerARM.so" "dist-l" "AppImage" "armv7l"
 build_images "pepflashplayer.dll" "dist-w" "exe"
 # Windows x32
 build_images "pepflashplayer32bits.dll" "dist-w" "exe" "ia32"
+
 # EXPERIMENTAL -
 # MacOS - can only be builded on macos!
 #build_images "PepperFlashPlayer.plugin" "dist-m" "dmg"
