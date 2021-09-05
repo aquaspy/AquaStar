@@ -56,7 +56,7 @@ You dont need to put all parameters (after 1.2.1). so you could for example chan
 
 ```
 {  
-    "design": "Ctrl+D",
+    "design": "Ctrl+D"
 }
 ```
 
@@ -77,3 +77,47 @@ It uses Electron's native keybinding values, so follow their value standard. Exa
 ## Sounds complicated, will there be a Custom menu for it?
 
 At the current point, no. But maybe soon a menu might be created. Maybe in the near future or maybe soon...
+
+## Heey, i did a change and it failed! 
+
+So, lets see possible/probable mistakes with JSON?
+
+### it says "unexpected token } on XXX character"
+
+your last line of configuration may have a comma, check this out:
+
+```
+// Good version
+{  
+    "wiki" : "Alt+F",
+    "design": "Ctrl+D"
+}
+
+// Bad! this will give the error
+{  
+    "wiki" : "Alt+F",
+    "design": "Ctrl+D",
+}
+// Notice the ',' at the end of "design"!
+
+```
+
+### it says "missing comma at chatacter XXX
+
+Well, the oposite mistake of the last one. JSON likes to separete elements using ',' but the very last one shouldnt have it!
+
+```
+// Good version
+{  
+    "wiki" : "Alt+F",
+    "design": "Ctrl+D"
+}
+
+// Bad! this will give the error
+{  
+    "wiki" : "Alt+F"
+    "design": "Ctrl+D"
+}
+// Notice the ',' at the end of "wiki" missing!
+
+```
