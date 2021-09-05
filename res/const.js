@@ -69,7 +69,7 @@ function _getFileUrl(path) {
 }
 
 /// -------------------------------
-/// Section 2 - KeyBindings and Custom swf stuff
+/// Section 2 - Original KeyBindings and Custom swf stuff
 /// -------------------------------
 
 // Default values - Also present at aquastar_testing.json as a copy of easy access!
@@ -102,7 +102,7 @@ const originalKeybinds = {
 }
 exports.originalKeybinds = originalKeybinds;
 
-// Finding out which one to load and if it should load... priority is first the local and after the appdata
+// Finding out which one to load and if it should load...
 var keybingJsonFileName = appName.toLocaleLowerCase() + '.json';
 var appdataJsonPath = path.join(app.getPath("appData"), keybingJsonFileName)
 var inPathJsonPath  = path.join(appCurrentDirectory, keybingJsonFileName);
@@ -112,30 +112,16 @@ if (fs.existsSync(inPathJsonPath))  { listValidKeybindLocations.push(inPathJsonP
 
 exports.listValidKeybindLocations = listValidKeybindLocations;
 
-/*
-var keyBinds = originalKeybinds;
-var getJson = (jsonPath) => {
-    try {
-        var tempJson = JSON.parse(fs.readFileSync(jsonPath));
-        Object.assign(keyBinds,tempJson);
-    }
-    catch (e) { // If it fails, wont matter rly
-        console.log(e.error + " " + e.message + "\n" +
-        "Check out " + jsonPath + "/" + keybingJsonFileName);
-    }
-}
-if (isKeyDataAvailable)   { getJson(appdataJsonPath); }
-if (isKeyInPathAvailable) { getJson(inPathJsonPath);  }
-exports.keyBinds = keyBinds;
-*/
-
 // Custom aqlite stuff
 var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 exports.aqlitePath = oldAqlite ? 
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
             //_getFileUrl(path.join(appRoot, 'aqlite.swf'))
             //'https://game.aq.com/game/gamefiles/Loader_Spider.swf';           // not working since OMG 2.001
-            'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=2001'    // gamefiles/Loader_Spider.swf?ver=2001
+            //'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=2001'    // gamefiles/Loader_Spider.swf?ver=2001
+            ('https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=' +
+            Math.floor(Math.random() * (900)) + 100); //random ending bt 100 and 1k. IT WAS ABOUT BROWSER CACHE!
+
 exports.isOldAqlite = oldAqlite;
 
 /// -------------------------------

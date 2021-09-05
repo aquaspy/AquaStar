@@ -42,7 +42,6 @@ const processKeybings = function (){
     }
     
     const k = customKeybinds();
-    console.log(k);
     addKeybind(k.wiki    , ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
     addKeybind(k.account , ()=>{inst.newBrowserWindow(constant.accountAq)});
