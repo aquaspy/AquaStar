@@ -100,23 +100,34 @@ const originalKeybinds = {
     ],
     settings: "Alt+9" //TODO - Make a screen and do your stuff XD. This is for future proofing
 }
+exports.originalKeybinds = originalKeybinds;
 
 // Finding out which one to load and if it should load... priority is first the local and after the appdata
-var appdataJsonPath = path.join(app.getPath("appData"), appName.toLocaleLowerCase() + '.json')
-var inPathJsonPath  = path.join(appCurrentDirectory, appName.toLocaleLowerCase() + '.json')
-const isKeyDataAvailable   = fs.existsSync(appdataJsonPath);
-const isKeyInPathAvailable = fs.existsSync(inPathJsonPath);
+var keybingJsonFileName = appName.toLocaleLowerCase() + '.json';
+var appdataJsonPath = path.join(app.getPath("appData"), keybingJsonFileName)
+var inPathJsonPath  = path.join(appCurrentDirectory, keybingJsonFileName);
+var listValidKeybindLocations = [];
+if (fs.existsSync(appdataJsonPath)) { listValidKeybindLocations.push(appdataJsonPath) }
+if (fs.existsSync(inPathJsonPath))  { listValidKeybindLocations.push(inPathJsonPath)  }
 
+exports.listValidKeybindLocations = listValidKeybindLocations;
+
+/*
 var keyBinds = originalKeybinds;
-if (isKeyDataAvailable) {
-    var tempJson = JSON.parse(fs.readFileSync(appdataJsonPath));
-    Object.assign(keyBinds,tempJson);
+var getJson = (jsonPath) => {
+    try {
+        var tempJson = JSON.parse(fs.readFileSync(jsonPath));
+        Object.assign(keyBinds,tempJson);
+    }
+    catch (e) { // If it fails, wont matter rly
+        console.log(e.error + " " + e.message + "\n" +
+        "Check out " + jsonPath + "/" + keybingJsonFileName);
+    }
 }
-if (isKeyInPathAvailable) {
-    var tempJson = JSON.parse(fs.readFileSync(inPathJsonPath));
-    Object.assign(keyBinds,tempJson);
-}
+if (isKeyDataAvailable)   { getJson(appdataJsonPath); }
+if (isKeyInPathAvailable) { getJson(inPathJsonPath);  }
 exports.keyBinds = keyBinds;
+*/
 
 // Custom aqlite stuff
 var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
@@ -183,7 +194,7 @@ exports.winConfig    = _getWinConfig("win");
 exports.mainConfig   = _getWinConfig("main");
 exports.charConfig   = _getWinConfig("cprint");
 
-exports.getMenu = (funcTakeSS, isContext = false) => {
+exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
     // needs to be like that as the function is located on instances...
     if (isContext == false && process.platform == 'darwin') return null;
 
@@ -191,7 +202,7 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
     [
         {
             label: '<<< ' + menuMessages.backward,
-            accelerator: keyBinds.backward,
+            accelerator: keybinds.backward,
             click(menuItem,focusedWin) {
                 var br = focusedWin.webContents;
                 if (br.canGoBack()) br.goBack();
@@ -199,7 +210,7 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
         },
         {
             label: '>>> ' + menuMessages.foward,
-            accelerator: keyBinds.forward,
+            accelerator: keybinds.forward,
             click(menuItem,focusedWin) {
                 var br = focusedWin.webContents;
                 if (br.canGoForward()) br.goForward();
@@ -210,28 +221,28 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
             submenu: [
                 {
                     label: menuMessages.wiki,
-                    accelerator: keyBinds.wiki,
+                    accelerator: keybinds.wiki,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(wikiReleases);
                     }
                 },
                 {
                     label: menuMessages.design,
-                    accelerator: keyBinds.design,
+                    accelerator: keybinds.design,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(designNotes);
                     }
                 },
                 {
                     label: menuMessages.account,
-                    accelerator: keyBinds.account,
+                    accelerator: keybinds.account,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(accountAq);
                     }
                 },
                 {
                     label: menuMessages.charpage,
-                    accelerator: keyBinds.charpage,
+                    accelerator: keybinds.charpage,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(charLookup);
                     }
@@ -270,7 +281,7 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
         },
         {
             label: menuMessages.takeCPSshot,
-            accelerator: keyBinds.cpSshot,
+            accelerator: keybinds.cpSshot,
             click() {
                 funcTakeSS();
             }

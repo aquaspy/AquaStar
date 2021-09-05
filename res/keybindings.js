@@ -1,29 +1,48 @@
 const inst     = require('./instances.js');
 const constant = require('./const.js');
+const fs       = require('fs');
 const electronLocalshortcut = require('electron-localshortcut');
 
-// Now, accepting Arrays as well...
-const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false){
-    if(Array.isArray(keybind)){
-        keybind.forEach((value) => {
-            addKeybind(value, func, onlyHTML, considerDF);
+var finalKeybinds = {};
+
+function customKeybinds() {
+    var list = constant.listValidKeybindLocations;
+    finalKeybinds = constant.originalKeybinds;
+
+    if (list != null && list.length != 0 ) {
+        list.forEach((jsonPath) => {
+            try {
+                var tempJson = JSON.parse(fs.readFileSync(jsonPath));
+                Object.assign(finalKeybinds,tempJson);
+            }
+            catch (e) { // If it fails, wont matter rly
+                const errorMsg = e.error + " " + e.message + "\n" +
+                "Check out " + jsonPath + "/" + keybingJsonFileName;
+                console.log(errorMsg);
+                const { dialog } = require('electron')
+                const dialog_options = {
+                    buttons: ['Oh no...'],
+                    title:   e.error,
+                    message: e.message,
+                    detail:  "Check out " + jsonPath + "/" + keybingJsonFileName
+                };
+                dialog.showMessageBox(null,dialog_options);
+            }
         })
     }
-    else {    
-        electronLocalshortcut.register(keybind, () => {
-            inst.executeOnFocused(func, onlyHTML, considerDF);
-        })
-    }
+    return finalKeybinds;
 }
 
-const addBinds = function (){
+const processKeybings = function (){
+
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
     
     if(constant.isDebugBuild){
         addKeybind('Alt+I', (fw)=>{fw.webContents.openDevTools()},true);        
     }
     
-    const k = constant.keyBinds;
+    const k = customKeybinds();
+    console.log(k);
     addKeybind(k.wiki    , ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
     addKeybind(k.account , ()=>{inst.newBrowserWindow(constant.accountAq)});
@@ -81,6 +100,23 @@ const addBinds = function (){
             },
         true);
     }
+
+    exports.keybinds = k;
+    return k;
 }
 
-exports.addKeybinding = addBinds;
+// Now, accepting Arrays as well...
+const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false){
+    if(Array.isArray(keybind)){
+        keybind.forEach((value) => {
+            addKeybind(value, func, onlyHTML, considerDF);
+        })
+    }
+    else {    
+        electronLocalshortcut.register(keybind, () => {
+            inst.executeOnFocused(func, onlyHTML, considerDF);
+        })
+    }
+}
+
+exports.addKeybinding = processKeybings;

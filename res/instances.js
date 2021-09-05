@@ -1,4 +1,5 @@
 const constant              = require('./const.js');
+const keybinds              = require('./keybindings.js');
 const {BrowserWindow, Menu} = require('electron');
 
 let usedAltPagesNumbers = [];
@@ -81,8 +82,7 @@ function _windowAddContext(newWin){
     
     // Context Menu part
     var contextMenu = Menu.buildFromTemplate( 
-        constant.getMenu( takeSS,true));
-    
+        constant.getMenu(keybinds.keybinds,takeSS,true));
     newWin.webContents.on("context-menu",(e,param)=>{
         contextMenu.popup({
             window: newWin,

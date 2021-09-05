@@ -11,21 +11,21 @@ const constant = require('./res/const.js');
 flash.flashManager(app, __dirname, constant.aqlitePath, constant.appName);
 
 function createWindow () {
+    // Keybindings now in keybindings.js
+    const finalkeyb = keyb.addKeybinding();
+
     // Lang setup. Has to be after Ready event.
-    constant.setLocale(app.getLocale(),constant.keyBinds);
-    //console.log(app.getLocale());
+    constant.setLocale(app.getLocale(),finalkeyb);
+
     // Create the browser window.
     let win = inst.newBrowserWindow(constant.aqlitePath,true);
 
-    // Keybindings now in keybindings.js
-    keyb.addKeybinding();
-    
     if (process.platform == 'darwin'){
         Menu.setApplicationMenu(null);
     }
     else {
         Menu.setApplicationMenu(
-            Menu.buildFromTemplate(constant.getMenu(inst.charPagePrint)));
+            Menu.buildFromTemplate(constant.getMenu(finalkeyb, inst.charPagePrint)));
         win.setMenuBarVisibility(false); //Remove menu so only wiki shows it
     }
     
