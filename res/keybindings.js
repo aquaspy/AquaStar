@@ -17,14 +17,16 @@ function customKeybinds() {
             }
             catch (e) { // If it fails, wont matter rly
                 const errorMsg = e.error + " " + e.message + "\n" +
-                "Check out " + jsonPath + "/" + keybingJsonFileName;
+                "Check out " + jsonPath;
                 console.log(errorMsg);
                 const { dialog } = require('electron')
                 const dialog_options = {
                     buttons: ['Oh no...'],
-                    title:   e.error,
+                    title:   "Error",
                     message: e.message,
-                    detail:  "Check out " + jsonPath + "/" + keybingJsonFileName
+                    detail:  "Check out " + jsonPath + " for the mistake.\n"+
+                    "The program might continue as normal, but the custom keybings wont work.\n" +
+                    "Try a JSON validation website/program if you are lost!\n"
                 };
                 dialog.showMessageBox(null,dialog_options);
             }
