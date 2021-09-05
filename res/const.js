@@ -104,18 +104,18 @@ const originalKeybinds = {
 // Finding out which one to load and if it should load... priority is first the local and after the appdata
 var appdataJsonPath = path.join(app.getPath("appData"), appName.toLocaleLowerCase() + '.json')
 var inPathJsonPath  = path.join(appCurrentDirectory, appName.toLocaleLowerCase() + '.json')
-const isKeyDataAvailable       = fs.existsSync(appdataJsonPath);
+const isKeyDataAvailable   = fs.existsSync(appdataJsonPath);
 const isKeyInPathAvailable = fs.existsSync(inPathJsonPath);
 
-var keyBinds;
+var keyBinds = originalKeybinds;
+if (isKeyDataAvailable) {
+    var tempJson = JSON.parse(fs.readFileSync(appdataJsonPath));
+    Object.assign(keyBinds,tempJson);
+}
 if (isKeyInPathAvailable) {
-    keyBinds = JSON.parse(fs.readFileSync(inPathJsonPath));
+    var tempJson = JSON.parse(fs.readFileSync(inPathJsonPath));
+    Object.assign(keyBinds,tempJson);
 }
-else if (isKeyDataAvailable) {
-    keyBinds = JSON.parse(fs.readFileSync(appdataJsonPath));
-}
-else keyBinds = originalKeybinds;
-
 exports.keyBinds = keyBinds;
 
 // Custom aqlite stuff
