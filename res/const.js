@@ -119,9 +119,10 @@ exports.aqlitePath = oldAqlite ?
             //_getFileUrl(path.join(appRoot, 'aqlite.swf'))
             //'https://game.aq.com/game/gamefiles/Loader_Spider.swf';           // not working since OMG 2.001
             //'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=2001'    // gamefiles/Loader_Spider.swf?ver=2001
+            
             ('https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=' +
             Math.floor(Math.random() * (900)) + 100); //random ending bt 100 and 1k. IT WAS ABOUT BROWSER CACHE!
-
+            // The above exists bc spider can mess up again the cache. so aqw WONT CACHE anymore.
 exports.isOldAqlite = oldAqlite;
 
 /// -------------------------------
