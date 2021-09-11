@@ -35,6 +35,10 @@ const heromart     = 'https://www.heromart.com/';
 const battleon     = 'https://portal.battleon.com/';
 const calendar     = 'https://www.aq.com/lore/calendar';
 
+// Social Media stuff
+const twtAlina     = "https://twitter.com/Alina_AE";
+const redditAqw    = "https://www.reddit.com/r/AQW/";
+
 exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=2'
 exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
@@ -142,7 +146,7 @@ function _getWinConfig(type){
         icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
-            webviewTag: ((type == "tab")? true : false),
+            sandbox:    ((type == "tab")? true : false),
             webviewTag: ((type == "tab")? true : false),
             plugins: true,
             javascript: true,
@@ -263,6 +267,23 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
                             }
                         }
                     ]
+                },
+                {
+                    label: menuMessages.socialmedia,
+                    submenu: [
+                        {
+                            label: menuMessages.twitter,
+                            click(menuItem,focusedWin) {
+                                focusedWin.webContents.loadURL(twtAlina);
+                            }
+                        },
+                        {
+                            label: menuMessages.reddit,
+                            click(menuItem,focusedWin) {
+                                focusedWin.webContents.loadURL(redditAqw);
+                            }
+                        }
+                    ]
                 }
             ]
         },
@@ -283,7 +304,13 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
                     require('electron').clipboard.writeText(
                         focusedWin.webContents.getURL(),'clipboard');
                 }
-           }
+           },
+           {
+            label: menuMessages.reloadPage,
+            click(menuItem,focusedWin) {
+                focusedWin.reload();
+            }
+       },
         ];
         ret.push({ type: 'separator' });
         links.forEach((e) => {
@@ -360,6 +387,7 @@ exports.setLocale        = (loc, keyb)=> {
         foward:       locale.getMenuFoward,
         otherPages:   locale.getMenuOtherPages,
         otherPages2:  locale.getMenuOtherPages2,
+        socialmedia:  locale.getMenuSocialMedia,
         wiki:         locale.getMenuWiki,
         design:       locale.getMenuDesign,
         account:      locale.getMenuAccount,
@@ -368,8 +396,12 @@ exports.setLocale        = (loc, keyb)=> {
         portal:       locale.getMenuPortal,
         heromart:     locale.getMenuHeromart,
         calendar:     locale.getMenuCalendar,
+        twitter:      locale.getMenuTwitter,
+        reddit:       locale.getMenuReddit,
+
         takeCPSshot:  locale.getMenuTakeShot,
-        copyPageURL:  locale.getMenuCopyURL
+        copyPageURL:  locale.getMenuCopyURL,
+        reloadPage:   locale.getMenuReloadPage
     }
     exports.menuMessages = menuMessages;
 }

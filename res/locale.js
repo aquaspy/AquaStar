@@ -40,6 +40,9 @@ function detectLang(systemLang, keyb){
     exports.getMenuFoward       = langFile.menuFoward;
     exports.getMenuOtherPages   = langFile.menuOtherPages;
     exports.getMenuOtherPages2  = langFile.menuOtherPages2;
+    exports.getMenuSocialMedia  = langFile.menuSocialMedia;
+    exports.getMenuReddit       = langFile.menuReddit;
+    exports.getMenuTwitter      = langFile.menuTwitter;
     exports.getMenuWiki         = langFile.menuWiki;
     exports.getMenuDesign       = langFile.menuDesign;
     exports.getMenuAccount      = langFile.menuAccount;
@@ -50,6 +53,7 @@ function detectLang(systemLang, keyb){
     exports.getMenuGuide        = langFile.menuGuide;
     exports.getMenuTakeShot     = langFile.menuTakeShot;
     exports.getMenuCopyURL      = langFile.menuCopyURL;
+    exports.getMenuReloadPage   = langFile.menuReloadPage;
 
     return lang;
 }
