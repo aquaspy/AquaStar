@@ -192,7 +192,7 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
     var links = 
     [
         {
-            label: '<<< ' + menuMessages.backward,
+            label: '<<< ' + menuMessages.menuBackward,
             accelerator: keybinds.backward,
             click(menuItem,focusedWin) {
                 var br = focusedWin.webContents;
@@ -200,7 +200,7 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             } 
         },
         {
-            label: '>>> ' + menuMessages.foward,
+            label: '>>> ' + menuMessages.menuFoward,
             accelerator: keybinds.forward,
             click(menuItem,focusedWin) {
                 var br = focusedWin.webContents;
@@ -208,31 +208,31 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             }
         }, // Sorry Mac, you cant have those next ones as its not worth it... There is still right click tho
         {
-            label: menuMessages.otherPages,
+            label: menuMessages.menuOtherPages,
             submenu: [
                 {
-                    label: menuMessages.wiki,
+                    label: menuMessages.menuWiki,
                     accelerator: keybinds.wiki,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(wikiReleases);
                     }
                 },
                 {
-                    label: menuMessages.design,
+                    label: menuMessages.menuDesign,
                     accelerator: keybinds.design,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(designNotes);
                     }
                 },
                 {
-                    label: menuMessages.account,
+                    label: menuMessages.menuAccount,
                     accelerator: keybinds.account,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(accountAq);
                     }
                 },
                 {
-                    label: menuMessages.charpage,
+                    label: menuMessages.menuCharpage,
                     accelerator: keybinds.charpage,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(charLookup);
@@ -240,28 +240,28 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
                 },
                 // No keybind now...
                 {
-                    label: menuMessages.otherPages2,
+                    label: menuMessages.menuOtherPages2,
                     submenu: [
                         {
-                            label: menuMessages.calendar,
+                            label: menuMessages.menuCalendar,
                             click(menuItem,focusedWin) {
                                 focusedWin.webContents.loadURL(calendar);
                             }
                         },
                         {
-                            label: menuMessages.aqwg,
+                            label: menuMessages.menuGuide,
                             click(menuItem,focusedWin) {
                                 focusedWin.webContents.loadURL(aqwg);
                             }
                         },
                         {
-                            label: menuMessages.heromart,
+                            label: menuMessages.menuHeromart,
                             click(menuItem,focusedWin) {
                                 focusedWin.webContents.loadURL(heromart);
                             }
                         },
                         {
-                            label: menuMessages.portal,
+                            label: menuMessages.menuPortal,
                             click(menuItem,focusedWin) {
                                 focusedWin.webContents.loadURL(battleon);
                             }
@@ -269,16 +269,16 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
                     ]
                 },
                 {
-                    label: menuMessages.socialmedia,
+                    label: menuMessages.menuSocialMedia,
                     submenu: [
                         {
-                            label: menuMessages.twitter,
+                            label: menuMessages.menuTwitter,
                             click(menuItem,focusedWin) {
                                 focusedWin.webContents.loadURL(twtAlina);
                             }
                         },
                         {
-                            label: menuMessages.reddit,
+                            label: menuMessages.menuReddit,
                             click(menuItem,focusedWin) {
                                 focusedWin.webContents.loadURL(redditAqw);
                             }
@@ -288,7 +288,7 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             ]
         },
         {
-            label: menuMessages.takeCPSshot,
+            label: menuMessages.menuTakeShot,
             accelerator: keybinds.cpSshot,
             click() {
                 funcTakeSS();
@@ -299,14 +299,14 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
     if (isContext){
         ret = [
            {
-                label: menuMessages.copyPageURL,
+                label: menuMessages.menuCopyURL,
                 click(menuItem,focusedWin) {
                     require('electron').clipboard.writeText(
                         focusedWin.webContents.getURL(),'clipboard');
                 }
            },
            {
-            label: menuMessages.reloadPage,
+            label: menuMessages.menuReloadPage,
             click(menuItem,focusedWin) {
                 focusedWin.reload();
             }
@@ -330,23 +330,23 @@ function showHelpMessage(win){
     const { dialog } = require('electron')
     const dialog_options = {
         buttons: ['Ok'],
-        title:   locale.getHelpTitle,
-        message: locale.getHelpMessage,
-        detail:  locale.getHelpDetail + "\n" +
-            locale.getHelpCustomKeyPath + appdataJsonPath + "\n" +
-            locale.getHelpScreenshot + sshotPath + "\n" + 
-            locale.getHelpAqliteOld + appCurrentDirectory 
+        title:   dialogMessages.helpTitle,
+        message: dialogMessages.helpMessage,
+        detail:  dialogMessages.helpDetail + "\n" +
+            dialogMessages.helpCustomKeyPath + appdataJsonPath + "\n" +
+            dialogMessages.helpScreenshot + sshotPath + "\n" + 
+            dialogMessages.helpAqliteOld + appCurrentDirectory 
     };
     dialog.showMessageBox(win,dialog_options);
 }
 function showAboutMessage(win) {
     const { dialog } = require('electron')
     const dialog_options = {
-        buttons: [locale.getGithubPage,locale.getCloseWindow],
-        title:   locale.getAboutTitle + appVersion,
-        message: locale.getAboutMessage,
-        detail:  locale.getAboutDetail + githubPage +'\n\n\n' +
-        locale.getDebug + ":\n" +
+        buttons: [dialogMessages.aboutGithubPrompt, dialogMessages.aboutClosePrompt],
+        title:   dialogMessages.aboutTitle + appVersion,
+        message: dialogMessages.aboutMessage,
+        detail:  dialogMessages.aboutDetail + githubPage +'\n\n\n' +
+        dialogMessages.aboutDebug + ":\n" +
         "OS   - " + process.platform + "\n" +
         "ARCH - " + process.arch     + "\n"
     };
@@ -371,37 +371,23 @@ exports.showAboutMessage = showAboutMessage;
 /// Section 5 - Locale stuff
 /// -------------------------------
 
+//better for internal constjs usage
+
 let menuMessages;
+let dialogMessages;
 // LOCALE SETUP
 exports.setLocale        = (loc, keyb)=> {
     locale.detectLang(loc,keyb);
-    exports.titleMessages = {
-        invalidCharpage:  locale.getInvalidCharpage,
-        loadingCharpage:  locale.getLoadingCharpage,
-        buildingCharpage: locale.getBuildingCharpage,
-        cpDone:           locale.getCPDone,
-        doneSavedAs :     locale.getDoneSavedAs
-    }    
-    menuMessages = {
-        backward:     locale.getMenuBackward,
-        foward:       locale.getMenuFoward,
-        otherPages:   locale.getMenuOtherPages,
-        otherPages2:  locale.getMenuOtherPages2,
-        socialmedia:  locale.getMenuSocialMedia,
-        wiki:         locale.getMenuWiki,
-        design:       locale.getMenuDesign,
-        account:      locale.getMenuAccount,
-        charpage:     locale.getMenuCharpage,
-        aqwg:         locale.getMenuGuide,
-        portal:       locale.getMenuPortal,
-        heromart:     locale.getMenuHeromart,
-        calendar:     locale.getMenuCalendar,
-        twitter:      locale.getMenuTwitter,
-        reddit:       locale.getMenuReddit,
+    const strings = locale.strings;
 
-        takeCPSshot:  locale.getMenuTakeShot,
-        copyPageURL:  locale.getMenuCopyURL,
-        reloadPage:   locale.getMenuReloadPage
-    }
-    exports.menuMessages = menuMessages;
+    // Title messages are only used on instances.js
+    exports.titleMessages = strings.titleMessages;
+
+    // Menu messages are only used here
+    menuMessages = strings.menuMessages;
+    //exports.menuMessages = menuMessages;
+
+    // Dialog messages are only used here
+    dialogMessages = strings.dialogMessages;
+    //exports.dialogMessages = dialogMessages;
 }
