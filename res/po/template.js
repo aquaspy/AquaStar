@@ -51,6 +51,7 @@ exports.menuMessages = {
     menuAccount      : "",
     menuPortal       : "",
     menuHeromart     : "",
+    menuDailyGifts   : "",
     menuCalendar     : "",
     menuCharpage     : "",
     menuGuide        : "",

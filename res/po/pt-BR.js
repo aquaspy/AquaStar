@@ -61,6 +61,7 @@ exports.menuMessages = {
     menuAccount      : "AQW Account",
     menuPortal       : "Portal Battleon",
     menuHeromart     : "Heromart",
+    menuDailyGifts   : "Drops Diarios",
     menuCalendar     : "Calendário de Eventos",
     menuCharpage     : "Charpages",
     menuGuide        : "Guia AQW (antigo mas relevante)",

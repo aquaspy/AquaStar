@@ -25,15 +25,18 @@ const iconPath  = path.join(appRoot, 'Icon', 'Icon_1024.png');
 
 const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
 
+// Links with keybinds
 const charLookup   = 'https://account.aq.com/CharPage';
 const designNotes  = 'https://www.aq.com/gamedesignnotes/';
 const accountAq    = 'https://account.aq.com/';
 const wikiReleases = 'https://aqwwiki.wikidot.com/new-releases';
 
+// Extra usefull links
 const aqwg         = 'https://aqwg.weebly.com/';
 const heromart     = 'https://www.heromart.com/';
 const battleon     = 'https://portal.battleon.com/';
 const calendar     = 'https://www.aq.com/lore/calendar';
+const dailyGifts   = 'https://www.aq.com/lore/dailygifts';
 
 // Social Media stuff
 const twtAlina     = "https://twitter.com/Alina_AE";
@@ -42,6 +45,8 @@ const redditAqw    = "https://www.reddit.com/r/AQW/";
 exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=2'
 exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
+
+// Export farm
 
 exports.githubPage       = githubPage;
 exports.wikiReleases     = wikiReleases;
@@ -243,6 +248,12 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
                     label: menuMessages.menuOtherPages2,
                     submenu: [
                         {
+                            label: menuMessages.menuDailyGifts,
+                            click(menuItem,focusedWin) {
+                                focusedWin.webContents.loadURL(dailyGifts);
+                            }
+                        },
+                        {
                             label: menuMessages.menuCalendar,
                             click(menuItem,focusedWin) {
                                 focusedWin.webContents.loadURL(calendar);
@@ -371,11 +382,10 @@ exports.showAboutMessage = showAboutMessage;
 /// Section 5 - Locale stuff
 /// -------------------------------
 
-//better for internal constjs usage
-
+// Better for internal constjs usage
 let menuMessages;
 let dialogMessages;
-// LOCALE SETUP
+
 exports.setLocale        = (loc, keyb)=> {
     locale.detectLang(loc,keyb);
     const strings = locale.strings;
