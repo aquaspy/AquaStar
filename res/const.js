@@ -156,7 +156,7 @@ function _getWinConfig(type){
             plugins: true,
             javascript: true,
             contextIsolation: true,
-            enableRemoteModule: false,
+            enableRemoteModule: true, // Recording screen... needs true;
             nodeIntegrationInWorker: false //maybe better performance for more instances in future... Needs testing.
         }
     }:
@@ -426,7 +426,4 @@ ipcMain.on('variable-request', function (event, arg) {
     event.sender.send('variable-reply', [mainProcessVars[arg[0]], mainProcessVars[arg[1]]]);
 });
 
-
-
 ////
-

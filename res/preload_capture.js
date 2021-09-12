@@ -2,10 +2,14 @@
 
 // Ok. testing big boi stuff
 
-const { ipcRenderer } = require("electron");
+const { ipcRenderer, remote} = require("electron");
+const {dialog} = remote;
 
 var currentWindowTitle = "";
 var currentWindowID = 0;
+
+let mediaRecorder;
+const recordedChunks = [];
 
 ipcRenderer.on('variable-reply', function (event, args) {
   console.log(args[0]); // "name"
@@ -22,11 +26,54 @@ ipcRenderer.send('variable-request', ['winTitle', 'winId']);
 
     var handleStream = (stream) => {
       console.log("CP4");
+      /*
       document.body.appendChild(document.createElement("video"));
 
       const video = document.querySelector('video')
       video.srcObject = stream
-      video.onloadedmetadata = (e) => video.play()
+      //video.onloadedmetadata = (e) => 
+      video.play();*/
+
+      var winTimeRef = setTimeout(() => {
+        mediaRecorder.stop();
+      },5800);
+
+      mediaRecorder = new MediaRecorder(stream, 
+        { mimeType: 'video/webm; codecs=vp9' }
+      );
+
+      mediaRecorder.start();
+
+      // Register Event Handlers
+      mediaRecorder.ondataavailable = (e) => {
+        recordedChunks.push(e.data);
+      };
+      mediaRecorder.onstop = async (e) => {
+        const blobb = new Blob(recordedChunks, {
+          type: 'video/webm; codecs=vp9'
+        });
+
+        const toArrayBuffer = (blob, cb) => {
+          let fileReader = new FileReader();
+          fileReader.onload = function() {
+              let arrayBuffer = this.result;
+              cb(arrayBuffer);
+          };
+          fileReader.readAsArrayBuffer(blob);
+          }
+        
+        toArrayBuffer(blobb, (arrayBuffer) => {
+          const buf = Buffer.from(arrayBuffer);
+          
+          dialog.showSaveDialog(null,{
+            buttonLabel: 'Save video',
+            defaultPath: `vid-${Date.now()}.webm`
+          }, (filename) => {
+            console.log(filename);
+            require("fs").writeFileSync(filename, buf);
+          })
+        })
+      };
       
     }
     
