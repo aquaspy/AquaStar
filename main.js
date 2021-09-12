@@ -1,4 +1,4 @@
-const {app, BrowserWindow, session, Menu}  = require('electron')
+const {app, session, Menu, desktopCapturer}  = require('electron')
 
 //const path     = require('path')
 const flash    = require('./res/flash.js');
@@ -6,6 +6,7 @@ const keyb     = require('./res/keybindings.js');
 const inst     = require('./res/instances.js');
 // Important Variables - in const.js
 const constant = require('./res/const.js');
+
 
 // Flash stuff is isolated in flash.js
 flash.flashManager(app, __dirname, constant.aqlitePath, constant.appName);
@@ -73,7 +74,7 @@ function createWindow () {
     if (constant.isDebugBuild){
         win.webContents.openDevTools()
     }
-    
+
 }
 
 // For anyone looking why we arent sandboxed and neither is AE...

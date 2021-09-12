@@ -21,7 +21,6 @@ function newBrowserWindow(new_path, isMainWin=false){
     }
     else config = constant.winConfig;
     
-    
     const newWin = new BrowserWindow(config);
     newWin.setMenuBarVisibility(false); //Remove default electron menu
     newWin.loadURL(new_path);

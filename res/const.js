@@ -5,8 +5,8 @@ const fs     = require("fs");
 const url    = require("url");
 
 // WARNING - ENABLES DEBUG MODE:
-exports.isDebugBuild = false;
-//exports.isDebugBuild = true;
+//exports.isDebugBuild = false;
+exports.isDebugBuild = true;
 
 /// -------------------------------
 /// Section 1 - Setup of URLs and files
@@ -62,11 +62,10 @@ exports.appDirectoryPath = appCurrentDirectory;
 exports.sshotPath        = sshotPath;
 
 /// Icon Stuff
-//const nativeImage = require('electron').nativeImage;
-//var iconImage = nativeImage.createFromPath(iconPath);
-//    iconImage.setTemplateImage(true);
+const nativeImage = require('electron').nativeImage.createFromPath(iconPath)
+    nativeImage.setTemplateImage(true);
 exports.iconPath = iconPath;
-
+exports.nativeImageIcon = nativeImage;
 
 // Fixing file:// urls
 function _getFileUrl(path) {
@@ -150,9 +149,10 @@ function _getWinConfig(type){
         height: 550,
         icon: iconPath,
         webPreferences: {
-            nodeIntegration: false,
+            nodeIntegration: true,
             sandbox:    ((type == "tab")? false : true),
             webviewTag: ((type == "tab")? true : false),
+            preload: path.join(appRoot,'res','preload_capture.js'),
             plugins: true,
             javascript: true,
             contextIsolation: true,
@@ -401,3 +401,32 @@ exports.setLocale        = (loc, keyb)=> {
     dialogMessages = strings.dialogMessages;
     //exports.dialogMessages = dialogMessages;
 }
+////
+const { ipcMain } = require('electron');
+
+var mainProcessVars = {
+    winTitle: "name",
+    winId: 0
+}
+
+ipcMain.on('variable-request', function (event, arg) {
+    var curWindow = BrowserWindow.getFocusedWindow();
+    if (curWindow == null || curWindow == undefined) {
+        mainProcessVars = {
+            winTitle : "",
+            winId: 0
+        }
+    }
+    else {
+        mainProcessVars = {
+            winTitle : curWindow.getTitle(),
+            winId : curWindow.id
+        }
+    }
+    event.sender.send('variable-reply', [mainProcessVars[arg[0]], mainProcessVars[arg[1]]]);
+});
+
+
+
+////
+
