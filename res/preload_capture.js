@@ -2,8 +2,7 @@
 
 // Ok. testing big boi stuff
 
-const { ipcRenderer, remote} = require("electron");
-const {dialog} = remote;
+const { ipcRenderer} = require("electron");
 
 var currentWindowTitle = "";
 var currentWindowID = 0;
@@ -26,14 +25,7 @@ ipcRenderer.send('variable-request', ['winTitle', 'winId']);
 
     var handleStream = (stream) => {
       console.log("CP4");
-      /*
-      document.body.appendChild(document.createElement("video"));
-
-      const video = document.querySelector('video')
-      video.srcObject = stream
-      //video.onloadedmetadata = (e) => 
-      video.play();*/
-
+      
       var winTimeRef = setTimeout(() => {
         mediaRecorder.stop();
       },5800);
@@ -65,7 +57,8 @@ ipcRenderer.send('variable-request', ['winTitle', 'winId']);
         toArrayBuffer(blobb, (arrayBuffer) => {
           const buf = Buffer.from(arrayBuffer);
           
-          dialog.showSaveDialog(null,{
+          // ONLY use of remote. not enabled on HTML windows, only game ones!
+          require("electron").remote.dialog.showSaveDialog(null,{
             buttonLabel: 'Save video',
             defaultPath: `vid-${Date.now()}.webm`
           }, (filename) => {
@@ -118,7 +111,5 @@ ipcRenderer.send('variable-request', ['winTitle', 'winId']);
     })
 
   }
-    
-    
   window.onload= onLoading;
 })();

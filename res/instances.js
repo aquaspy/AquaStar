@@ -14,11 +14,12 @@ let winNames   = {}; // Fake dictionary
 
 // New page function
 function newBrowserWindow(new_path, isMainWin=false){
-    var config = "";
+    var config;
     if (isMainWin) config = constant.mainConfig;
     else if (new_path == constant.pagesPath){
          config = constant.tabbedConfig 
     }
+    else if (_isGameWindow(new_path)) config = constant.gameConfig;
     else config = constant.winConfig;
     
     const newWin = new BrowserWindow(config);
@@ -27,8 +28,8 @@ function newBrowserWindow(new_path, isMainWin=false){
     
     if (new_path == constant.aqlitePath || 
         new_path == constant.vanillaAQW) {
+
         // Its alt window, Put the aqlite/Aqw title...
-        
         var windowNumber = 1;
         
         for (;usedAltPagesNumbers.includes(windowNumber);windowNumber++){

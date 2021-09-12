@@ -143,20 +143,21 @@ function _getWinConfig(type){
     //win
     //main
     //cprint
+    //game
     return (type != "cprint")? 
     {
         width: 960,
         height: 550,
         icon: iconPath,
         webPreferences: {
-            nodeIntegration: true,
+            nodeIntegration: false,
             sandbox:    ((type == "tab")? false : true),
-            webviewTag: ((type == "tab")? true : false),
-            preload: path.join(appRoot,'res','preload_capture.js'),
+            webviewTag: ((type == "tab")? true : false), 
+            preload: ((type == "game" || type == "main")? path.join(appRoot,'res','preload_capture.js'): null),
             plugins: true,
             javascript: true,
             contextIsolation: true,
-            enableRemoteModule: true, // Recording screen... needs true;
+            enableRemoteModule: ((type == "game" || type == "main")? true : false), // Recording screen... needs true;
             nodeIntegrationInWorker: false //maybe better performance for more instances in future... Needs testing.
         }
     }:
@@ -167,7 +168,6 @@ function _getWinConfig(type){
         // of the OS complain about the 1 billion window size. I think 4k is a nice number...
         // Sec. YES, it NEEDS both Show off (so doesnt show in user's face) and
         // resizable false, so it stays "maxed size";
-        
         width: 3840,
         height: 2160,
         show: false,
@@ -189,6 +189,7 @@ exports.tabbedConfig = _getWinConfig("tab");
 exports.winConfig    = _getWinConfig("win");
 exports.mainConfig   = _getWinConfig("main");
 exports.charConfig   = _getWinConfig("cprint");
+exports.gameConfig   = _getWinConfig("game");
 
 exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
     // needs to be like that as the function is located on instances...
