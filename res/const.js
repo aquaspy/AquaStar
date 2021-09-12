@@ -151,7 +151,7 @@ function _getWinConfig(type){
         icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
-            sandbox:    ((type == "tab")? true : false),
+            sandbox:    ((type == "tab")? false : true),
             webviewTag: ((type == "tab")? true : false),
             plugins: true,
             javascript: true,
