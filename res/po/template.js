@@ -5,7 +5,9 @@ exports.titleMessages = {
     loadingCharpage  : "",
     buildingCharpage : "",
     cpDone           : "",
-    doneSavedAs      : ""
+    doneSavedAs      : "",
+    recording        : "", // Please, dont use '!'s
+    alreadyRecording : ""
 }
 
 exports.dialogMessages = {
@@ -22,6 +24,7 @@ exports.dialogMessages = {
         expand(k.about)     + ' - \n' +
         expand(k.fullscreen)+ ' - \n' +
         expand(k.sshot)     + ' - \n' +
+        expand(k.record)    + ' - \n' +
         expand(k.reload)    + " - \n" +
         expand(k.reloadCache)+' - .\n\n' +
         '\n\n' +

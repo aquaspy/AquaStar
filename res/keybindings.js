@@ -4,6 +4,7 @@ const fs       = require('fs');
 const electronLocalshortcut = require('electron-localshortcut');
 
 var finalKeybinds = {};
+var recordingWinId = 0;
 
 function customKeybinds() {
     var list = constant.listValidKeybindLocations;
@@ -73,7 +74,21 @@ const processKeybings = function (){
     // Print Screen 
     addKeybind(k.sshot,    (focusedWin) => { inst.takeSS(focusedWin); },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
     // Record screen
-    addKeybind(k.record,   () => {console.log("Keyb recording");constant.triggerRecording()});
+    addKeybind(k.record,   (focusedWin) => {
+        if(!constant.wasRecording()){
+            inst.notifyWin(focusedWin, 
+                constant.titleMessages.recording + "! " + focusedWin.getTitle(),
+                false);
+            recordingWinId = focusedWin.id;
+        }
+        else {
+            if (recordingWinId != focusedWin.id) inst.notifyWin(focusedWin,
+                constant.titleMessages.alreadyRecording);
+            else inst.notifyWin(focusedWin,
+                focusedWin.getTitle().split('!')[1]);
+        }
+        constant.triggerRecording();
+    });
 
 
     // Reload

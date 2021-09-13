@@ -5,7 +5,9 @@ exports.titleMessages = {
     loadingCharpage  : "Loading Char Page...",
     buildingCharpage : "Building scenario. Please wait some seconds...",
     cpDone           : "DONE! Saved CP in Screenshot folder",
-    doneSavedAs      : "Done! Saved as "
+    doneSavedAs      : "Done! Saved as ",
+    recording        : "RECORDING",
+    alreadyRecording : "You are already recording another window!"
 }
 
 exports.dialogMessages = {
@@ -22,7 +24,8 @@ exports.dialogMessages = {
         expand(k.about)     + ' - About AquaStar.\n' +
         expand(k.fullscreen)+ ' - Toggles Fullscreen\n' +
         expand(k.sshot)     + ' - Screenshot the game window (AQW and AQLITE only). They are saved in another folder as detailed below.\n' +
-        expand(k.reload) + " - Reload the pages, like in a browser\n" +
+        expand(k.record)    + ' - Record the Screen. Use it again to stop.\n' +
+        expand(k.reload)    + " - Reload the pages, like in a browser\n" +
         expand(k.reloadCache)+' - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
         'For an older/custom aqlite file, please name it "aqlite_old.swf" and put it in the same folder as the executable, as said below!\n\n' +
         'Note:' + expand(k.help) + ' Shows this message.';

@@ -23,14 +23,12 @@ ipcRenderer.send('variable-request', ['winTitle', 'winId']);
   function triggerRecording(startRecording){
     if(!startRecording) mediaRecorder.stop();
     else {
-      console.log("Recording...");
       recordedChunks.splice(0,recordedChunks.length); // Empty it
       mediaRecorder.start();
     }
   }
 
   ipcRenderer.on('record', (event, message) => {
-    console.log("TriggerRecording - Renderer");
     triggerRecording(message);
   })
 

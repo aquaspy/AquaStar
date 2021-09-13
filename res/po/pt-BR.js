@@ -5,7 +5,9 @@ exports.titleMessages = {
     loadingCharpage  : "Carregando Char Page...",
     buildingCharpage : "Construindo cenário. Por favor aguarde uns segundos...",
     cpDone           : "PRONTO! Salvo a CP na pasta de Screenshots",
-    doneSavedAs      : "Pronto! Salvo como "
+    doneSavedAs      : "Pronto! Salvo como ",
+    recording        : "GRAVANDO",
+    alreadyRecording : "Você já está gravando em alguma outra janela!"
 }
 
 exports.dialogMessages = {

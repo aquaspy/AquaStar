@@ -60,6 +60,7 @@ After version 1.2: Now that AQLite is "dead", as its merged into official game, 
  - Colour customization is shown in char page when its saved.
  - And also a keybinding to save your char page!
  - Custom keybindings! just create a aquastar.json in the designed folder!
+ - Record the game screen!
 
 # How to build it yourself
 

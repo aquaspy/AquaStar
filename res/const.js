@@ -5,8 +5,8 @@ const fs     = require("fs");
 const url    = require("url");
 
 // WARNING - ENABLES DEBUG MODE:
-//exports.isDebugBuild = false;
-exports.isDebugBuild = true;
+exports.isDebugBuild = false;
+//exports.isDebugBuild = true;
 
 /// -------------------------------
 /// Section 1 - Setup of URLs and files
@@ -428,12 +428,12 @@ ipcMain.on('variable-request', function (event, arg) {
     event.sender.send('variable-reply', [mainProcessVars[arg[0]], mainProcessVars[arg[1]]]);
 });
 
-var _isRecording = false;
+var _wasRecording = false;
+exports.wasRecording = () => {return _wasRecording};
 exports.triggerRecording = () => {
     // The event for the recording!
-    _isRecording = !_isRecording;
-    console.log("TriggerRecording - Main: " + _isRecording );
-    BrowserWindow.getFocusedWindow().webContents.send('record', _isRecording);
+    _wasRecording = !_wasRecording;
+    BrowserWindow.getFocusedWindow().webContents.send('record', _wasRecording);
 }
 
 ////
