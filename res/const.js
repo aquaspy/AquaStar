@@ -20,8 +20,9 @@ const appVersion  = require('electron').app.getVersion();
 const appName     = "AquaStar";
 
 /// Pictures save location.
-const sshotPath = path.join(app.getPath("pictures"),"AquaStar Screenshots");
-const iconPath  = path.join(appRoot, 'Icon', 'Icon_1024.png');
+const sshotPath   = path.join(app.getPath("pictures"),"AquaStar Screenshots");
+const iconPath    = path.join(appRoot, 'Icon', 'Icon_1024.png');
+const iconRedPath = path.join(appRoot, 'Icon', 'Iconred_1024.png');
 
 const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
 
@@ -65,7 +66,8 @@ exports.sshotPath        = sshotPath;
 const nativeImage = require('electron').nativeImage.createFromPath(iconPath)
     nativeImage.setTemplateImage(true);
 exports.iconPath = iconPath;
-exports.nativeImageIcon = nativeImage;
+exports.nativeImageIcon    = nativeImage;
+exports.nativeImageRedIcon = require('electron').nativeImage.createFromPath(iconRedPath);
 
 // Fixing file:// urls
 function _getFileUrl(path) {

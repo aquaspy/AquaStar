@@ -24,6 +24,7 @@ exports.dialogMessages = {
         expand(k.about)     + ' - Sobre AquaStar.\n' +
         expand(k.fullscreen)+ ' - Ativa/Desativa Fullscreen\n' +
         expand(k.sshot)     + ' - Printa a tela do jogo (apenas AQW e AQLITE). Eles são salvos em uma pasta separada dita abaixo.\n' +
+        expand(k.record)    + ' - Grava a tela do jogo. Use de novo para parar.\n' +
         expand(k.reload)    + " - Recarregam as páginas, como em um navegador\n" +
         expand(k.reloadCache)+' - Limpa todo o cachê do jogo, alguns cookies, e recarrega a página (pode consertar bugs dentro do jogo).\n\n' +
         'Para um aqlite antigo/customizado, por favor nomeie ele para "aqlite_old.swf" e o coloque na mesma pasta da executável, dita abaixo!\n\n' +
