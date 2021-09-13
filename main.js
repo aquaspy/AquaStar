@@ -1,4 +1,4 @@
-const {app, session, Menu, desktopCapturer}  = require('electron')
+const {app, session, Menu}  = require('electron')
 
 //const path     = require('path')
 const flash    = require('./res/flash.js');
