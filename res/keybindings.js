@@ -80,16 +80,23 @@ const processKeybings = function (){
                 constant.titleMessages.recording + "! " + focusedWin.getTitle(),
                 false);
             recordingWinId = focusedWin.id;
+
+            constant.triggerRecording();
             focusedWin.setIcon(constant.nativeImageRedIcon)
         }
         else {
-            if (recordingWinId != focusedWin.id) inst.notifyWin(focusedWin,
-                constant.titleMessages.alreadyRecording);
-            else inst.notifyWin(focusedWin,
-                focusedWin.getTitle().split('!')[1]);
-            focusedWin.setIcon(constant.nativeImageIcon)
+            if (recordingWinId != focusedWin.id) {
+                inst.notifyWin(focusedWin,
+                    constant.titleMessages.alreadyRecording);
+                return;
+            }
+            else {
+                inst.notifyWin(focusedWin,
+                    focusedWin.getTitle().split('!')[1]);
+                constant.triggerRecording();
+                focusedWin.setIcon(constant.nativeImageIcon)
+            }
         }
-        constant.triggerRecording();
     });
 
 
