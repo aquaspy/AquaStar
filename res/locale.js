@@ -16,40 +16,15 @@ function detectLang(systemLang, keyb){
         langFile = require(path.join(__dirname, langFolder, "en-US" + ".js"));
         //TODO - test for similar langs with substringing the Lang using the '-' as a separator.
     }
+    
+    // Convert the function to a gettable string.
+    var newHelpDetail = { 
+        helpDetail : langFile.dialogMessages.helpDetail(keyb)
+    }
 
-    exports.getHelpTitle        = langFile.helpTitle;
-    exports.getHelpMessage      = langFile.helpMessage;
-    exports.getHelpDetail       = langFile.helpDetail(keyb);
-    exports.getHelpScreenshot   = langFile.helpScreenshot;
-    exports.getHelpAqliteOld    = langFile.helpAqliteOld;
-    exports.getHelpCustomKeyPath= langFile.helpCustomKeyPath 
-    exports.getAboutTitle       = langFile.aboutTitle;
-    exports.getAboutMessage     = langFile.aboutMessage;
-    exports.getAboutDetail      = langFile.aboutDetail;
-    exports.getGithubPage       = langFile.aboutGithubPrompt;
-    exports.getCloseWindow      = langFile.aboutClosePrompt;
-    exports.getDebug            = langFile.aboutDebug;
+    Object.assign(langFile.dialogMessages,newHelpDetail);
 
-    exports.getInvalidCharpage  = langFile.invalidCharpage;
-    exports.getLoadingCharpage  = langFile.loadingCharpage;
-    exports.getBuildingCharpage = langFile.buildingCharpage;
-    exports.getCPDone           = langFile.cpDone;
-    exports.getDoneSavedAs      = langFile.doneSavedAs;
-
-    exports.getMenuBackward     = langFile.menuBackward;
-    exports.getMenuFoward       = langFile.menuFoward;
-    exports.getMenuOtherPages   = langFile.menuOtherPages;
-    exports.getMenuOtherPages2  = langFile.menuOtherPages2;
-    exports.getMenuWiki         = langFile.menuWiki;
-    exports.getMenuDesign       = langFile.menuDesign;
-    exports.getMenuAccount      = langFile.menuAccount;
-    exports.getMenuPortal       = langFile.menuPortal;
-    exports.getMenuHeromart     = langFile.menuHeromart;
-    exports.getMenuCalendar     = langFile.menuCalendar;
-    exports.getMenuCharpage     = langFile.menuCharpage;
-    exports.getMenuGuide        = langFile.menuGuide;
-    exports.getMenuTakeShot     = langFile.menuTakeShot;
-    exports.getMenuCopyURL      = langFile.menuCopyURL;
+    exports.strings = langFile;
 
     return lang;
 }

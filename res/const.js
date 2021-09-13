@@ -20,24 +20,34 @@ const appVersion  = require('electron').app.getVersion();
 const appName     = "AquaStar";
 
 /// Pictures save location.
-const sshotPath = path.join(app.getPath("pictures"),"AquaStar Screenshots");
-const iconPath  = path.join(appRoot, 'Icon', 'Icon_1024.png');
+const sshotPath   = path.join(app.getPath("pictures"),"AquaStar Screenshots");
+const iconPath    = path.join(appRoot, 'Icon', 'Icon_1024.png');
+const iconRedPath = path.join(appRoot, 'Icon', 'Iconred_1024.png');
 
 const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
 
+// Links with keybinds
 const charLookup   = 'https://account.aq.com/CharPage';
 const designNotes  = 'https://www.aq.com/gamedesignnotes/';
 const accountAq    = 'https://account.aq.com/';
 const wikiReleases = 'https://aqwwiki.wikidot.com/new-releases';
 
+// Extra usefull links
 const aqwg         = 'https://aqwg.weebly.com/';
 const heromart     = 'https://www.heromart.com/';
 const battleon     = 'https://portal.battleon.com/';
 const calendar     = 'https://www.aq.com/lore/calendar';
+const dailyGifts   = 'https://www.aq.com/lore/dailygifts';
+
+// Social Media stuff
+const twtAlina     = "https://twitter.com/Alina_AE";
+const redditAqw    = "https://www.reddit.com/r/AQW/";
 
 exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=2'
 exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
+
+// Export farm
 
 exports.githubPage       = githubPage;
 exports.wikiReleases     = wikiReleases;
@@ -53,11 +63,11 @@ exports.appDirectoryPath = appCurrentDirectory;
 exports.sshotPath        = sshotPath;
 
 /// Icon Stuff
-//const nativeImage = require('electron').nativeImage;
-//var iconImage = nativeImage.createFromPath(iconPath);
-//    iconImage.setTemplateImage(true);
+const nativeImage = require('electron').nativeImage.createFromPath(iconPath)
+    nativeImage.setTemplateImage(true);
 exports.iconPath = iconPath;
-
+exports.nativeImageIcon    = nativeImage;
+exports.nativeImageRedIcon = require('electron').nativeImage.createFromPath(iconRedPath);
 
 // Fixing file:// urls
 function _getFileUrl(path) {
@@ -69,7 +79,7 @@ function _getFileUrl(path) {
 }
 
 /// -------------------------------
-/// Section 2 - KeyBindings and Custom swf stuff
+/// Section 2 - Original KeyBindings and Custom swf stuff
 /// -------------------------------
 
 // Default values - Also present at aquastar_testing.json as a copy of easy access!
@@ -98,25 +108,20 @@ const originalKeybinds = {
         "CmdOrCtrl+H",
         "F1"
     ],
-    settings: "Alt+9" //TODO - Make a screen and do your stuff XD. This is for future proofing
+    settings: "Alt+9", //TODO - Make a screen and do your stuff XD. This is for future proofing
+    record:   "Ctrl+J"
 }
+exports.originalKeybinds = originalKeybinds;
 
-// Finding out which one to load and if it should load... priority is first the local and after the appdata
-var appdataJsonPath = path.join(app.getPath("appData"), appName.toLocaleLowerCase() + '.json')
-var inPathJsonPath  = path.join(appCurrentDirectory, appName.toLocaleLowerCase() + '.json')
-const isKeyDataAvailable       = fs.existsSync(appdataJsonPath);
-const isKeyInPathAvailable = fs.existsSync(inPathJsonPath);
+// Finding out which one to load and if it should load...
+var keybingJsonFileName = appName.toLocaleLowerCase() + '.json';
+var appdataJsonPath = path.join(app.getPath("appData"), keybingJsonFileName)
+var inPathJsonPath  = path.join(appCurrentDirectory, keybingJsonFileName);
+var listValidKeybindLocations = [];
+if (fs.existsSync(appdataJsonPath)) { listValidKeybindLocations.push(appdataJsonPath) }
+if (fs.existsSync(inPathJsonPath))  { listValidKeybindLocations.push(inPathJsonPath)  }
 
-var keyBinds;
-if (isKeyInPathAvailable) {
-    keyBinds = JSON.parse(fs.readFileSync(inPathJsonPath));
-}
-else if (isKeyDataAvailable) {
-    keyBinds = JSON.parse(fs.readFileSync(appdataJsonPath));
-}
-else keyBinds = originalKeybinds;
-
-exports.keyBinds = keyBinds;
+exports.listValidKeybindLocations = listValidKeybindLocations;
 
 // Custom aqlite stuff
 var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
@@ -124,7 +129,11 @@ exports.aqlitePath = oldAqlite ?
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
             //_getFileUrl(path.join(appRoot, 'aqlite.swf'))
             //'https://game.aq.com/game/gamefiles/Loader_Spider.swf';           // not working since OMG 2.001
-            'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=2001'    // gamefiles/Loader_Spider.swf?ver=2001
+            //'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=2001'    // gamefiles/Loader_Spider.swf?ver=2001
+            
+            ('https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=' +
+            Math.floor(Math.random() * (900)) + 100); //random ending bt 100 and 1k. IT WAS ABOUT BROWSER CACHE!
+            // The above exists bc spider can mess up again the cache. so aqw WONT CACHE anymore.
 exports.isOldAqlite = oldAqlite;
 
 /// -------------------------------
@@ -137,6 +146,7 @@ function _getWinConfig(type){
     //win
     //main
     //cprint
+    //game
     return (type != "cprint")? 
     {
         width: 960,
@@ -144,12 +154,13 @@ function _getWinConfig(type){
         icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
-            sandbox: true,
-            webviewTag: ((type == "tab")? true : false),
+            sandbox:    ((type == "tab")? false : true),
+            webviewTag: ((type == "tab")? true : false), 
+            preload: ((type == "game" || type == "main")? path.join(appRoot,'res','preload_capture.js'): null),
             plugins: true,
             javascript: true,
             contextIsolation: true,
-            enableRemoteModule: false,
+            enableRemoteModule: ((type == "game" || type == "main")? true : false), // Recording screen... needs true;
             nodeIntegrationInWorker: false //maybe better performance for more instances in future... Needs testing.
         }
     }:
@@ -160,7 +171,6 @@ function _getWinConfig(type){
         // of the OS complain about the 1 billion window size. I think 4k is a nice number...
         // Sec. YES, it NEEDS both Show off (so doesnt show in user's face) and
         // resizable false, so it stays "maxed size";
-        
         width: 3840,
         height: 2160,
         show: false,
@@ -182,86 +192,110 @@ exports.tabbedConfig = _getWinConfig("tab");
 exports.winConfig    = _getWinConfig("win");
 exports.mainConfig   = _getWinConfig("main");
 exports.charConfig   = _getWinConfig("cprint");
+exports.gameConfig   = _getWinConfig("game");
 
-exports.getMenu = (funcTakeSS, isContext = false) => {
+exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
     // needs to be like that as the function is located on instances...
     if (isContext == false && process.platform == 'darwin') return null;
 
     var links = 
     [
         {
-            label: '<<< ' + menuMessages.backward,
-            accelerator: keyBinds.backward,
+            label: '<<< ' + menuMessages.menuBackward,
+            accelerator: keybinds.backward,
             click(menuItem,focusedWin) {
                 var br = focusedWin.webContents;
                 if (br.canGoBack()) br.goBack();
             } 
         },
         {
-            label: '>>> ' + menuMessages.foward,
-            accelerator: keyBinds.forward,
+            label: '>>> ' + menuMessages.menuFoward,
+            accelerator: keybinds.forward,
             click(menuItem,focusedWin) {
                 var br = focusedWin.webContents;
                 if (br.canGoForward()) br.goForward();
             }
         }, // Sorry Mac, you cant have those next ones as its not worth it... There is still right click tho
         {
-            label: menuMessages.otherPages,
+            label: menuMessages.menuOtherPages,
             submenu: [
                 {
-                    label: menuMessages.wiki,
-                    accelerator: keyBinds.wiki,
+                    label: menuMessages.menuWiki,
+                    accelerator: keybinds.wiki,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(wikiReleases);
                     }
                 },
                 {
-                    label: menuMessages.design,
-                    accelerator: keyBinds.design,
+                    label: menuMessages.menuDesign,
+                    accelerator: keybinds.design,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(designNotes);
                     }
                 },
                 {
-                    label: menuMessages.account,
-                    accelerator: keyBinds.account,
+                    label: menuMessages.menuAccount,
+                    accelerator: keybinds.account,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(accountAq);
                     }
                 },
                 {
-                    label: menuMessages.charpage,
-                    accelerator: keyBinds.charpage,
+                    label: menuMessages.menuCharpage,
+                    accelerator: keybinds.charpage,
                     click(menuItem,focusedWin) {
                         focusedWin.webContents.loadURL(charLookup);
                     }
                 },
                 // No keybind now...
                 {
-                    label: menuMessages.otherPages2,
+                    label: menuMessages.menuOtherPages2,
                     submenu: [
                         {
-                            label: menuMessages.calendar,
+                            label: menuMessages.menuDailyGifts,
+                            click(menuItem,focusedWin) {
+                                focusedWin.webContents.loadURL(dailyGifts);
+                            }
+                        },
+                        {
+                            label: menuMessages.menuCalendar,
                             click(menuItem,focusedWin) {
                                 focusedWin.webContents.loadURL(calendar);
                             }
                         },
                         {
-                            label: menuMessages.aqwg,
+                            label: menuMessages.menuGuide,
                             click(menuItem,focusedWin) {
                                 focusedWin.webContents.loadURL(aqwg);
                             }
                         },
                         {
-                            label: menuMessages.heromart,
+                            label: menuMessages.menuHeromart,
                             click(menuItem,focusedWin) {
                                 focusedWin.webContents.loadURL(heromart);
                             }
                         },
                         {
-                            label: menuMessages.portal,
+                            label: menuMessages.menuPortal,
                             click(menuItem,focusedWin) {
                                 focusedWin.webContents.loadURL(battleon);
+                            }
+                        }
+                    ]
+                },
+                {
+                    label: menuMessages.menuSocialMedia,
+                    submenu: [
+                        {
+                            label: menuMessages.menuTwitter,
+                            click(menuItem,focusedWin) {
+                                focusedWin.webContents.loadURL(twtAlina);
+                            }
+                        },
+                        {
+                            label: menuMessages.menuReddit,
+                            click(menuItem,focusedWin) {
+                                focusedWin.webContents.loadURL(redditAqw);
                             }
                         }
                     ]
@@ -269,8 +303,8 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
             ]
         },
         {
-            label: menuMessages.takeCPSshot,
-            accelerator: keyBinds.cpSshot,
+            label: menuMessages.menuTakeShot,
+            accelerator: keybinds.cpSshot,
             click() {
                 funcTakeSS();
             }
@@ -280,12 +314,18 @@ exports.getMenu = (funcTakeSS, isContext = false) => {
     if (isContext){
         ret = [
            {
-                label: menuMessages.copyPageURL,
+                label: menuMessages.menuCopyURL,
                 click(menuItem,focusedWin) {
                     require('electron').clipboard.writeText(
                         focusedWin.webContents.getURL(),'clipboard');
                 }
-           }
+           },
+           {
+            label: menuMessages.menuReloadPage,
+            click(menuItem,focusedWin) {
+                focusedWin.reload();
+            }
+       },
         ];
         ret.push({ type: 'separator' });
         links.forEach((e) => {
@@ -305,23 +345,23 @@ function showHelpMessage(win){
     const { dialog } = require('electron')
     const dialog_options = {
         buttons: ['Ok'],
-        title:   locale.getHelpTitle,
-        message: locale.getHelpMessage,
-        detail:  locale.getHelpDetail + "\n" +
-            locale.getHelpCustomKeyPath + appdataJsonPath + "\n" +
-            locale.getHelpScreenshot + sshotPath + "\n" + 
-            locale.getHelpAqliteOld + appCurrentDirectory 
+        title:   dialogMessages.helpTitle,
+        message: dialogMessages.helpMessage,
+        detail:  dialogMessages.helpDetail + "\n" +
+            dialogMessages.helpCustomKeyPath + appdataJsonPath + "\n" +
+            dialogMessages.helpScreenshot + sshotPath + "\n" + 
+            dialogMessages.helpAqliteOld + appCurrentDirectory 
     };
     dialog.showMessageBox(win,dialog_options);
 }
 function showAboutMessage(win) {
     const { dialog } = require('electron')
     const dialog_options = {
-        buttons: [locale.getGithubPage,locale.getCloseWindow],
-        title:   locale.getAboutTitle + appVersion,
-        message: locale.getAboutMessage,
-        detail:  locale.getAboutDetail + githubPage +'\n\n\n' +
-        locale.getDebug + ":\n" +
+        buttons: [dialogMessages.aboutGithubPrompt, dialogMessages.aboutClosePrompt],
+        title:   dialogMessages.aboutTitle + appVersion,
+        message: dialogMessages.aboutMessage,
+        detail:  dialogMessages.aboutDetail + githubPage +'\n\n\n' +
+        dialogMessages.aboutDebug + ":\n" +
         "OS   - " + process.platform + "\n" +
         "ARCH - " + process.arch     + "\n"
     };
@@ -346,32 +386,56 @@ exports.showAboutMessage = showAboutMessage;
 /// Section 5 - Locale stuff
 /// -------------------------------
 
+// Better for internal constjs usage
 let menuMessages;
-// LOCALE SETUP
+let dialogMessages;
+
 exports.setLocale        = (loc, keyb)=> {
     locale.detectLang(loc,keyb);
-    exports.titleMessages = {
-        invalidCharpage:  locale.getInvalidCharpage,
-        loadingCharpage:  locale.getLoadingCharpage,
-        buildingCharpage: locale.getBuildingCharpage,
-        cpDone:           locale.getCPDone,
-        doneSavedAs :     locale.getDoneSavedAs
-    }    
-    menuMessages = {
-        backward:     locale.getMenuBackward,
-        foward:       locale.getMenuFoward,
-        otherPages:   locale.getMenuOtherPages,
-        otherPages2:  locale.getMenuOtherPages2,
-        wiki:         locale.getMenuWiki,
-        design:       locale.getMenuDesign,
-        account:      locale.getMenuAccount,
-        charpage:     locale.getMenuCharpage,
-        aqwg:         locale.getMenuGuide,
-        portal:       locale.getMenuPortal,
-        heromart:     locale.getMenuHeromart,
-        calendar:     locale.getMenuCalendar,
-        takeCPSshot:  locale.getMenuTakeShot,
-        copyPageURL:  locale.getMenuCopyURL
-    }
-    exports.menuMessages = menuMessages;
+    const strings = locale.strings;
+
+    // Title messages are only used on instances.js
+    exports.titleMessages = strings.titleMessages;
+
+    // Menu messages are only used here
+    menuMessages = strings.menuMessages;
+    //exports.menuMessages = menuMessages;
+
+    // Dialog messages are only used here
+    dialogMessages = strings.dialogMessages;
+    //exports.dialogMessages = dialogMessages;
 }
+////
+const { ipcMain } = require('electron');
+
+var mainProcessVars = {
+    winTitle: "name",
+    winId: 0
+}
+
+ipcMain.on('variable-request', function (event, arg) {
+    var curWindow = BrowserWindow.getFocusedWindow();
+    if (curWindow == null || curWindow == undefined) {
+        mainProcessVars = {
+            winTitle : "",
+            winId: 0
+        }
+    }
+    else {
+        mainProcessVars = {
+            winTitle : curWindow.getTitle(),
+            winId : curWindow.id
+        }
+    }
+    event.sender.send('variable-reply', [mainProcessVars[arg[0]], mainProcessVars[arg[1]]]);
+});
+
+var _wasRecording = false;
+exports.wasRecording = () => {return _wasRecording};
+exports.triggerRecording = () => {
+    // The event for the recording!
+    _wasRecording = !_wasRecording;
+    BrowserWindow.getFocusedWindow().webContents.send('record', _wasRecording);
+}
+
+////

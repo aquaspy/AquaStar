@@ -1,4 +1,5 @@
 const constant              = require('./const.js');
+const keybinds              = require('./keybindings.js');
 const {BrowserWindow, Menu} = require('electron');
 
 let usedAltPagesNumbers = [];
@@ -13,13 +14,13 @@ let winNames   = {}; // Fake dictionary
 
 // New page function
 function newBrowserWindow(new_path, isMainWin=false){
-    var config = "";
+    var config;
     if (isMainWin) config = constant.mainConfig;
     else if (new_path == constant.pagesPath){
          config = constant.tabbedConfig 
     }
+    else if (_isGameWindow(new_path)) config = constant.gameConfig;
     else config = constant.winConfig;
-    
     
     const newWin = new BrowserWindow(config);
     newWin.setMenuBarVisibility(false); //Remove default electron menu
@@ -27,8 +28,8 @@ function newBrowserWindow(new_path, isMainWin=false){
     
     if (new_path == constant.aqlitePath || 
         new_path == constant.vanillaAQW) {
+
         // Its alt window, Put the aqlite/Aqw title...
-        
         var windowNumber = 1;
         
         for (;usedAltPagesNumbers.includes(windowNumber);windowNumber++){
@@ -81,8 +82,7 @@ function _windowAddContext(newWin){
     
     // Context Menu part
     var contextMenu = Menu.buildFromTemplate( 
-        constant.getMenu( takeSS,true));
-    
+        constant.getMenu(keybinds.keybinds,takeSS,true));
     newWin.webContents.on("context-menu",(e,param)=>{
         contextMenu.popup({
             window: newWin,
