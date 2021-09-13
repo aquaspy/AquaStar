@@ -20,23 +20,30 @@ ipcRenderer.on('variable-reply', function (event, args) {
 ipcRenderer.send('variable-request', ['winTitle', 'winId']);
 
 (() => {
+  function triggerRecording(startRecording){
+    if(!startRecording) mediaRecorder.stop();
+    else {
+      console.log("Recording...");
+      recordedChunks.splice(0,recordedChunks.length); // Empty it
+      mediaRecorder.start();
+    }
+  }
+
+  ipcRenderer.on('record', (event, message) => {
+    console.log("TriggerRecording - Renderer");
+    triggerRecording(message);
+  })
+
   function onLoading (){
     const {desktopCapturer}  = require('electron');
 
     var handleStream = (stream) => {
-      console.log("CP4");
-      
-      var winTimeRef = setTimeout(() => {
-        mediaRecorder.stop();
-      },5800);
 
       mediaRecorder = new MediaRecorder(stream, 
         { mimeType: 'video/webm; codecs=vp9' }
       );
-
-      mediaRecorder.start();
-
-      // Register Event Handlers
+      
+      // Register Handlers
       mediaRecorder.ondataavailable = (e) => {
         recordedChunks.push(e.data);
       };
@@ -104,7 +111,6 @@ ipcRenderer.send('variable-request', ['winTitle', 'winId']);
             }
           }).then((stream) => handleStream(stream))
             .catch((e) => console.log(e));
-          console.log("Recording...");
             break;
         }
       }

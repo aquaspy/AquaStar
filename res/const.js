@@ -106,7 +106,8 @@ const originalKeybinds = {
         "CmdOrCtrl+H",
         "F1"
     ],
-    settings: "Alt+9" //TODO - Make a screen and do your stuff XD. This is for future proofing
+    settings: "Alt+9", //TODO - Make a screen and do your stuff XD. This is for future proofing
+    record:   "Ctrl+J"
 }
 exports.originalKeybinds = originalKeybinds;
 
@@ -426,5 +427,13 @@ ipcMain.on('variable-request', function (event, arg) {
     }
     event.sender.send('variable-reply', [mainProcessVars[arg[0]], mainProcessVars[arg[1]]]);
 });
+
+var _isRecording = false;
+exports.triggerRecording = () => {
+    // The event for the recording!
+    _isRecording = !_isRecording;
+    console.log("TriggerRecording - Main: " + _isRecording );
+    BrowserWindow.getFocusedWindow().webContents.send('record', _isRecording);
+}
 
 ////

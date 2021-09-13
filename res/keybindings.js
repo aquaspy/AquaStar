@@ -72,7 +72,10 @@ const processKeybings = function (){
 
     // Print Screen 
     addKeybind(k.sshot,    (focusedWin) => { inst.takeSS(focusedWin); },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
-    
+    // Record screen
+    addKeybind(k.record,   () => {console.log("Keyb recording");constant.triggerRecording()});
+
+
     // Reload
     addKeybind(k.reload,   (focusedWin) => {focusedWin.reload()});
     // Reload and Clear cache
