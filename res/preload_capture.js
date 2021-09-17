@@ -65,7 +65,7 @@ ipcRenderer.send('getTitleID', "");
             today.getFullYear() + "-" +
             (today.getMonth() + 1) + "-" +
             today.getDate() + "_" + 
-            today.getHours() + ":" + today.getMinutes() +  ":"
+            today.getHours() + ":" + today.getMinutes() +  ":" +
             today.getSeconds();
 
           ipcRenderer.send('saveDialog', recordName);
@@ -73,6 +73,7 @@ ipcRenderer.send('getTitleID', "");
           ipcRenderer.on('saveDialogReply', (event, filename) => {
             if(filename != null && filename != undefined){
               // User didnt canceled. Go ahead!
+              // Reason why remote is enabled -_- sadly.
               require("fs").writeFileSync(filename, buf);
             }
           })

@@ -160,7 +160,7 @@ function _getWinConfig(type){
             plugins: true,
             javascript: true,
             contextIsolation: true,
-            enableRemoteModule: ((type == "game" || type == "main")? true : false), // Recording screen... needs true... for now;
+            enableRemoteModule: ((type == "game" || type == "main")? true : false), // Recording screen needs to save it.
             nodeIntegrationInWorker: false //maybe better performance for more instances in future... Needs testing.
         }
     }:
