@@ -5,8 +5,8 @@ const fs     = require("fs");
 const url    = require("url");
 
 // WARNING - ENABLES DEBUG MODE:
-//exports.isDebugBuild = false;
-exports.isDebugBuild = true;
+exports.isDebugBuild = false;
+//exports.isDebugBuild = true;
 
 /// -------------------------------
 /// Section 1 - Setup of URLs and files
@@ -45,7 +45,6 @@ const redditAqw    = "https://www.reddit.com/r/AQW/";
 
 exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=2'
-exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
 
 // Export farm
 
@@ -90,7 +89,6 @@ const originalKeybinds = {
     charpage:    "Alt+P",
     newAqlite:   "Alt+N",
     newAqw:      "Alt+Q",
-    newTabbed:   "Alt+Y",
     about:       "F9",
     fullscreen:  "F11",
     sshot:       "F2",
@@ -142,7 +140,6 @@ exports.isOldAqlite = oldAqlite;
 
 // For customizing windows themselfs
 function _getWinConfig(type){
-    //tab
     //win
     //main
     //cprint
@@ -154,8 +151,8 @@ function _getWinConfig(type){
         icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
-            sandbox:    ((type == "tab")? false : true),
-            webviewTag: ((type == "tab")? true : false), 
+            sandbox:    true,
+            webviewTag: false, 
             preload: ((type == "game" || type == "main")? path.join(appRoot,'res','preload_capture.js'): null),
             plugins: true,
             javascript: true,
@@ -188,7 +185,6 @@ function _getWinConfig(type){
     }
 }
 
-exports.tabbedConfig = _getWinConfig("tab");
 exports.winConfig    = _getWinConfig("win");
 exports.mainConfig   = _getWinConfig("main");
 exports.charConfig   = _getWinConfig("cprint");

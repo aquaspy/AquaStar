@@ -37,7 +37,6 @@ For a example of the defaults, check out the OriginalKeybinds variable on const.
     "charpage": "Alt+P",
     "newAqlite": "Alt+N",
     "newAqw": "Alt+Q",
-    "newTabbed": "Alt+Y",
     "about": "F9",
     "fullscreen": "F11",
     "sshot": "F2",

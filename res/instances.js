@@ -18,9 +18,6 @@ let winNames   = {}; // Fake dictionary
 function newBrowserWindow(new_path, isMainWin=false){
     var config;
     if (isMainWin) config = constant.mainConfig;
-    else if (new_path == constant.pagesPath){
-         config = constant.tabbedConfig 
-    }
     else if (_isGameWindow(new_path)) config = constant.gameConfig;
     else config = constant.winConfig;
     
@@ -63,7 +60,7 @@ function newBrowserWindow(new_path, isMainWin=false){
     else if (new_path == constant.df_url) {
         newWin.setTitle("AquaStar - DragonFable");
     }
-    else if (new_path != constant.pagesPath) {
+    else {
         /// Its a usual HTML page window then! features incomming
         /// ... but only if its win or lunix. Mac doesnt have the feature -_-
         /// Mac still get keybinds tho, just not the menu.
@@ -105,7 +102,6 @@ function _windowAddContext(newWin){
 
     // Bonus: Hug popup (yeah, Hug them hard.)
     newWin.webContents.on("did-finish-load", () => {
-        // Remember tabbed has it on preload_webfix.js.
         var url = newWin.getURL();
         function testAndDelete (testURL,objName,isClass = false) {
             if(url.includes(testURL)){
