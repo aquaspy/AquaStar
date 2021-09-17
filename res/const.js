@@ -5,8 +5,8 @@ const fs     = require("fs");
 const url    = require("url");
 
 // WARNING - ENABLES DEBUG MODE:
-exports.isDebugBuild = false;
-//exports.isDebugBuild = true;
+//exports.isDebugBuild = false;
+exports.isDebugBuild = true;
 
 /// -------------------------------
 /// Section 1 - Setup of URLs and files

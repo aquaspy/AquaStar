@@ -1,6 +1,6 @@
 const constant              = require('./const.js');
 const keybinds              = require('./keybindings.js');
-const {BrowserWindow, Menu} = require('electron');
+const {BrowserWindow, Menu, webContents} = require('electron');
 
 let usedAltPagesNumbers = [];
 
@@ -69,6 +69,7 @@ function newBrowserWindow(new_path, isMainWin=false){
         /// Mac still get keybinds tho, just not the menu.
         newWin.setMenuBarVisibility(true);
     }
+    
     _windowAddContext(newWin);
     
     return newWin;
@@ -101,6 +102,32 @@ function _windowAddContext(newWin){
         _windowAddContext(childWin);
         event.newGuest = childWin;
     })
+
+    // Bonus: Hug popup (yeah, Hug them hard.)
+    newWin.webContents.on("did-finish-load", () => {
+        // Remember tabbed has it on preload_webfix.js.
+        var url = newWin.getURL();
+        function testAndDelete (testURL,objName,isClass = false) {
+            if(url.includes(testURL)){
+                var codeTest;
+                codeTest = (isClass)? 
+                    "(document.getElementsByClassName('" + objName + "')[0] == undefined)? false : true":
+                    "(document.getElementById('" + objName + "') == undefined)? false : true;";
+
+                newWin.webContents.executeJavaScript(codeTest).then((popUpExists) =>{
+                    if (popUpExists) {
+                        var codeNuke;
+                        codeNuke = (isClass)? 
+                            "document.getElementsByClassName('" + objName + "')[0].innerHTML = ''":
+                            "document.getElementById('" + objName + "').innerHTML = ''";
+                        newWin.webContents.executeJavaScript(codeNuke);
+                    }
+                });
+            }
+        }
+        testAndDelete("wikidot","ncmp__tool",false);
+        testAndDelete("aq.com","fb-page",true);
+    });
 }
 
 /// GAME WINDOW ONLY

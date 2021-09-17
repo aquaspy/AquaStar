@@ -3,6 +3,44 @@ var el = document.querySelector('.chrome-tabs');
 var chromeTabs = new ChromeTabs();
 chromeTabs.init(el);
 
+function getPreloadUrl(){
+    var url = window.location.href
+    return url.substring(0,url.lastIndexOf('/')) + "/preload_webfix.js"; 
+}
+
+function createWebViews () {
+    document.getElementById("webviews");
+
+    function addWebView(id,src,isActivePage=false){
+
+        var divHolder = document.createElement("div");
+        divHolder.setAttribute("class","page-holder");
+
+        var newWebview = document.createElement("webview")
+        newWebview.setAttribute("id",id);
+        newWebview.setAttribute("src",src);
+        newWebview.setAttribute("preload",getPreloadUrl());
+        newWebview.setAttribute("class",(isActivePage? "page-active ":"" ) + "tabs")
+
+        divHolder.appendChild(newWebview);
+        document.getElementById("webviews").appendChild(divHolder);
+    }
+    addWebView("wiki","http://aqwwiki.wikidot.com/new-releases",true);
+    addWebView("account","https://account.aq.com/");
+    addWebView("design","https://www.aq.com/gamedesignnotes/");
+
+    /* // I tried okay!? I tried... In tabbed window, it doest work...
+    var webs = document.getElementsByTagName("webview");
+
+    for (var i = 0; i< webs.length; i++){
+        // Wiki popup and facebook popup begone.
+        webs[i].executeJavaScript("document.getElementsByClassName('fb-page')[0].innerHTML = ''");
+        webs[i].executeJavaScript("document.getElementById('ncmp__tool').innerHTML = ''");
+    }*/
+}
+
+window.onload = createWebViews();
+
 var texts = {
     account: "AQW Account",
     wiki: "Wiki New Releases",
