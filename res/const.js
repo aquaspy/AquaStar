@@ -198,6 +198,15 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
     // needs to be like that as the function is located on instances...
     if (isContext == false && process.platform == 'darwin') return null;
 
+    function generateLink (label,link,keybind = null) {
+        return {
+            label: label,
+            accelerator: keybind,
+            click(menuItem,focusedWin) {
+                focusedWin.webContents.loadURL(link);
+            }
+        }
+    }
     var links = 
     [
         {
@@ -219,85 +228,27 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
         {
             label: menuMessages.menuOtherPages,
             submenu: [
-                {
-                    label: menuMessages.menuWiki,
-                    accelerator: keybinds.wiki,
-                    click(menuItem,focusedWin) {
-                        focusedWin.webContents.loadURL(wikiReleases);
-                    }
-                },
-                {
-                    label: menuMessages.menuDesign,
-                    accelerator: keybinds.design,
-                    click(menuItem,focusedWin) {
-                        focusedWin.webContents.loadURL(designNotes);
-                    }
-                },
-                {
-                    label: menuMessages.menuAccount,
-                    accelerator: keybinds.account,
-                    click(menuItem,focusedWin) {
-                        focusedWin.webContents.loadURL(accountAq);
-                    }
-                },
-                {
-                    label: menuMessages.menuCharpage,
-                    accelerator: keybinds.charpage,
-                    click(menuItem,focusedWin) {
-                        focusedWin.webContents.loadURL(charLookup);
-                    }
-                },
+                generateLink(menuMessages.menuWiki,wikiReleases,keybinds.wiki),
+                generateLink(menuMessages.menuDesign,designNotes,keybinds.design),
+                generateLink(menuMessages.menuAccount,accountAq,keybinds.account),
+                generateLink(menuMessages.menuCharpage,charLookup,keybinds.charpage),
                 // No keybind now...
+                {type: 'separator'},
                 {
                     label: menuMessages.menuOtherPages2,
                     submenu: [
-                        {
-                            label: menuMessages.menuDailyGifts,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(dailyGifts);
-                            }
-                        },
-                        {
-                            label: menuMessages.menuCalendar,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(calendar);
-                            }
-                        },
-                        {
-                            label: menuMessages.menuGuide,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(aqwg);
-                            }
-                        },
-                        {
-                            label: menuMessages.menuHeromart,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(heromart);
-                            }
-                        },
-                        {
-                            label: menuMessages.menuPortal,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(battleon);
-                            }
-                        }
+                        generateLink(menuMessages.menuDailyGifts,dailyGifts),
+                        generateLink(menuMessages.menuCalendar,calendar),
+                        generateLink(menuMessages.menuGuide,aqwg),
+                        generateLink(menuMessages.menuHeromart,heromart),
+                        generateLink(menuMessages.menuPortal,battleon)
                     ]
                 },
                 {
                     label: menuMessages.menuSocialMedia,
                     submenu: [
-                        {
-                            label: menuMessages.menuTwitter,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(twtAlina);
-                            }
-                        },
-                        {
-                            label: menuMessages.menuReddit,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(redditAqw);
-                            }
-                        }
+                        generateLink(menuMessages.menuTwitter,twtAlina),
+                        generateLink(menuMessages.menuReddit,redditAqw)
                     ]
                 }
             ]
@@ -310,36 +261,31 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             }
         }
     ];
-    var ret;
     if (isContext){
-        ret = [
-           {
+        var ret = [
+            {
                 label: menuMessages.menuCopyURL,
                 click(menuItem,focusedWin) {
                     require('electron').clipboard.writeText(
                         focusedWin.webContents.getURL(),'clipboard');
                 }
-           },
-           {
-            label: menuMessages.menuReloadPage,
-            click(menuItem,focusedWin) {
-                focusedWin.reload();
-            }
-       },
+            },
+            {
+                label: menuMessages.menuReloadPage,
+                click(menuItem,focusedWin) {
+                    focusedWin.reload();
+                }
+            },
+            { type: 'separator' }
         ];
-        ret.push({ type: 'separator' });
-        links.forEach((e) => {
-            ret.push(e);
-        });
-        return ret;
+        ret.reverse().forEach((e) => {links.splice(0, 0, e)}); // Insert at the beginning
     }
-    else return links;
+    return links;
 }
 
 /// -------------------------------
 /// Section 4 - Help and About menus
 /// -------------------------------
-
 
 function showHelpMessage(win){
     const dialog_options = {
