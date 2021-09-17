@@ -127,6 +127,12 @@ function _windowAddContext(newWin){
         }
         testAndDelete("wikidot","ncmp__tool",false);
         testAndDelete("aq.com","fb-page",true);
+
+        // Ads. Bc wiki is being too trashy to get ad revenue from me.
+        testAndDelete("wikidot","wad-aqwwiki-above-content",false);
+        testAndDelete("wikidot","wad-aqwwiki-below-content",false);
+        newWin.webContents.executeJavaScript("var rem = document.getElementsByTagName('iframe');" +
+        "for (var i=0;i<rem.lenght;i++) rem[i].remove()");
     });
 }
 
