@@ -10,14 +10,12 @@ var currentWindowID = 0;
 let mediaRecorder;
 const recordedChunks = [];
 
-ipcRenderer.on('variable-reply', function (event, args) {
-  console.log(args[0]); // "name"
-  currentWindowTitle = args[0];
-  console.log(args[1]); // 33
-  currentWindowID = args[1];
+ipcRenderer.on('getTitleIDReply', function (event, titleAndID) {
+  currentWindowTitle = titleAndID[0];
+  currentWindowID = titleAndID[1];
 });
 
-ipcRenderer.send('variable-request', ['winTitle', 'winId']);
+ipcRenderer.send('getTitleID', "");
 
 (() => {
   function triggerRecording(startRecording){
@@ -61,31 +59,30 @@ ipcRenderer.send('variable-request', ['winTitle', 'winId']);
         
         toArrayBuffer(blobb, (arrayBuffer) => {
           const buf = Buffer.from(arrayBuffer);
+
+          var today = new Date();
+          var recordName = "Recording-" +
+            today.getFullYear() + "-" +
+            (today.getMonth() + 1) + "-" +
+            today.getDate() + "_" + 
+            today.getHours() + ":" + today.getMinutes() +  ":"
+            today.getSeconds();
+
+          ipcRenderer.send('saveDialog', recordName);
           
-          // ONLY use of remote. not enabled on HTML windows, only game ones!
-          require("electron").remote.dialog.showSaveDialog(null,{
-            buttonLabel: 'Save video',
-            defaultPath: `vid-${Date.now()}.webm`
-          }, (filename) => {
-            console.log(filename);
-            require("fs").writeFileSync(filename, buf);
+          ipcRenderer.on('saveDialogReply', (event, filename) => {
+            if(filename != null && filename != undefined){
+              // User didnt canceled. Go ahead!
+              require("fs").writeFileSync(filename, buf);
+            }
           })
         })
       };
       
     }
-    
-    //const iconPath  = require("path").join(__dirname.substring(0,__dirname.lastIndexOf(path.sep)), 'Icon', 'Icon_1024.png');
-    
-    //console.log(__dirname);
-    //const nativeImage = require('electron').nativeImage.createFromPath(iconPath)
 
     desktopCapturer.getSources({types: ['window']}, (error, sources)=> {
       if (error) throw console.log(error);
-      console.log("CP2");
-
-      //var currentWindowTitle = require('electron').remote.getCurrentWindow().getTitle();
-      //var currentWindowID = require('electron').remote.getCurrentWindow().id;
 
       // Filter only aquastar strings now.
       var aquastarWindows = [];
@@ -97,7 +94,7 @@ ipcRenderer.send('variable-request', ['winTitle', 'winId']);
       }
 
       for (let i = 0; i < aquastarWindows.length; ++i) {
-        console.log("CP2.5 + " + aquastarWindows[i].id + " = " + aquastarWindows[i].name)// + " - " + (nativeImage == sources[i].nativeImageIcon)? "true":"false");
+        //console.log("Window list: + " + aquastarWindows[i].id + " = " + aquastarWindows[i].name)// + " - " + (nativeImage == sources[i].nativeImageIcon)? "true":"false");
         if (aquastarWindows[i].name === currentWindowTitle) {
           navigator.mediaDevices.getUserMedia({
             audio: false,

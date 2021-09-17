@@ -7,8 +7,10 @@ let usedAltPagesNumbers = [];
 // SS asks for them....
 const fs       = require('fs');
 const path     = require('path');
+let   isAltKPageUp = false;
+
 // For notify Window's original names.
-let winTimeRef = null;
+let winTimeRef = {};
 let winNames   = {}; // Fake dictionary
 
 
@@ -166,9 +168,16 @@ function charPagePrint(){
             _notifyWindow(focusedWindow,constant.titleMessages.loadingCharpage, false);
             newWin.loadURL(url);
             
+            // Fix for closing the window too soon...
+            isAltKPageUp = true;
+            focusedWindow.on('closed', () => {
+                isAltKPageUp = false;
+            });
+            
             newWin.webContents.on("did-finish-load", () => {
-                _notifyWindow(focusedWindow,constant.titleMessages.buildingCharpage, false);
-    
+
+                if(isAltKPageUp) _notifyWindow(focusedWindow,constant.titleMessages.buildingCharpage, false);
+
                 // Lets figure it out how to take the sizes
                 const wOri = 715;
                 const hOri = 455;
@@ -198,8 +207,7 @@ function charPagePrint(){
                         }
                     }
                     takeSS(newWin,rect,true);
-                    _notifyWindow(focusedWindow,constant.titleMessages.cpDone);
-    
+                    if(isAltKPageUp) _notifyWindow(focusedWindow,constant.titleMessages.cpDone);
                 },5000);
             });
         }
@@ -275,8 +283,14 @@ function _notifyWindow(targetWin, notif, resetAfter = true){
     targetWin.setTitle(notif);
 
     if (resetAfter) {
-        clearTimeout(winTimeRef); // Reset timer, as each SS needs to have a time to show
-        winTimeRef = setTimeout(() => {
+        targetWin.on('close',() => {
+            // Cancel the reset. avoid the error when there is no window anymore (closed)!
+            clearTimeout(winTimeRef[targetWin.id]);
+            targetWin = null; // default kinda deal
+        });
+        // Reset timer, as each SS needs to have a time to show
+        clearTimeout(winTimeRef[targetWin.id]);
+        winTimeRef[targetWin.id] = setTimeout(() => {
             targetWin.setTitle(winNames[targetWin.id]);
         },3200);
     }

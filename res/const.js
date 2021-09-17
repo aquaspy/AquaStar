@@ -5,8 +5,8 @@ const fs     = require("fs");
 const url    = require("url");
 
 // WARNING - ENABLES DEBUG MODE:
-exports.isDebugBuild = false;
-//exports.isDebugBuild = true;
+//exports.isDebugBuild = false;
+exports.isDebugBuild = true;
 
 /// -------------------------------
 /// Section 1 - Setup of URLs and files
@@ -160,7 +160,7 @@ function _getWinConfig(type){
             plugins: true,
             javascript: true,
             contextIsolation: true,
-            enableRemoteModule: ((type == "game" || type == "main")? true : false), // Recording screen... needs true;
+            enableRemoteModule: ((type == "game" || type == "main")? true : false), // Recording screen... needs true... for now;
             nodeIntegrationInWorker: false //maybe better performance for more instances in future... Needs testing.
         }
     }:
@@ -405,29 +405,30 @@ exports.setLocale        = (loc, keyb)=> {
     dialogMessages = strings.dialogMessages;
     //exports.dialogMessages = dialogMessages;
 }
-////
+
+/// -------------------------------
+/// Section 6 - IPC, or Inter Process Comunication. Way simpler than its name, trust me
+/// -------------------------------
+
 const { ipcMain } = require('electron');
 
-var mainProcessVars = {
-    winTitle: "name",
-    winId: 0
-}
-
-ipcMain.on('variable-request', function (event, arg) {
+ipcMain.on('getTitleID', function (event, arg) {
     var curWindow = BrowserWindow.getFocusedWindow();
     if (curWindow == null || curWindow == undefined) {
-        mainProcessVars = {
-            winTitle : "",
-            winId: 0
-        }
+        event.sender.send('getTitleIDReply', ["",0]);
     }
     else {
-        mainProcessVars = {
-            winTitle : curWindow.getTitle(),
-            winId : curWindow.id
-        }
+        event.sender.send('getTitleIDReply', [curWindow.getTitle(), curWindow.id] );
     }
-    event.sender.send('variable-reply', [mainProcessVars[arg[0]], mainProcessVars[arg[1]]]);
+});
+
+ipcMain.on('saveDialog', function (event, arg) {
+    require('electron').dialog.showSaveDialog(null,{
+        buttonLabel: 'Save video',
+        defaultPath: arg + ".webm"
+    }, (filename) => {
+        event.sender.send('saveDialogReply', filename);
+    })
 });
 
 var _wasRecording = false;
@@ -437,5 +438,3 @@ exports.triggerRecording = () => {
     _wasRecording = !_wasRecording;
     BrowserWindow.getFocusedWindow().webContents.send('record', _wasRecording);
 }
-
-////
