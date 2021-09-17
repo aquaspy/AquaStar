@@ -17,6 +17,14 @@ ipcRenderer.on('getTitleIDReply', function (event, titleAndID) {
 
 ipcRenderer.send('getTitleID', "");
 
+function getRecordName () {
+  var t = new Date();
+  return "Recording-" +
+    t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate() + "_" + 
+    t.getHours() + ":" + t.getMinutes() +  ":" +
+    t.getSeconds();
+}
+
 (() => {
   function triggerRecording(startRecording){
     if(!startRecording) mediaRecorder.stop();
@@ -30,10 +38,34 @@ ipcRenderer.send('getTitleID', "");
     triggerRecording(message);
   })
 
-  function onLoading (){
+  function getGameWindow() {
     const {desktopCapturer}  = require('electron');
+    desktopCapturer.getSources({types: ['window']}, (error, sources)=> {
+      if (error) throw console.log(error);
 
-    var handleStream = (stream) => {
+      for (let i = 0; i < sources.length; ++i) {
+        // The very last character of this shows 0 for non aquastars and a number for aquastar.
+        var num = parseInt(sources[i].id.substring(sources[i].id.lastIndexOf(":")));
+
+        // Aquastar test, then if "its the right window" test.
+        if ( num != 0 && sources[i].name === currentWindowTitle) {
+          navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+              mandatory: {
+                chromeMediaSourceId: sources[i].id,
+                chromeMediaSource: 'desktop'
+              }
+            }
+          }).then((stream) => handleStream(stream))
+            .catch((e) => console.log(e));
+            break;
+        }
+      }
+    })
+  }
+
+  function handleStream(stream) {
 
       mediaRecorder = new MediaRecorder(stream, 
         { mimeType: 'video/webm; codecs=vp9' }
@@ -44,74 +76,32 @@ ipcRenderer.send('getTitleID', "");
         recordedChunks.push(e.data);
       };
       mediaRecorder.onstop = async (e) => {
-        const blobb = new Blob(recordedChunks, {
-          type: 'video/webm; codecs=vp9'
-        });
-
-        const toArrayBuffer = (blob, cb) => {
-          let fileReader = new FileReader();
-          fileReader.onload = function() {
-              let arrayBuffer = this.result;
-              cb(arrayBuffer);
-          };
-          fileReader.readAsArrayBuffer(blob);
-          }
-        
-        toArrayBuffer(blobb, (arrayBuffer) => {
-          const buf = Buffer.from(arrayBuffer);
-
-          var today = new Date();
-          var recordName = "Recording-" +
-            today.getFullYear() + "-" +
-            (today.getMonth() + 1) + "-" +
-            today.getDate() + "_" + 
-            today.getHours() + ":" + today.getMinutes() +  ":" +
-            today.getSeconds();
-
-          ipcRenderer.send('saveDialog', recordName);
-          
-          ipcRenderer.on('saveDialogReply', (event, filename) => {
-            if(filename != null && filename != undefined){
-              // User didnt canceled. Go ahead!
-              // Reason why remote is enabled -_- sadly.
-              require("fs").writeFileSync(filename, buf);
-            }
-          })
-        })
+        saveVideo();
       };
-      
-    }
-
-    desktopCapturer.getSources({types: ['window']}, (error, sources)=> {
-      if (error) throw console.log(error);
-
-      // Filter only aquastar strings now.
-      var aquastarWindows = [];
-      for (let i = 0; i < sources.length; ++i) {
-        var numStr = sources[i].id.substring(sources[i].id.lastIndexOf(":"));
-        if (parseInt(numStr) != 0){
-          aquastarWindows.push(sources[i]);
-        }
-      }
-
-      for (let i = 0; i < aquastarWindows.length; ++i) {
-        //console.log("Window list: + " + aquastarWindows[i].id + " = " + aquastarWindows[i].name)// + " - " + (nativeImage == sources[i].nativeImageIcon)? "true":"false");
-        if (aquastarWindows[i].name === currentWindowTitle) {
-          navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-              mandatory: {
-                chromeMediaSourceId: aquastarWindows[i].id,
-                chromeMediaSource: 'desktop'
-              }
-            }
-          }).then((stream) => handleStream(stream))
-            .catch((e) => console.log(e));
-            break;
-        }
-      }
-    })
-
   }
-  window.onload= onLoading;
+  
+  function saveVideo () {
+    const blob = new Blob(recordedChunks, {
+      type: 'video/webm; codecs=vp9'
+    });
+
+    let fileReader = new FileReader();
+    fileReader.onload = function() {
+      let arrayBuffer = this.result;
+      const buff = Buffer.from(arrayBuffer);
+      var recordName = getRecordName();
+
+      ipcRenderer.send('saveDialog', recordName);
+      ipcRenderer.on('saveDialogReply', (event, filename) => {
+        if(filename != null && filename != undefined){
+          // User didnt canceled. Go ahead!
+          // Reason why remote is enabled -_- sadly.
+          require("fs").writeFileSync(filename, buff);
+        }
+      })
+    };
+    fileReader.readAsArrayBuffer(blob);
+  }
+
+  window.onload = getGameWindow();
 })();
