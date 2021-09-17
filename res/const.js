@@ -5,8 +5,8 @@ const fs     = require("fs");
 const url    = require("url");
 
 // WARNING - ENABLES DEBUG MODE:
-//exports.isDebugBuild = false;
-exports.isDebugBuild = true;
+exports.isDebugBuild = false;
+//exports.isDebugBuild = true;
 
 /// -------------------------------
 /// Section 1 - Setup of URLs and files
@@ -342,7 +342,6 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
 
 
 function showHelpMessage(win){
-    const { dialog } = require('electron')
     const dialog_options = {
         buttons: ['Ok'],
         title:   dialogMessages.helpTitle,
@@ -352,10 +351,9 @@ function showHelpMessage(win){
             dialogMessages.helpScreenshot + sshotPath + "\n" + 
             dialogMessages.helpAqliteOld + appCurrentDirectory 
     };
-    dialog.showMessageBox(win,dialog_options);
+    require('electron').dialog.showMessageBox(win,dialog_options);
 }
 function showAboutMessage(win) {
-    const { dialog } = require('electron')
     const dialog_options = {
         buttons: [dialogMessages.aboutGithubPrompt, dialogMessages.aboutClosePrompt],
         title:   dialogMessages.aboutTitle + appVersion,
@@ -369,7 +367,7 @@ function showAboutMessage(win) {
     // I wish the worse for who created Promisses and async stuff with such poor way to deal with them.
     // Now i have to do ugly and messy code. Good job. ASSHOLE
     // and no, sync version isnt available on our version. Freaking flash....
-    dialog.showMessageBox(win,dialog_options, (response) => {
+    require('electron').dialog.showMessageBox(win,dialog_options, (response) => {
         if (response != 0) return;
 
         // Cant pull instances module or else would be cyclical.

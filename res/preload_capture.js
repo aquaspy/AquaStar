@@ -1,7 +1,3 @@
-
-
-// Ok. testing big boi stuff
-
 const { ipcRenderer} = require("electron");
 
 var currentWindowTitle = "";
@@ -39,8 +35,7 @@ function getRecordName () {
   })
 
   function getGameWindow() {
-    const {desktopCapturer}  = require('electron');
-    desktopCapturer.getSources({types: ['window']}, (error, sources)=> {
+    require('electron').desktopCapturer.getSources({types: ['window']}, (error, sources)=> {
       if (error) throw console.log(error);
 
       for (let i = 0; i < sources.length; ++i) {
