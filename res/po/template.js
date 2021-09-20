@@ -20,7 +20,6 @@ exports.dialogMessages = {
         expand(k.cpSshot)   + ' - \n' +
         expand(k.newAqlite) + ' - \n' +
         expand(k.newAqw)    + ' - \n' +
-        expand(k.newTabbed) + ' - \n' +
         expand(k.about)     + ' - \n' +
         expand(k.fullscreen)+ ' - \n' +
         expand(k.sshot)     + ' - \n' +

@@ -5,8 +5,9 @@ const fs     = require("fs");
 const url    = require("url");
 
 // WARNING - ENABLES DEBUG MODE:
-exports.isDebugBuild = false;
-//exports.isDebugBuild = true;
+const isDebugBuild = false;
+//const isDebugBuild = true;
+exports.isDebugBuild = isDebugBuild;
 
 /// -------------------------------
 /// Section 1 - Setup of URLs and files
@@ -21,7 +22,7 @@ const appName     = "AquaStar";
 
 /// Pictures save location.
 const sshotPath   = path.join(app.getPath("pictures"),"AquaStar Screenshots");
-const iconPath    = path.join(appRoot, 'Icon', 'Icon_1024.png');
+const iconPath    = path.join(appRoot, 'Icon', (isDebugBuild)? 'Icondeb_1024.png' : 'Icon_1024.png');
 const iconRedPath = path.join(appRoot, 'Icon', 'Iconred_1024.png');
 
 const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
@@ -45,7 +46,6 @@ const redditAqw    = "https://www.reddit.com/r/AQW/";
 
 exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=2'
-exports.pagesPath  =  _getFileUrl(path.join(appRoot, 'pages', 'pages.html'))
 
 // Export farm
 
@@ -90,7 +90,6 @@ const originalKeybinds = {
     charpage:    "Alt+P",
     newAqlite:   "Alt+N",
     newAqw:      "Alt+Q",
-    newTabbed:   "Alt+Y",
     about:       "F9",
     fullscreen:  "F11",
     sshot:       "F2",
@@ -142,7 +141,6 @@ exports.isOldAqlite = oldAqlite;
 
 // For customizing windows themselfs
 function _getWinConfig(type){
-    //tab
     //win
     //main
     //cprint
@@ -154,13 +152,13 @@ function _getWinConfig(type){
         icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
-            sandbox:    ((type == "tab")? false : true),
-            webviewTag: ((type == "tab")? true : false), 
+            sandbox:    true,
+            webviewTag: false, 
             preload: ((type == "game" || type == "main")? path.join(appRoot,'res','preload_capture.js'): null),
             plugins: true,
             javascript: true,
             contextIsolation: true,
-            enableRemoteModule: ((type == "game" || type == "main")? true : false), // Recording screen... needs true;
+            enableRemoteModule: ((type == "game" || type == "main")? true : false), // Recording screen needs to save it.
             nodeIntegrationInWorker: false //maybe better performance for more instances in future... Needs testing.
         }
     }:
@@ -188,7 +186,6 @@ function _getWinConfig(type){
     }
 }
 
-exports.tabbedConfig = _getWinConfig("tab");
 exports.winConfig    = _getWinConfig("win");
 exports.mainConfig   = _getWinConfig("main");
 exports.charConfig   = _getWinConfig("cprint");
@@ -198,6 +195,15 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
     // needs to be like that as the function is located on instances...
     if (isContext == false && process.platform == 'darwin') return null;
 
+    function generateLink (label,link,keybind = null) {
+        return {
+            label: label,
+            accelerator: keybind,
+            click(menuItem,focusedWin) {
+                focusedWin.webContents.loadURL(link);
+            }
+        }
+    }
     var links = 
     [
         {
@@ -219,85 +225,27 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
         {
             label: menuMessages.menuOtherPages,
             submenu: [
-                {
-                    label: menuMessages.menuWiki,
-                    accelerator: keybinds.wiki,
-                    click(menuItem,focusedWin) {
-                        focusedWin.webContents.loadURL(wikiReleases);
-                    }
-                },
-                {
-                    label: menuMessages.menuDesign,
-                    accelerator: keybinds.design,
-                    click(menuItem,focusedWin) {
-                        focusedWin.webContents.loadURL(designNotes);
-                    }
-                },
-                {
-                    label: menuMessages.menuAccount,
-                    accelerator: keybinds.account,
-                    click(menuItem,focusedWin) {
-                        focusedWin.webContents.loadURL(accountAq);
-                    }
-                },
-                {
-                    label: menuMessages.menuCharpage,
-                    accelerator: keybinds.charpage,
-                    click(menuItem,focusedWin) {
-                        focusedWin.webContents.loadURL(charLookup);
-                    }
-                },
+                generateLink(menuMessages.menuWiki,wikiReleases,keybinds.wiki),
+                generateLink(menuMessages.menuDesign,designNotes,keybinds.design),
+                generateLink(menuMessages.menuAccount,accountAq,keybinds.account),
+                generateLink(menuMessages.menuCharpage,charLookup,keybinds.charpage),
                 // No keybind now...
+                {type: 'separator'},
                 {
                     label: menuMessages.menuOtherPages2,
                     submenu: [
-                        {
-                            label: menuMessages.menuDailyGifts,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(dailyGifts);
-                            }
-                        },
-                        {
-                            label: menuMessages.menuCalendar,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(calendar);
-                            }
-                        },
-                        {
-                            label: menuMessages.menuGuide,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(aqwg);
-                            }
-                        },
-                        {
-                            label: menuMessages.menuHeromart,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(heromart);
-                            }
-                        },
-                        {
-                            label: menuMessages.menuPortal,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(battleon);
-                            }
-                        }
+                        generateLink(menuMessages.menuDailyGifts,dailyGifts),
+                        generateLink(menuMessages.menuCalendar,calendar),
+                        generateLink(menuMessages.menuGuide,aqwg),
+                        generateLink(menuMessages.menuHeromart,heromart),
+                        generateLink(menuMessages.menuPortal,battleon)
                     ]
                 },
                 {
                     label: menuMessages.menuSocialMedia,
                     submenu: [
-                        {
-                            label: menuMessages.menuTwitter,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(twtAlina);
-                            }
-                        },
-                        {
-                            label: menuMessages.menuReddit,
-                            click(menuItem,focusedWin) {
-                                focusedWin.webContents.loadURL(redditAqw);
-                            }
-                        }
+                        generateLink(menuMessages.menuTwitter,twtAlina),
+                        generateLink(menuMessages.menuReddit,redditAqw)
                     ]
                 }
             ]
@@ -310,39 +258,33 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             }
         }
     ];
-    var ret;
     if (isContext){
-        ret = [
-           {
+        var ret = [
+            {
                 label: menuMessages.menuCopyURL,
                 click(menuItem,focusedWin) {
                     require('electron').clipboard.writeText(
                         focusedWin.webContents.getURL(),'clipboard');
                 }
-           },
-           {
-            label: menuMessages.menuReloadPage,
-            click(menuItem,focusedWin) {
-                focusedWin.reload();
-            }
-       },
+            },
+            {
+                label: menuMessages.menuReloadPage,
+                click(menuItem,focusedWin) {
+                    focusedWin.reload();
+                }
+            },
+            { type: 'separator' }
         ];
-        ret.push({ type: 'separator' });
-        links.forEach((e) => {
-            ret.push(e);
-        });
-        return ret;
+        ret.reverse().forEach((e) => {links.splice(0, 0, e)}); // Insert at the beginning
     }
-    else return links;
+    return links;
 }
 
 /// -------------------------------
 /// Section 4 - Help and About menus
 /// -------------------------------
 
-
 function showHelpMessage(win){
-    const { dialog } = require('electron')
     const dialog_options = {
         buttons: ['Ok'],
         title:   dialogMessages.helpTitle,
@@ -352,10 +294,9 @@ function showHelpMessage(win){
             dialogMessages.helpScreenshot + sshotPath + "\n" + 
             dialogMessages.helpAqliteOld + appCurrentDirectory 
     };
-    dialog.showMessageBox(win,dialog_options);
+    require('electron').dialog.showMessageBox(win,dialog_options);
 }
 function showAboutMessage(win) {
-    const { dialog } = require('electron')
     const dialog_options = {
         buttons: [dialogMessages.aboutGithubPrompt, dialogMessages.aboutClosePrompt],
         title:   dialogMessages.aboutTitle + appVersion,
@@ -369,7 +310,7 @@ function showAboutMessage(win) {
     // I wish the worse for who created Promisses and async stuff with such poor way to deal with them.
     // Now i have to do ugly and messy code. Good job. ASSHOLE
     // and no, sync version isnt available on our version. Freaking flash....
-    dialog.showMessageBox(win,dialog_options, (response) => {
+    require('electron').dialog.showMessageBox(win,dialog_options, (response) => {
         if (response != 0) return;
 
         // Cant pull instances module or else would be cyclical.
@@ -405,29 +346,30 @@ exports.setLocale        = (loc, keyb)=> {
     dialogMessages = strings.dialogMessages;
     //exports.dialogMessages = dialogMessages;
 }
-////
+
+/// -------------------------------
+/// Section 6 - IPC, or Inter Process Comunication. Way simpler than its name, trust me
+/// -------------------------------
+
 const { ipcMain } = require('electron');
 
-var mainProcessVars = {
-    winTitle: "name",
-    winId: 0
-}
-
-ipcMain.on('variable-request', function (event, arg) {
+ipcMain.on('getTitleID', function (event, arg) {
     var curWindow = BrowserWindow.getFocusedWindow();
     if (curWindow == null || curWindow == undefined) {
-        mainProcessVars = {
-            winTitle : "",
-            winId: 0
-        }
+        event.sender.send('getTitleIDReply', ["",0]);
     }
     else {
-        mainProcessVars = {
-            winTitle : curWindow.getTitle(),
-            winId : curWindow.id
-        }
+        event.sender.send('getTitleIDReply', [curWindow.getTitle(), curWindow.id] );
     }
-    event.sender.send('variable-reply', [mainProcessVars[arg[0]], mainProcessVars[arg[1]]]);
+});
+
+ipcMain.on('saveDialog', function (event, arg) {
+    require('electron').dialog.showSaveDialog(null,{
+        buttonLabel: 'Save video',
+        defaultPath: arg + ".webm"
+    }, (filename) => {
+        event.sender.send('saveDialogReply', filename);
+    })
 });
 
 var _wasRecording = false;
@@ -437,5 +379,3 @@ exports.triggerRecording = () => {
     _wasRecording = !_wasRecording;
     BrowserWindow.getFocusedWindow().webContents.send('record', _wasRecording);
 }
-
-////

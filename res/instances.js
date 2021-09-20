@@ -1,14 +1,16 @@
 const constant              = require('./const.js');
 const keybinds              = require('./keybindings.js');
-const {BrowserWindow, Menu} = require('electron');
+const {BrowserWindow, Menu, webContents} = require('electron');
 
 let usedAltPagesNumbers = [];
 
 // SS asks for them....
 const fs       = require('fs');
 const path     = require('path');
+let   isAltKPageUp = false;
+
 // For notify Window's original names.
-let winTimeRef = null;
+let winTimeRef = {};
 let winNames   = {}; // Fake dictionary
 
 
@@ -16,9 +18,6 @@ let winNames   = {}; // Fake dictionary
 function newBrowserWindow(new_path, isMainWin=false){
     var config;
     if (isMainWin) config = constant.mainConfig;
-    else if (new_path == constant.pagesPath){
-         config = constant.tabbedConfig 
-    }
     else if (_isGameWindow(new_path)) config = constant.gameConfig;
     else config = constant.winConfig;
     
@@ -61,12 +60,13 @@ function newBrowserWindow(new_path, isMainWin=false){
     else if (new_path == constant.df_url) {
         newWin.setTitle("AquaStar - DragonFable");
     }
-    else if (new_path != constant.pagesPath) {
+    else {
         /// Its a usual HTML page window then! features incomming
         /// ... but only if its win or lunix. Mac doesnt have the feature -_-
         /// Mac still get keybinds tho, just not the menu.
         newWin.setMenuBarVisibility(true);
     }
+    
     _windowAddContext(newWin);
     
     return newWin;
@@ -79,6 +79,8 @@ function _windowAddContext(newWin){
         Console.log("This is very problematic... If you are seeing this in terminal, do a CTRL + C on it and cancel the program!");
         return;
     }
+    
+    if (constant.isDebugBuild) newWin.setTitle(newWin.getTitle() + " < Debug >");
     
     // Context Menu part
     var contextMenu = Menu.buildFromTemplate( 
@@ -99,12 +101,42 @@ function _windowAddContext(newWin){
         _windowAddContext(childWin);
         event.newGuest = childWin;
     })
+    
+    // Bonus: Hug popup (yeah, Hug them hard.)
+    newWin.webContents.on("did-finish-load", () => {
+        var url = newWin.getURL();
+        function testAndDelete (testURL,objName,isClass = false) {
+            if(url.includes(testURL)){
+                var codeTest;
+                codeTest = (isClass)? 
+                    "(document.getElementsByClassName('" + objName + "')[0] == undefined)? false : true":
+                    "(document.getElementById('" + objName + "') == undefined)? false : true;";
+
+                newWin.webContents.executeJavaScript(codeTest).then((popUpExists) =>{
+                    if (popUpExists) {
+                        var codeNuke;
+                        codeNuke = (isClass)? 
+                            "document.getElementsByClassName('" + objName + "')[0].innerHTML = ''":
+                            "document.getElementById('" + objName + "').innerHTML = ''";
+                        newWin.webContents.executeJavaScript(codeNuke);
+                    }
+                });
+            }
+        }
+        testAndDelete("wikidot","ncmp__tool",false);
+        testAndDelete("aq.com","fb-page",true);
+
+        // Ads. Bc wiki is being too trashy to get ad revenue from me.
+        testAndDelete("wikidot","wad-aqwwiki-above-content",false);
+        testAndDelete("wikidot","wad-aqwwiki-below-content",false);
+        newWin.webContents.executeJavaScript("var rem = document.getElementsByTagName('iframe');" +
+        "for (var i=0;i<rem.lenght;i++) rem[i].remove()");
+    });
 }
 
 /// GAME WINDOW ONLY
 function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
     // Friendly reminder for BrowserWindow.getAllWindows() existing
-
     var focusedWindow = BrowserWindow.getFocusedWindow();
     if (focusedWindow === null) {
         // No AquaStar Windows are focused. Do nothing.
@@ -166,9 +198,16 @@ function charPagePrint(){
             _notifyWindow(focusedWindow,constant.titleMessages.loadingCharpage, false);
             newWin.loadURL(url);
             
+            // Fix for closing the window too soon...
+            isAltKPageUp = true;
+            focusedWindow.on('closed', () => {
+                isAltKPageUp = false;
+            });
+            
             newWin.webContents.on("did-finish-load", () => {
-                _notifyWindow(focusedWindow,constant.titleMessages.buildingCharpage, false);
-    
+
+                if(isAltKPageUp) _notifyWindow(focusedWindow,constant.titleMessages.buildingCharpage, false);
+
                 // Lets figure it out how to take the sizes
                 const wOri = 715;
                 const hOri = 455;
@@ -198,8 +237,7 @@ function charPagePrint(){
                         }
                     }
                     takeSS(newWin,rect,true);
-                    _notifyWindow(focusedWindow,constant.titleMessages.cpDone);
-    
+                    if(isAltKPageUp) _notifyWindow(focusedWindow,constant.titleMessages.cpDone);
                 },5000);
             });
         }
@@ -275,8 +313,14 @@ function _notifyWindow(targetWin, notif, resetAfter = true){
     targetWin.setTitle(notif);
 
     if (resetAfter) {
-        clearTimeout(winTimeRef); // Reset timer, as each SS needs to have a time to show
-        winTimeRef = setTimeout(() => {
+        targetWin.on('close',() => {
+            // Cancel the reset. avoid the error when there is no window anymore (closed)!
+            clearTimeout(winTimeRef[targetWin.id]);
+            targetWin = null; // default kinda deal
+        });
+        // Reset timer, as each SS needs to have a time to show
+        clearTimeout(winTimeRef[targetWin.id]);
+        winTimeRef[targetWin.id] = setTimeout(() => {
             targetWin.setTitle(winNames[targetWin.id]);
         },3200);
     }

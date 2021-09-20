@@ -50,9 +50,6 @@ const processKeybings = function (){
     addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
     addKeybind(k.account , ()=>{inst.newBrowserWindow(constant.accountAq)});
     addKeybind(k.charpage, ()=>{inst.newBrowserWindow(constant.charLookup)});
-
-    // Function knows how to load it.
-    addKeybind(k.newTabbed,()=>{inst.newBrowserWindow(constant.pagesPath)});
     
     // Open new Aqlite window (usefull for alts)
     addKeybind(k.newAqlite,()=>{inst.newBrowserWindow(constant.aqlitePath)});

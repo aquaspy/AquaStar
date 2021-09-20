@@ -20,7 +20,6 @@ exports.dialogMessages = {
         expand(k.cpSshot)   + ' - (Char pages only!) Take a screenshot of the current char page.\n' +
         expand(k.newAqlite) + ' - Opens a new Aqlite instance.\n' +
         expand(k.newAqw)    + ' - Opens a Vanilla AQW instance as in aq.com/game/ (keybind subject to change as its temporary)\n' +
-        expand(k.newTabbed) + ' - Opens a new Window with the usefull browser pages with tabs, being grouped up so doesnt spam windows. Uses more memory (300mb) tho.\n' +
         expand(k.about)     + ' - About AquaStar.\n' +
         expand(k.fullscreen)+ ' - Toggles Fullscreen\n' +
         expand(k.sshot)     + ' - Screenshot the game window (AQW and AQLITE only). They are saved in another folder as detailed below.\n' +
