@@ -80,6 +80,8 @@ function _windowAddContext(newWin){
         return;
     }
     
+    if (constant.isDebugBuild) newWin.setTitle(newWin.getTitle() + " < Debug >");
+    
     // Context Menu part
     var contextMenu = Menu.buildFromTemplate( 
         constant.getMenu(keybinds.keybinds,takeSS,true));
@@ -99,7 +101,7 @@ function _windowAddContext(newWin){
         _windowAddContext(childWin);
         event.newGuest = childWin;
     })
-
+    
     // Bonus: Hug popup (yeah, Hug them hard.)
     newWin.webContents.on("did-finish-load", () => {
         var url = newWin.getURL();
@@ -135,7 +137,6 @@ function _windowAddContext(newWin){
 /// GAME WINDOW ONLY
 function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
     // Friendly reminder for BrowserWindow.getAllWindows() existing
-
     var focusedWindow = BrowserWindow.getFocusedWindow();
     if (focusedWindow === null) {
         // No AquaStar Windows are focused. Do nothing.

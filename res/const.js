@@ -5,8 +5,9 @@ const fs     = require("fs");
 const url    = require("url");
 
 // WARNING - ENABLES DEBUG MODE:
-exports.isDebugBuild = false;
-//exports.isDebugBuild = true;
+const isDebugBuild = false;
+//const isDebugBuild = true;
+exports.isDebugBuild = isDebugBuild;
 
 /// -------------------------------
 /// Section 1 - Setup of URLs and files
@@ -21,7 +22,7 @@ const appName     = "AquaStar";
 
 /// Pictures save location.
 const sshotPath   = path.join(app.getPath("pictures"),"AquaStar Screenshots");
-const iconPath    = path.join(appRoot, 'Icon', 'Icon_1024.png');
+const iconPath    = path.join(appRoot, 'Icon', (isDebugBuild)? 'Icondeb_1024.png' : 'Icon_1024.png');
 const iconRedPath = path.join(appRoot, 'Icon', 'Iconred_1024.png');
 
 const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
