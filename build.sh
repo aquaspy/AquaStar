@@ -33,7 +33,7 @@ build_images(){
 	
     rm   -rf ./"${buildfolder}"
     mkdir -p ./"${buildfolder}"
-    cp -r Icon/ LICENSE.md node_modules pages res main.js package*.json "${buildfolder}"/
+    cp -r Icon/ LICENSE.md node_modules res main.js package*.json "${buildfolder}"/
     echo -e "$yellow --> Rebuilding the folder -> DONE! $clear"
 	
     if ! [ -z "$targetArch" ]; then

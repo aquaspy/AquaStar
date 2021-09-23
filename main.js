@@ -9,7 +9,7 @@ const constant = require('./res/const.js');
 
 
 // Flash stuff is isolated in flash.js
-flash.flashManager(app, __dirname, constant.aqlitePath, constant.appName);
+flash.flashManager(app, __dirname, constant.mainPath, constant.appName);
 
 function createWindow () {
     // Keybindings now in keybindings.js
@@ -19,7 +19,7 @@ function createWindow () {
     constant.setLocale(app.getLocale(),finalkeyb);
 
     // Create the browser window.
-    let win = inst.newBrowserWindow(constant.aqlitePath,true);
+    let win = inst.newBrowserWindow(constant.mainPath,true);
 
     if (process.platform == 'darwin'){
         Menu.setApplicationMenu(null);

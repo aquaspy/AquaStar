@@ -44,7 +44,10 @@ const dailyGifts   = 'https://www.aq.com/lore/dailygifts';
 const twtAlina     = "https://twitter.com/Alina_AE";
 const redditAqw    = "https://www.reddit.com/r/AQW/";
 
-exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
+//exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
+exports.testingAQW = ('https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=' +
+                        Math.floor(Math.random() * (900)) + 100); //random ending bt 100 and 1k. IT WAS ABOUT BROWSER CACHE!
+                        // The above exists bc spider can mess up again the cache. so aqw WONT CACHE anymore.
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=2'
 
 // Export farm
@@ -88,8 +91,8 @@ const originalKeybinds = {
     account:     "Alt+A",
     design:      "Alt+D",
     charpage:    "Alt+P",
-    newAqlite:   "Alt+N",
-    newAqw:      "Alt+Q",
+    newAqw:      "Alt+N",
+    newTest:     "Alt+Q",
     about:       "F9",
     fullscreen:  "F11",
     sshot:       "F2",
@@ -124,15 +127,9 @@ exports.listValidKeybindLocations = listValidKeybindLocations;
 
 // Custom aqlite stuff
 var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
-exports.aqlitePath = oldAqlite ? 
+exports.mainPath = oldAqlite ? 
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
-            //_getFileUrl(path.join(appRoot, 'aqlite.swf'))
-            //'https://game.aq.com/game/gamefiles/Loader_Spider.swf';           // not working since OMG 2.001
-            //'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=2001'    // gamefiles/Loader_Spider.swf?ver=2001
-            
-            ('https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=' +
-            Math.floor(Math.random() * (900)) + 100); //random ending bt 100 and 1k. IT WAS ABOUT BROWSER CACHE!
-            // The above exists bc spider can mess up again the cache. so aqw WONT CACHE anymore.
+            "https://game.aq.com/game/gamefiles/Loader2.swf?ver=a"
 exports.isOldAqlite = oldAqlite;
 
 /// -------------------------------

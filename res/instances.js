@@ -25,8 +25,8 @@ function newBrowserWindow(new_path, isMainWin=false){
     newWin.setMenuBarVisibility(false); //Remove default electron menu
     newWin.loadURL(new_path);
     
-    if (new_path == constant.aqlitePath || 
-        new_path == constant.vanillaAQW) {
+    if (new_path == constant.mainPath || 
+        new_path == constant.testingAQW) {
 
         // Its alt window, Put the aqlite/Aqw title...
         var windowNumber = 1;
@@ -40,11 +40,11 @@ function newBrowserWindow(new_path, isMainWin=false){
         
         // Deciding the new title name...
         var winTitle = "";
-        if (new_path == constant.aqlitePath){
-            winTitle = "AquaStar - " + (constant.isOldAqlite ? "Older/Custom ":"") + "AQLite";
+        if (new_path == constant.mainPath){
+            winTitle = "AquaStar - " + (constant.isOldAqlite ? "Older/Custom AQLite":" Adventure Quest Worlds");
         }
         else {
-            winTitle = "AquaStar - Adventure Quest Worlds";
+            winTitle = "AquaStar - AQW Testing Version!";
         }
         if (windowNumber > 1) winTitle += " (Window " + windowNumber + ")";
             
@@ -162,13 +162,13 @@ function executeOnAnyFocused(funcForWindow){
 
 function _isGameWindow(url, considerDF = true){
     
-    var aqliteValue = constant.aqlitePath;
-    var vanilla     = constant.vanillaAQW;
+    var aqliteValue = constant.mainPath;
+    var vanilla     = constant.testingAQW;
     if(process.platform == "win32") {
         // I so want to swear RN... just WHY???
         // Now when comparing to the file:///, its the same rules as URL.
-        aqliteValue = constant.aqlitePath.replace(/\\/g,"/");
-        vanilla     = constant.vanillaAQW.replace(/\\/g,"/");
+        aqliteValue = constant.mainPath.replace(/\\/g,"/");
+        vanilla     = constant.testingAQW.replace(/\\/g,"/");
     }
     
     if (url == aqliteValue || url == vanilla) return true;

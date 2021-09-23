@@ -18,8 +18,8 @@ exports.dialogMessages = {
         expand(k.account)   + ' - \n' +
         expand(k.charpage)  + ' - \n' +
         expand(k.cpSshot)   + ' - \n' +
-        expand(k.newAqlite) + ' - \n' +
         expand(k.newAqw)    + ' - \n' +
+        expand(k.newTest)   + ' - \n' +
         expand(k.about)     + ' - \n' +
         expand(k.fullscreen)+ ' - \n' +
         expand(k.sshot)     + ' - \n' +
