@@ -52,8 +52,8 @@ const processKeybings = function (){
     addKeybind(k.charpage, ()=>{inst.newBrowserWindow(constant.charLookup)});
     
     // Open new Aqlite window (usefull for alts)
-    addKeybind(k.newAqlite,()=>{inst.newBrowserWindow(constant.aqlitePath)});
-    addKeybind(k.newAqw,   ()=>{inst.newBrowserWindow(constant.vanillaAQW)});
+    addKeybind(k.newAqw  , ()=>{inst.newBrowserWindow(constant.mainPath)});
+    addKeybind(k.newTest , ()=>{inst.newBrowserWindow(constant.testingAQW)});
     
     // Show help message
     addKeybind(k.help,     (focusedWin)=>{constant.showHelpMessage(focusedWin)});

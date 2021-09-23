@@ -18,8 +18,8 @@ exports.dialogMessages = {
         expand(k.account)   + ' - Account page\n' +
         expand(k.charpage)  + ' - Character (Player) lookup. Você também pode utilizar o interno do jogo.\n' +
         expand(k.cpSshot)   + ' - (Apenas char pages!) Printa a tela do char page atual.\n' +
-        expand(k.newAqlite) + ' - Abre uma nova instância do Aqlite.\n' +
-        expand(k.newAqw)    + ' - Abre uma instância padrão do AQW como a de aq.com/game/ (keybind sujeita a mudanças por ser temporária)\n' +
+        expand(k.newAqw)    + ' - Abre uma nova instância do AQW.\n' +
+        expand(k.newTest)   + ' - Abre uma instância de testes do AQW.\n' +
         expand(k.about)     + ' - Sobre AquaStar.\n' +
         expand(k.fullscreen)+ ' - Ativa/Desativa Fullscreen\n' +
         expand(k.sshot)     + ' - Printa a tela do jogo (apenas AQW e AQLITE). Eles são salvos em uma pasta separada dita abaixo.\n' +
