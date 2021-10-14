@@ -5,7 +5,7 @@ function getPluginName() {
     let pluginName
     switch (process.platform) {
     case 'win32':
-        if (process.arch == "x86"){
+        if (process.arch == "x86" || process.arch == "ia32"){
             pluginName = 'pepflashplayer32bits.dll'
         }
         else {
@@ -18,7 +18,7 @@ function getPluginName() {
         break
     case 'linux':
         // Can be arm too...
-        if (process.arch == "x86"){
+        if (process.arch == "x86"|| process.arch == "ia32"){
             pluginName = 'libpepflashplayer32bits.so'
         }
         else if (process.arch == "arm") {
