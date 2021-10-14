@@ -17,7 +17,7 @@ function getRecordName () {
   var t = new Date();
   return "Recording-" +
     t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate() + "_" + 
-    t.getHours() + ":" + t.getMinutes() +  ":" +
+    t.getHours() + "-" + t.getMinutes() +  "-" +
     t.getSeconds();
 }
 
