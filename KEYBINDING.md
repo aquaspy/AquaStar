@@ -73,6 +73,10 @@ It uses Electron's native keybinding values, so follow their value standard. Exa
 
 ```
 
+Check out the electron documentation for a list of valid inputs:
+
+https://www.electronjs.org/docs/latest/api/accelerator
+
 ## Sounds complicated, will there be a Custom menu for it?
 
 At the current point, no. But maybe soon a menu might be created. Maybe in the near future or maybe soon...
