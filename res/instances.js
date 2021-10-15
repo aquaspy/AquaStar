@@ -344,3 +344,4 @@ exports.charPagePrint       = charPagePrint;
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;
 exports.notifyWin           = _notifyWindow;
+exports.mkdir               = _mkdir;

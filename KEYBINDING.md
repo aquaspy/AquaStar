@@ -51,6 +51,8 @@ For a example of the defaults, check out the OriginalKeybinds variable on const.
 }
 ```
 
+NOTE : there is also a swfLog mode (as of 1.5 version). Dont worry about it unless you want to log every swf the game uses. Intended for Devs.
+
 You dont need to put all parameters (after 1.2.1). so you could for example change only a single value you dont like. The following is an example of the aquastar.json file, with only one change, which is the design notes keybind, from the original to Ctrl D.
 
 ```

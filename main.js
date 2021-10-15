@@ -1,12 +1,13 @@
 const {app, session, Menu}  = require('electron')
 
-//const path     = require('path')
+const path     = require('path')
+const fs       = require('fs');
+
 const flash    = require('./res/flash.js');
 const keyb     = require('./res/keybindings.js');
 const inst     = require('./res/instances.js');
 // Important Variables - in const.js
 const constant = require('./res/const.js');
-
 
 // Flash stuff is isolated in flash.js
 flash.flashManager(app, __dirname, constant.mainPath, constant.appName);
@@ -70,6 +71,27 @@ function createWindow () {
         callback({ requestHeaders: details.requestHeaders })
     })
     
+    
+    
+    if (constant.isSwfLogEnabled){
+        var t = new Date();
+        var logName = "SWF log " +
+            t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate() + "_" + 
+            t.getHours() + "-" + t.getMinutes() + ".txt";
+            
+        inst.mkdir(constant.swflogPath);
+        var stream = fs.createWriteStream(
+            path.join(constant.swflogPath,logName), 
+            {autoClose:true});
+        
+        const aqwgamefilters = {urls: ['*://game.aq.com/game/*']};
+        session.defaultSession.webRequest.onBeforeRequest( aqwgamefilters, (details,callback) => {
+            //console.log(details.url);
+            stream.write(details.url + "\n");
+            callback({requestHeaders: details.requestHeaders})
+        })
+    }
+
     //Console
     if (constant.isDebugBuild){
         win.webContents.openDevTools()

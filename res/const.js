@@ -81,6 +81,16 @@ function _getFileUrl(path) {
     })
 }
 
+/// Saving SWF pathes...
+
+exports.swflogPath = path.join(sshotPath,"SWFLogging");
+var isSwfLogEnabled = false;
+exports.isSwfLogEnabled = isSwfLogEnabled;
+exports.enableSWFLogging = () => {
+    isSwfLogEnabled = true;
+    exports.isSwfLogEnabled = true;
+}
+
 /// -------------------------------
 /// Section 2 - Original KeyBindings and Custom swf stuff
 /// -------------------------------

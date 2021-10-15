@@ -15,5 +15,6 @@
     "forward": "Alt+F",
     "backward": "Alt+B",
     "help": [ "Alt+H", "CmdOrCtrl+H", "F1" ] ,
-    "settings": "Alt+9"
+    "settings": "Alt+9",
+    "swfLog": false
 }
