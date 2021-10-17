@@ -373,7 +373,7 @@ ipcMain.on('getTitleID', function (event, arg) {
 ipcMain.on('saveDialog', function (event, arg) {
     require('electron').dialog.showSaveDialog(null,{
         buttonLabel: 'Save video',
-        defaultPath: arg + ".webm"
+        defaultPath: arg
     }, (filename) => {
         event.sender.send('saveDialogReply', filename);
     })

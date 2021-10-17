@@ -18,7 +18,7 @@ function getRecordName () {
   return "Recording-" +
     t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate() + "_" + 
     t.getHours() + "-" + t.getMinutes() +  "-" +
-    t.getSeconds();
+    t.getSeconds() + ".webm";
 }
 
 (() => {
@@ -63,7 +63,7 @@ function getRecordName () {
   function handleStream(stream) {
 
       mediaRecorder = new MediaRecorder(stream, 
-        { mimeType: 'video/webm; codecs=vp9' }
+        { mimeType: 'video/webm; codecs=h264' }
       );
       
       // Register Handlers
@@ -77,13 +77,13 @@ function getRecordName () {
   
   function saveVideo () {
     const blob = new Blob(recordedChunks, {
-      type: 'video/webm; codecs=vp9'
+      type: 'video/webm; codecs=h264'
     });
 
     let fileReader = new FileReader();
     fileReader.onload = function() {
       let arrayBuffer = this.result;
-      const buff = Buffer.from(arrayBuffer);
+      const buffer = Buffer.from(arrayBuffer); // Buffer() is deprecated.
       var recordName = getRecordName();
 
       ipcRenderer.send('saveDialog', recordName);
@@ -91,7 +91,7 @@ function getRecordName () {
         if(filename != null && filename != undefined){
           // User didnt canceled. Go ahead!
           // Reason why remote is enabled -_- sadly.
-          require("fs").writeFileSync(filename, buff);
+          require("fs").writeFileSync(filename, buffer);
         }
       })
     };
