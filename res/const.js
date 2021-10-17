@@ -142,6 +142,12 @@ exports.mainPath = oldAqlite ?
             "https://game.aq.com/game/gamefiles/Loader2.swf?ver=a"
 exports.isOldAqlite = oldAqlite;
 
+exports.changeMainUrl = function(newAqUrl){
+    if (!oldAqlite) {
+        exports.mainPath = newAqUrl;
+    }
+}
+
 /// -------------------------------
 /// Section 3 - Window and Menu configuration
 /// -------------------------------

@@ -51,7 +51,9 @@ For a example of the defaults, check out the OriginalKeybinds variable on const.
 }
 ```
 
-NOTE : there is also a swfLog mode (as of 1.5 version). Dont worry about it unless you want to log every swf the game uses. Intended for Devs.
+ - **NOTE** : In the example file, there is also a "swfLog" mode (as of 1.5 version). Dont worry about it unless you want to log every swf the game uses. Intended for Devs, uses **true** and **false**(no quotes) values only.
+
+ - **NOTE2** : there is also a "customUrl" mode. With commas, insert a URL (like https://www.coololdflashgame.org/my-favorite-child-game.swf), and it will run. **Wont work in "custom swf"** mode, but can be used the same way if you have the flash file downloaded. a **null** value disables it and reverts back to the default AQW.
 
 You dont need to put all parameters (after 1.2.1). so you could for example change only a single value you dont like. The following is an example of the aquastar.json file, with only one change, which is the design notes keybind, from the original to Ctrl D.
 
