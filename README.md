@@ -61,6 +61,8 @@ After version 1.2: Now that AQLite is "dead", as its merged into official game, 
  - And also a keybinding to save your char page!
  - Custom keybindings! just create a aquastar.json in the designed folder!
  - Record the game screen!
+ - (For devs and content creators only) Logging of the SWF URLs! Enable it with a aquastar.json file (more on KEYBINDING.MD and aquastar_testing.json)
+ - (For those looking at your childhood) Load a custom URL into the launcher for old flash games/content! Enable it with a aquastar.json file (more on KEYBINDING.MD and aquastar_testing.json)
 
 # How to build it yourself
 

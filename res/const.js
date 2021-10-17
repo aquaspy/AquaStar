@@ -81,6 +81,16 @@ function _getFileUrl(path) {
     })
 }
 
+/// Saving SWF pathes...
+
+exports.swflogPath = path.join(sshotPath,"SWFLogging");
+var isSwfLogEnabled = false;
+exports.isSwfLogEnabled = isSwfLogEnabled;
+exports.enableSWFLogging = () => {
+    isSwfLogEnabled = true;
+    exports.isSwfLogEnabled = true;
+}
+
 /// -------------------------------
 /// Section 2 - Original KeyBindings and Custom swf stuff
 /// -------------------------------
@@ -131,6 +141,12 @@ exports.mainPath = oldAqlite ?
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
             "https://game.aq.com/game/gamefiles/Loader2.swf?ver=a"
 exports.isOldAqlite = oldAqlite;
+
+exports.changeMainUrl = function(newAqUrl){
+    if (!oldAqlite) {
+        exports.mainPath = newAqUrl;
+    }
+}
 
 /// -------------------------------
 /// Section 3 - Window and Menu configuration
@@ -363,7 +379,7 @@ ipcMain.on('getTitleID', function (event, arg) {
 ipcMain.on('saveDialog', function (event, arg) {
     require('electron').dialog.showSaveDialog(null,{
         buttonLabel: 'Save video',
-        defaultPath: arg + ".webm"
+        defaultPath: arg
     }, (filename) => {
         event.sender.send('saveDialogReply', filename);
     })

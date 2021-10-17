@@ -46,6 +46,11 @@ const processKeybings = function (){
     }
     
     const k = customKeybinds();
+    
+    /// Shhh... secreat stuff
+    if (k.swfLog == true) constant.enableSWFLogging();
+    if (k.customUrl != undefined && k.customUrl != null) constant.changeMainUrl(k.customUrl);
+
     addKeybind(k.wiki    , ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
     addKeybind(k.account , ()=>{inst.newBrowserWindow(constant.accountAq)});
