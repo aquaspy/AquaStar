@@ -139,7 +139,7 @@ exports.listValidKeybindLocations = listValidKeybindLocations;
 var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 exports.mainPath = oldAqlite ? 
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
-            "https://game.aq.com/game/gamefiles/Loader2.swf?ver=a"
+            "https://game.aq.com/game/gamefiles/Loader3.swf?ver=a"
 exports.isOldAqlite = oldAqlite;
 
 exports.changeMainUrl = function(newAqUrl){
