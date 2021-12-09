@@ -139,7 +139,7 @@ exports.listValidKeybindLocations = listValidKeybindLocations;
 var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 exports.mainPath = oldAqlite ? 
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
-            "https://game.aq.com/game/gamefiles/Loader3.swf?ver=a"
+            "https://game.aq.com/game/gamefiles/Loader2.swf?ver=a"
 exports.isOldAqlite = oldAqlite;
 
 exports.changeMainUrl = function(newAqUrl){
@@ -161,7 +161,8 @@ function _getWinConfig(type){
     return (type != "cprint")? 
     {
         width: 960,
-        height: 550,
+        height: 530,
+		useContentSize: true,
         icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
@@ -184,6 +185,7 @@ function _getWinConfig(type){
         // resizable false, so it stays "maxed size";
         width: 3840,
         height: 2160,
+		useContentSize: true,
         show: false,
         resizable: false,
         webPreferences: {
