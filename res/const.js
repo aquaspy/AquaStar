@@ -162,7 +162,7 @@ function _getWinConfig(type){
     {
         width: 960,
         height: 530,
-		useContentSize: true,
+        useContentSize: true,
         icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
