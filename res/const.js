@@ -34,7 +34,7 @@ const accountAq    = 'https://account.aq.com/';
 const wikiReleases = 'https://aqwwiki.wikidot.com/new-releases';
 
 // Extra usefull links
-const aqwg         = 'https://aqwg.weebly.com/';
+const aqwg         = 'https://www.aqwg.net/home';
 const heromart     = 'https://www.heromart.com/';
 const battleon     = 'https://portal.battleon.com/';
 const calendar     = 'https://www.aq.com/lore/calendar';

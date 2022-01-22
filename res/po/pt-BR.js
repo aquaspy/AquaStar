@@ -66,7 +66,7 @@ exports.menuMessages = {
     menuDailyGifts   : "Drops Diários",
     menuCalendar     : "Calendário de Eventos",
     menuCharpage     : "Charpages",
-    menuGuide        : "Guia AQW (antigo mas relevante)",
+    menuGuide        : "Guia AQW",
     menuReddit       : "AQW Subreddit",
     menuTwitter      : "Twitter da Alina",
     menuTakeShot     : "Printa a Charpage (somente CP!)",
