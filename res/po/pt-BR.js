@@ -67,6 +67,7 @@ exports.menuMessages = {
     menuCalendar     : "Calendário de Eventos",
     menuCharpage     : "Charpages",
     menuGuide        : "Guia AQW",
+    menuForge        : "Encantamentos de Forja",
     menuReddit       : "AQW Subreddit",
     menuTwitter      : "Twitter da Alina",
     menuTakeShot     : "Printa a Charpage (somente CP!)",

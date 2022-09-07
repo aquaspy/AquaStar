@@ -39,6 +39,7 @@ const heromart     = 'https://www.heromart.com/';
 const battleon     = 'https://portal.battleon.com/';
 const calendar     = 'https://www.aq.com/lore/calendar';
 const dailyGifts   = 'https://www.aq.com/lore/dailygifts';
+const forgeEnchants= 'https://www.aq.com/lore/guides/enhancementtraits';
 
 // Social Media stuff
 const twtAlina     = "https://twitter.com/Alina_AE";
@@ -252,6 +253,7 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
                         generateLink(menuMessages.menuDailyGifts,dailyGifts),
                         generateLink(menuMessages.menuCalendar,calendar),
                         generateLink(menuMessages.menuGuide,aqwg),
+                        generateLink(menuMessages.menuForge,forgeEnchants),
                         generateLink(menuMessages.menuHeromart,heromart),
                         generateLink(menuMessages.menuPortal,battleon)
                     ]

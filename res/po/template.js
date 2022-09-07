@@ -57,6 +57,7 @@ exports.menuMessages = {
     menuCalendar     : "",
     menuCharpage     : "",
     menuGuide        : "",
+    menuForge        : "",
     menuReddit       : "",
     menuTwitter      : "",
     menuTakeShot     : "",
