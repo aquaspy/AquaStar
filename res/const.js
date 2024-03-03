@@ -31,14 +31,15 @@ const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
 const charLookup   = 'https://account.aq.com/CharPage';
 const designNotes  = 'https://www.aq.com/gamedesignnotes/';
 const accountAq    = 'https://account.aq.com/';
-const wikiReleases = 'https://aqwwiki.wikidot.com/new-releases';
+const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 
 // Extra usefull links
-const aqwg         = 'https://aqwg.weebly.com/';
+const aqwg         = 'https://www.aqwg.net/home';
 const heromart     = 'https://www.heromart.com/';
 const battleon     = 'https://portal.battleon.com/';
 const calendar     = 'https://www.aq.com/lore/calendar';
 const dailyGifts   = 'https://www.aq.com/lore/dailygifts';
+const forgeEnchants= 'https://www.aq.com/lore/guides/enhancementtraits';
 
 // Social Media stuff
 const twtAlina     = "https://twitter.com/Alina_AE";
@@ -139,7 +140,7 @@ exports.listValidKeybindLocations = listValidKeybindLocations;
 var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
 exports.mainPath = oldAqlite ? 
             _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
-            "https://game.aq.com/game/gamefiles/Loader2.swf?ver=a"
+            "https://game.aq.com/game/gamefiles/Loader3.swf?ver=a"
 exports.isOldAqlite = oldAqlite;
 
 exports.changeMainUrl = function(newAqUrl){
@@ -161,7 +162,8 @@ function _getWinConfig(type){
     return (type != "cprint")? 
     {
         width: 960,
-        height: 550,
+        height: 530,
+        useContentSize: true,
         icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
@@ -184,6 +186,7 @@ function _getWinConfig(type){
         // resizable false, so it stays "maxed size";
         width: 3840,
         height: 2160,
+		useContentSize: true,
         show: false,
         resizable: false,
         webPreferences: {
@@ -250,6 +253,7 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
                         generateLink(menuMessages.menuDailyGifts,dailyGifts),
                         generateLink(menuMessages.menuCalendar,calendar),
                         generateLink(menuMessages.menuGuide,aqwg),
+                        generateLink(menuMessages.menuForge,forgeEnchants),
                         generateLink(menuMessages.menuHeromart,heromart),
                         generateLink(menuMessages.menuPortal,battleon)
                     ]

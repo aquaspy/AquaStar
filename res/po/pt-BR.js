@@ -37,8 +37,8 @@ exports.dialogMessages = {
     aboutMessage   : "Aquastar não seria possível sem a ajuda de:",
     aboutDetail    : 
         '133spider (github) por criar o AQLite em si\n' +
-        'CaioFViana (github)\n' +
         'aquaspy (github)\n' +
+        'biglavis (github) Por desenvolver a extensão WikiView\n' +
         'Artix Entertainment (artix.com)\n' +
         'ElectronJs (electronjs.org)\n' +
         'Adobe Flash Player (adobe.com)\n' +
@@ -66,7 +66,8 @@ exports.menuMessages = {
     menuDailyGifts   : "Drops Diários",
     menuCalendar     : "Calendário de Eventos",
     menuCharpage     : "Charpages",
-    menuGuide        : "Guia AQW (antigo mas relevante)",
+    menuGuide        : "Guia AQW",
+    menuForge        : "Encantamentos de Forja",
     menuReddit       : "AQW Subreddit",
     menuTwitter      : "Twitter da Alina",
     menuTakeShot     : "Printa a Charpage (somente CP!)",
