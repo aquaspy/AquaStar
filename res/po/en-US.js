@@ -37,8 +37,8 @@ exports.dialogMessages = {
     aboutMessage   : "Aquastar would not be possible without the help of:",
     aboutDetail    : 
         '133spider (github) for creating AQLite itself\n' +
-        'CaioFViana (github)\n' +
         'aquaspy (github)\n' +
+        'biglavis (github) For developing the extension WikiView\n' +
         'Artix Entertainment (artix.com)\n' +
         'ElectronJs (electronjs.org)\n' +
         'Adobe Flash Player (adobe.com)\n' +
@@ -65,7 +65,8 @@ exports.menuMessages = {
     menuDailyGifts   : "Daily Drops",
     menuCalendar     : "Calendar of Events",
     menuCharpage     : "Charpages",
-    menuGuide        : "AQW Guides (old but relevant)",
+    menuGuide        : "AQW Guides",
+    menuForge        : "Forge Enchants",
     menuReddit       : "AQW Subreddit",
     menuTwitter      : "Alina's Twitter",
     menuTakeShot     : "Take a SShot of CP (CP ONLY!)",
