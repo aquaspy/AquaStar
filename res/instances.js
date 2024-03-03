@@ -4,7 +4,7 @@ const {BrowserWindow, Menu, webContents} = require('electron');
 
 let usedAltPagesNumbers = [];
 
-// SS asks for them....
+// SS asks for them.... Also WikiView JUST because i wanted it in a separeted file organized.
 const fs       = require('fs');
 const path     = require('path');
 let   isAltKPageUp = false;
@@ -131,6 +131,47 @@ function _windowAddContext(newWin){
         testAndDelete("wikidot","wad-aqwwiki-below-content",false);
         newWin.webContents.executeJavaScript("var rem = document.getElementsByTagName('iframe');" +
         "for (var i=0;i<rem.lenght;i++) rem[i].remove()");
+        // ----------------------------------------------------------------------------------------------
+        // Another bonus: Wiki link preview (WikiView), made by biglavis over at https://github.com/biglavis
+        //  Available on the file wikiviewsource.js. same folder as this one.
+        
+        const checkWiki     = /aqwwiki\.wikidot\.com\/.+/gi
+        const checkCharPage = /account\.aq\.com\/CharPage\?id=.+/gi
+        const checkAccountAq= /account\.aq\.com\/AQW\/(Inventory|BuyBack|WheelProgress|House)/gi
+
+        const bWiki = checkWiki.test(url)
+        const bCp   = checkCharPage.test(url)
+        const bAcc  = checkAccountAq.test(url)
+
+        //newWin.webContents.executeJavaScript("console.log('Wiki "+ bWiki +"')")
+        //newWin.webContents.executeJavaScript("console.log('charpage "+ bCp +"')")
+        //newWin.webContents.executeJavaScript("console.log('account "+ bAcc +"')")
+
+        // This code of mine is weird, yes, but the correct way is BLACK MAGIC UNSTABLE. I am going insane.
+        var isViewUrl = false
+        if (bWiki) isViewUrl = true
+        if (bCp)   isViewUrl = true
+        if (bAcc)  isViewUrl = true
+
+        //newWin.webContents.executeJavaScript("console.log('IsViewUrl: "+ isViewUrl +"')")
+        //newWin.webContents.executeJavaScript("console.log('IsViewUrlBruto: "+ bWiki + bCp + bAcc +" = "+ (bWiki || bCp || bAcc) + "')")
+
+        if (isViewUrl){
+            // Prepare the javascript for it
+            //  It uses the already available JQuery.
+            //newWin.webContents.executeJavaScript("console.log('ValidURL. loading WikiView...')")
+
+            var wikiview = fs.readFileSync(path.join(__dirname,'wikiviewsource.js'), 'utf8');
+            if (bWiki){
+                //newWin.webContents.executeJavaScript("console.log('Wiki2 "+bWiki +"')")
+                // THAT SAID. wiki doesnt have jquery. load it just for it. I hate dependencies but ooooh well
+                //  This file is the exact same as the one the original script asked. same version, everything.
+                const jquery = fs.readFileSync(path.join(__dirname,'jquery.min.js'), 'utf8');
+                wikiview = jquery + wikiview
+                
+            }
+            newWin.webContents.executeJavaScript(wikiview);
+        }
     });
 }
 

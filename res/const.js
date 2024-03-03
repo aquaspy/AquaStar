@@ -31,7 +31,7 @@ const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
 const charLookup   = 'https://account.aq.com/CharPage';
 const designNotes  = 'https://www.aq.com/gamedesignnotes/';
 const accountAq    = 'https://account.aq.com/';
-const wikiReleases = 'https://aqwwiki.wikidot.com/new-releases';
+const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 
 // Extra usefull links
 const aqwg         = 'https://www.aqwg.net/home';

@@ -37,8 +37,8 @@ exports.dialogMessages = {
     aboutMessage   : "Aquastar não seria possível sem a ajuda de:",
     aboutDetail    : 
         '133spider (github) por criar o AQLite em si\n' +
-        'CaioFViana (github)\n' +
         'aquaspy (github)\n' +
+        'biglavis (github) Por desenvolver a extensão WikiView\n' +
         'Artix Entertainment (artix.com)\n' +
         'ElectronJs (electronjs.org)\n' +
         'Adobe Flash Player (adobe.com)\n' +
