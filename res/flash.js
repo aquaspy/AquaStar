@@ -35,7 +35,7 @@ function getPluginName() {
 const flashTrustManager = (app, appRootPath, aqlitePath, appName) =>{
     
     app.commandLine.appendSwitch('ppapi-flash-path', path.join(appRootPath,"FlashPlayer", getPluginName()))
-    app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.344');
+    app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.465');
 
     const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot');
     const trustManager = flashTrust.initSync(appName, flashPath);
