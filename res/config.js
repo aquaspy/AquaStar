@@ -6,7 +6,7 @@ const fs     = require("fs");
 const url    = require("url");
 
 // WARNING - ENABLES DEBUG MODE:
-const isDebugBuild = true;
+const isDebugBuild = false;
 exports.isDebugBuild = isDebugBuild;
 
 class constant {
