@@ -1,14 +1,14 @@
-const path = require("path");
-
+const path = require("path")
+const fs   = require('fs')
 // Default is english.
-let   lang       = "en-US";
-const langFolder = "po";
+let   lang       = "en-US"
+const langFolder = "po"
 
-function detectLang(systemLang, keyb){
+exports.detectLang = function (systemLang, keyb){
     lang       = systemLang;
     pathToFile = path.join(__dirname, langFolder, lang + ".js");
     let langFile;
-    if(require('fs').existsSync(pathToFile)){
+    if(fs.existsSync(pathToFile)){
         langFile = require(pathToFile);
     }
     else {
@@ -28,5 +28,3 @@ function detectLang(systemLang, keyb){
 
     return lang;
 }
-
-exports.detectLang = detectLang;

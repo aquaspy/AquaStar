@@ -1,60 +1,26 @@
 {
-  "name": "AquaStar",
-  "version": "1.6.0",
-  "description": "A custom aqlite launcher",
+  "name": "aquastar",
+  "version": "2.0-RC1",
+  "description": "A custom AQW launcher",
+  "homepage": "https://github.com/aquaspy/AquaStar",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aquaspy/AquaStar"
+  },
+  "bugs": {
+    "url": "https://github.com/aquaspy/AquaStar/issues"
+  },
+  "license": "MIT",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder",
-    "dist-w": "electron-builder -w",
-    "dist-l": "electron-builder -l",
-    "dist-wl": "electron-builder -wl",
-    "dist-m": "electron-builder -m"
-  },
-  "keywords": [
-    "aqw;",
-    "aquastar;",
-    "aqlite;"
-  ],
-  "author": "aquastar",
-  "license": "MIT",
-  "devDependencies": {
-    "electron": "^4.2.12",
-    "electron-builder": "^22.8.1",
-    "nw-flash-trust": "^0.3.0"
-  },
-  "build": {
-    "asar": false,
-    "appId": "aquastar",
-    "mac": {
-      "category": "Games"
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "category": "Game"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "icon": "Icon/Icon.png"
+    "package": "electron-builder --publish never",
+    "start": "electron ."
   },
   "dependencies": {
-    "nw-flash-trust": "^0.3.0",
-    "electron-localshortcut": "3.2.1"
+    "electron-localshortcut": "^3.2.1"
+  },
+  "devDependencies": {
+    "electron": "^11.5.0",
+    "electron-builder": "^24.13.3"
   }
 }

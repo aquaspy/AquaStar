@@ -1,14 +1,15 @@
-const inst     = require('./instances.js');
-const constant = require('./const.js');
-const fs       = require('fs');
-const electronLocalshortcut = require('electron-localshortcut');
+const wind   = require('./window.js');
+const config = require('./config.js');
+const fs     = require('fs');
+const {BrowserWindow, dialog} = require('electron/main');
+const localshortcut = require("electron-localshortcut")
 
 var finalKeybinds = {};
 var recordingWinId = 0;
 
 function customKeybinds() {
-    var list = constant.listValidKeybindLocations;
-    finalKeybinds = constant.originalKeybinds;
+    var list = config.keybind.listValidKeybindLocations;
+    finalKeybinds = config.keybind.originalKeybinds;
 
     if (list != null && list.length != 0 ) {
         list.forEach((jsonPath) => {
@@ -20,7 +21,6 @@ function customKeybinds() {
                 const errorMsg = e.error + " " + e.message + "\n" +
                 "Check out " + jsonPath;
                 console.log(errorMsg);
-                const { dialog } = require('electron')
                 const dialog_options = {
                     buttons: ['Oh no...'],
                     title:   "Error",
@@ -30,7 +30,7 @@ function customKeybinds() {
                     "Try checking out the KEYBINDING.MD file on github.\n" +
                     "Also try a JSON validation website/program if you are lost!\n"
                 };
-                dialog.showMessageBox(null,dialog_options);
+                dialog.showMessageBox(null, dialog_options);
             }
         })
     }
@@ -38,18 +38,20 @@ function customKeybinds() {
 }
 
 const processKeybings = function (){
+    // yeah, gonna reuse the old code fully XD
+    let inst = wind.windows
+    let constant = config.constant
 
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
-    
     if(constant.isDebugBuild){
         addKeybind('Alt+I', (fw)=>{fw.webContents.openDevTools()},true);        
     }
     
     const k = customKeybinds();
-    
-    /// Shhh... secreat stuff
-    if (k.swfLog == true) constant.enableSWFLogging();
-    if (k.customUrl != undefined && k.customUrl != null) constant.changeMainUrl(k.customUrl);
+
+    /// Shhh... secret stuff
+    if (k.swfLog == true) config.constant.enableSWFLogging();
+    if (![undefined, null].includes(k.customUrl)) constant.changeMainUrl(k.customUrl);
 
     addKeybind(k.wiki    , ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
@@ -61,9 +63,9 @@ const processKeybings = function (){
     addKeybind(k.newTest , ()=>{inst.newBrowserWindow(constant.testingAQW)});
     
     // Show help message
-    addKeybind(k.help,     (focusedWin)=>{constant.showHelpMessage(focusedWin)});
+    addKeybind(k.help,     (focusedWin)=>{config.helpmsg.showHelpMessage(focusedWin)});
     
-    addKeybind(k.about,    (focusedWin)=>{constant.showAboutMessage(focusedWin)});
+    addKeybind(k.about,    (focusedWin)=>{config.helpmsg.showAboutMessage(focusedWin)});
 
     // Toggle Fullscreen
     addKeybind(k.fullscreen,(focusedWin) => {
@@ -74,28 +76,28 @@ const processKeybings = function (){
     });
 
     // Print Screen 
-    addKeybind(k.sshot,    (focusedWin) => { inst.takeSS(focusedWin); },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
+    addKeybind(k.sshot,    (focusedWin) => { inst.takeSS(focusedWin); }, false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
     // Record screen
     addKeybind(k.record,   (focusedWin) => {
-        if(!constant.wasRecording()){
-            inst.notifyWin(focusedWin, 
-                constant.titleMessages.recording + "! " + focusedWin.getTitle(),
+        if(!config.recording.wasRecording){
+            inst._notifyWindow(focusedWin, 
+                config.localeStrings.titleMessages.recording + "! " + focusedWin.getTitle(),
                 false);
             recordingWinId = focusedWin.id;
 
-            constant.triggerRecording();
+            config.recording.triggerRecording();
             focusedWin.setIcon(constant.nativeImageRedIcon)
         }
         else {
             if (recordingWinId != focusedWin.id) {
-                inst.notifyWin(focusedWin,
-                    constant.titleMessages.alreadyRecording);
+                inst._notifyWindow(focusedWin,
+                    config.localeStrings.titleMessages.alreadyRecording);
                 return;
             }
             else {
-                inst.notifyWin(focusedWin,
+                inst._notifyWindow(focusedWin,
                     focusedWin.getTitle().split('!')[1]);
-                constant.triggerRecording();
+                config.recording.triggerRecording();
                 focusedWin.setIcon(constant.nativeImageIcon)
             }
         }
@@ -137,15 +139,17 @@ const processKeybings = function (){
 }
 
 // Now, accepting Arrays as well...
-const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false){
+const addKeybind = function(keybind, func, onlyHTML = false, considerOthers = false){
     if(Array.isArray(keybind)){
         keybind.forEach((value) => {
-            addKeybind(value, func, onlyHTML, considerDF);
+            addKeybind(value, func, onlyHTML, considerOthers);
         })
     }
     else {    
-        electronLocalshortcut.register(keybind, () => {
-            inst.executeOnFocused(func, onlyHTML, considerDF);
+        // as we kinda have to use global shortcuts, make it work only when its on aquastar.
+        localshortcut.register(keybind, () => {
+            if (BrowserWindow.getFocusedWindow() != null)
+                wind.windows.executeOnFocused(func, onlyHTML, considerOthers);
         })
     }
 }

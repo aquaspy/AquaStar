@@ -1,68 +1,47 @@
-const {app, session, Menu}  = require('electron')
+const { app, BrowserWindow, Menu, shell, session } = require('electron');
 
 const path     = require('path')
 const fs       = require('fs');
 
-const flash    = require('./res/flash.js');
 const keyb     = require('./res/keybindings.js');
-const inst     = require('./res/instances.js');
-// Important Variables - in const.js
-const constant = require('./res/const.js');
-
-// Flash stuff is isolated in flash.js
-flash.flashManager(app, __dirname, constant.mainPath, constant.appName);
+const wind     = require('./res/window.js');
+const config   = require('./res/config.js');
 
 function createWindow () {
     // Keybindings now in keybindings.js
     const finalkeyb = keyb.addKeybinding();
 
     // Lang setup. Has to be after Ready event.
-    constant.setLocale(app.getLocale(),finalkeyb);
-
-    // Create the browser window.
-    let win = inst.newBrowserWindow(constant.mainPath,true);
-
+    config.localeStrings.setLocale(app.getLocale(),finalkeyb);
+ 
+    const mainWindow = wind.windows.newBrowserWindow(config.constant.mainPath,true);
     if (process.platform == 'darwin'){
         Menu.setApplicationMenu(null);
     }
     else {
         Menu.setApplicationMenu(
-            Menu.buildFromTemplate(constant.getMenu(finalkeyb, inst.charPagePrint)));
-        win.setMenuBarVisibility(false); //Remove menu so only wiki shows it
+            Menu.buildFromTemplate(config.winconf.getMenu(finalkeyb, wind.windows.charPagePrint)));
+        mainWindow.setMenuBarVisibility(false); //Remove menu so only wiki shows it
     }
-    
-    win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
-    
-    win.on('closed', () => {
-        // Dereference the window object, usually you would store windows
-        // in an array if your app supports multi windows, this is the time
-        // when you should delete the corresponding element.
-        win = null
-    })
 
     // FIX for the "Save PX" Dialog!! Wiki is annoying to use w/o this!
-    session.defaultSession.webRequest.onBeforeRequest(['*://*./*'], function(details, callback) {
+    const websiteAdFilter = {urls: ['*://*.com/*']}
+    session.defaultSession.webRequest.onBeforeRequest(websiteAdFilter, function(details, callback) {
 
-        var test_url = details.url;
-        var check_block_list =/.*adsymptotic\.com\/.*/gi;
-        var check_white_list =/(account.)?aq.com\/.*/gi;
-
-        var block_me = check_block_list.test(test_url);
-        var release_me = check_white_list.test(test_url);
-
-        if(release_me){
-            callback({cancel: false})
-        }else if(block_me){
-            callback({cancel: true});
-        }else{
-            callback({cancel: false})
+        var test_url = details.url
+        var blockListTest = [/cdn-onesignal\.com\/.*/gi, /.*\.cloudfront\.net\/.*/gi, /nitropay\.com\/.*/gi,
+            /statcounter\.com\/.*/gi, /.*google\.com\/.*/gi, /.*doubleclick\.net\/.*/gi, /.*ad-delivery\.com\/.*/gi]
+        
+        var block_me = false
+        for(var i=0; i<blockListTest.length; i++) {
+            if (blockListTest[i].test(test_url)) {block_me = true; break;}
         }
-
+        callback({ cancel: block_me })
     });
 
     // Enable Flash swf in official char pages. Thanks for /u/gulag1337 for finding this info and posting in reddit. I almost found it myself by accident... oof.
     const agentTagetFilter = {
-        urls: ['*://*.aq.com/*','*://*.aq.com', '*://aq.com(/*)?','*://game.aq.com', '*://play.dragonfable.com/*']
+        urls: ['*://account.aq.com/*','*://game.aq.com/*','*://aq.com/*' ,'*://play.dragonfable.com/*']
     }
     session.defaultSession.webRequest.onBeforeSendHeaders(agentTagetFilter, (details, callback) => {
         details.requestHeaders['User-Agent'] = 
@@ -70,19 +49,17 @@ function createWindow () {
         //details.requestHeaders['Referer'] = 'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=1'
         callback({ requestHeaders: details.requestHeaders })
     })
-    
-    
-    
-    if (constant.isSwfLogEnabled){
+
+    if (config.constant.isSwfLogEnabled){
         var t = new Date();
         var logName = "SWF log " +
             t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate() + "_" + 
             t.getHours() + "-" + t.getMinutes() + ".txt";
             
-        inst.mkdir(constant.swflogPath);
+        wind.mkdir(config.constant.swflogPath);
         var stream = fs.createWriteStream(
-            path.join(constant.swflogPath,logName), 
-            {autoClose:true});
+            path.join(config.constant.swflogPath,logName), {autoClose:true}
+            );
         
         const aqwgamefilters = {urls: ['*://game.aq.com/game/*']};
         session.defaultSession.webRequest.onBeforeRequest( aqwgamefilters, (details,callback) => {
@@ -93,30 +70,49 @@ function createWindow () {
     }
 
     //Console
-    if (constant.isDebugBuild){
-        win.webContents.openDevTools()
+    if (config.isDebugBuild){
+        mainWindow.webContents.openDevTools()
     }
+    // Show the main window when it's ready
+    mainWindow.once('ready-to-show', () => mainWindow.show());
+};
 
+const initializeFlashPlugin = () => {
+let pluginName;
+switch (process.platform) {
+    case 'win32':
+    pluginName = app.isPackaged ? 'pepflashplayer.dll' : 'win/x64/pepflashplayer.dll';
+    break;
+    case 'darwin':
+    pluginName = 'PepperFlashPlayer.plugin';
+    break;
+    default:
+    pluginName = 'libpepflashplayer.so';
 }
 
-// For anyone looking why we arent sandboxed and neither is AE...
-// To look in the filesystem for the flash plugin, it needs the "no sandbox" part.
-// If anyone out there think we just dont know about it, uncomment here and see for yourself...
-// We do enable sandbox for each created window just for safety. Check const.js's config function
-//app.enableSandbox();
+const resourcesPath = app.isPackaged ? process.resourcesPath : __dirname;
 
-app.on('ready', createWindow)
+if (['freebsd', 'linux', 'netbsd', 'openbsd'].includes(process.platform)) {
+    app.commandLine.appendSwitch('no-sandbox');
+}
+
+app.commandLine.appendSwitch('ppapi-flash-path', path.join(resourcesPath, 'plugins', pluginName));
+app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.465');
+};
+
 app.on('window-all-closed', () => {
-  // On macOS it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-app.on('activate', () => {
-  // On macOS it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (win === null) {
-    createWindow()
-  }
-})
+if (process.platform !== 'darwin') {
+    app.quit();
+}
+});
+
+initializeFlashPlugin();
+
+app.whenReady().then(() => {
+    createWindow();
+    app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+            createWindow();
+        }
+    });
+});

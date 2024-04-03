@@ -1,0 +1,35 @@
+appId: "com.aquastar.launcher"
+productName: "AquaStar AQW Launcher"
+
+directories:
+  output: "dist"
+
+files:
+  - "!plugins/"
+
+extraResources:
+  - from: "plugins/${os}/${arch}"
+    to: "plugins"
+    filter:
+      - "**/*"
+
+mac:
+  target: "dmg"
+
+win:
+  target:
+    - "nsis"
+    - "portable"
+
+nsis:
+  deleteAppDataOnUninstall: true
+
+linux:
+  target: 
+    - "deb"
+    - "appimage"
+
+protocols:
+  - name: "AE Protocol"
+    schemes:
+      - "artix"
