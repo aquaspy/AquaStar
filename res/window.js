@@ -72,8 +72,6 @@ class windows {
         }
         
         this._windowAddContext(newWin);
-        
-        newWin.webContents.openDevTools()
         return newWin;
     }
 
