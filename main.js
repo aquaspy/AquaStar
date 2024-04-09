@@ -80,14 +80,34 @@ function createWindow () {
 const initializeFlashPlugin = () => {
 let pluginName;
 switch (process.platform) {
+
+
     case 'win32':
-    pluginName = app.isPackaged ? 'pepflashplayer.dll' : 'win/x64/pepflashplayer.dll';
+    if (process.arch == "x86" || process.arch == "ia32"){
+    pluginName = 'pepflashplayer32bits.dll'
+    }
+    else{
+           pluginName = app.isPackaged ? 'pepflashplayer.dll' : 'win/x64/pepflashplayer.dll';
+           }
     break;
     case 'darwin':
-    pluginName = 'PepperFlashPlayer.plugin';
+    pluginName = app.isPackaged ? 'PepperFlashPlayer.plugin' : 'mac/x64/PepperFlashPlayer.plugin';
     break;
+    case 'linux':
+    if (process.arch == "x86"|| process.arch == "ia32"){
+    pluginName = app.isPackaged ? 'libpepflashplayer.so' : 'linux/ia32/libpepflashplayer.so';
+    }
+    else if (process.arch == "arm") {
+    pluginName = app.isPackaged ? 'libpepflashplayerARM.so' : 'linux/arm/libpepflashplayerARM.so';
+    }
+    else {
+    pluginName = app.isPackaged ? 'libpepflashplayer.so' : 'linux/x64/libpepflashplayer.so';
+    }
+    break;
+    
     default:
     pluginName = 'libpepflashplayer.so';
+   
 }
 
 const resourcesPath = app.isPackaged ? process.resourcesPath : __dirname;
