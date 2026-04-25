@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html style="margin:0;padding:0;width:100%;height:100%;overflow:hidden;">
+<head>
+<meta charset="UTF-8">
+<title>AquaStar</title>
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; }
+  object { display:block; width:100%; height:100%; border:none; outline:none; }
+</style>
+</head>
+<body>
+<script>
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    var swfUrl = params.get('swf');
+    if (!swfUrl) return;
+
+    var obj = document.createElement('object');
+    obj.type = 'application/x-shockwave-flash';
+    obj.data = swfUrl;
+    obj.width = '100%';
+    obj.height = '100%';
+
+    var cfg = [
+      {name:'wmode', value:'direct'},
+      {name:'allowscriptaccess', value:'always'},
+      {name:'allowfullscreen', value:'true'},
+      {name:'quality', value:'best'}
+    ];
+
+    cfg.forEach(function(p) {
+      var el = document.createElement('param');
+      el.name = p.name;
+      el.value = p.value;
+      obj.appendChild(el);
+    });
+
+    document.body.appendChild(obj);
+  })();
+</script>
+</body>
+</html>

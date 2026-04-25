@@ -41,11 +41,15 @@ function createWindow () {
     })
 
     // FIX for the "Save PX" Dialog!! Wiki is annoying to use w/o this!
-    session.defaultSession.webRequest.onBeforeRequest(['*://*./*'], function(details, callback) {
+    session.defaultSession.webRequest.onBeforeRequest(
+        ['*://*.adsymptotic.com/*', '*://*.doubleclick.net/*', '*://*.onesignal.com/*',
+         '*://*.nitropay.com/*', '*://translate.googleapis.com/*',
+         '*://*.aq.com/*', '*://aq.com/*'],
+        function(details, callback) {
 
         var test_url = details.url;
-        var check_block_list =/.*adsymptotic\.com\/.*/gi;
-        var check_white_list =/(account.)?aq.com\/.*/gi;
+        var check_block_list = /.*(adsymptotic\.com|doubleclick\.net|onesignal\.com|nitropay\.com|translate\.googleapis\.com).*/gi;
+        var check_white_list = /(account.)?aq.com\/.*/gi;
 
         var block_me = check_block_list.test(test_url);
         var release_me = check_white_list.test(test_url);

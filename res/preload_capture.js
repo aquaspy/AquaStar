@@ -87,7 +87,7 @@ function getRecordName () {
       var recordName = getRecordName();
 
       ipcRenderer.send('saveDialog', recordName);
-      ipcRenderer.on('saveDialogReply', (event, filename) => {
+      ipcRenderer.once('saveDialogReply', (event, filename) => {
         if(filename != null && filename != undefined){
           // User didnt canceled. Go ahead!
           // Reason why remote is enabled -_- sadly.

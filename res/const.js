@@ -46,9 +46,13 @@ const twtAlina     = "https://twitter.com/Alina_AE";
 const redditAqw    = "https://www.reddit.com/r/AQW/";
 
 //exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
-exports.testingAQW = ('https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=' +
-                        Math.floor(Math.random() * (900)) + 100); //random ending bt 100 and 1k. IT WAS ABOUT BROWSER CACHE!
-                        // The above exists bc spider can mess up again the cache. so aqw WONT CACHE anymore.
+Object.defineProperty(exports, 'testingAQW', {
+    get() {
+        // Random ending between 100 and 999. Prevents browser cache per load.
+        return 'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=' +
+               (Math.floor(Math.random() * 900) + 100);
+    }
+});
 exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=2'
 
 // Export farm
@@ -90,6 +94,18 @@ exports.isSwfLogEnabled = isSwfLogEnabled;
 exports.enableSWFLogging = () => {
     isSwfLogEnabled = true;
     exports.isSwfLogEnabled = true;
+}
+
+// Performance: wmode=direct via HTML wrapper (enabled by default)
+exports.useDirectWmode = true;
+exports.setUseDirectWmode = (val) => {
+    exports.useDirectWmode = val !== false;
+}
+
+const swfWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'swf_wrapper.html'));
+exports.wrapSwfUrl = function(swfUrl) {
+    if (!swfUrl) return swfUrl;
+    return swfWrapperUrl + '?swf=' + encodeURIComponent(swfUrl);
 }
 
 /// -------------------------------

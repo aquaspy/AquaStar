@@ -17,16 +17,23 @@ let winNames   = {}; // Fake dictionary
 // New page function
 function newBrowserWindow(new_path, isMainWin=false){
     var config;
+    var originalPath = new_path;
     if (isMainWin) config = constant.mainConfig;
     else if (_isGameWindow(new_path)) config = constant.gameConfig;
     else config = constant.winConfig;
     
+    // Wrap game SWFs in an HTML page with wmode=direct for maximum performance
+    if (constant.useDirectWmode && _isGameWindow(new_path)) {
+        new_path = constant.wrapSwfUrl(new_path);
+    }
+    
     const newWin = new BrowserWindow(config);
+    newWin.aquaStarSwfUrl = originalPath;
     newWin.setMenuBarVisibility(false); //Remove default electron menu
     newWin.loadURL(new_path);
     
-    if (new_path == constant.mainPath || 
-        new_path == constant.testingAQW) {
+    if (originalPath == constant.mainPath || 
+        originalPath == constant.testingAQW) {
 
         // Its alt window, Put the aqlite/Aqw title...
         var windowNumber = 1;
@@ -40,7 +47,7 @@ function newBrowserWindow(new_path, isMainWin=false){
         
         // Deciding the new title name...
         var winTitle = "";
-        if (new_path == constant.mainPath){
+        if (originalPath == constant.mainPath){
             winTitle = "AquaStar - " + (constant.isOldAqlite ? "Older/Custom AQLite":" Adventure Quest Worlds");
         }
         else {
@@ -57,7 +64,7 @@ function newBrowserWindow(new_path, isMainWin=false){
                 usedAltPagesNumbers.indexOf(windowNumber), 1);
         });
     }
-    else if (new_path == constant.df_url) {
+    else if (originalPath == constant.df_url) {
         newWin.setTitle("AquaStar - DragonFable");
     }
     else {
@@ -76,7 +83,7 @@ function newBrowserWindow(new_path, isMainWin=false){
 function _windowAddContext(newWin){
     // First, a security check. No more than 70 windows opened at once...
     if (BrowserWindow.getAllWindows().length > 70){
-        Console.log("This is very problematic... If you are seeing this in terminal, do a CTRL + C on it and cancel the program!");
+        console.log("This is very problematic... If you are seeing this in terminal, do a CTRL + C on it and cancel the program!");
         return;
     }
     
@@ -96,7 +103,7 @@ function _windowAddContext(newWin){
     // "Child Windows follow the same rule" part
     newWin.webContents.on('new-window', (event, url, frameName, disposition, options, additionalFeatures) => {
         event.preventDefault()
-        childWin = new BrowserWindow(constant.winConfig);
+        const childWin = new BrowserWindow(constant.winConfig);
         childWin.loadURL(url);
         _windowAddContext(childWin);
         event.newGuest = childWin;
@@ -105,6 +112,8 @@ function _windowAddContext(newWin){
     // Bonus: Hug popup (yeah, Hug them hard.)
     newWin.webContents.on("did-finish-load", () => {
         var url = newWin.getURL();
+        // Game windows only contain Flash — skip popup/ad injection
+        if (_isGameWindow(newWin)) return;
         function testAndDelete (testURL,objName,isClass = false) {
             if(url.includes(testURL)){
                 var codeTest;
@@ -184,7 +193,7 @@ function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
         return;
     }
     // Is it a game or is it a HTML..?
-    var isGame = _isGameWindow(focusedWindow.webContents.getURL(), considerDF);
+    var isGame = _isGameWindow(focusedWindow, considerDF);
 
     // Compacting of the XOR gave me this... LOOL
     if (onlyHtml == !isGame) funcForWindow(focusedWindow);
@@ -201,7 +210,14 @@ function executeOnAnyFocused(funcForWindow){
     funcForWindow(focusedWindow);
 }
 
-function _isGameWindow(url, considerDF = true){
+function _isGameWindow(target, considerDF = true){
+    var url;
+    // If passed a BrowserWindow, use the stored original SWF URL
+    if (target && typeof target === 'object' && target.webContents) {
+        url = target.aquaStarSwfUrl || target.webContents.getURL();
+    } else {
+        url = target;
+    }
     
     var aqliteValue = constant.mainPath;
     var vanilla     = constant.testingAQW;
@@ -354,7 +370,7 @@ function _notifyWindow(targetWin, notif, resetAfter = true){
     targetWin.setTitle(notif);
 
     if (resetAfter) {
-        targetWin.on('close',() => {
+        targetWin.once('close',() => {
             // Cancel the reset. avoid the error when there is no window anymore (closed)!
             clearTimeout(winTimeRef[targetWin.id]);
             targetWin = null; // default kinda deal

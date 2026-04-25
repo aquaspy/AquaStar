@@ -8,7 +8,7 @@ var recordingWinId = 0;
 
 function customKeybinds() {
     var list = constant.listValidKeybindLocations;
-    finalKeybinds = constant.originalKeybinds;
+    finalKeybinds = Object.assign({}, constant.originalKeybinds);
 
     if (list != null && list.length != 0 ) {
         list.forEach((jsonPath) => {
@@ -50,6 +50,7 @@ const processKeybings = function (){
     /// Shhh... secreat stuff
     if (k.swfLog == true) constant.enableSWFLogging();
     if (k.customUrl != undefined && k.customUrl != null) constant.changeMainUrl(k.customUrl);
+    if (k.useDirectWmode !== undefined) constant.setUseDirectWmode(k.useDirectWmode);
 
     addKeybind(k.wiki    , ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
