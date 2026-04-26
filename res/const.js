@@ -396,6 +396,17 @@ ipcMain.on('getTitleID', function (event, arg) {
     }
 });
 
+// Synchronous version used by preload_capture to avoid race conditions
+ipcMain.on('getTitleIDSync', function (event, arg) {
+    var curWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!curWindow) {
+        event.returnValue = ["",0];
+    }
+    else {
+        event.returnValue = [curWindow.getTitle(), curWindow.id];
+    }
+});
+
 ipcMain.on('saveDialog', function (event, arg) {
     require('electron').dialog.showSaveDialog(null,{
         buttonLabel: 'Save video',
