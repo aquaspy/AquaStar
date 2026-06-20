@@ -35,6 +35,10 @@
       "category": "Games",
       "target": [
         {
+          "target": "zip",
+          "arch": ["x64"]
+        },
+        {
           "target": "dmg",
           "arch": ["x64"]
         }

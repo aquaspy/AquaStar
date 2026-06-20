@@ -58,13 +58,12 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run dist-m
+      # zip avoids DMG tooling that requires /usr/bin/python on GHA arm64 runners
+      - run: npx electron-builder --mac zip --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - uses: actions/upload-artifact@v4
         with:
           name: aquastar-macos-x64
-          path: |
-            dist/*.dmg
-            dist/*.zip
+          path: dist/*.zip
           if-no-files-found: error
