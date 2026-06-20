@@ -6,11 +6,11 @@
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder",
-    "dist-w": "electron-builder -w",
-    "dist-l": "electron-builder -l",
-    "dist-wl": "electron-builder -wl",
-    "dist-m": "electron-builder -m"
+    "dist": "electron-builder --publish never",
+    "dist-w": "electron-builder -w --publish never",
+    "dist-l": "electron-builder -l --publish never",
+    "dist-wl": "electron-builder -wl --publish never",
+    "dist-m": "electron-builder -m --publish never"
   },
   "keywords": [
     "aqw;",
@@ -24,6 +24,7 @@
     "electron-builder": "22.14.13"
   },
   "build": {
+    "publish": null,
     "asar": false,
     "files": [
       "**/*",
