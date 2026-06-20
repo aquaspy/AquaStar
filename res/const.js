@@ -171,29 +171,25 @@ exports.changeMainUrl = function(newAqUrl){
 
 // For customizing windows themselfs
 function _getWinConfig(type){
-    //win
-    //main
-    //cprint
-    //game
-    return (type != "cprint")? 
-    {
-        width: 960,
-        height: 530,
-        useContentSize: true,
-        icon: iconPath,
-        webPreferences: {
-            nodeIntegration: false,
-            sandbox:    true,
-            webviewTag: false, 
-            preload: ((type == "game" || type == "main")? path.join(appRoot,'res','preload_capture.js'): null),
-            plugins: true,
-            javascript: true,
-            contextIsolation: true,
-            enableRemoteModule: ((type == "game" || type == "main")? true : false), // Recording screen needs to save it.
-            nodeIntegrationInWorker: false //maybe better performance for more instances in future... Needs testing.
-        }
-    }:
-    {   
+    if (type != "cprint") {
+        const isGame = (type == "game" || type == "main");
+        return {
+            width: 960,
+            height: 530,
+            useContentSize: true,
+            icon: iconPath,
+            webPreferences: {
+                nodeIntegration: false,
+                sandbox: isGame ? false : true,
+                webviewTag: false,
+                preload: isGame ? path.join(appRoot, 'res', 'preload_capture.js') : null,
+                plugins: isGame,
+                contextIsolation: true,
+                backgroundThrottling: !isGame
+            }
+        };
+    }
+    return {
         // First off, yes, this is 4K res, no, it wont be your print size.
         // The window caps (in Cinnamon's Muffin at least) at your window size
         // And bc of that, i setted the number as high as i imagined w/o having the chance
@@ -207,15 +203,12 @@ function _getWinConfig(type){
         resizable: false,
         webPreferences: {
             nodeIntegration: false,
-            sandbox: true,
+            sandbox: false,
             plugins: true,
-            javascript: true,
             contextIsolation: true,
-            enableRemoteModule: false,
-            nodeIntegrationInWorker: false,
             preload: path.join(appRoot,'res','preload_charpage.js'),
         }
-    }
+    };
 }
 
 exports.winConfig    = _getWinConfig("win");
@@ -384,42 +377,49 @@ exports.setLocale        = (loc, keyb)=> {
 /// Section 6 - IPC, or Inter Process Comunication. Way simpler than its name, trust me
 /// -------------------------------
 
-const { ipcMain } = require('electron');
+const { ipcMain, desktopCapturer } = require('electron');
 
-ipcMain.on('getTitleID', function (event, arg) {
-    var curWindow = BrowserWindow.getFocusedWindow();
-    if (curWindow == null || curWindow == undefined) {
-        event.sender.send('getTitleIDReply', ["",0]);
-    }
-    else {
-        event.sender.send('getTitleIDReply', [curWindow.getTitle(), curWindow.id] );
-    }
-});
-
-// Synchronous version used by preload_capture to avoid race conditions
-ipcMain.on('getTitleIDSync', function (event, arg) {
-    var curWindow = BrowserWindow.fromWebContents(event.sender);
-    if (!curWindow) {
-        event.returnValue = ["",0];
-    }
-    else {
-        event.returnValue = [curWindow.getTitle(), curWindow.id];
-    }
-});
-
-ipcMain.on('saveDialog', function (event, arg) {
-    require('electron').dialog.showSaveDialog(null,{
+ipcMain.on('saveDialog', async function (event, arg) {
+    const { dialog } = require('electron');
+    const { canceled, filePath } = await dialog.showSaveDialog({
         buttonLabel: 'Save video',
-        defaultPath: arg
-    }, (filename) => {
-        event.sender.send('saveDialogReply', filename);
-    })
+        defaultPath: arg,
+        filters: [{ name: 'WebM Video', extensions: ['webm'] }]
+    });
+    event.sender.send('saveDialogReply', canceled ? undefined : filePath);
+});
+
+ipcMain.on('saveRecording', function (event, filename, buffer) {
+    fs.writeFileSync(filename, Buffer.from(buffer));
+});
+
+ipcMain.handle('getDesktopCapturerSourceForWindow', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return null;
+
+    const sources = await desktopCapturer.getSources({ types: ['window'] });
+    const title = win.getTitle();
+
+    for (let i = 0; i < sources.length; i++) {
+        if (sources[i].name === title) return { id: sources[i].id, name: sources[i].name };
+    }
+    for (let i = 0; i < sources.length; i++) {
+        if (title && sources[i].name && sources[i].name.indexOf(title) !== -1) {
+            return { id: sources[i].id, name: sources[i].name };
+        }
+    }
+    for (let i = 0; i < sources.length; i++) {
+        if (sources[i].name && sources[i].name.indexOf('AquaStar') !== -1) {
+            return { id: sources[i].id, name: sources[i].name };
+        }
+    }
+    return null;
 });
 
 var _wasRecording = false;
 exports.wasRecording = () => {return _wasRecording};
-exports.triggerRecording = () => {
-    // The event for the recording!
+exports.triggerRecording = (win) => {
     _wasRecording = !_wasRecording;
-    BrowserWindow.getFocusedWindow().webContents.send('record', _wasRecording);
+    const target = win || BrowserWindow.getFocusedWindow();
+    if (target) target.webContents.send('record', _wasRecording);
 }

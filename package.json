@@ -20,17 +20,29 @@
   "author": "aquastar",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^4.2.12",
-    "electron-builder": "^22.8.1",
-    "nw-flash-trust": "^0.3.0"
+    "electron": "11.5.0",
+    "electron-builder": "22.14.13"
   },
   "build": {
     "asar": false,
+    "files": [
+      "**/*",
+      "!squashfs-root/**"
+    ],
     "appId": "aquastar",
     "mac": {
-      "category": "Games"
+      "category": "Games",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64"]
+        }
+      ]
     },
     "linux": {
+      "executableArgs": [
+        "--no-sandbox"
+      ],
       "target": [
         {
           "target": "AppImage",

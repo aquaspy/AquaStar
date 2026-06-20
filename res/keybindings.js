@@ -1,6 +1,7 @@
 const inst     = require('./instances.js');
 const constant = require('./const.js');
 const fs       = require('fs');
+const { globalShortcut, BrowserWindow } = require('electron');
 const electronLocalshortcut = require('electron-localshortcut');
 
 var finalKeybinds = {};
@@ -74,17 +75,16 @@ const processKeybings = function (){
         // As only wiki and so should have menubars, do not show them on game windows (that can be Fullscreen)
     });
 
-    // Print Screen 
-    addKeybind(k.sshot,    (focusedWin) => { inst.takeSS(focusedWin); },false, true); // So dragonfable has SS. the first false is to tell it needs to be a game window... check the function for details
-    // Record screen
-    addKeybind(k.record,   (focusedWin) => {
+    // F2 / Ctrl+J must use globalShortcut — Flash PPAPI eats before-input-event keys
+    addGlobalKeybind(k.sshot, (focusedWin) => { inst.takeSS(focusedWin); }, false, true);
+    addGlobalKeybind(k.record, (focusedWin) => {
         if(!constant.wasRecording()){
-            inst.notifyWin(focusedWin, 
+            inst.notifyWin(focusedWin,
                 constant.titleMessages.recording + "! " + focusedWin.getTitle(),
                 false);
             recordingWinId = focusedWin.id;
 
-            constant.triggerRecording();
+            constant.triggerRecording(focusedWin);
             focusedWin.setIcon(constant.nativeImageRedIcon)
         }
         else {
@@ -94,10 +94,10 @@ const processKeybings = function (){
                 return;
             }
             else {
-                inst.notifyWin(focusedWin,
-                    focusedWin.getTitle().split('!')[1]);
-                constant.triggerRecording();
-                focusedWin.setIcon(constant.nativeImageIcon)
+                const recordWin = BrowserWindow.fromId(recordingWinId) || focusedWin;
+                inst.notifyWin(recordWin, inst.getSavedTitle(recordWin));
+                constant.triggerRecording(recordWin);
+                recordWin.setIcon(constant.nativeImageIcon)
             }
         }
     });
@@ -151,4 +151,16 @@ const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false)
     }
 }
 
+const addGlobalKeybind = function(keybind, func, onlyHTML = false, considerDF = false){
+    const handler = () => inst.executeOnFocused(func, onlyHTML, considerDF);
+    if (Array.isArray(keybind)) {
+        keybind.forEach((value) => addGlobalKeybind(value, func, onlyHTML, considerDF));
+        return;
+    }
+    if (!globalShortcut.register(keybind, handler)) {
+        console.error('[AquaStar] Failed to register global shortcut:', keybind);
+    }
+};
+
+exports.unregisterGlobalShortcuts = () => globalShortcut.unregisterAll();
 exports.addKeybinding = processKeybings;

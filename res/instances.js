@@ -1,6 +1,6 @@
 const constant              = require('./const.js');
 const keybinds              = require('./keybindings.js');
-const {BrowserWindow, Menu, webContents} = require('electron');
+const {BrowserWindow, Menu} = require('electron');
 
 let usedAltPagesNumbers = [];
 
@@ -12,6 +12,7 @@ let   isAltKPageUp = false;
 // For notify Window's original names.
 let winTimeRef = {};
 let winNames   = {}; // Fake dictionary
+let lastFocusedWindow = null;
 
 
 // New page function
@@ -30,6 +31,7 @@ function newBrowserWindow(new_path, isMainWin=false){
     const newWin = new BrowserWindow(config);
     newWin.aquaStarSwfUrl = originalPath;
     newWin.setMenuBarVisibility(false); //Remove default electron menu
+    newWin.on('focus', () => { lastFocusedWindow = newWin; });
     newWin.loadURL(new_path);
     
     if (originalPath == constant.mainPath || 
@@ -101,13 +103,16 @@ function _windowAddContext(newWin){
     })
     
     // "Child Windows follow the same rule" part
-    newWin.webContents.on('new-window', (event, url, frameName, disposition, options, additionalFeatures) => {
-        event.preventDefault()
+    const openChildWindow = (url) => {
         const childWin = new BrowserWindow(constant.winConfig);
         childWin.loadURL(url);
         _windowAddContext(childWin);
-        event.newGuest = childWin;
-    })
+        return childWin;
+    };
+    newWin.webContents.on('new-window', (event, url) => {
+        event.preventDefault();
+        event.newGuest = openChildWindow(url);
+    });
     
     // Bonus: Hug popup (yeah, Hug them hard.)
     newWin.webContents.on("did-finish-load", () => {
@@ -151,63 +156,33 @@ function _windowAddContext(newWin){
         const bWiki = checkWiki.test(url)
         const bCp   = checkCharPage.test(url)
         const bAcc  = checkAccountAq.test(url)
-
-        //newWin.webContents.executeJavaScript("console.log('Wiki "+ bWiki +"')")
-        //newWin.webContents.executeJavaScript("console.log('charpage "+ bCp +"')")
-        //newWin.webContents.executeJavaScript("console.log('account "+ bAcc +"')")
-
-        // This code of mine is weird, yes, but the correct way is BLACK MAGIC UNSTABLE. I am going insane.
-        var isViewUrl = false
-        if (bWiki) isViewUrl = true
-        if (bCp)   isViewUrl = true
-        if (bAcc)  isViewUrl = true
-
-        //newWin.webContents.executeJavaScript("console.log('IsViewUrl: "+ isViewUrl +"')")
-        //newWin.webContents.executeJavaScript("console.log('IsViewUrlBruto: "+ bWiki + bCp + bAcc +" = "+ (bWiki || bCp || bAcc) + "')")
+        const isViewUrl = bWiki || bCp || bAcc
 
         if (isViewUrl){
-            // Prepare the javascript for it
-            //  It uses the already available JQuery.
-            //newWin.webContents.executeJavaScript("console.log('ValidURL. loading WikiView...')")
-
             var wikiview = fs.readFileSync(path.join(__dirname,'wikiviewsource.js'), 'utf8');
             if (bWiki){
-                //newWin.webContents.executeJavaScript("console.log('Wiki2 "+bWiki +"')")
-                // THAT SAID. wiki doesnt have jquery. load it just for it. I hate dependencies but ooooh well
-                //  This file is the exact same as the one the original script asked. same version, everything.
                 const jquery = fs.readFileSync(path.join(__dirname,'jquery.min.js'), 'utf8');
                 wikiview = jquery + wikiview
-                
             }
             newWin.webContents.executeJavaScript(wikiview);
         }
     });
 }
 
-/// GAME WINDOW ONLY
-function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
-    // Friendly reminder for BrowserWindow.getAllWindows() existing
-    var focusedWindow = BrowserWindow.getFocusedWindow();
-    if (focusedWindow === null) {
-        // No AquaStar Windows are focused. Do nothing.
-        return;
-    }
-    // Is it a game or is it a HTML..?
-    var isGame = _isGameWindow(focusedWindow, considerDF);
+function _resolveTargetWindow(onlyHtml = false, considerDF = false) {
+    // PPAPI Flash steals renderer keyboard focus; fall back to last focused window.
+    var target = BrowserWindow.getFocusedWindow() || lastFocusedWindow;
+    if (target === null) return null;
 
-    // Compacting of the XOR gave me this... LOOL
-    if (onlyHtml == !isGame) funcForWindow(focusedWindow);
+    var isGame = _isGameWindow(target, considerDF);
+    if (onlyHtml == !isGame) return target;
+    return null;
 }
 
-/// ANY APP WINDOW WILL DO
-function executeOnAnyFocused(funcForWindow){
-    // NO FUNCTION USES IT, HERE FOR THE FUTURE!
-    var focusedWindow = BrowserWindow.getFocusedWindow();
-    if (focusedWindow === null) {
-        // No AquaStar Windows are focused. Do nothing.
-        return;
-    }
-    funcForWindow(focusedWindow);
+/// GAME WINDOW ONLY
+function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
+    var target = _resolveTargetWindow(onlyHtml, considerDF);
+    if (target !== null) funcForWindow(target);
 }
 
 function _isGameWindow(target, considerDF = true){
@@ -317,25 +292,21 @@ function takeSS(focusedWin, ret = null, destroyWindow = false){
         }
     }
     else { rect = ret;}
-    focusedWin.webContents.capturePage(
-        rect,
-        (sshot) => {
+    focusedWin.webContents.capturePage(rect)
+        .then((sshot) => {
             console.log("Screenshotting it...");
-            // Create SS directory if doesnt exist
             var ssfolder = constant.sshotPath;
             _mkdir(ssfolder);
 
-            // Figure out the filename ----------
             var today = new Date();
             var pre_name = "Screenshot-" +
                 today.getFullYear() + "-" +
                 (today.getMonth() + 1) + "-" +
                 today.getDate() + "_";
-    
-            // Find the number for it
+
             var extraNumberName = 1;
             for (;;extraNumberName++){
-                if (fs.existsSync( path.join( ssfolder, pre_name + extraNumberName + ".png"))){
+                if (fs.existsSync(path.join(ssfolder, pre_name + extraNumberName + ".png"))){
                     if (extraNumberName === 10000) {
                         console.log("10000 prints per day...? wow! Thats a lot!");
                     }
@@ -345,29 +316,38 @@ function takeSS(focusedWin, ret = null, destroyWindow = false){
             }
             var sshotFileName = pre_name + extraNumberName + ".png";
             var savePath = path.join(ssfolder, sshotFileName);
-            // Save it. ----------------
-            fs.writeFileSync(path.join(ssfolder, sshotFileName), sshot.toPNG());
+            fs.writeFileSync(savePath, sshot.toPNG());
             console.log(constant.titleMessages.doneSavedAs + savePath);
             if (!destroyWindow){
-                // Usefull for char page builds
-                _notifyWindow(focusedWin,constant.titleMessages.doneSavedAs + savePath);
+                _notifyWindow(focusedWin, constant.titleMessages.doneSavedAs + savePath);
             }
             else {
                 focusedWin.close();
             }
-        }
-    );
+        })
+        .catch((err) => {
+            console.log("[AquaStar] Screenshot error:", err);
+        });
+}
+
+function getSavedTitle(targetWin) {
+    if (!targetWin) return '';
+    if (winNames[targetWin.id]) return winNames[targetWin.id];
+    const title = targetWin.getTitle();
+    const bang = title.indexOf('!');
+    if (bang !== -1) return title.slice(bang + 1).trim();
+    return title;
 }
 
 function _notifyWindow(targetWin, notif, resetAfter = true){
-    // Setup for it
-    if (winNames[targetWin.id] == null || 
-        winNames[targetWin.id] == undefined ){
-            // Save if needed
+    if (!targetWin || notif == null || notif === undefined) return;
+
+    if (winNames[targetWin.id] == null ||
+        winNames[targetWin.id] == undefined) {
             winNames[targetWin.id] = targetWin.getTitle();
     }
 
-    targetWin.setTitle(notif);
+    targetWin.setTitle(String(notif));
 
     if (resetAfter) {
         targetWin.once('close',() => {
@@ -401,4 +381,5 @@ exports.charPagePrint       = charPagePrint;
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;
 exports.notifyWin           = _notifyWindow;
+exports.getSavedTitle       = getSavedTitle;
 exports.mkdir               = _mkdir;

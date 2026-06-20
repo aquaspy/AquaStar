@@ -1,4 +1,5 @@
 const path       = require('path')
+const fs         = require('fs')
 const flashTrust = require('nw-flash-trust');
 
 function appendPerformanceSwitches(app) {
@@ -8,7 +9,7 @@ function appendPerformanceSwitches(app) {
     app.commandLine.appendSwitch('disable-background-timer-throttling');
 
     // GPU / rendering optimizations
-    app.commandLine.appendSwitch('ignore-gpu-blacklist');
+    app.commandLine.appendSwitch('ignore-gpu-blocklist');
     app.commandLine.appendSwitch('enable-gpu-rasterization');
     app.commandLine.appendSwitch('enable-zero-copy');
     app.commandLine.appendSwitch('disable-software-rasterizer');
@@ -26,7 +27,7 @@ function appendPerformanceSwitches(app) {
     app.commandLine.appendSwitch('disable-extensions');
     app.commandLine.appendSwitch('disable-component-extensions-with-background-pages');
     app.commandLine.appendSwitch('disable-print-preview');
-    app.commandLine.appendSwitch('disable-features', 'BackForwardCache,Prerender2');
+
 
     // CPU: disable accessibility tree and crash reporter
     app.commandLine.appendSwitch('disable-renderer-accessibility');
@@ -72,7 +73,14 @@ function getPluginName() {
 const flashTrustManager = (app, appRootPath, aqlitePath, appName) =>{
     appendPerformanceSwitches(app);
 
-    app.commandLine.appendSwitch('ppapi-flash-path', path.join(appRootPath,"FlashPlayer", getPluginName()))
+    // Required for PPAPI Flash on Linux (matches Artix AppRun --no-sandbox)
+    app.commandLine.appendSwitch('no-sandbox');
+
+    const flashPluginPath = path.resolve(appRootPath, 'FlashPlayer', getPluginName());
+    if (!fs.existsSync(flashPluginPath)) {
+        console.error('[AquaStar] PPAPI Flash plugin not found:', flashPluginPath);
+    }
+    app.commandLine.appendSwitch('ppapi-flash-path', flashPluginPath);
     app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.465');
 
     const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot');

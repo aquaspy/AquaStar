@@ -1,4 +1,6 @@
-const {app, session, Menu}  = require('electron')
+const {app, session, Menu, BrowserWindow}  = require('electron')
+
+app.allowRendererProcessReuse = false;
 
 const path     = require('path')
 const fs       = require('fs');
@@ -13,6 +15,10 @@ const constant = require('./res/const.js');
 flash.flashManager(app, __dirname, constant.mainPath, constant.appName);
 
 function createWindow () {
+    session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+        callback(permission === 'media' || permission === 'display-capture');
+    });
+
     // Keybindings now in keybindings.js
     const finalkeyb = keyb.addKeybinding();
 
@@ -42,36 +48,27 @@ function createWindow () {
 
     // FIX for the "Save PX" Dialog!! Wiki is annoying to use w/o this!
     session.defaultSession.webRequest.onBeforeRequest(
-        ['*://*.adsymptotic.com/*', '*://*.doubleclick.net/*', '*://*.onesignal.com/*',
-         '*://*.nitropay.com/*', '*://translate.googleapis.com/*',
-         '*://*.aq.com/*', '*://aq.com/*'],
-        function(details, callback) {
-
-        var test_url = details.url;
-        var check_block_list = /.*(adsymptotic\.com|doubleclick\.net|onesignal\.com|nitropay\.com|translate\.googleapis\.com).*/gi;
-        var check_white_list = /(account.)?aq.com\/.*/gi;
-
-        var block_me = check_block_list.test(test_url);
-        var release_me = check_white_list.test(test_url);
-
-        if(release_me){
-            callback({cancel: false})
-        }else if(block_me){
-            callback({cancel: true});
-        }else{
-            callback({cancel: false})
-        }
-
-    });
+        { urls: ['*://*.adsymptotic.com/*', '*://*.doubleclick.net/*', '*://*.onesignal.com/*',
+                 '*://*.nitropay.com/*', '*://translate.googleapis.com/*'] },
+        function(_details, callback) {
+            callback({ cancel: true });
+        });
 
     // Enable Flash swf in official char pages. Thanks for /u/gulag1337 for finding this info and posting in reddit. I almost found it myself by accident... oof.
+    // Match patterns must include a path (e.g. /*)
     const agentTagetFilter = {
-        urls: ['*://*.aq.com/*','*://*.aq.com', '*://aq.com(/*)?','*://game.aq.com', '*://play.dragonfable.com/*']
+        urls: [
+            '*://*.aq.com/*',
+            '*://aq.com/*',
+            '*://game.aq.com/*',
+            '*://play.dragonfable.com/*'
+        ]
     }
+    // Match Artix Game Launcher: strip Artix branding from native UA, identify via header
+    const spoofedUA = win.webContents.getUserAgent().replace(/Artix.*\s/, '');
     session.defaultSession.webRequest.onBeforeSendHeaders(agentTagetFilter, (details, callback) => {
-        details.requestHeaders['User-Agent'] = 
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ArtixGameLauncher/2.0.9 Chrome/80.0.3987.163 Electron/8.5.5 Safari/537.36'
-        //details.requestHeaders['Referer'] = 'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=1'
+        details.requestHeaders['User-Agent'] = spoofedUA;
+        details.requestHeaders['artixmode'] = 'launcher';
         callback({ requestHeaders: details.requestHeaders })
     })
     
@@ -92,7 +89,7 @@ function createWindow () {
         session.defaultSession.webRequest.onBeforeRequest( aqwgamefilters, (details,callback) => {
             //console.log(details.url);
             stream.write(details.url + "\n");
-            callback({requestHeaders: details.requestHeaders})
+            callback({ cancel: false })
         })
     }
 
@@ -106,10 +103,11 @@ function createWindow () {
 // For anyone looking why we arent sandboxed and neither is AE...
 // To look in the filesystem for the flash plugin, it needs the "no sandbox" part.
 // If anyone out there think we just dont know about it, uncomment here and see for yourself...
-// We do enable sandbox for each created window just for safety. Check const.js's config function
+// Game/main windows disable per-window sandbox so PPAPI Flash can load.
 //app.enableSandbox();
 
 app.on('ready', createWindow)
+app.on('will-quit', () => keyb.unregisterGlobalShortcuts())
 app.on('window-all-closed', () => {
   // On macOS it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
@@ -118,9 +116,7 @@ app.on('window-all-closed', () => {
   }
 })
 app.on('activate', () => {
-  // On macOS it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (win === null) {
+  if (BrowserWindow.getAllWindows().length === 0) {
     createWindow()
   }
 })

@@ -4,7 +4,7 @@ Custom Electron launcher for AdventureQuest Worlds using native Pepper Flash (PP
 
 ## Commands
 
-- `npm install` – install deps (Electron 4.2.12, electron-builder, nw-flash-trust)
+- `npm install` – install deps (Electron 11.5.0, electron-builder, nw-flash-trust)
 - `npm start` – run in dev
 - `npm run dist` – package for current OS (`dist/`)
 - `npm run dist-w` / `dist-l` / `dist-m` – Windows / Linux / Mac only
@@ -14,9 +14,9 @@ No tests, lint, typecheck, or CI exist in this repo.
 
 ## Critical constraints
 
-- **Electron is pinned to `^4.2.12`. Do NOT upgrade.** This is the last Electron version that reliably loads PPAPI Flash. Later versions remove Flash support entirely.
+- **Electron is pinned to `11.5.0`.** This is the last Electron release on Chromium 87, the final Chromium line that supports PPAPI Flash (removed in Chromium 88 / Electron 12+). Do not upgrade to Electron 12+ without a Flash alternative (e.g. Ruffle).
 - **`asar: false` is required.** The PPAPI Flash plugin must exist as a real file on disk (`FlashPlayer/*.so`, `*.dll`, `*.plugin`). Electron passes the path directly to Chromium.
-- **The app runs without `app.enableSandbox()`** in the main process because Electron needs filesystem access to locate the Flash plugin. Individual windows use `sandbox: true`.
+- **The app runs without `app.enableSandbox()`** in the main process because Electron needs filesystem access to locate the Flash plugin. Game/main windows use `sandbox: false` so PPAPI Flash loads; wiki windows use `sandbox: true` and `plugins: false`.
 
 ## Architecture
 
@@ -40,11 +40,13 @@ No tests, lint, typecheck, or CI exist in this repo.
 
 ## Important quirks
 
-- Game SWFs are now loaded through **`res/swf_wrapper.html`** so Flash runs with `wmode=direct` (GPU direct-to-screen) instead of the slower `wmode=window` browser-compositing path. Set `"useDirectWmode": false` in `aquastar.json` to disable the wrapper if you encounter issues.
-- **Background throttling is disabled.** A suite of performance Chromium flags is appended at startup in `res/flash.js` (`disable-renderer-backgrounding`, `disable-background-timer-throttling`, GPU-rasterization, zero-copy, etc.). Alt-tabbing or opening wiki windows will no longer drop the game's FPS.
-- **User-Agent is hardcoded** to spoof `ArtixGameLauncher/2.0.9 Chrome/80.0.3987.163 Electron/8.5.5` regardless of the actual Electron version. This is intentional for server compatibility.
-- **Ad blocking** is done via `session.webRequest.onBeforeRequest`: blocks `adsymptotic.com`, allows `aq.com`.
-- The `enableRemoteModule: true` flag is used in game/main windows for screen recording IPC. Removing it will break recording.
+- Game SWFs are loaded through **`res/swf_wrapper.html`** with `wmode=direct` (GPU direct-to-screen). Set `"useDirectWmode": false` in `aquastar.json` to disable the wrapper.
+- **Background throttling is disabled** via Chromium flags in `res/flash.js` and `backgroundThrottling: false` on game/main windows.
+- **Wiki windows** use `plugins: false` to avoid spawning a PPAPI instance per tab (RAM savings).
+- **F2 / Ctrl+J** use `globalShortcut` because Flash PPAPI consumes keyboard events before `before-input-event`.
+- **Screen recording** saves WebM (VP8 preferred). Native MP4 is not supported on Chromium 87; upgrading to Electron 12+ drops Flash.
+- **User-Agent** for `*.aq.com` requests matches Artix Game Launcher: native Chromium UA with any `Artix...` token stripped, plus `artixmode: launcher` header (no hardcoded ArtixGameLauncher string).
+- **Ad blocking** blocks known ad domains only via `session.webRequest.onBeforeRequest` (aq.com traffic is not filtered).
 
 ## Testing checklist
 
@@ -52,8 +54,9 @@ After making changes:
 1. `npm start` – verify the game loads and Flash works
 2. Test `Alt+N` (new AQW window) and `Alt+1` (DragonFable)
 3. Test `F2` screenshot saves to `Pictures/AquaStar Screenshots`
-4. Test `Alt+K` on a charpage (opens hidden 4K window, captures, closes)
-5. If modifying build/packaging, test `npm run pack` first (`--dir`, no installer)
+4. Test `Ctrl+J` screen recording saves WebM to a chosen path
+5. Test `Alt+K` on a charpage (opens hidden 4K window, captures, closes)
+6. If modifying build/packaging, test `npm run pack` first (`--dir`, no installer)
 
 ## Build artifacts
 
