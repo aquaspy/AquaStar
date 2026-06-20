@@ -8,7 +8,8 @@ Custom Electron launcher for AdventureQuest Worlds using native Pepper Flash (PP
 - `npm start` – run in dev
 - `npm run dist` – package for current OS (`dist/`)
 - `npm run dist-w` / `dist-l` / `dist-m` – Windows / Linux (AppImage + deb) / Mac (zip + dmg locally; CI builds zip only)
-- `./build.sh` – **release script, do not run locally unless releasing.** Builds all platforms (Linux x64/ia32/armv7l, Windows x64/ia32). Requires WINE for Windows builds.
+- `./build.sh` – **legacy local release script** for multi-arch Linux/Windows. Prefer GitHub Releases via tag (see below).
+- **GitHub Release:** bump `version` in `package.json`, commit, then `git tag v1.8.0 && git push origin v1.8.0` — the Release workflow builds all platforms and attaches installers to the GitHub Release.
 
 No tests, lint, typecheck, or CI exist in this repo.
 
