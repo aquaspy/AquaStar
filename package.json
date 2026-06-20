@@ -43,9 +43,17 @@
       "executableArgs": [
         "--no-sandbox"
       ],
+      "maintainer": "aquastar",
+      "synopsis": "AQW launcher with native Flash",
       "target": [
         {
           "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
           "arch": [
             "x64"
           ]

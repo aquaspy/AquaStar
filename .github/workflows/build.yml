@@ -21,7 +21,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: aquastar-linux-x64
-          path: dist/*.AppImage
+          path: |
+            dist/*.AppImage
+            dist/*.deb
           if-no-files-found: error
 
   build-windows:

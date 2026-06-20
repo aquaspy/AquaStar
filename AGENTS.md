@@ -4,10 +4,10 @@ Custom Electron launcher for AdventureQuest Worlds using native Pepper Flash (PP
 
 ## Commands
 
-- `npm install` – install deps (Electron 11.5.0, electron-builder, nw-flash-trust)
+- `npm install` – install deps (Electron 11.5.0, electron-builder 22.14.x, nw-flash-trust, electron-localshortcut)
 - `npm start` – run in dev
 - `npm run dist` – package for current OS (`dist/`)
-- `npm run dist-w` / `dist-l` / `dist-m` – Windows / Linux / Mac only
+- `npm run dist-w` / `dist-l` / `dist-m` – Windows / Linux (AppImage + deb) / Mac only
 - `./build.sh` – **release script, do not run locally unless releasing.** Builds all platforms (Linux x64/ia32/armv7l, Windows x64/ia32). Requires WINE for Windows builds.
 
 No tests, lint, typecheck, or CI exist in this repo.
