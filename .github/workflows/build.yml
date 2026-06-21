@@ -47,9 +47,9 @@ jobs:
       - run: bash scripts/build-arch.sh win x64
       - run: |
           mkdir artifacts
-          Copy-Item -Path dist\*.exe -Destination artifacts\
+          Copy-Item -Path dist\*.exe -Destination artifacts\AquaStar-Setup-x64.exe
       - run: bash scripts/build-arch.sh win ia32
-      - run: Copy-Item -Path dist\*.exe -Destination artifacts\ -Force
+      - run: Copy-Item -Path dist\*.exe -Destination artifacts\AquaStar-Setup-ia32.exe
       - uses: actions/upload-artifact@v4
         with:
           name: aquastar-windows
