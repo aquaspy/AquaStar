@@ -7,6 +7,11 @@ const electronLocalshortcut = require('electron-localshortcut');
 var finalKeybinds = {};
 var recordingWinId = 0;
 
+const CACHE_STORAGES = [
+    'appcache', 'shadercache', 'cachestorage', 'localstorage',
+    'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers'
+];
+
 function customKeybinds() {
     var list = constant.listValidKeybindLocations;
     finalKeybinds = Object.assign({}, constant.originalKeybinds);
@@ -105,13 +110,19 @@ const processKeybings = function (){
 
     // Reload
     addKeybind(k.reload,   (focusedWin) => {focusedWin.reload()});
-    // Reload and Clear cache
-    addKeybind(k.reloadCache, (focusedWin) => {
-        var ses = focusedWin.webContents.session;
-        ses.flushStorageData() //writing some data from memory to disk before cleaning
-        ses.clearStorageData({storages: ['appcache', 'shadercache', 'cachestorage', 'localstorage', 'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers']})
-        focusedWin.reload();
-    })
+    // Reload and clear cache — globalShortcut so Flash game windows receive Ctrl+Shift+F5
+    addGlobalKeybind(k.reloadCache, async (focusedWin) => {
+        const ses = focusedWin.webContents.session;
+        try {
+            await Promise.all([
+                ses.clearCache(),
+                ses.clearStorageData({ storages: CACHE_STORAGES })
+            ]);
+        } catch (err) {
+            console.error('[AquaStar] Cache purge error:', err);
+        }
+        focusedWin.webContents.reloadIgnoringCache();
+    }, false, true);
     
     // Yay, AquaSP can have his DF too!
     addKeybind(k.dragon, () => inst.newBrowserWindow(constant.df_url));
