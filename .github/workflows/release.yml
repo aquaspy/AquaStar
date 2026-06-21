@@ -20,11 +20,11 @@ jobs:
       - run: bash scripts/build-arch.sh linux x64
       - run: |
           mkdir -p artifacts
-          cp -a dist/* artifacts/
+          cp dist/*.AppImage dist/*.deb artifacts/
       - run: bash scripts/build-arch.sh linux ia32
-      - run: cp -a dist/* artifacts/
+      - run: cp dist/*.AppImage artifacts/
       - run: bash scripts/build-arch.sh linux armv7l
-      - run: cp -a dist/* artifacts/
+      - run: cp dist/*.AppImage artifacts/
       - uses: actions/upload-artifact@v4
         with:
           name: aquastar-linux
@@ -45,9 +45,9 @@ jobs:
       - run: bash scripts/build-arch.sh win x64
       - run: |
           mkdir artifacts
-          Copy-Item -Path dist\* -Destination artifacts\
+          Copy-Item -Path dist\*.exe -Destination artifacts\
       - run: bash scripts/build-arch.sh win ia32
-      - run: Copy-Item -Path dist\* -Destination artifacts\
+      - run: Copy-Item -Path dist\*.exe -Destination artifacts\ -Force
       - uses: actions/upload-artifact@v4
         with:
           name: aquastar-windows
