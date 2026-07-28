@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html style="margin:0;padding:0;width:100%;height:100%;">
+<head>
+<meta charset="UTF-8">
+<title>AquaStar - Reminders</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #121212; color: #e6e6e6;
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    font-size: 13px;
+  }
+  #app { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
+
+  header { padding: 14px 18px 8px 18px; border-bottom: 1px solid #2c2c2c; flex: 0 0 auto; }
+  header h1 { margin: 0 0 4px 0; font-size: 16px; }
+  header p#description { margin: 0; color: #9a9a9a; line-height: 1.4; }
+
+  #tabs { display:flex; align-items:center; gap:6px; padding:10px 18px 0 18px; flex-wrap:wrap; flex:0 0 auto; }
+  .tab { background:#1b1b1b; border:1px solid #333; border-radius:4px 4px 0 0; padding:6px 10px; color:#9a9a9a; font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer; }
+  .tab.active { background:#232323; color:#e6e6e6; border-color:#4da3ff; }
+  .tab .tabBtn { color:#6f6f6f; cursor:pointer; padding:0 2px; font-size:11px; }
+  .tab .tabBtn:hover { color:#e6e6e6; }
+  .tabAddBtn { background:transparent; border:1px dashed #383838; color:#9a9a9a; }
+  .tabAddBtn:hover { color:#e6e6e6; border-color:#4da3ff; }
+
+  #addQuestForm { display:flex; gap:8px; align-items:center; padding:10px 18px; border-bottom:1px solid #2c2c2c; flex-wrap:wrap; flex:0 0 auto; }
+
+  #rows { flex: 1 1 auto; overflow-y: auto; padding: 4px 18px; }
+  .quest-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #202020; }
+  .quest-row .qname { flex:1 1 160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .quest-row .qtype { flex:0 0 56px; font-size:11px; color:#6f6f6f; text-transform:uppercase; }
+  .quest-row .qjoin {
+    flex:0 0 190px; font-family:"Consolas","Courier New",monospace;
+    background:#1b1b1b; border:1px solid #333; border-radius:4px;
+    padding:5px 8px; color:#dcdcdc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .quest-row .qtime { flex:0 0 70px; font-size:12px; color:#9cc9ff; text-align:right; }
+
+  .text-input { flex:0 0 190px; font-family:inherit; background:#1b1b1b; border:1px solid #333; border-radius:4px; padding:5px 8px; color:#dcdcdc; }
+  .text-input:focus { outline:none; border-color:#4da3ff; }
+  .select-input { flex:0 0 100px; font-family:inherit; background:#1b1b1b; border:1px solid #333; border-radius:4px; padding:5px 8px; color:#dcdcdc; cursor:pointer; }
+  .select-input:focus { outline:none; border-color:#4da3ff; }
+
+  .switch { position:relative; display:inline-block; flex:0 0 38px; width:38px; height:22px; }
+  .switch input { position:absolute; opacity:0; width:0; height:0; }
+  .switch .slider { position:absolute; top:0; left:0; right:0; bottom:0; background:#1b1b1b; border:1px solid #383838; border-radius:22px; cursor:pointer; transition:background-color .15s, border-color .15s; }
+  .switch .slider::before { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#9a9a9a; transition:transform .15s, background-color .15s; }
+  .switch input:checked + .slider { background:#2b6fce; border-color:#2b6fce; }
+  .switch input:checked + .slider::before { transform:translateX(16px); background:#fff; }
+  .switch input:focus-visible + .slider { outline: 2px solid #4da3ff; outline-offset: 2px; }
+
+  button { background:#232323; color:#e6e6e6; border:1px solid #383838; border-radius:4px; padding:6px 12px; cursor:pointer; font-size:12px; }
+  button:hover { background:#2c2c2c; }
+  button:active { background:#1a1a1a; }
+  button.small { padding:5px 10px; font-size:11px; }
+  button.primary { background:#2b6fce; border-color:#2b6fce; color:#fff; }
+  button.primary:hover { background:#3a7fe0; }
+
+  footer { flex:0 0 auto; padding:8px 18px 12px 18px; border-top:1px solid #2c2c2c; }
+  #status { min-height:15px; color:#7fd08a; font-size:12px; }
+  #noCharsHint { color:#6f6f6f; padding:20px 0; }
+
+  /* Electron does not implement window.prompt() (it silently resolves to null with no
+     UI shown) - alert()/confirm() map to native dialogs and work fine, but text-entry
+     prompts need this hand-rolled modal instead. */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:1000; }
+  .modal-overlay.open { display:flex; }
+  .modal-box { background:#1b1b1b; border:1px solid #333; border-radius:6px; padding:16px; width:260px; display:flex; flex-direction:column; gap:10px; }
+  .modal-box .modal-label { font-size:12px; color:#e6e6e6; }
+  .modal-box .text-input { flex:0 0 auto; width:100%; box-sizing:border-box; }
+  .modal-buttons { display:flex; justify-content:flex-end; gap:8px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="heading">Reminders</h1>
+    <p id="description"></p>
+  </header>
+  <div id="tabs"></div>
+  <div id="addQuestForm">
+    <input id="questNameInput" class="text-input" type="text" spellcheck="false">
+    <input id="questJoinInput" class="text-input" type="text" spellcheck="false">
+    <select id="questTypeInput" class="select-input">
+      <option value="daily"></option>
+      <option value="weekly"></option>
+    </select>
+    <button id="addQuestBtn" class="primary small"></button>
+  </div>
+  <div id="rows"></div>
+  <footer><span id="status"></span></footer>
+</div>
+
+<div id="promptOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <div id="promptLabel" class="modal-label"></div>
+    <input id="promptInput" class="text-input" type="text" spellcheck="false">
+    <div class="modal-buttons">
+      <button id="promptCancelBtn" class="small"></button>
+      <button id="promptOkBtn" class="primary small"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const api = window.aquastarReminders;
+  let messages, state, activeCharId = null;
+
+  function genId(prefix) {
+    return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  }
+
+  // --- Reset-time math (America/New_York, DST-aware). No external libraries -
+  // Intl.DateTimeFormat already handles EST/EDT transitions given the IANA name. ---
+
+  function _getPartsInTZ(date, timeZone) {
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: timeZone,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false, weekday: 'short'
+    });
+    const raw = {};
+    fmt.formatToParts(date).forEach((p) => { if (p.type !== 'literal') raw[p.type] = p.value; });
+    let hour = parseInt(raw.hour, 10);
+    if (hour === 24) hour = 0; // Chromium/ICU quirk: hour12:false can render midnight as "24"
+    return {
+      year: parseInt(raw.year, 10), month: parseInt(raw.month, 10), day: parseInt(raw.day, 10),
+      hour: hour, minute: parseInt(raw.minute, 10), second: parseInt(raw.second, 10),
+      weekday: raw.weekday // "Mon".."Sun"
+    };
+  }
+
+  function _etOffsetMinutes(date) {
+    const utc = _getPartsInTZ(date, 'UTC');
+    const et  = _getPartsInTZ(date, 'America/New_York');
+    const utcAsEpoch = Date.UTC(utc.year, utc.month - 1, utc.day, utc.hour, utc.minute, utc.second);
+    const etAsEpoch  = Date.UTC(et.year,  et.month  - 1, et.day,  et.hour,  et.minute,  et.second);
+    return (etAsEpoch - utcAsEpoch) / 60000; // -300 EST / -240 EDT
+  }
+
+  // Precise UTC epoch-ms of "America/New_York Y-M-D 00:00:00". US DST transitions always
+  // land at 2am local, never at midnight, so every calendar day has exactly one well-defined
+  // local-midnight instant - sampling the offset at the naive UTC-interpreted guess is safe.
+  function _etMidnightUtcMs(year, month, day) {
+    const guess = Date.UTC(year, month - 1, day, 0, 0, 0);
+    const offsetMin = _etOffsetMinutes(new Date(guess));
+    return guess - offsetMin * 60000;
+  }
+
+  function _addCalendarDays(year, month, day, delta) {
+    const d = new Date(Date.UTC(year, month - 1, day));
+    d.setUTCDate(d.getUTCDate() + delta);
+    return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+  }
+
+  function getPreviousDailyReset(now) {
+    const p = _getPartsInTZ(now, 'America/New_York');
+    return new Date(_etMidnightUtcMs(p.year, p.month, p.day));
+  }
+
+  function getNextDailyReset(now) {
+    const prev = getPreviousDailyReset(now);
+    const p = _getPartsInTZ(prev, 'America/New_York');
+    const nextCal = _addCalendarDays(p.year, p.month, p.day, 1);
+    return new Date(_etMidnightUtcMs(nextCal.year, nextCal.month, nextCal.day));
+  }
+
+  // Weekly reset = the Thursday -> Friday midnight transition, America/New_York local time.
+  function getPreviousWeeklyReset(now) {
+    let resetDate = getPreviousDailyReset(now);
+    let p = _getPartsInTZ(resetDate, 'America/New_York');
+    while (p.weekday !== 'Fri') {
+      const prevCal = _addCalendarDays(p.year, p.month, p.day, -1);
+      resetDate = new Date(_etMidnightUtcMs(prevCal.year, prevCal.month, prevCal.day));
+      p = _getPartsInTZ(resetDate, 'America/New_York');
+    }
+    return resetDate;
+  }
+
+  function getNextWeeklyReset(now) {
+    let resetDate = getNextDailyReset(now);
+    let p = _getPartsInTZ(resetDate, 'America/New_York');
+    while (p.weekday !== 'Fri') {
+      const nextCal = _addCalendarDays(p.year, p.month, p.day, 1);
+      resetDate = new Date(_etMidnightUtcMs(nextCal.year, nextCal.month, nextCal.day));
+      p = _getPartsInTZ(resetDate, 'America/New_York');
+    }
+    return resetDate;
+  }
+
+  function formatTimeRemaining(msRemaining) {
+    if (msRemaining <= 0) return '0m';
+    const totalMinutes = Math.ceil(msRemaining / 60000);
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const mins = totalMinutes % 60;
+    if (days > 0) return days + 'd ' + hours + 'h';
+    if (hours > 0) return hours + 'h ' + mins + 'm';
+    return mins + 'm';
+  }
+
+  // Derived "done for the current period" check - pure comparison against the last-done
+  // timestamp, no background job needed. A reset simply makes this return false again.
+  function isDoneForCurrentPeriod(quest, lastDoneMs, now) {
+    if (!lastDoneMs) return false;
+    const periodStart = quest.type === 'weekly' ? getPreviousWeeklyReset(now) : getPreviousDailyReset(now);
+    return lastDoneMs >= periodStart.getTime();
+  }
+
+  // --- UI ---
+
+  // Electron doesn't implement window.prompt() - it resolves to null instantly with no
+  // dialog shown (window.alert/confirm map to native dialogs and DO work; prompt doesn't
+  // have a native equivalent and Electron never shimmed it). This hand-rolled modal
+  // replaces every text-entry prompt in this window.
+  function showPromptModal(labelText, defaultValue) {
+    return new Promise((resolve) => {
+      const overlay = document.getElementById('promptOverlay');
+      const labelEl = document.getElementById('promptLabel');
+      const inputEl = document.getElementById('promptInput');
+      const okBtn = document.getElementById('promptOkBtn');
+      const cancelBtn = document.getElementById('promptCancelBtn');
+
+      labelEl.textContent = labelText;
+      inputEl.value = defaultValue || '';
+      okBtn.textContent = messages.promptOkButton;
+      cancelBtn.textContent = messages.promptCancelButton;
+      overlay.classList.add('open');
+      inputEl.focus();
+      inputEl.select();
+
+      function cleanup(result) {
+        overlay.classList.remove('open');
+        inputEl.removeEventListener('keydown', onKeyDown);
+        okBtn.onclick = null;
+        cancelBtn.onclick = null;
+        resolve(result);
+      }
+      function onKeyDown(e) {
+        if (e.key === 'Enter') { e.preventDefault(); cleanup(inputEl.value); }
+        else if (e.key === 'Escape') { e.preventDefault(); cleanup(null); }
+      }
+      inputEl.addEventListener('keydown', onKeyDown);
+      okBtn.onclick = () => cleanup(inputEl.value);
+      cancelBtn.onclick = () => cleanup(null);
+    });
+  }
+
+  function setStatus(text) { document.getElementById('status').textContent = text || ''; }
+
+  function persistState() {
+    setStatus(messages.savingLabel);
+    api.saveReminders(state).then(() => setStatus(messages.savedLabel));
+  }
+
+  function renderTabs() {
+    const tabsEl = document.getElementById('tabs');
+    tabsEl.innerHTML = '';
+    state.characters.forEach((character) => {
+      const tab = document.createElement('div');
+      tab.className = 'tab' + (character.id === activeCharId ? ' active' : '');
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = character.name;
+      nameSpan.onclick = () => { activeCharId = character.id; renderTabs(); renderQuestRows(); };
+
+      const renameBtn = document.createElement('span');
+      renameBtn.className = 'tabBtn';
+      renameBtn.title = messages.renameTabTitle;
+      renameBtn.textContent = '✎';
+      renameBtn.onclick = (e) => { e.stopPropagation(); renameCharacterTab(character); };
+
+      const removeBtn = document.createElement('span');
+      removeBtn.className = 'tabBtn';
+      removeBtn.title = messages.removeTabTitle;
+      removeBtn.textContent = '✕';
+      removeBtn.onclick = (e) => { e.stopPropagation(); removeCharacterTab(character); };
+
+      tab.appendChild(nameSpan);
+      tab.appendChild(renameBtn);
+      tab.appendChild(removeBtn);
+      tabsEl.appendChild(tab);
+    });
+
+    const addTab = document.createElement('div');
+    addTab.className = 'tab tabAddBtn';
+    addTab.textContent = messages.addCharacterTab;
+    addTab.onclick = addCharacterTab;
+    tabsEl.appendChild(addTab);
+  }
+
+  async function addCharacterTab() {
+    const name = await showPromptModal(messages.promptCharacterName, '');
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const character = { id: genId('c'), name: trimmed };
+    state.characters.push(character);
+    activeCharId = character.id;
+    persistState();
+    renderTabs();
+    renderQuestRows();
+  }
+
+  async function renameCharacterTab(character) {
+    const name = await showPromptModal(messages.promptCharacterName, character.name);
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    character.name = trimmed;
+    persistState();
+    renderTabs();
+  }
+
+  function removeCharacterTab(character) {
+    if (!window.confirm(messages.confirmDeleteCharacter)) return;
+    state.characters = state.characters.filter((c) => c.id !== character.id);
+    state.quests.forEach((q) => { delete q.done[character.id]; });
+    if (activeCharId === character.id) {
+      activeCharId = state.characters.length ? state.characters[0].id : null;
+    }
+    persistState();
+    renderTabs();
+    renderQuestRows();
+  }
+
+  function updateRowDynamic(quest, checkboxEl, timeEl) {
+    const now = new Date();
+    const lastDone = quest.done[activeCharId];
+    checkboxEl.checked = isDoneForCurrentPeriod(quest, lastDone, now);
+    const nextReset = quest.type === 'weekly' ? getNextWeeklyReset(now) : getNextDailyReset(now);
+    timeEl.textContent = formatTimeRemaining(nextReset.getTime() - now.getTime());
+  }
+
+  function buildQuestRow(quest) {
+    const row = document.createElement('div');
+    row.className = 'quest-row';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'qname';
+    nameEl.textContent = quest.name;
+    nameEl.title = quest.name;
+
+    const typeEl = document.createElement('div');
+    typeEl.className = 'qtype';
+    typeEl.textContent = quest.type === 'weekly' ? messages.weeklyLabel : messages.dailyLabel;
+
+    const joinEl = document.createElement('div');
+    joinEl.className = 'qjoin';
+    joinEl.textContent = quest.joinCommand;
+    joinEl.title = quest.joinCommand;
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'small';
+    copyBtn.textContent = messages.copyButton;
+    copyBtn.onclick = () => {
+      api.copyText(quest.joinCommand);
+      copyBtn.textContent = messages.copiedLabel;
+      setTimeout(() => { copyBtn.textContent = messages.copyButton; }, 1200);
+    };
+
+    const switchLabel = document.createElement('label');
+    switchLabel.className = 'switch';
+    const checkboxEl = document.createElement('input');
+    checkboxEl.type = 'checkbox';
+    const sliderEl = document.createElement('span');
+    sliderEl.className = 'slider';
+    switchLabel.appendChild(checkboxEl);
+    switchLabel.appendChild(sliderEl);
+
+    const timeEl = document.createElement('div');
+    timeEl.className = 'qtime';
+
+    checkboxEl.addEventListener('change', () => {
+      if (checkboxEl.checked) quest.done[activeCharId] = Date.now();
+      else delete quest.done[activeCharId];
+      persistState();
+      updateRowDynamic(quest, checkboxEl, timeEl);
+    });
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'small';
+    deleteBtn.textContent = messages.deleteButton;
+    deleteBtn.onclick = () => {
+      if (!window.confirm(messages.confirmDeleteQuest)) return;
+      state.quests = state.quests.filter((q) => q.id !== quest.id);
+      persistState();
+      renderQuestRows();
+    };
+
+    row.appendChild(nameEl);
+    row.appendChild(typeEl);
+    row.appendChild(joinEl);
+    row.appendChild(copyBtn);
+    row.appendChild(switchLabel);
+    row.appendChild(timeEl);
+    row.appendChild(deleteBtn);
+
+    row._quest = quest; row._checkboxEl = checkboxEl; row._timeEl = timeEl;
+    updateRowDynamic(quest, checkboxEl, timeEl);
+    return row;
+  }
+
+  function renderQuestRows() {
+    const rowsEl = document.getElementById('rows');
+    rowsEl.innerHTML = '';
+    if (!activeCharId) {
+      const hint = document.createElement('div');
+      hint.id = 'noCharsHint';
+      hint.textContent = messages.noCharactersHint;
+      rowsEl.appendChild(hint);
+      return;
+    }
+    state.quests.forEach((quest) => rowsEl.appendChild(buildQuestRow(quest)));
+  }
+
+  function tick() {
+    document.querySelectorAll('.quest-row').forEach((row) => {
+      updateRowDynamic(row._quest, row._checkboxEl, row._timeEl);
+    });
+  }
+
+  async function init() {
+    const [msgs, remindersResult] = await Promise.all([api.getMessages(), api.getReminders()]);
+    messages = msgs;
+    state = remindersResult.data;
+
+    document.title = messages.title;
+    document.getElementById('heading').textContent = messages.heading;
+    document.getElementById('description').textContent = messages.description;
+    document.getElementById('questNameInput').placeholder = messages.questNamePlaceholder;
+    document.getElementById('questJoinInput').placeholder = messages.questJoinPlaceholder;
+    document.getElementById('questTypeInput').options[0].textContent = messages.dailyLabel;
+    document.getElementById('questTypeInput').options[1].textContent = messages.weeklyLabel;
+    document.getElementById('addQuestBtn').textContent = messages.addQuestButton;
+
+    document.getElementById('addQuestBtn').onclick = () => {
+      const nameInput = document.getElementById('questNameInput');
+      const joinInput = document.getElementById('questJoinInput');
+      const typeInput = document.getElementById('questTypeInput');
+      const name = nameInput.value.trim();
+      if (!name) return;
+      state.quests.push({
+        id: genId('q'), name: name,
+        joinCommand: joinInput.value.trim(),
+        type: typeInput.value === 'weekly' ? 'weekly' : 'daily',
+        done: {}
+      });
+      nameInput.value = ''; joinInput.value = '';
+      persistState();
+      renderQuestRows();
+    };
+
+    activeCharId = state.characters.length ? state.characters[0].id : null;
+    renderTabs();
+    renderQuestRows();
+    setInterval(tick, 30000);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

@@ -26,7 +26,8 @@ exports.dialogMessages = {
         expand(k.record)    + ' - Record the Game Screen. Use it again to stop.\n' +
         expand(k.reload)    + " - Reload the pages, like in a browser\n" +
         expand(k.reloadCache)+' - Clears all game cache, some cookies and refresh the window (can fix some bugs in game)\n' +
-        expand(k.settings)  + ' - Opens the Settings screen, to customize keybindings.\n\n' +
+        expand(k.settings)  + ' - Opens the Settings screen, to customize keybindings.\n' +
+        expand(k.reminders) + ' - Opens the Reminders screen, to track daily/weekly quests per character.\n\n' +
         'For an older/custom aqlite file, please name it "aqlite_old.swf" and put it in the same folder as the executable, as said below!\n\n' +
         'Note:' + expand(k.help) + ' Shows this message.';
     },
@@ -72,7 +73,8 @@ exports.menuMessages = {
     menuTakeShot     : "Take a SShot of CP (CP ONLY!)",
     menuCopyURL      : "Copy this page's URL",
     menuReloadPage   : "Reload this page",
-    menuSettings     : "Settings"
+    menuSettings     : "Settings",
+    menuReminders    : "Reminders"
 }
 
 exports.settingsMessages = {
@@ -108,6 +110,7 @@ exports.settingsMessages = {
         backward:    "Go Backward",
         help:        "Show Help",
         settings:    "Open Settings (this screen)",
+        reminders:   "Open Reminders",
         record:      "Record Game Screen"
     },
     optionsHeading: "Other Options",
@@ -129,4 +132,29 @@ exports.settingsMessages = {
         renderMode:     "Ruffle is an experimental, open-source Flash emulator. It may be slower, less stable, or behave differently than the real Flash Player, especially in crowded rooms. Switch anyway?",
         enableDevTools: "This option is for developers. Normal players usually don't need it. Enable anyway?"
     }
+}
+
+exports.remindersMessages = {
+    title              : "AquaStar - Reminders",
+    heading            : "Reminders",
+    description        : "Track daily and weekly in-game tasks per character. Resets follow the AE server clock (America/New_York) - daily at midnight, weekly at the Thursday-to-Friday midnight.",
+    addCharacterTab    : "+ Add Character",
+    promptCharacterName: "Character name:",
+    promptOkButton     : "OK",
+    promptCancelButton : "Cancel",
+    confirmDeleteCharacter: "Remove this character and its progress on every quest? This cannot be undone.",
+    confirmDeleteQuest : "Delete this quest for every character? This cannot be undone.",
+    noCharactersHint   : "Add a character tab above to start tracking quests.",
+    questNamePlaceholder: "Quest name",
+    questJoinPlaceholder: "/join ...",
+    dailyLabel         : "Daily",
+    weeklyLabel        : "Weekly",
+    addQuestButton     : "Add Quest",
+    copyButton         : "Copy",
+    copiedLabel        : "Copied!",
+    deleteButton       : "Delete",
+    renameTabTitle     : "Rename",
+    removeTabTitle     : "Remove",
+    savingLabel        : "Saving...",
+    savedLabel         : "Saved"
 }

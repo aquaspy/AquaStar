@@ -135,7 +135,8 @@ exports.wrapRuffleUrl = function(swfUrl) {
         '&proxy=' + encodeURIComponent(socketProxy.proxyUrl);
 }
 
-exports.settingsUrl = _getFileUrl(path.join(appRoot, 'res', 'settings.html'));
+exports.settingsUrl  = _getFileUrl(path.join(appRoot, 'res', 'settings.html'));
+exports.remindersUrl = _getFileUrl(path.join(appRoot, 'res', 'reminders.html'));
 
 /// -------------------------------
 /// Section 2 - Original KeyBindings and Custom swf stuff
@@ -167,6 +168,7 @@ const originalKeybinds = {
         "F1"
     ],
     settings: "Alt+9", //TODO - Make a screen and do your stuff XD. This is for future proofing
+    reminders: "Alt+T",
     record:   "Ctrl+J"
 }
 exports.originalKeybinds = originalKeybinds;
@@ -336,6 +338,23 @@ exports.settingsConfig = {
     }
 };
 
+// Reminders screen - own preload, needed for IPC (read/write aquastar_reminders.json) under contextIsolation.
+exports.remindersConfig = {
+    width: 760,
+    height: 620,
+    useContentSize: true,
+    icon: iconPath,
+    resizable: true,
+    webPreferences: {
+        nodeIntegration: false,
+        sandbox: true,
+        webviewTag: false,
+        preload: path.join(appRoot, 'res', 'preload_reminders.js'),
+        plugins: false,
+        contextIsolation: true
+    }
+};
+
 exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
     // needs to be like that as the function is located on instances...
     if (isContext == false && process.platform == 'darwin') return null;
@@ -414,6 +433,13 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             click() {
                 // Cant pull instances module at top level or else would be cyclical.
                 require('./instances.js').openSettingsWindow();
+            }
+        },
+        {
+            label: menuMessages.menuReminders,
+            accelerator: keybinds.reminders,
+            click() {
+                require('./instances.js').openRemindersWindow();
             }
         }
     ];

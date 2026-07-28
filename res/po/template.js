@@ -26,7 +26,8 @@ exports.dialogMessages = {
         expand(k.record)    + ' - \n' +
         expand(k.reload)    + " - \n" +
         expand(k.reloadCache)+' - \n' +
-        expand(k.settings)  + ' - .\n\n' +
+        expand(k.settings)  + ' - .\n' +
+        expand(k.reminders) + ' - .\n\n' +
         '\n\n' +
         ':' + expand(k.help) + ' .';
     },
@@ -63,7 +64,8 @@ exports.menuMessages = {
     menuTakeShot     : "",
     menuCopyURL      : "",
     menuReloadPage   : "",
-    menuSettings     : ""
+    menuSettings     : "",
+    menuReminders    : ""
 }
 
 exports.settingsMessages = {
@@ -99,6 +101,7 @@ exports.settingsMessages = {
         backward:    "",
         help:        "",
         settings:    "",
+        reminders:   "",
         record:      ""
     },
     optionsHeading: "",
@@ -120,4 +123,29 @@ exports.settingsMessages = {
         renderMode:     "",
         enableDevTools: ""
     }
+}
+
+exports.remindersMessages = {
+    title              : "",
+    heading            : "",
+    description        : "",
+    addCharacterTab    : "",
+    promptCharacterName: "",
+    promptOkButton     : "",
+    promptCancelButton : "",
+    confirmDeleteCharacter: "",
+    confirmDeleteQuest : "",
+    noCharactersHint   : "",
+    questNamePlaceholder: "",
+    questJoinPlaceholder: "",
+    dailyLabel         : "",
+    weeklyLabel        : "",
+    addQuestButton     : "",
+    copyButton         : "",
+    copiedLabel        : "",
+    deleteButton       : "",
+    renameTabTitle     : "",
+    removeTabTitle     : "",
+    savingLabel        : "",
+    savedLabel         : ""
 }

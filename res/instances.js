@@ -396,6 +396,21 @@ function openSettingsWindow(){
     return settingsWin;
 }
 
+// Reminders screen - singleton window, just refocus if already open.
+let remindersWin = null;
+function openRemindersWindow(){
+    if (remindersWin && !remindersWin.isDestroyed()) {
+        remindersWin.focus();
+        return remindersWin;
+    }
+    remindersWin = new BrowserWindow(constant.remindersConfig);
+    remindersWin.setMenuBarVisibility(false);
+    remindersWin.setTitle("AquaStar - Reminders");
+    remindersWin.loadURL(constant.remindersUrl);
+    remindersWin.on('closed', () => { remindersWin = null; });
+    return remindersWin;
+}
+
 function _mkdir (filepath){
     try { fs.lstatSync(filepath).isDirectory() }
     catch (ex) {
@@ -411,6 +426,7 @@ function _mkdir (filepath){
 exports.newBrowserWindow    = newBrowserWindow;
 exports.charPagePrint       = charPagePrint;
 exports.openSettingsWindow  = openSettingsWindow;
+exports.openRemindersWindow = openRemindersWindow;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;

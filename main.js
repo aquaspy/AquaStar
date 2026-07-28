@@ -13,6 +13,7 @@ const fs       = require('fs');
 
 const flash       = require('./res/flash.js');
 const keyb        = require('./res/keybindings.js');
+const reminders   = require('./res/reminders.js');
 const inst        = require('./res/instances.js');
 const socketProxy = require('./res/socketProxy.js');
 // Important Variables - in const.js

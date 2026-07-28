@@ -77,6 +77,9 @@ const processKeybings = function (){
     // Open Settings screen - customize keybindings
     addKeybind(k.settings, ()=>{inst.openSettingsWindow()});
 
+    // Open Reminders screen - daily/weekly quest tracker per character
+    addKeybind(k.reminders, ()=>{inst.openRemindersWindow()});
+
     // Toggle Fullscreen
     addKeybind(k.fullscreen,(focusedWin) => {
         focusedWin.setFullScreen(!focusedWin.isFullScreen());

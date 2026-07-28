@@ -26,7 +26,8 @@ exports.dialogMessages = {
         expand(k.record)    + ' - Grava a tela do jogo. Use de novo para parar.\n' +
         expand(k.reload)    + " - Recarregam as páginas, como em um navegador\n" +
         expand(k.reloadCache)+' - Limpa todo o cachê do jogo, alguns cookies, e recarrega a página (pode consertar bugs dentro do jogo)\n' +
-        expand(k.settings)  + ' - Abre a tela de Configurações, para customizar as keybindings.\n\n' +
+        expand(k.settings)  + ' - Abre a tela de Configurações, para customizar as keybindings.\n' +
+        expand(k.reminders) + ' - Abre a tela de Lembretes, para acompanhar quests diárias/semanais por personagem.\n\n' +
         'Para um aqlite antigo/customizado, por favor nomeie ele para "aqlite_old.swf" e o coloque na mesma pasta da executável, dita abaixo!\n\n' +
         'Nota: ' + expand(k.help) + ' Mostra esta mensagem.';
     },
@@ -73,7 +74,8 @@ exports.menuMessages = {
     menuTakeShot     : "Printa a Charpage (somente CP!)",
     menuCopyURL      : "Copiar o link da página",
     menuReloadPage   : "Recaregar a página",
-    menuSettings     : "Configurações"
+    menuSettings     : "Configurações",
+    menuReminders    : "Lembretes"
 }
 
 exports.settingsMessages = {
@@ -109,6 +111,7 @@ exports.settingsMessages = {
         backward:    "Voltar",
         help:        "Mostrar a Ajuda",
         settings:    "Abrir Configurações (esta tela)",
+        reminders:   "Abrir Lembretes",
         record:      "Gravar a Tela do Jogo"
     },
     optionsHeading: "Outras Opções",
@@ -130,4 +133,29 @@ exports.settingsMessages = {
         renderMode:     "Ruffle é um emulador de Flash experimental e de código aberto. Pode ser mais lento, menos estável, ou se comportar diferente do Flash Player real, principalmente em salas cheias. Trocar mesmo assim?",
         enableDevTools: "Esta opção é para desenvolvedores. Players normalmente não precisam dela. Ativar mesmo assim?"
     }
+}
+
+exports.remindersMessages = {
+    title              : "AquaStar - Lembretes",
+    heading            : "Lembretes",
+    description        : "Acompanhe tarefas diárias e semanais do jogo por personagem. Os resets seguem o horário do servidor da AE (America/New_York) - diário à meia-noite, semanal na virada de quinta para sexta.",
+    addCharacterTab    : "+ Adicionar Personagem",
+    promptCharacterName: "Nome do personagem:",
+    promptOkButton     : "OK",
+    promptCancelButton : "Cancelar",
+    confirmDeleteCharacter: "Remover este personagem e seu progresso em todas as quests? Isso não pode ser desfeito.",
+    confirmDeleteQuest : "Excluir esta quest para todos os personagens? Isso não pode ser desfeito.",
+    noCharactersHint   : "Adicione uma aba de personagem acima para começar a acompanhar quests.",
+    questNamePlaceholder: "Nome da quest",
+    questJoinPlaceholder: "/join ...",
+    dailyLabel         : "Diária",
+    weeklyLabel        : "Semanal",
+    addQuestButton     : "Adicionar Quest",
+    copyButton         : "Copiar",
+    copiedLabel        : "Copiado!",
+    deleteButton       : "Excluir",
+    renameTabTitle     : "Renomear",
+    removeTabTitle     : "Remover",
+    savingLabel        : "Salvando...",
+    savedLabel         : "Salvo"
 }
