@@ -34,13 +34,11 @@ const accountAq    = 'https://account.aq.com/';
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 
 // Extra usefull links
-const aqwg         = 'https://www.aqwg.net/home';
 const heromart     = 'https://www.heromart.com/';
 const battleon     = 'https://portal.battleon.com/';
 const calendar     = 'https://www.aq.com/lore/calendar';
 const dailyGifts   = 'https://www.aq.com/lore/dailygifts';
 const forgeEnchants= 'https://www.aq.com/lore/guides/enhancementtraits';
-const aqwTracker   = 'https://aqwtracker.com/';
 
 // Social Media stuff
 const twtAlina     = "https://twitter.com/Alina_AE";
@@ -63,7 +61,6 @@ exports.wikiReleases     = wikiReleases;
 exports.accountAq        = accountAq;
 exports.designNotes      = designNotes;
 exports.charLookup       = charLookup;
-exports.aqwg             = aqwg;
 
 exports.appName          = appName;
 exports.appVersion       = appVersion;
@@ -356,11 +353,9 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
                     submenu: [
                         generateLink(menuMessages.menuDailyGifts,dailyGifts),
                         generateLink(menuMessages.menuCalendar,calendar),
-                        generateLink(menuMessages.menuGuide,aqwg),
                         generateLink(menuMessages.menuForge,forgeEnchants),
                         generateLink(menuMessages.menuHeromart,heromart),
-                        generateLink(menuMessages.menuPortal,battleon),
-                        generateLink(menuMessages.menuAqwTracker,aqwTracker)
+                        generateLink(menuMessages.menuPortal,battleon)
                     ]
                 },
                 {
