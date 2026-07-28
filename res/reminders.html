@@ -14,8 +14,11 @@
   #app { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
 
   header { padding: 14px 18px 8px 18px; border-bottom: 1px solid #2c2c2c; flex: 0 0 auto; }
+  .header-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
   header h1 { margin: 0 0 4px 0; font-size: 16px; }
   header p#description { margin: 0; color: #9a9a9a; line-height: 1.4; }
+  #serverTime { flex:0 0 auto; font-size:12px; color:#9cc9ff; white-space:nowrap; font-family:"Consolas","Courier New",monospace; padding-top:2px; text-align:right; }
+  #serverTime .label { display:block; color:#6f6f6f; font-family:inherit; font-size:10px; text-transform:uppercase; letter-spacing:.03em; }
 
   #tabs { display:flex; align-items:center; gap:6px; padding:10px 18px 0 18px; flex-wrap:wrap; flex:0 0 auto; }
   .tab { background:#1b1b1b; border:1px solid #333; border-radius:4px 4px 0 0; padding:6px 10px; color:#9a9a9a; font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer; }
@@ -36,6 +39,14 @@
   .quest-row .drag-handle:active { cursor:grabbing; }
   .quest-row .qname { flex:1 1 160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .quest-row .qtype { flex:0 0 56px; font-size:11px; color:#6f6f6f; text-transform:uppercase; }
+  .quest-row .qcategory {
+    flex:0 0 92px; font-size:10px; padding:2px 7px; border-radius:10px;
+    text-transform:uppercase; white-space:nowrap; letter-spacing:.02em;
+    text-align:center; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box;
+  }
+  .qcategory.class { background:rgba(147,112,219,0.18); color:#c3aaf0; }
+  .qcategory.ultra { background:rgba(230,126,34,0.18); color:#f5a45d; }
+  .qcategory.other { background:rgba(154,154,154,0.18); color:#b0b0b0; }
   .quest-row .qjoin {
     flex:0 0 190px; font-family:"Consolas","Courier New",monospace;
     background:#1b1b1b; border:1px solid #333; border-radius:4px;
@@ -76,6 +87,9 @@
   #status { min-height:15px; color:#7fd08a; font-size:12px; }
   #noCharsHint { color:#6f6f6f; padding:20px 0; }
 
+  #toolbar { display:flex; align-items:center; gap:8px; padding:10px 18px 0 18px; flex:0 0 auto; }
+  .toolbar-label { font-size:12px; color:#9a9a9a; }
+
   /* Electron does not implement window.prompt() (it silently resolves to null with no
      UI shown) - alert()/confirm() map to native dialogs and work fine, but text-entry
      prompts need this hand-rolled modal instead. */
@@ -90,9 +104,21 @@
 <body>
 <div id="app">
   <header>
-    <h1 id="heading">Reminders</h1>
-    <p id="description"></p>
+    <div class="header-row">
+      <div>
+        <h1 id="heading">Reminders</h1>
+        <p id="description"></p>
+      </div>
+      <div id="serverTime"><span class="label" id="serverTimeLabel"></span><span id="serverTimeValue"></span></div>
+    </div>
   </header>
+  <div id="toolbar">
+    <label class="switch">
+      <input type="checkbox" id="showCompletedToggle">
+      <span class="slider"></span>
+    </label>
+    <span id="showCompletedLabel" class="toolbar-label"></span>
+  </div>
   <div id="tabs"></div>
   <div id="addQuestForm">
     <input id="questNameInput" class="text-input" type="text" spellcheck="false">
@@ -100,6 +126,11 @@
     <select id="questTypeInput" class="select-input">
       <option value="daily"></option>
       <option value="weekly"></option>
+    </select>
+    <select id="questCategoryInput" class="select-input">
+      <option value="class"></option>
+      <option value="ultra"></option>
+      <option value="other"></option>
     </select>
     <button id="addQuestBtn" class="primary small"></button>
   </div>
@@ -215,6 +246,14 @@
       p = _getPartsInTZ(resetDate, 'America/New_York');
     }
     return resetDate;
+  }
+
+  const _serverTimeFmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+  });
+  function formatServerTimeText(now) {
+    return _serverTimeFmt.format(now);
   }
 
   function formatTimeRemaining(msRemaining) {
@@ -357,6 +396,17 @@
     return isDoneForCurrentPeriod(quest, quest.done[activeCharId], new Date());
   }
 
+  const CATEGORY_KEYS = ['class', 'ultra', 'other'];
+  function categoryKeyOf(quest) {
+    return CATEGORY_KEYS.indexOf(quest.category) !== -1 ? quest.category : 'other';
+  }
+  function categoryLabelOf(quest) {
+    const key = categoryKeyOf(quest);
+    if (key === 'class') return messages.categoryClassLabel;
+    if (key === 'ultra') return messages.categoryUltraLabel;
+    return messages.categoryOtherLabel;
+  }
+
   function nextResetText(quest) {
     const now = new Date();
     const nextReset = quest.type === 'weekly' ? getNextWeeklyReset(now) : getNextDailyReset(now);
@@ -422,6 +472,10 @@
     typeEl.className = 'qtype';
     typeEl.textContent = quest.type === 'weekly' ? messages.weeklyLabel : messages.dailyLabel;
 
+    const categoryEl = document.createElement('div');
+    categoryEl.className = 'qcategory ' + categoryKeyOf(quest);
+    categoryEl.textContent = categoryLabelOf(quest);
+
     const joinEl = document.createElement('div');
     joinEl.className = 'qjoin';
     joinEl.textContent = quest.joinCommand;
@@ -480,6 +534,7 @@
 
     row.appendChild(nameEl);
     row.appendChild(typeEl);
+    row.appendChild(categoryEl);
     row.appendChild(joinEl);
     row.appendChild(copyBtn);
     row.appendChild(switchLabel);
@@ -519,12 +574,14 @@
       renderArchiveSection([]);
       return;
     }
-    // Not-done quests first, done ones sink to the bottom - purely a display-time sort,
-    // the underlying state.quests order (which drag-and-drop reordering controls) is untouched.
-    const visibleQuests = state.quests
-      .filter((q) => !q.hidden)
-      .slice()
-      .sort((a, b) => (isDoneNow(a) ? 1 : 0) - (isDoneNow(b) ? 1 : 0));
+    let visibleQuests = state.quests.filter((q) => !q.hidden);
+    if (state.showCompleted) {
+      // Not-done quests first, done ones sink to the bottom - purely a display-time sort,
+      // the underlying state.quests order (which drag-and-drop reordering controls) is untouched.
+      visibleQuests = visibleQuests.slice().sort((a, b) => (isDoneNow(a) ? 1 : 0) - (isDoneNow(b) ? 1 : 0));
+    } else {
+      visibleQuests = visibleQuests.filter((q) => !isDoneNow(q));
+    }
     visibleQuests.forEach((quest) => rowsEl.appendChild(buildQuestRow(quest, false)));
 
     renderArchiveSection(state.quests.filter((q) => q.hidden));
@@ -538,26 +595,41 @@
     const [msgs, remindersResult] = await Promise.all([api.getMessages(), api.getReminders()]);
     messages = msgs;
     state = remindersResult.data;
+    if (state.showCompleted === undefined) state.showCompleted = true;
 
     document.title = messages.title;
     document.getElementById('heading').textContent = messages.heading;
     document.getElementById('description').textContent = messages.description;
+    document.getElementById('showCompletedLabel').textContent = messages.showCompletedLabel;
+    const showCompletedToggle = document.getElementById('showCompletedToggle');
+    showCompletedToggle.checked = state.showCompleted;
+    showCompletedToggle.addEventListener('change', () => {
+      state.showCompleted = showCompletedToggle.checked;
+      persistState();
+      renderQuestRows();
+    });
     document.getElementById('questNameInput').placeholder = messages.questNamePlaceholder;
     document.getElementById('questJoinInput').placeholder = messages.questJoinPlaceholder;
     document.getElementById('questTypeInput').options[0].textContent = messages.dailyLabel;
     document.getElementById('questTypeInput').options[1].textContent = messages.weeklyLabel;
+    document.getElementById('questCategoryInput').options[0].textContent = messages.categoryClassLabel;
+    document.getElementById('questCategoryInput').options[1].textContent = messages.categoryUltraLabel;
+    document.getElementById('questCategoryInput').options[2].textContent = messages.categoryOtherLabel;
     document.getElementById('addQuestBtn').textContent = messages.addQuestButton;
+    document.getElementById('serverTimeLabel').textContent = messages.serverTimeLabel;
 
     document.getElementById('addQuestBtn').onclick = () => {
       const nameInput = document.getElementById('questNameInput');
       const joinInput = document.getElementById('questJoinInput');
       const typeInput = document.getElementById('questTypeInput');
+      const categoryInput = document.getElementById('questCategoryInput');
       const name = nameInput.value.trim();
       if (!name) return;
       state.quests.push({
         id: genId('q'), name: name,
         joinCommand: joinInput.value.trim(),
         type: typeInput.value === 'weekly' ? 'weekly' : 'daily',
+        category: categoryInput.value,
         done: {}
       });
       nameInput.value = ''; joinInput.value = '';
@@ -569,6 +641,10 @@
       archiveExpanded = !archiveExpanded;
       renderQuestRows();
     };
+
+    const serverTimeValueEl = document.getElementById('serverTimeValue');
+    serverTimeValueEl.textContent = formatServerTimeText(new Date());
+    setInterval(() => { serverTimeValueEl.textContent = formatServerTimeText(new Date()); }, 1000);
 
     activeCharId = state.characters.length ? state.characters[0].id : null;
     renderTabs();

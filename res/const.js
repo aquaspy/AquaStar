@@ -340,7 +340,7 @@ exports.settingsConfig = {
 
 // Reminders screen - own preload, needed for IPC (read/write aquastar_reminders.json) under contextIsolation.
 exports.remindersConfig = {
-    width: 760,
+    width: 980,
     height: 620,
     useContentSize: true,
     icon: iconPath,

@@ -1,0 +1,6 @@
+{
+    "quests": [
+        { "name": "Example Daily Quest", "joinCommand": "/join example", "type": "daily", "category": "other" },
+        { "name": "Example Weekly Quest", "joinCommand": "/join example", "type": "weekly", "category": "other" }
+    ]
+}
