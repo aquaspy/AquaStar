@@ -1,6 +1,6 @@
 {
   "name": "AquaStar",
-  "version": "1.8.2",
+  "version": "1.9.0",
   "description": "A custom aqlite launcher",
   "homepage": "https://github.com/aquaspy/AquaStar",
   "main": "main.js",
@@ -37,11 +37,15 @@
       "target": [
         {
           "target": "zip",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "dmg",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
