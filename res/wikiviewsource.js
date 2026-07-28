@@ -61,8 +61,11 @@ function unhovered() {
  
 function showPreview(link) {
     if (link.startsWith("http://aqwwiki.wikidot.com/")) {
-        let url = "https://whoasked.freewebhostmost.com/wikimg.php?page=" + link;
-        fetch(url)
+        // wikimg.php (whoasked.freewebhostmost.com) is gone - it used to scrape the wiki
+        // page server-side and hand back just the item's own image(s). Since we're
+        // already same-origin with the wiki, we can fetch the page ourselves and do the
+        // same filtering locally - see extractItemImages() below.
+        fetch(link)
             .then(function(response) {
                 // convert page to text
                 return response.text()
@@ -73,23 +76,23 @@ function showPreview(link) {
             })
             .then(function(doc) {
                 // get images
-                let images = $(doc).find("body img")
- 
+                let images = extractItemImages(doc);
+
                 if (images.length > 0) {
                     let maxwidth = window.innerWidth*0.45 + "px";
                     let maxheight = window.innerHeight*0.65 + "px";
- 
+
                     removePreview(); // remove previous preview
                     $("body").append('<div id="preview" style="position:fixed;"></div>');
- 
+
                     // add images to new div
-                    images.each(function () {
+                    images.forEach(function (img) {
                         if (images.length == 1)
-                            $("#preview").append('<img style="max-width:' + maxwidth + '; max-height:' + maxheight + '; height:auto; width:auto;" src="' + this.src + '">');
+                            $("#preview").append('<img style="max-width:' + maxwidth + '; max-height:' + maxheight + '; height:auto; width:auto;" src="' + img.src + '">');
                         else
-                            $("#preview").append('<img style="height:' + maxheight + ';" src="' + this.src + '">');
+                            $("#preview").append('<img style="height:' + maxheight + ';" src="' + img.src + '">');
                     });
- 
+
                     // wait for images to load then position div
                     waitForImg("#preview img:last", function() {
                         $("#preview").css("top", mousePos.y - (mousePos.y / window.innerHeight) * $("#preview").height() + "px");
@@ -104,6 +107,54 @@ function showPreview(link) {
                 console.log("Failed to fetch page: ", err);
             });
     }
+}
+
+// Finds the item's own appearance image(s) on an AQW Wiki item page - replicating what
+// the now-defunct wikimg.php proxy used to return. Armors show Male/Female versions in
+// a tabbed widget; both come back (in that order) so showPreview displays them side by
+// side. Everything else (weapons, capes, unisex items, ...) has a single image in the
+// page content.
+function extractItemImages(doc) {
+    let $content = $(doc).find("#page-content").first();
+    if ($content.length === 0) return [];
+
+    // Armor gender variants use wikidot's tabview widget. Only treat it as a gender split
+    // if the tabs are actually labeled Male/Female - the same widget gets reused elsewhere
+    // on the wiki (e.g. mystery chest reward tables) for unrelated things.
+    let genderImages = null;
+    $content.find(".yui-navset").each(function () {
+        let $navset = $(this);
+        let $tabs = $navset.children("ul.yui-nav").children("li");
+        let $panels = $navset.children("div.yui-content").children("div");
+        let male = null, female = null;
+
+        $tabs.each(function (i) {
+            let $label = $(this).find("a em").first();
+            if ($label.length === 0) $label = $(this).find("a").first();
+            let label = $label.text().trim().toLowerCase();
+            let img = $panels.eq(i).find("img")[0];
+            if (!img) return;
+            if (label === "male") male = img;
+            else if (label === "female") female = img;
+        });
+
+        if (male || female) {
+            genderImages = [male, female].filter(Boolean);
+            return false; // found it, stop looking at other tabviews on the page
+        }
+    });
+    if (genderImages) return genderImages;
+
+    // No gender tabview - take the first real image, skipping the small UI "tag" badge
+    // icons (costs AC, seasonal item, etc.) sprinkled throughout the page text.
+    let fallback = null;
+    $content.find("img").each(function () {
+        if (!/wdfiles\.com\/local--files\/image-tags\//i.test(this.src)) {
+            fallback = this;
+            return false;
+        }
+    });
+    return fallback ? [fallback] : [];
 }
  
 function removePreview() {
