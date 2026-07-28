@@ -1,5 +1,11 @@
 const {app, session, Menu, BrowserWindow}  = require('electron')
 
+// I am honestly surprised we forgot this line.
+if (!app.requestSingleInstanceLock()) {
+    app.quit();
+    return;
+}
+
 app.allowRendererProcessReuse = false;
 
 const path     = require('path')
@@ -101,6 +107,14 @@ function createWindow () {
 // Game/main windows disable per-window sandbox so PPAPI Flash can load.
 //app.enableSandbox();
 
+app.on('second-instance', () => {
+  // Someone tried to run a second AquaStar - focus the existing one instead.
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win) {
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  }
+})
 app.on('ready', createWindow)
 app.on('will-quit', () => keyb.unregisterGlobalShortcuts())
 app.on('window-all-closed', () => {
