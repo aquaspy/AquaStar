@@ -27,12 +27,18 @@ function _buildSeedState() {
     } catch (e) {
         console.log('[AquaStar] Failed to read ' + remindersDefaultPath + ': ' + e.message);
     }
+    const SEASONAL_EVENT_KEYS = [
+        'nulgathBirthday', 'carnival', 'dageBirthday', 'aprilFools', 'starFestival',
+        'friday13', 'pirateDay', 'anniversary', 'blackFriday', 'frostval'
+    ];
     const quests = (Array.isArray(raw.quests) ? raw.quests : []).map((q) => ({
         id: _genId('q'),
         name: typeof q.name === 'string' ? q.name : '',
         joinCommand: typeof q.joinCommand === 'string' ? q.joinCommand : '',
         type: q.type === 'weekly' ? 'weekly' : 'daily',
         category: ['class', 'ultra', 'other'].indexOf(q.category) !== -1 ? q.category : 'other',
+        seasonal: q.seasonal === true && SEASONAL_EVENT_KEYS.indexOf(q.seasonalEvent) !== -1,
+        seasonalEvent: (q.seasonal === true && SEASONAL_EVENT_KEYS.indexOf(q.seasonalEvent) !== -1) ? q.seasonalEvent : null,
         done: {},
         hidden: false
     }));

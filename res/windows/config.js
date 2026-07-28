@@ -78,11 +78,11 @@ exports.settingsConfig = {
 exports.settingsUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'settings', 'settings.html'));
 
 // Reminders screen - own preload, needed for IPC (read/write aquastar_reminders.json) under contextIsolation.
-// Width needs to fit every fixed-width quest-row column (type/category badges, /join box,
-// copy/switch/time, Hide/Delete buttons) plus a readable amount of quest name text, or the
-// name column gets squeezed down to near-nothing by its flex-shrink.
+// Width needs to fit every fixed-width quest-row column (type/category/seasonal badges,
+// /join box, copy/switch/time, Hide/Delete buttons) plus a readable amount of quest name
+// text, or the name column gets squeezed down to near-nothing by its flex-shrink.
 exports.remindersConfig = {
-    width: 980,
+    width: 1040,
     height: 620,
     useContentSize: true,
     icon: iconPath,

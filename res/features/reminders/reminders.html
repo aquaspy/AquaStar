@@ -19,6 +19,7 @@
   header p#description { margin: 0; color: #9a9a9a; line-height: 1.4; }
   #serverTime { flex:0 0 auto; font-size:12px; color:#9cc9ff; white-space:nowrap; font-family:"Consolas","Courier New",monospace; padding-top:2px; text-align:right; }
   #serverTime .label { display:block; color:#6f6f6f; font-family:inherit; font-size:10px; text-transform:uppercase; letter-spacing:.03em; }
+  #nextFriday13Row { margin-top:6px; color:#e0a3f0; }
 
   #tabs { display:flex; align-items:center; gap:6px; padding:10px 18px 0 18px; flex-wrap:wrap; flex:0 0 auto; }
   .tab { background:#1b1b1b; border:1px solid #333; border-radius:4px 4px 0 0; padding:6px 10px; color:#9a9a9a; font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer; }
@@ -47,6 +48,12 @@
   .qcategory.class { background:rgba(147,112,219,0.18); color:#c3aaf0; }
   .qcategory.ultra { background:rgba(230,126,34,0.18); color:#f5a45d; }
   .qcategory.other { background:rgba(154,154,154,0.18); color:#b0b0b0; }
+  .quest-row .qseasonal {
+    flex:0 0 40px; font-size:10px; padding:2px 4px; border-radius:10px;
+    text-transform:uppercase; white-space:nowrap; letter-spacing:.02em;
+    text-align:center; box-sizing:border-box;
+  }
+  .qseasonal.active { background:rgba(255,182,193,0.18); color:#ffb6c1; }
   .quest-row .qjoin {
     flex:0 0 190px; font-family:"Consolas","Courier New",monospace;
     background:#1b1b1b; border:1px solid #333; border-radius:4px;
@@ -56,12 +63,15 @@
 
   .icon-btn { display:inline-flex; align-items:center; justify-content:center; padding:5px 7px; line-height:0; }
 
-  #archiveSection { flex:0 0 auto; border-top:1px solid #2c2c2c; padding:0 18px; }
-  #archiveSection.hidden { display:none; }
+  #archiveSection, #seasonalSection { flex:0 0 auto; border-top:1px solid #2c2c2c; padding:0 18px; }
+  #archiveSection.hidden, #seasonalSection.hidden { display:none; }
   .archive-toggle { cursor:pointer; padding:8px 0; color:#9a9a9a; font-size:12px; user-select:none; }
   .archive-toggle:hover { color:#e6e6e6; }
-  #archiveRows { max-height:180px; overflow-y:auto; }
+  #archiveRows, #seasonalRows { max-height:180px; overflow-y:auto; }
   #archiveRows .quest-row { opacity:0.7; }
+
+  .form-checkbox { display:flex; align-items:center; gap:5px; font-size:12px; color:#9a9a9a; white-space:nowrap; }
+  .form-checkbox input { cursor:pointer; }
 
   .text-input { flex:0 0 190px; font-family:inherit; background:#1b1b1b; border:1px solid #333; border-radius:4px; padding:5px 8px; color:#dcdcdc; }
   .text-input:focus { outline:none; border-color:#4da3ff; }
@@ -109,7 +119,10 @@
         <h1 id="heading">Reminders</h1>
         <p id="description"></p>
       </div>
-      <div id="serverTime"><span class="label" id="serverTimeLabel"></span><span id="serverTimeValue"></span></div>
+      <div id="serverTime">
+        <span class="label" id="serverTimeLabel"></span><span id="serverTimeValue"></span>
+        <div id="nextFriday13Row"><span class="label" id="nextFriday13Label"></span><span id="nextFriday13Value"></span></div>
+      </div>
     </div>
   </header>
   <div id="toolbar">
@@ -132,9 +145,29 @@
       <option value="ultra"></option>
       <option value="other"></option>
     </select>
+    <label class="form-checkbox">
+      <input type="checkbox" id="questSeasonalInput">
+      <span id="questSeasonalLabel"></span>
+    </label>
+    <select id="questSeasonalEventInput" class="select-input" disabled>
+      <option value="nulgathBirthday"></option>
+      <option value="carnival"></option>
+      <option value="dageBirthday"></option>
+      <option value="aprilFools"></option>
+      <option value="starFestival"></option>
+      <option value="friday13"></option>
+      <option value="pirateDay"></option>
+      <option value="anniversary"></option>
+      <option value="blackFriday"></option>
+      <option value="frostval"></option>
+    </select>
     <button id="addQuestBtn" class="primary small"></button>
   </div>
   <div id="rows"></div>
+  <div id="seasonalSection" class="hidden">
+    <div id="seasonalToggle" class="archive-toggle"></div>
+    <div id="seasonalRows" style="display:none;"></div>
+  </div>
   <div id="archiveSection" class="hidden">
     <div id="archiveToggle" class="archive-toggle"></div>
     <div id="archiveRows" style="display:none;"></div>
@@ -159,6 +192,7 @@
   let messages, state, activeCharId = null;
   let draggedQuestId = null;
   let archiveExpanded = false;
+  let seasonalExpanded = false;
 
   // Plain inline SVGs (not emoji) so the copy button's icon renders identically across
   // platforms/fonts - swapped to a checkmark briefly after a successful copy.
@@ -407,33 +441,71 @@
     return messages.categoryOtherLabel;
   }
 
+  // Seasonal is a separate, orthogonal tag from category (class/ultra/other) - a quest can
+  // be both (e.g. a seasonal ultra boss (iara)) or seasonal on its own. `month` is 1-12 for events
+  // pinned to a calendar month; friday13 has none since it recurs on whichever months
+  // actually contain a Friday the 13th that year.
+  const SEASONAL_EVENT_KEYS = [
+    'nulgathBirthday', 'carnival', 'dageBirthday', 'aprilFools', 'starFestival',
+    'friday13', 'pirateDay', 'anniversary', 'blackFriday', 'frostval'
+  ];
+  function isSeasonal(quest) {
+    return !!quest.seasonal && SEASONAL_EVENT_KEYS.indexOf(quest.seasonalEvent) !== -1;
+  }
+  function seasonalShortOf(quest) {
+    return (messages.seasonalEvents[quest.seasonalEvent] || {}).short || '';
+  }
+  function seasonalLabelOf(quest) {
+    return (messages.seasonalEvents[quest.seasonalEvent] || {}).label || '';
+  }
+
+  // "Next Friday the 13th" shown near Server Time - deliberately does NOT check whether
+  // the 13th has already passed this month, per design: if the current calendar month
+  // contains a Friday the 13th at all, it counts as "This Month".
+  function getNextFriday13Text(now) {
+    const p = _getPartsInTZ(now, 'America/New_York');
+    for (let i = 0; i < 24; i++) {
+      const y = p.year + Math.floor((p.month - 1 + i) / 12);
+      const m = ((p.month - 1 + i) % 12) + 1;
+      const weekday = _getPartsInTZ(new Date(_etMidnightUtcMs(y, m, 13)), 'America/New_York').weekday;
+      if (weekday === 'Fri') {
+        return i === 0 ? messages.thisMonthLabel : messages.monthNames[m - 1];
+      }
+    }
+    return '';
+  }
+
   function nextResetText(quest) {
     const now = new Date();
     const nextReset = quest.type === 'weekly' ? getNextWeeklyReset(now) : getNextDailyReset(now);
     return formatTimeRemaining(nextReset.getTime() - now.getTime());
   }
 
-  // Reorders within the visible (non-hidden) subset only - hidden quests keep whatever
-  // relative order they already had, since the archive list isn't draggable.
+  // Reorders within the visible (non-hidden, non-seasonal) subset only - hidden/seasonal
+  // quests keep whatever relative order they already had, since those lists aren't draggable.
   function reorderQuest(draggedId, targetId) {
     if (draggedId === targetId) return;
-    const visible = state.quests.filter((q) => !q.hidden);
-    const hidden = state.quests.filter((q) => q.hidden);
+    const rest = state.quests.filter((q) => q.hidden || q.seasonal);
+    const visible = state.quests.filter((q) => !q.hidden && !q.seasonal);
     const fromIdx = visible.findIndex((q) => q.id === draggedId);
     const toIdx = visible.findIndex((q) => q.id === targetId);
     if (fromIdx === -1 || toIdx === -1) return;
     const [moved] = visible.splice(fromIdx, 1);
     visible.splice(toIdx, 0, moved);
-    state.quests = visible.concat(hidden);
+    state.quests = visible.concat(rest);
     persistState();
     renderQuestRows();
   }
 
-  function buildQuestRow(quest, isArchived) {
+  // opts.archived controls the Hide/Unhide button label; opts.draggable controls whether
+  // the row gets a drag handle - kept separate since the Seasonal section shows normal
+  // (non-hidden) rows that still shouldn't be reorderable there.
+  function buildQuestRow(quest, opts) {
+    opts = opts || {};
     const row = document.createElement('div');
     row.className = 'quest-row' + (isDoneNow(quest) ? ' done' : '');
 
-    if (!isArchived) {
+    if (opts.draggable) {
       const handle = document.createElement('span');
       handle.className = 'drag-handle';
       handle.draggable = true;
@@ -476,6 +548,15 @@
     categoryEl.className = 'qcategory ' + categoryKeyOf(quest);
     categoryEl.textContent = categoryLabelOf(quest);
 
+    // Always rendered (fixed width) even when not seasonal, so every row's columns after
+    // this one stay aligned regardless of which quests happen to be seasonal.
+    const seasonalEl = document.createElement('div');
+    seasonalEl.className = 'qseasonal' + (isSeasonal(quest) ? ' active' : '');
+    if (isSeasonal(quest)) {
+      seasonalEl.textContent = seasonalShortOf(quest);
+      seasonalEl.title = seasonalLabelOf(quest);
+    }
+
     const joinEl = document.createElement('div');
     joinEl.className = 'qjoin';
     joinEl.textContent = quest.joinCommand;
@@ -515,9 +596,9 @@
 
     const hideBtn = document.createElement('button');
     hideBtn.className = 'small';
-    hideBtn.textContent = isArchived ? messages.unhideButton : messages.hideButton;
+    hideBtn.textContent = opts.archived ? messages.unhideButton : messages.hideButton;
     hideBtn.onclick = () => {
-      quest.hidden = !isArchived;
+      quest.hidden = !opts.archived;
       persistState();
       renderQuestRows();
     };
@@ -535,6 +616,7 @@
     row.appendChild(nameEl);
     row.appendChild(typeEl);
     row.appendChild(categoryEl);
+    row.appendChild(seasonalEl);
     row.appendChild(joinEl);
     row.appendChild(copyBtn);
     row.appendChild(switchLabel);
@@ -559,7 +641,29 @@
     rowsEl.style.display = archiveExpanded ? '' : 'none';
     rowsEl.innerHTML = '';
     if (archiveExpanded) {
-      hiddenQuests.forEach((quest) => rowsEl.appendChild(buildQuestRow(quest, true)));
+      hiddenQuests.forEach((quest) => rowsEl.appendChild(buildQuestRow(quest, { archived: true, draggable: false })));
+    }
+  }
+
+  function renderSeasonalSection(seasonalQuests) {
+    const wrapEl = document.getElementById('seasonalSection');
+    const toggleEl = document.getElementById('seasonalToggle');
+    const rowsEl = document.getElementById('seasonalRows');
+
+    if (!activeCharId || seasonalQuests.length === 0) {
+      wrapEl.classList.add('hidden');
+      return;
+    }
+    wrapEl.classList.remove('hidden');
+    toggleEl.textContent = (seasonalExpanded ? '▾ ' : '▸ ') + messages.seasonalSectionLabel + ' (' + seasonalQuests.length + ')';
+    rowsEl.style.display = seasonalExpanded ? '' : 'none';
+    rowsEl.innerHTML = '';
+    if (seasonalExpanded) {
+      // Same done-last sort/tint as the main list, but never filtered out by "Show completed" -
+      // seasonal quests are occasional check-ins, not something you want to disappear once done.
+      seasonalQuests.slice()
+        .sort((a, b) => (isDoneNow(a) ? 1 : 0) - (isDoneNow(b) ? 1 : 0))
+        .forEach((quest) => rowsEl.appendChild(buildQuestRow(quest, { archived: false, draggable: false })));
     }
   }
 
@@ -571,10 +675,15 @@
       hint.id = 'noCharsHint';
       hint.textContent = messages.noCharactersHint;
       rowsEl.appendChild(hint);
+      renderSeasonalSection([]);
       renderArchiveSection([]);
       return;
     }
-    let visibleQuests = state.quests.filter((q) => !q.hidden);
+    // Hidden quests are pulled out first (regardless of seasonal), then seasonal quests get
+    // their own section, so a quest lands in exactly one of: main list / Seasonal / Hidden.
+    const nonHidden = state.quests.filter((q) => !q.hidden);
+    const seasonalQuests = nonHidden.filter((q) => isSeasonal(q));
+    let visibleQuests = nonHidden.filter((q) => !isSeasonal(q));
     if (state.showCompleted) {
       // Not-done quests first, done ones sink to the bottom - purely a display-time sort,
       // the underlying state.quests order (which drag-and-drop reordering controls) is untouched.
@@ -582,8 +691,9 @@
     } else {
       visibleQuests = visibleQuests.filter((q) => !isDoneNow(q));
     }
-    visibleQuests.forEach((quest) => rowsEl.appendChild(buildQuestRow(quest, false)));
+    visibleQuests.forEach((quest) => rowsEl.appendChild(buildQuestRow(quest, { archived: false, draggable: true })));
 
+    renderSeasonalSection(seasonalQuests);
     renderArchiveSection(state.quests.filter((q) => q.hidden));
   }
 
@@ -615,8 +725,19 @@
     document.getElementById('questCategoryInput').options[0].textContent = messages.categoryClassLabel;
     document.getElementById('questCategoryInput').options[1].textContent = messages.categoryUltraLabel;
     document.getElementById('questCategoryInput').options[2].textContent = messages.categoryOtherLabel;
+    document.getElementById('questSeasonalLabel').textContent = messages.seasonalToggleLabel;
+    SEASONAL_EVENT_KEYS.forEach((key, i) => {
+      document.getElementById('questSeasonalEventInput').options[i].textContent = messages.seasonalEvents[key].label;
+    });
     document.getElementById('addQuestBtn').textContent = messages.addQuestButton;
     document.getElementById('serverTimeLabel').textContent = messages.serverTimeLabel;
+    document.getElementById('nextFriday13Label').textContent = messages.nextFriday13Label;
+
+    const seasonalToggleInput = document.getElementById('questSeasonalInput');
+    const seasonalEventInput = document.getElementById('questSeasonalEventInput');
+    seasonalToggleInput.addEventListener('change', () => {
+      seasonalEventInput.disabled = !seasonalToggleInput.checked;
+    });
 
     document.getElementById('addQuestBtn').onclick = () => {
       const nameInput = document.getElementById('questNameInput');
@@ -630,9 +751,13 @@
         joinCommand: joinInput.value.trim(),
         type: typeInput.value === 'weekly' ? 'weekly' : 'daily',
         category: categoryInput.value,
+        seasonal: seasonalToggleInput.checked,
+        seasonalEvent: seasonalToggleInput.checked ? seasonalEventInput.value : null,
         done: {}
       });
       nameInput.value = ''; joinInput.value = '';
+      seasonalToggleInput.checked = false;
+      seasonalEventInput.disabled = true;
       persistState();
       renderQuestRows();
     };
@@ -641,10 +766,20 @@
       archiveExpanded = !archiveExpanded;
       renderQuestRows();
     };
+    document.getElementById('seasonalToggle').onclick = () => {
+      seasonalExpanded = !seasonalExpanded;
+      renderQuestRows();
+    };
 
     const serverTimeValueEl = document.getElementById('serverTimeValue');
-    serverTimeValueEl.textContent = formatServerTimeText(new Date());
-    setInterval(() => { serverTimeValueEl.textContent = formatServerTimeText(new Date()); }, 1000);
+    const nextFriday13ValueEl = document.getElementById('nextFriday13Value');
+    function refreshClock() {
+      const now = new Date();
+      serverTimeValueEl.textContent = formatServerTimeText(now);
+      nextFriday13ValueEl.textContent = getNextFriday13Text(now);
+    }
+    refreshClock();
+    setInterval(refreshClock, 1000);
 
     activeCharId = state.characters.length ? state.characters[0].id : null;
     renderTabs();

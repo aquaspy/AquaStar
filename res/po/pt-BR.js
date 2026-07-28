@@ -144,6 +144,26 @@ exports.remindersMessages = {
     categoryClassLabel : "Classe",
     categoryUltraLabel : "Ultra Bosses",
     categoryOtherLabel : "Outros",
+    seasonalToggleLabel: "Sazonal",
+    seasonalSectionLabel: "Sazonais",
+    nextFriday13Label  : "Próxima sexta-feira 13: ",
+    thisMonthLabel     : "Este Mês",
+    monthNames: [
+        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ],
+    seasonalEvents: {
+        nulgathBirthday: { label: "Aniversário do Nulgath (Jan)",                       short: "JAN" },
+        carnival:        { label: "Carnaval / Ano Novo Lunar (Fev)",                    short: "FEV" },
+        dageBirthday:    { label: "Aniversário do Dage (Mar)",                          short: "MAR" },
+        aprilFools:      { label: "Dia da Mentira (Abr)",                               short: "ABR" },
+        starFestival:    { label: "Festival das Estrelas / Verão (Jul)",                short: "JUL" },
+        friday13:        { label: "Sexta-feira 13",                                     short: "S13" },
+        pirateDay:       { label: "Dia de Falar Como Pirata / Independência (Set)",     short: "SET" },
+        anniversary:     { label: "Aniversário do AQW (Out)",                           short: "OUT" },
+        blackFriday:     { label: "Black Friday (Nov)",                                 short: "NOV" },
+        frostval:        { label: "Frostval / Ano Novo (Dez)",                          short: "DEZ" }
+    },
     addCharacterTab    : "+ Adicionar Personagem",
     promptCharacterName: "Nome do personagem:",
     promptOkButton     : "OK",
