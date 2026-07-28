@@ -33,7 +33,15 @@ function newBrowserWindow(new_path, isMainWin=false){
     newWin.setMenuBarVisibility(false); //Remove default electron menu
     newWin.on('focus', () => { lastFocusedWindow = newWin; });
     newWin.loadURL(new_path);
-    
+
+    // Debug mode opens DevTools on every window created through here (main, wiki,
+    // design notes, account, char page lookup, game instances...). The char page
+    // PRINT window (charPagePrint(), below) is built directly with `new BrowserWindow`
+    // and never goes through this function, so it's never affected.
+    if (constant.isDebugBuild || constant.isDevToolsEnabled) {
+        newWin.webContents.openDevTools();
+    }
+
     if (originalPath == constant.mainPath || 
         originalPath == constant.testingAQW) {
 
@@ -50,7 +58,8 @@ function newBrowserWindow(new_path, isMainWin=false){
         // Deciding the new title name...
         var winTitle = "";
         if (originalPath == constant.mainPath){
-            winTitle = "AquaStar - " + (constant.isOldAqlite ? "Older/Custom AQLite":" Adventure Quest Worlds");
+            var displayName = constant.resolveAppDisplayName(keybinds.keybinds);
+            winTitle = displayName + " - " + (constant.isOldAqlite ? "Older/Custom AQLite":" Adventure Quest Worlds");
         }
         else {
             winTitle = "AquaStar - AQW Testing Version!";
@@ -363,7 +372,22 @@ function _notifyWindow(targetWin, notif, resetAfter = true){
     }
 }
 
-function _mkdir (filepath){ 
+// Settings screen - singleton window, just refocus if already open.
+let settingsWin = null;
+function openSettingsWindow(){
+    if (settingsWin && !settingsWin.isDestroyed()) {
+        settingsWin.focus();
+        return settingsWin;
+    }
+    settingsWin = new BrowserWindow(constant.settingsConfig);
+    settingsWin.setMenuBarVisibility(false);
+    settingsWin.setTitle("AquaStar - Settings");
+    settingsWin.loadURL(constant.settingsUrl);
+    settingsWin.on('closed', () => { settingsWin = null; });
+    return settingsWin;
+}
+
+function _mkdir (filepath){
     try { fs.lstatSync(filepath).isDirectory() }
     catch (ex) {
         if (ex.code == 'ENOENT') {
@@ -377,6 +401,7 @@ function _mkdir (filepath){
 
 exports.newBrowserWindow    = newBrowserWindow;
 exports.charPagePrint       = charPagePrint;
+exports.openSettingsWindow  = openSettingsWindow;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;

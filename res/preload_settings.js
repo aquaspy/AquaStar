@@ -1,0 +1,9 @@
+const { contextBridge, ipcRenderer } = require("electron");
+
+contextBridge.exposeInMainWorld("aquastarSettings", {
+  getKeybindings:  () => ipcRenderer.invoke("getKeybindings"),
+  getMessages:     () => ipcRenderer.invoke("getSettingsMessages"),
+  saveKeybindings: (binds) => ipcRenderer.invoke("saveKeybindings", binds),
+  restartApp:      () => ipcRenderer.send("restartApp"),
+  platform:        process.platform
+});

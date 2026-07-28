@@ -93,11 +93,6 @@ function createWindow () {
         })
     }
 
-    //Console
-    if (constant.isDebugBuild){
-        win.webContents.openDevTools()
-    }
-
 }
 
 // For anyone looking why we arent sandboxed and neither is AE...

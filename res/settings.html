@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html style="margin:0;padding:0;width:100%;height:100%;">
+<head>
+<meta charset="UTF-8">
+<title>AquaStar - Settings</title>
+<style>
+  :root {
+    color-scheme: dark;
+  }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #121212; color: #e6e6e6;
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    font-size: 13px;
+  }
+  #app { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
+
+  header {
+    padding: 14px 18px 12px 18px;
+    border-bottom: 1px solid #2c2c2c;
+    flex: 0 0 auto;
+  }
+  header h1 { margin: 0 0 4px 0; font-size: 16px; }
+  header p#description { margin: 0 0 8px 0; color: #9a9a9a; line-height: 1.4; }
+  #saveLocation { color: #9a9a9a; font-size: 11px; word-break: break-all; }
+  #saveLocation code { color: #cfcfcf; }
+
+  #rows { flex: 1 1 auto; overflow-y: auto; padding: 4px 18px; }
+  .row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 0; border-bottom: 1px solid #202020;
+  }
+  .row .label { flex: 1 1 auto; min-width: 0; }
+  .row .label .mac { color: #6f6f6f; font-size: 11px; }
+  .combo {
+    flex: 0 0 190px;
+    font-family: "Consolas", "Courier New", monospace;
+    background: #1b1b1b; border: 1px solid #333; border-radius: 4px;
+    padding: 5px 8px; text-align: center; color: #dcdcdc;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .combo.recording { color: #ffcf5c; border-color: #7a6323; animation: pulse 1s infinite; }
+  .combo.changed { border-color: #4da3ff; color: #9cc9ff; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
+
+  .section-heading {
+    padding: 12px 0 6px; font-size: 11px; color: #9a9a9a;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .row .label .hint { color: #6f6f6f; font-size: 11px; display: block; margin-top: 2px; }
+  .text-input {
+    flex: 0 0 190px;
+    font-family: inherit;
+    background: #1b1b1b; border: 1px solid #333; border-radius: 4px;
+    padding: 5px 8px; color: #dcdcdc;
+  }
+  .text-input:focus { outline: none; border-color: #4da3ff; }
+  .text-input.changed { border-color: #4da3ff; color: #9cc9ff; }
+  .switch {
+    position: relative; display: inline-block;
+    flex: 0 0 38px; width: 38px; height: 22px;
+  }
+  .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .switch .slider {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: #1b1b1b; border: 1px solid #383838; border-radius: 22px;
+    cursor: pointer; transition: background-color .15s, border-color .15s;
+  }
+  .switch .slider::before {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #9a9a9a; transition: transform .15s, background-color .15s;
+  }
+  .switch input:checked + .slider { background: #2b6fce; border-color: #2b6fce; }
+  .switch input:checked + .slider::before { transform: translateX(16px); background: #fff; }
+  .switch input:focus-visible + .slider { outline: 2px solid #4da3ff; outline-offset: 2px; }
+
+  button {
+    background: #232323; color: #e6e6e6; border: 1px solid #383838;
+    border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 12px;
+  }
+  button:hover { background: #2c2c2c; }
+  button:active { background: #1a1a1a; }
+  button.small { padding: 5px 10px; font-size: 11px; }
+  button.primary { background: #2b6fce; border-color: #2b6fce; color: #fff; }
+  button.primary:hover { background: #3a7fe0; }
+  button:disabled { opacity: .45; cursor: default; }
+
+  footer {
+    flex: 0 0 auto; padding: 12px 18px 14px 18px; border-top: 1px solid #2c2c2c;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  #status { min-height: 15px; color: #7fd08a; font-size: 12px; }
+  #status.pending { color: #ffcf5c; }
+  #footerButtons { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="heading">Keybind Settings</h1>
+    <p id="description"></p>
+    <div id="saveLocation"></div>
+  </header>
+
+  <div id="rows"></div>
+
+  <footer>
+    <span id="status"></span>
+    <div id="footerButtons">
+      <button id="resetAllBtn" class="small"></button>
+      <button id="restartBtn" class="small" disabled></button>
+      <button id="saveBtn" class="primary"></button>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const api = window.aquastarSettings;
+
+  const MODIFIER_CODES = new Set([
+    'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight',
+    'ShiftLeft', 'ShiftRight', 'MetaLeft', 'MetaRight'
+  ]);
+
+  const CODE_KEY_MAP = {
+    Escape: 'Esc', Space: 'Space', Enter: 'Return', Tab: 'Tab',
+    ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right',
+    Backspace: 'Backspace', Delete: 'Delete', Insert: 'Insert',
+    Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown',
+    Minus: '-', Equal: '=', Comma: ',', Period: '.', Slash: '/',
+    Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']',
+    Backslash: '\\', Backquote: '`'
+  };
+
+  const MAC_ONLY_KEYS = new Set(['forward', 'backward']);
+  const CHARPAGE_ONLY_KEYS = new Set(['cpSshot']);
+
+  // Non-keybind settings shown in the "Other Options" section - which widget renders each.
+  const OPTION_TYPES = {
+    playerCharacter:   'text',
+    featurePlayerName: 'boolean',
+    enableDevTools:    'boolean'
+  };
+
+  // Boolean options that need an explicit confirm before flipping on.
+  const WARN_ON_ENABLE_KEYS = new Set(['enableDevTools']);
+
+  // Accelerators are stored/sent as Electron's "CmdOrCtrl" internally (that's what
+  // electron-localshortcut expects); only the on-screen text is swapped per OS.
+  const modLabel = (api.platform === 'darwin') ? 'Cmd' : 'Ctrl';
+  function formatForDisplay(str) {
+    return (str || '').replace(/CmdOrCtrl/g, modLabel);
+  }
+
+  function normalizeKey(e) {
+    const code = e.code || '';
+    if (MODIFIER_CODES.has(code)) return null;
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+    if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+    if (/^Numpad[0-9]$/.test(code)) return 'num' + code.slice(6);
+    if (/^F([1-9]|1[0-9]|2[0-4])$/.test(code)) return code;
+    if (CODE_KEY_MAP[code]) return CODE_KEY_MAP[code];
+    return null;
+  }
+
+  function isBareEscape(e) {
+    return e.code === 'Escape' && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey;
+  }
+
+  function acceleratorFromEvent(e) {
+    const key = normalizeKey(e);
+    if (key === null) return null;
+    const parts = [];
+    if (e.ctrlKey || e.metaKey) parts.push('CmdOrCtrl');
+    if (e.altKey) parts.push('Alt');
+    if (e.shiftKey) parts.push('Shift');
+    parts.push(key);
+    return parts.join('+');
+  }
+
+  function toDisplay(value) {
+    return Array.isArray(value) ? value.join(', ') : (value || '');
+  }
+
+  function resetRowToDefault(key) {
+    const st = rowState[key];
+    if (!st) return;
+    if (st.recording) stopRecording(key);
+    if (st.type === 'text-option') {
+      st.value = options[key] || '';
+      st.comboEl.value = st.value;
+      st.comboEl.classList.toggle('changed', st.value !== st.initial);
+    } else if (st.type === 'boolean-option') {
+      st.value = options[key] === true;
+      st.comboEl.checked = st.value;
+    } else {
+      st.value = toDisplay(defaults[key]);
+      st.comboEl.textContent = formatForDisplay(st.value) || '(none)';
+      st.comboEl.classList.toggle('changed', st.value !== st.initial);
+    }
+  }
+
+  let messages, defaults, current, options;
+  // key -> { comboEl, initial: string, value: string, recording: bool, type: 'keybind'|'option' }
+  const rowState = {};
+  let activeRecordingKey = null;
+
+  function setStatus(text, pending) {
+    const el = document.getElementById('status');
+    el.textContent = text || '';
+    el.classList.toggle('pending', !!pending);
+  }
+
+  function anyChanges() {
+    return Object.keys(rowState).some((k) => rowState[k].value !== rowState[k].initial);
+  }
+
+  function refreshSaveState() {
+    document.getElementById('saveBtn').disabled = !anyChanges();
+    if (anyChanges()) setStatus(null);
+  }
+
+  function stopRecording(key) {
+    const st = rowState[key];
+    if (!st) return;
+    st.recording = false;
+    st.comboEl.classList.remove('recording');
+    st.comboEl.textContent = formatForDisplay(st.value) || '(none)';
+    st.comboEl.classList.toggle('changed', st.value !== st.initial);
+    if (activeRecordingKey === key) activeRecordingKey = null;
+    document.removeEventListener('keydown', st.handler, true);
+  }
+
+  function startRecording(key) {
+    if (activeRecordingKey && activeRecordingKey !== key) {
+      stopRecording(activeRecordingKey);
+    }
+    const st = rowState[key];
+    st.recording = true;
+    activeRecordingKey = key;
+    st.comboEl.textContent = messages.recordingLabel;
+    st.comboEl.classList.add('recording');
+
+    st.handler = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (isBareEscape(e)) {
+        stopRecording(key);
+        return;
+      }
+      const accel = acceleratorFromEvent(e);
+      if (accel === null) return; // waiting for a real key, modifier alone isn't enough
+      st.value = accel;
+      stopRecording(key);
+      refreshSaveState();
+    };
+    document.addEventListener('keydown', st.handler, true);
+  }
+
+  function buildRow(key) {
+    const initialValue = toDisplay(current[key] !== undefined ? current[key] : defaults[key]);
+    const label = (messages.labels && messages.labels[key]) || key;
+
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'label';
+    labelEl.textContent = label;
+    const restrictionText =
+      (MAC_ONLY_KEYS.has(key) ? messages.macOnlyLabel : '') +
+      (CHARPAGE_ONLY_KEYS.has(key) ? messages.charpageOnly : '');
+    if (restrictionText) {
+      const mac = document.createElement('span');
+      mac.className = 'mac';
+      mac.textContent = restrictionText;
+      labelEl.appendChild(mac);
+    }
+
+    const comboEl = document.createElement('div');
+    comboEl.className = 'combo';
+    comboEl.textContent = formatForDisplay(initialValue) || '(none)';
+
+    const recordBtn = document.createElement('button');
+    recordBtn.className = 'small';
+    recordBtn.textContent = messages.recordButton;
+    recordBtn.onclick = () => startRecording(key);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'small';
+    resetBtn.textContent = messages.resetButton;
+    resetBtn.onclick = () => { resetRowToDefault(key); refreshSaveState(); };
+
+    row.appendChild(labelEl);
+    row.appendChild(comboEl);
+    row.appendChild(recordBtn);
+    row.appendChild(resetBtn);
+
+    rowState[key] = { comboEl: comboEl, initial: initialValue, value: initialValue, recording: false, type: 'keybind' };
+
+    return row;
+  }
+
+  function _buildOptionLabel(key) {
+    const label = (messages.optionLabels && messages.optionLabels[key]) || key;
+    const hintText = messages.optionHints && messages.optionHints[key];
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'label';
+    labelEl.textContent = label;
+    if (hintText) {
+      const hint = document.createElement('span');
+      hint.className = 'hint';
+      hint.textContent = hintText;
+      labelEl.appendChild(hint);
+    }
+    return labelEl;
+  }
+
+  function buildTextOptionRow(key) {
+    const initialValue = (current[key] !== undefined ? current[key] : options[key]) || '';
+
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const inputEl = document.createElement('input');
+    inputEl.type = 'text';
+    inputEl.className = 'text-input';
+    inputEl.spellcheck = false;
+    inputEl.value = initialValue;
+    inputEl.addEventListener('input', () => {
+      // Only alphanumeric characters - this value gets dropped straight into a URL query string / window title.
+      const sanitized = inputEl.value.replace(/[^a-zA-Z0-9]/g, '');
+      if (sanitized !== inputEl.value) inputEl.value = sanitized;
+      const st = rowState[key];
+      st.value = inputEl.value;
+      st.comboEl.classList.toggle('changed', st.value !== st.initial);
+      refreshSaveState();
+    });
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'small';
+    resetBtn.textContent = messages.resetButton;
+    resetBtn.onclick = () => { resetRowToDefault(key); refreshSaveState(); };
+
+    row.appendChild(_buildOptionLabel(key));
+    row.appendChild(inputEl);
+    row.appendChild(resetBtn);
+
+    rowState[key] = { comboEl: inputEl, initial: initialValue, value: initialValue, recording: false, type: 'text-option' };
+
+    return row;
+  }
+
+  function buildBooleanOptionRow(key) {
+    const initialValue = (current[key] !== undefined ? current[key] : options[key]) === true;
+
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const switchLabel = document.createElement('label');
+    switchLabel.className = 'switch';
+
+    const inputEl = document.createElement('input');
+    inputEl.type = 'checkbox';
+    inputEl.checked = initialValue;
+    inputEl.addEventListener('change', () => {
+      if (inputEl.checked && WARN_ON_ENABLE_KEYS.has(key)) {
+        const warnText = messages.optionWarnings && messages.optionWarnings[key];
+        if (warnText && !window.confirm(warnText)) {
+          inputEl.checked = false;
+          return;
+        }
+      }
+      const st = rowState[key];
+      st.value = inputEl.checked;
+      refreshSaveState();
+    });
+
+    const sliderEl = document.createElement('span');
+    sliderEl.className = 'slider';
+
+    switchLabel.appendChild(inputEl);
+    switchLabel.appendChild(sliderEl);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'small';
+    resetBtn.textContent = messages.resetButton;
+    resetBtn.onclick = () => { resetRowToDefault(key); refreshSaveState(); };
+
+    row.appendChild(_buildOptionLabel(key));
+    row.appendChild(switchLabel);
+    row.appendChild(resetBtn);
+
+    rowState[key] = { comboEl: inputEl, initial: initialValue, value: initialValue, recording: false, type: 'boolean-option' };
+
+    return row;
+  }
+
+  async function init() {
+    const [kb, msgs] = await Promise.all([api.getKeybindings(), api.getMessages()]);
+    current = kb.current;
+    defaults = kb.defaults;
+    options = kb.options || {};
+    messages = msgs;
+
+    document.title = messages.title;
+    document.getElementById('heading').textContent = messages.heading;
+    document.getElementById('description').textContent = messages.description;
+    document.getElementById('saveLocation').innerHTML =
+      messages.saveLocationLabel + '<code>' + kb.savePath.replace(/</g, '&lt;') + '</code>';
+
+    const rowsEl = document.getElementById('rows');
+    Object.keys(defaults).forEach((key) => rowsEl.appendChild(buildRow(key)));
+
+    const optionKeys = Object.keys(options);
+    if (optionKeys.length) {
+      const heading = document.createElement('div');
+      heading.className = 'section-heading';
+      heading.textContent = messages.optionsHeading || '';
+      rowsEl.appendChild(heading);
+      optionKeys.forEach((key) => {
+        const builder = OPTION_TYPES[key] === 'boolean' ? buildBooleanOptionRow : buildTextOptionRow;
+        rowsEl.appendChild(builder(key));
+      });
+    }
+
+    document.getElementById('saveBtn').textContent = messages.saveButton;
+    document.getElementById('resetAllBtn').textContent = messages.resetAllButton;
+    document.getElementById('restartBtn').textContent = messages.restartButton;
+
+    document.getElementById('resetAllBtn').onclick = () => {
+      Object.keys(rowState).forEach((key) => resetRowToDefault(key));
+      refreshSaveState();
+    };
+
+    document.getElementById('saveBtn').onclick = async () => {
+      const changed = {};
+      Object.keys(rowState).forEach((key) => {
+        const st = rowState[key];
+        if (st.value !== st.initial) changed[key] = st.value;
+      });
+      if (Object.keys(changed).length === 0) return;
+
+      document.getElementById('saveBtn').disabled = true;
+      try {
+        const result = await api.saveKeybindings(changed);
+        Object.keys(changed).forEach((key) => { rowState[key].initial = rowState[key].value; });
+        setStatus(messages.savedMessage, true);
+        document.getElementById('saveLocation').innerHTML =
+          messages.saveLocationLabel + '<code>' + result.savedTo.replace(/</g, '&lt;') + '</code>';
+        document.getElementById('restartBtn').disabled = false;
+      } finally {
+        refreshSaveState();
+      }
+    };
+
+    document.getElementById('restartBtn').onclick = () => api.restartApp();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

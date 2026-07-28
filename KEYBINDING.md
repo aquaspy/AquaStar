@@ -55,6 +55,8 @@ For a example of the defaults, check out the OriginalKeybinds variable on const.
 
  - **NOTE2** : there is also a "customUrl" mode. With commas, insert a URL (like https://www.coololdflashgame.org/my-favorite-child-game.swf), and it will run. **Wont work in "custom swf"** mode, but can be used the same way if you have the flash file downloaded. a **null** value disables it and reverts back to the default AQW.
 
+ - **NOTE3** : there is also a "enableDevTools" mode. When **true**, opens the DevTools console automatically on startup, same as an actual Debug build does, but without needing to rebuild the app. Uses **true** and **false** (no quotes) values only.
+
 You dont need to put all parameters (after 1.2.1). so you could for example change only a single value you dont like. The following is an example of the aquastar.json file, with only one change, which is the design notes keybind, from the original to Ctrl D.
 
 ```
@@ -83,7 +85,7 @@ https://www.electronjs.org/docs/latest/api/accelerator
 
 ## Sounds complicated, will there be a Custom menu for it?
 
-At the current point, no. But maybe soon a menu might be created. Maybe in the near future or maybe soon...
+Yes! There is now a Settings screen (default keybind `Alt+9`, also available through the window menu on non-game windows) where you can record and save new keybindings without touching any JSON by hand. It still writes to the same `aquastar.json` file described above, so everything on this page still applies - the screen is just a friendlier way to edit it. Changes require restarting AquaStar to take effect (the Settings screen has a "Restart AquaStar Now" button for that).
 
 ## Heey, i did a change and it failed! 
 

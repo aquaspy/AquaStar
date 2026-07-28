@@ -25,7 +25,8 @@ exports.dialogMessages = {
         expand(k.sshot)     + ' - Screenshot the game window (AQW and AQLITE only). They are saved in another folder as detailed below.\n' +
         expand(k.record)    + ' - Record the Game Screen. Use it again to stop.\n' +
         expand(k.reload)    + " - Reload the pages, like in a browser\n" +
-        expand(k.reloadCache)+' - Clears all game cache, some cookies and refresh the window (can fix some bugs in game).\n\n' +
+        expand(k.reloadCache)+' - Clears all game cache, some cookies and refresh the window (can fix some bugs in game)\n' +
+        expand(k.settings)  + ' - Opens the Settings screen, to customize keybindings.\n\n' +
         'For an older/custom aqlite file, please name it "aqlite_old.swf" and put it in the same folder as the executable, as said below!\n\n' +
         'Note:' + expand(k.help) + ' Shows this message.';
     },
@@ -67,9 +68,62 @@ exports.menuMessages = {
     menuCharpage     : "Charpages",
     menuGuide        : "AQW Guides",
     menuForge        : "Forge Enchants",
+    menuAqwTracker   : "Aqw Tracker",
     menuReddit       : "AQW Subreddit",
     menuTwitter      : "Alina's Twitter",
     menuTakeShot     : "Take a SShot of CP (CP ONLY!)",
     menuCopyURL      : "Copy this page's URL",
-    menuReloadPage   : "Reload this page"
+    menuReloadPage   : "Reload this page",
+    menuSettings     : "Settings"
+}
+
+exports.settingsMessages = {
+    title            : "AquaStar - Settings",
+    heading          : "Keybind Settings",
+    description      : "Click \"Record\" and press a new key combination to change a shortcut. Changes are saved to the file shown below and require restarting AquaStar to take effect.",
+    saveLocationLabel: "Saving to: ",
+    saveButton       : "Save Changes",
+    resetAllButton   : "Reset All to Default",
+    restartButton    : "Restart AquaStar Now",
+    closeButton      : "Close",
+    recordButton     : "Record",
+    recordingLabel   : "Press keys... (Esc to cancel)",
+    resetButton      : "Reset",
+    savedMessage     : "Saved! Restart AquaStar to apply the new keybindings.",
+    macOnlyLabel     : " (macOS only)",
+    charpageOnly     : " (char page only)",
+    labels: {
+        wiki:        "Open AQW Wiki",
+        account:     "Open Account Page",
+        design:      "Open Design Notes",
+        charpage:    "Character Lookup",
+        newAqw:      "Open New AQW Instance",
+        newTest:     "Open Testing AQW Instance",
+        about:       "About AquaStar",
+        fullscreen:  "Toggle Fullscreen",
+        sshot:       "Screenshot Game Window",
+        cpSshot:     "Screenshot Char Page",
+        reload:      "Reload Page",
+        reloadCache: "Reload and Clear Cache",
+        dragon:      "Open DragonFable",
+        forward:     "Go Forward",
+        backward:    "Go Backward",
+        help:        "Show Help",
+        settings:    "Open Settings (this screen)",
+        record:      "Record Game Screen"
+    },
+    optionsHeading: "Other Options",
+    optionLabels: {
+        playerCharacter:   "Player Character",
+        featurePlayerName: "Show Player Character in Window Title",
+        enableDevTools:    "Enable DevTools"
+    },
+    optionHints: {
+        playerCharacter:   "Letters and numbers only. Used by the Char Page shortcut (Alt+P) to open straight to this character.",
+        featurePlayerName: "When on, replaces \"AquaStar\" in the main window title with your Player Character above.",
+        enableDevTools:    "Opens the DevTools console automatically on startup."
+    },
+    optionWarnings: {
+        enableDevTools: "This option is for developers. Normal players usually don't need it. Enable anyway?"
+    }
 }

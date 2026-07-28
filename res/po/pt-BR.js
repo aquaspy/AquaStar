@@ -25,7 +25,8 @@ exports.dialogMessages = {
         expand(k.sshot)     + ' - Printa a tela do jogo (apenas AQW e AQLITE). Eles são salvos em uma pasta separada dita abaixo.\n' +
         expand(k.record)    + ' - Grava a tela do jogo. Use de novo para parar.\n' +
         expand(k.reload)    + " - Recarregam as páginas, como em um navegador\n" +
-        expand(k.reloadCache)+' - Limpa todo o cachê do jogo, alguns cookies, e recarrega a página (pode consertar bugs dentro do jogo).\n\n' +
+        expand(k.reloadCache)+' - Limpa todo o cachê do jogo, alguns cookies, e recarrega a página (pode consertar bugs dentro do jogo)\n' +
+        expand(k.settings)  + ' - Abre a tela de Configurações, para customizar as keybindings.\n\n' +
         'Para um aqlite antigo/customizado, por favor nomeie ele para "aqlite_old.swf" e o coloque na mesma pasta da executável, dita abaixo!\n\n' +
         'Nota: ' + expand(k.help) + ' Mostra esta mensagem.';
     },
@@ -68,9 +69,62 @@ exports.menuMessages = {
     menuCharpage     : "Charpages",
     menuGuide        : "Guia AQW",
     menuForge        : "Encantamentos de Forja",
+    menuAqwTracker   : "Aqw Tracker",
     menuReddit       : "AQW Subreddit",
     menuTwitter      : "Twitter da Alina",
     menuTakeShot     : "Printa a Charpage (somente CP!)",
     menuCopyURL      : "Copiar o link da página",
     menuReloadPage   : "Recaregar a página",
+    menuSettings     : "Configurações"
+}
+
+exports.settingsMessages = {
+    title            : "AquaStar - Configurações",
+    heading          : "Configurações de Keybindings",
+    description      : "Clique em \"Gravar\" e pressione uma nova combinação de teclas para alterar um atalho. As mudanças são salvas no arquivo mostrado abaixo e exigem reiniciar o AquaStar para terem efeito.",
+    saveLocationLabel: "Salvando em: ",
+    saveButton       : "Salvar Alterações",
+    resetAllButton   : "Restaurar Tudo ao Padrão",
+    restartButton    : "Reiniciar o AquaStar Agora",
+    closeButton      : "Fechar",
+    recordButton     : "Gravar",
+    recordingLabel   : "Pressione as teclas... (Esc para cancelar)",
+    resetButton      : "Restaurar",
+    savedMessage     : "Salvo! Reinicie o AquaStar para aplicar as novas keybindings.",
+    macOnlyLabel     : " (somente macOS)",
+    charpageOnly     : " (somente char pages)",
+    labels: {
+        wiki:        "Abrir a Wiki do AQW",
+        account:     "Abrir a Página da Conta",
+        design:      "Abrir as Design Notes",
+        charpage:    "Consultar Char Page",
+        newAqw:      "Abrir Nova Instância do AQW",
+        newTest:     "Abrir Instância de Testes do AQW",
+        about:       "Sobre o AquaStar",
+        fullscreen:  "Ativar/Desativar Fullscreen",
+        sshot:       "Printar a Janela do Jogo",
+        cpSshot:     "Printar a Char Page",
+        reload:      "Recarregar a Página",
+        reloadCache: "Recarregar e Limpar o Cachê",
+        dragon:      "Abrir o DragonFable",
+        forward:     "Avançar",
+        backward:    "Voltar",
+        help:        "Mostrar a Ajuda",
+        settings:    "Abrir Configurações (esta tela)",
+        record:      "Gravar a Tela do Jogo"
+    },
+    optionsHeading: "Outras Opções",
+    optionLabels: {
+        playerCharacter:   "Personagem",
+        featurePlayerName: "Mostrar Personagem no Título da Janela",
+        enableDevTools:    "Ativar DevTools"
+    },
+    optionHints: {
+        playerCharacter:   "Apenas letras e números. Usado pelo atalho da Char Page (Alt+P) para abrir direto neste personagem.",
+        featurePlayerName: "Quando ativado, substitui \"AquaStar\" no título da janela principal pelo Personagem acima.",
+        enableDevTools:    "Abre o console de DevTools automaticamente ao iniciar."
+    },
+    optionWarnings: {
+        enableDevTools: "Esta opção é para desenvolvedores. Players normalmente não precisam dela. Ativar mesmo assim?"
+    }
 }

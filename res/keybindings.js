@@ -1,7 +1,8 @@
 const inst     = require('./instances.js');
 const constant = require('./const.js');
+const locale   = require('./locale.js');
 const fs       = require('fs');
-const { globalShortcut, BrowserWindow } = require('electron');
+const { globalShortcut, BrowserWindow, ipcMain, app } = require('electron');
 const electronLocalshortcut = require('electron-localshortcut');
 
 var finalKeybinds = {};
@@ -14,7 +15,7 @@ const CACHE_STORAGES = [
 
 function customKeybinds() {
     var list = constant.listValidKeybindLocations;
-    finalKeybinds = Object.assign({}, constant.originalKeybinds);
+    finalKeybinds = Object.assign({}, constant.originalKeybinds, constant.originalOptions);
 
     if (list != null && list.length != 0 ) {
         list.forEach((jsonPath) => {
@@ -57,11 +58,12 @@ const processKeybings = function (){
     if (k.swfLog == true) constant.enableSWFLogging();
     if (k.customUrl != undefined && k.customUrl != null) constant.changeMainUrl(k.customUrl);
     if (k.useDirectWmode !== undefined) constant.setUseDirectWmode(k.useDirectWmode);
+    if (k.enableDevTools == true) constant.enableDevTools();
 
     addKeybind(k.wiki    , ()=>{inst.newBrowserWindow(constant.wikiReleases)});
     addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
     addKeybind(k.account , ()=>{inst.newBrowserWindow(constant.accountAq)});
-    addKeybind(k.charpage, ()=>{inst.newBrowserWindow(constant.charLookup)});
+    addKeybind(k.charpage, ()=>{inst.newBrowserWindow(constant.buildCharLookupUrl(k.playerCharacter))});
     
     // Open new Aqlite window (usefull for alts)
     addKeybind(k.newAqw  , ()=>{inst.newBrowserWindow(constant.mainPath)});
@@ -69,8 +71,11 @@ const processKeybings = function (){
     
     // Show help message
     addKeybind(k.help,     (focusedWin)=>{constant.showHelpMessage(focusedWin)});
-    
+
     addKeybind(k.about,    (focusedWin)=>{constant.showAboutMessage(focusedWin)});
+
+    // Open Settings screen - customize keybindings
+    addKeybind(k.settings, ()=>{inst.openSettingsWindow()});
 
     // Toggle Fullscreen
     addKeybind(k.fullscreen,(focusedWin) => {
@@ -175,3 +180,43 @@ const addGlobalKeybind = function(keybind, func, onlyHTML = false, considerDF = 
 
 exports.unregisterGlobalShortcuts = () => globalShortcut.unregisterAll();
 exports.addKeybinding = processKeybings;
+
+/// -------------------------------
+/// Settings screen IPC - reading/writing custom keybindings from aquastar.json
+/// -------------------------------
+
+// Whichever file is actually taking effect gets the write - inPathJsonPath wins the
+// merge in customKeybinds() when both exist, so writing to appdata only would be a silent no-op.
+function _keybindSaveTarget(){
+    return fs.existsSync(constant.inPathJsonPath) ? constant.inPathJsonPath : constant.appdataJsonPath;
+}
+
+ipcMain.handle('getKeybindings', () => {
+    return {
+        current:  Object.assign({}, finalKeybinds),
+        defaults: Object.assign({}, constant.originalKeybinds),
+        options:  Object.assign({}, constant.originalOptions),
+        savePath: _keybindSaveTarget()
+    };
+});
+
+ipcMain.handle('getSettingsMessages', () => {
+    return locale.strings.settingsMessages;
+});
+
+ipcMain.handle('saveKeybindings', (event, updatedBinds) => {
+    const target = _keybindSaveTarget();
+    let existing = {};
+    if (fs.existsSync(target)) {
+        try { existing = JSON.parse(fs.readFileSync(target)); }
+        catch (e) { existing = {}; }
+    }
+    Object.assign(existing, updatedBinds);
+    fs.writeFileSync(target, JSON.stringify(existing, null, 4));
+    return { savedTo: target };
+});
+
+ipcMain.on('restartApp', () => {
+    app.relaunch();
+    app.exit(0);
+});

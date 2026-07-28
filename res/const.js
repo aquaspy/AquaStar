@@ -40,6 +40,7 @@ const battleon     = 'https://portal.battleon.com/';
 const calendar     = 'https://www.aq.com/lore/calendar';
 const dailyGifts   = 'https://www.aq.com/lore/dailygifts';
 const forgeEnchants= 'https://www.aq.com/lore/guides/enhancementtraits';
+const aqwTracker   = 'https://aqwtracker.com/';
 
 // Social Media stuff
 const twtAlina     = "https://twitter.com/Alina_AE";
@@ -96,6 +97,15 @@ exports.enableSWFLogging = () => {
     exports.isSwfLogEnabled = true;
 }
 
+// Lets DevTools be opened on startup without needing an actual Debug build -
+// set via the "enableDevTools" flag in aquastar.json. See KEYBINDING.md.
+var isDevToolsEnabled = false;
+exports.isDevToolsEnabled = isDevToolsEnabled;
+exports.enableDevTools = () => {
+    isDevToolsEnabled = true;
+    exports.isDevToolsEnabled = true;
+}
+
 // Performance: wmode=direct via HTML wrapper (enabled by default)
 exports.useDirectWmode = true;
 exports.setUseDirectWmode = (val) => {
@@ -107,6 +117,8 @@ exports.wrapSwfUrl = function(swfUrl) {
     if (!swfUrl) return swfUrl;
     return swfWrapperUrl + '?swf=' + encodeURIComponent(swfUrl);
 }
+
+exports.settingsUrl = _getFileUrl(path.join(appRoot, 'res', 'settings.html'));
 
 /// -------------------------------
 /// Section 2 - Original KeyBindings and Custom swf stuff
@@ -142,6 +154,36 @@ const originalKeybinds = {
 }
 exports.originalKeybinds = originalKeybinds;
 
+// Non-keybind settings. Saved to the same aquastar.json file as the keybinds
+// above, but shown in the Settings screen as plain fields instead of recorders.
+const originalOptions = {
+    playerCharacter:   "",
+    featurePlayerName: false,
+    // Dev-only escape hatch, warned about on enable in the Settings screen.
+    // Keep this key last - new options should be added above it.
+    enableDevTools:    false
+}
+exports.originalOptions = originalOptions;
+
+// Keeps only what's safe to drop straight into a URL query string / window title -
+// matches the input filter on the Settings screen's Player Character field.
+function _sanitizePlayerCharacter(raw) {
+    if (raw == null) return '';
+    return String(raw).trim().replace(/[^a-zA-Z0-9]/g, '');
+}
+exports.buildCharLookupUrl = function(playerCharacter) {
+    var id = _sanitizePlayerCharacter(playerCharacter);
+    return id === '' ? charLookup : charLookup + '?id=' + encodeURIComponent(id);
+}
+
+// When featurePlayerName is on and a Player Character is set, it replaces "AquaStar"
+// in the main window's title. Falls back to the app name otherwise.
+exports.resolveAppDisplayName = function(k) {
+    if (!k || k.featurePlayerName !== true) return appName;
+    var id = _sanitizePlayerCharacter(k.playerCharacter);
+    return id === '' ? appName : id;
+}
+
 // Finding out which one to load and if it should load...
 var keybingJsonFileName = appName.toLocaleLowerCase() + '.json';
 var appdataJsonPath = path.join(app.getPath("appData"), keybingJsonFileName)
@@ -151,6 +193,8 @@ if (fs.existsSync(appdataJsonPath)) { listValidKeybindLocations.push(appdataJson
 if (fs.existsSync(inPathJsonPath))  { listValidKeybindLocations.push(inPathJsonPath)  }
 
 exports.listValidKeybindLocations = listValidKeybindLocations;
+exports.appdataJsonPath = appdataJsonPath;
+exports.inPathJsonPath  = inPathJsonPath;
 
 // Custom aqlite stuff
 var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
@@ -183,7 +227,9 @@ function _getWinConfig(type){
                 sandbox: isGame ? false : true,
                 webviewTag: false,
                 preload: isGame ? path.join(appRoot, 'res', 'preload_capture.js') : null,
-                plugins: isGame,
+                // Plugins (Flash) enabled everywhere - Blame Char page breaking in a update or two.
+                // AquaStar shouldnt navigate to random websites anyway. Not endorsed to.
+                plugins: true,
                 contextIsolation: true,
                 backgroundThrottling: !isGame
             }
@@ -216,6 +262,23 @@ exports.mainConfig   = _getWinConfig("main");
 exports.charConfig   = _getWinConfig("cprint");
 exports.gameConfig   = _getWinConfig("game");
 
+// Settings screen - own preload, needed for IPC (read/write aquastar.json) under contextIsolation.
+exports.settingsConfig = {
+    width: 640,
+    height: 680,
+    useContentSize: true,
+    icon: iconPath,
+    resizable: true,
+    webPreferences: {
+        nodeIntegration: false,
+        sandbox: true,
+        webviewTag: false,
+        preload: path.join(appRoot, 'res', 'preload_settings.js'),
+        plugins: false,
+        contextIsolation: true
+    }
+};
+
 exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
     // needs to be like that as the function is located on instances...
     if (isContext == false && process.platform == 'darwin') return null;
@@ -224,6 +287,12 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
         return {
             label: label,
             accelerator: keybind,
+            // Show the shortcut hint only - don't actually bind it here. These keys
+            // (wiki/design/account/charpage) already open a *new* window via
+            // electron-localshortcut; letting the menu also register the accelerator
+            // races that handler and can replace the current window's URL instead
+            // (most visible once DevTools shifts window focus timing).
+            registerAccelerator: false,
             click(menuItem,focusedWin) {
                 focusedWin.webContents.loadURL(link);
             }
@@ -264,7 +333,8 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
                         generateLink(menuMessages.menuGuide,aqwg),
                         generateLink(menuMessages.menuForge,forgeEnchants),
                         generateLink(menuMessages.menuHeromart,heromart),
-                        generateLink(menuMessages.menuPortal,battleon)
+                        generateLink(menuMessages.menuPortal,battleon),
+                        generateLink(menuMessages.menuAqwTracker,aqwTracker)
                     ]
                 },
                 {
@@ -281,6 +351,14 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             accelerator: keybinds.cpSshot,
             click() {
                 funcTakeSS();
+            }
+        },
+        {
+            label: menuMessages.menuSettings,
+            accelerator: keybinds.settings,
+            click() {
+                // Cant pull instances module at top level or else would be cyclical.
+                require('./instances.js').openSettingsWindow();
             }
         }
     ];

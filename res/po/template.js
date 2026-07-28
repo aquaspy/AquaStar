@@ -25,7 +25,8 @@ exports.dialogMessages = {
         expand(k.sshot)     + ' - \n' +
         expand(k.record)    + ' - \n' +
         expand(k.reload)    + " - \n" +
-        expand(k.reloadCache)+' - .\n\n' +
+        expand(k.reloadCache)+' - \n' +
+        expand(k.settings)  + ' - .\n\n' +
         '\n\n' +
         ':' + expand(k.help) + ' .';
     },
@@ -58,9 +59,62 @@ exports.menuMessages = {
     menuCharpage     : "",
     menuGuide        : "",
     menuForge        : "",
+    menuAqwTracker   : "",
     menuReddit       : "",
     menuTwitter      : "",
     menuTakeShot     : "",
     menuCopyURL      : "",
-    menuReloadPage   : ""
+    menuReloadPage   : "",
+    menuSettings     : ""
+}
+
+exports.settingsMessages = {
+    title            : "",
+    heading          : "",
+    description      : "",
+    saveLocationLabel: "",
+    saveButton       : "",
+    resetAllButton   : "",
+    restartButton    : "",
+    closeButton      : "",
+    recordButton     : "",
+    recordingLabel   : "",
+    resetButton      : "",
+    savedMessage     : "",
+    macOnlyLabel     : "",
+    charpageOnly     : "",
+    labels: {
+        wiki:        "",
+        account:     "",
+        design:      "",
+        charpage:    "",
+        newAqw:      "",
+        newTest:     "",
+        about:       "",
+        fullscreen:  "",
+        sshot:       "",
+        cpSshot:     "",
+        reload:      "",
+        reloadCache: "",
+        dragon:      "",
+        forward:     "",
+        backward:    "",
+        help:        "",
+        settings:    "",
+        record:      ""
+    },
+    optionsHeading: "",
+    optionLabels: {
+        playerCharacter:   "",
+        featurePlayerName: "",
+        enableDevTools:    ""
+    },
+    optionHints: {
+        playerCharacter:   "",
+        featurePlayerName: "",
+        enableDevTools:    ""
+    },
+    optionWarnings: {
+        enableDevTools: ""
+    }
 }
