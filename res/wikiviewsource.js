@@ -59,20 +59,35 @@ function unhovered() {
     mouseOn = false;
 }
  
+// wikimg.php (whoasked.freewebhostmost.com) is gone - it used to scrape the wiki page
+// server-side and hand back just the item's own image(s). We fetch the page ourselves
+// and do the same filtering locally - see extractItemImages() below.
+// On aqwwiki itself that fetch is same-origin and works directly. On account.aq.com
+// (Inventory/BuyBack/Wheel/CharPage) it isn't - a page-side fetch() to aqwwiki.wikidot.com
+// gets blocked by CORS. preload_wikiview.js bridges that: when present, it asks the main
+// process to make the request instead (a plain HTTP request there, no CORS to hit) and
+// hands the raw HTML back over IPC.
+function fetchWikiHtml(link) {
+    if (window.aquastarWiki && typeof window.aquastarWiki.fetchWikiPage === "function") {
+        return window.aquastarWiki.fetchWikiPage(link).then(function(result) {
+            if (!result || !result.ok) throw new Error((result && result.error) || "IPC fetch failed");
+            return result.html;
+        });
+    }
+    // No bridge available (e.g. preload missing) - fall back to a direct fetch,
+    // which still works when we're same-origin with the wiki.
+    return fetch(link).then(function(response) { return response.text(); });
+}
+
 function showPreview(link) {
     if (link.startsWith("http://aqwwiki.wikidot.com/")) {
-        // wikimg.php (whoasked.freewebhostmost.com) is gone - it used to scrape the wiki
-        // page server-side and hand back just the item's own image(s). Since we're
-        // already same-origin with the wiki, we can fetch the page ourselves and do the
-        // same filtering locally - see extractItemImages() below.
-        fetch(link)
-            .then(function(response) {
-                // convert page to text
-                return response.text()
-            })
+        fetchWikiHtml(link)
             .then(function(html) {
-                // parse text
-                return new DOMParser().parseFromString(html, "text/html");
+                // parse text. The explicit <base> keeps any relative image URLs anchored
+                // to the wiki even when this script is actually running on account.aq.com -
+                // DOMParser otherwise resolves relative URLs against the current window's
+                // location, not the page the HTML came from.
+                return new DOMParser().parseFromString('<base href="http://aqwwiki.wikidot.com/">' + html, "text/html");
             })
             .then(function(doc) {
                 // get images

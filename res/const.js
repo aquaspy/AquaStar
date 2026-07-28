@@ -283,7 +283,7 @@ function _getWinConfig(type){
                 nodeIntegration: false,
                 sandbox: isGame ? false : true,
                 webviewTag: false,
-                preload: isGame ? path.join(appRoot, 'res', 'preload_capture.js') : null,
+                preload: isGame ? path.join(appRoot, 'res', 'preload_capture.js') : path.join(appRoot, 'res', 'preload_wikiview.js'),
                 // Plugins (Flash) enabled everywhere - Blame Char page breaking in a update or two.
                 // AquaStar shouldnt navigate to random websites anyway. Not endorsed to.
                 plugins: true,
@@ -510,7 +510,32 @@ exports.setLocale        = (loc, keyb)=> {
 /// Section 6 - IPC, or Inter Process Comunication. Way simpler than its name, trust me
 /// -------------------------------
 
-const { ipcMain, desktopCapturer } = require('electron');
+const { ipcMain, desktopCapturer, net } = require('electron');
+
+// WikiView (wikiviewsource.js) needs to fetch AQW Wiki pages from windows whose
+// origin is account.aq.com, where a page-side fetch() would be blocked by CORS.
+// Doing the request here in the main process sidesteps that entirely - it's a
+// plain HTTP request, not a browser fetch, so there's no origin to police.
+// Locked to the wiki domain since this handler is reachable from any window
+// that has the wikiview preload (see _getWinConfig) - it shouldn't become a
+// general-purpose fetch proxy for whatever a loaded page asks for.
+ipcMain.handle('fetchWikiPage', async (event, targetUrl) => {
+    if (typeof targetUrl !== 'string' || !/^https?:\/\/aqwwiki\.wikidot\.com\//i.test(targetUrl)) {
+        return { ok: false, error: 'blocked' };
+    }
+
+    return new Promise((resolve) => {
+        const request = net.request(targetUrl);
+        let body = '';
+        request.on('response', (response) => {
+            response.on('data', (chunk) => { body += chunk.toString(); });
+            response.on('end', () => resolve({ ok: true, html: body }));
+            response.on('error', (err) => resolve({ ok: false, error: err.message }));
+        });
+        request.on('error', (err) => resolve({ ok: false, error: err.message }));
+        request.end();
+    });
+});
 
 ipcMain.on('saveDialog', async function (event, arg) {
     const { dialog } = require('electron');
