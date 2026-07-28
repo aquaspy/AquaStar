@@ -159,18 +159,24 @@ exports.originalKeybinds = originalKeybinds;
 // real "video/mp4" muxing isn't available (would need a much newer Chromium than the one
 // bundled here, which would drop PPAPI Flash support - see flash.js). H.264/MKV is kept
 // as the default since H.264 is by far the most widely compatible codec of the three.
+// audioMimeType is used when the capture stream actually got an audio track (desktop
+// audio loopback - Windows only, see preload_capture.js) - Opus muxes fine into both containers.
 const recordingFormats = {
-    'h264-mkv': { mimeType: 'video/x-matroska;codecs=avc1', extension: 'mkv',  label: 'MKV (H.264)' },
-    'vp9-webm': { mimeType: 'video/webm;codecs=vp9',        extension: 'webm', label: 'WebM (VP9)'  },
-    'vp8-webm': { mimeType: 'video/webm;codecs=vp8',        extension: 'webm', label: 'WebM (VP8)'  }
+    'h264-mkv': { mimeType: 'video/x-matroska;codecs=avc1', audioMimeType: 'video/x-matroska;codecs=avc1,opus', extension: 'mkv',  label: 'MKV (H.264)' },
+    'vp9-webm': { mimeType: 'video/webm;codecs=vp9',        audioMimeType: 'video/webm;codecs=vp9,opus',        extension: 'webm', label: 'WebM (VP9)'  },
+    'vp8-webm': { mimeType: 'video/webm;codecs=vp8',        audioMimeType: 'video/webm;codecs=vp8,opus',        extension: 'webm', label: 'WebM (VP8)'  }
 }
 exports.recordingFormats = recordingFormats;
 exports.defaultRecordingFormat = 'h264-mkv';
 exports.recordingFormatChoices = Object.keys(recordingFormats).map((id) => (
     { id: id, label: recordingFormats[id].label }
 ));
-exports.resolveRecordingFormat = function(id) {
-    return recordingFormats[id] || recordingFormats[exports.defaultRecordingFormat];
+exports.resolveRecordingFormat = function(id, hasAudio) {
+    var fmt = recordingFormats[id] || recordingFormats[exports.defaultRecordingFormat];
+    return {
+        mimeType:  (hasAudio && fmt.audioMimeType) ? fmt.audioMimeType : fmt.mimeType,
+        extension: fmt.extension
+    };
 }
 
 // Non-keybind settings. Saved to the same aquastar.json file as the keybinds

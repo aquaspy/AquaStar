@@ -203,8 +203,8 @@ ipcMain.handle('getKeybindings', () => {
 
 // Game window preload (preload_capture.js) asks this before starting MediaRecorder -
 // it can't read aquastar.json itself (no Node access needed there beyond IPC).
-ipcMain.handle('getRecordingFormat', () => {
-    return constant.resolveRecordingFormat(finalKeybinds.recordingFormat);
+ipcMain.handle('getRecordingFormat', (event, hasAudio) => {
+    return constant.resolveRecordingFormat(finalKeybinds.recordingFormat, hasAudio);
 });
 
 ipcMain.handle('getSettingsMessages', () => {

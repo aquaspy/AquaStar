@@ -13,10 +13,10 @@ function getRecordName () {
     t.getSeconds() + "." + currentExtension;
 }
 
-async function pickFormat() {
+async function pickFormat(hasAudio) {
   let desired = null;
   try {
-    desired = await ipcRenderer.invoke('getRecordingFormat');
+    desired = await ipcRenderer.invoke('getRecordingFormat', hasAudio);
   } catch (e) {
     console.log("[AquaStar] getRecordingFormat error:", e);
   }
@@ -24,8 +24,9 @@ async function pickFormat() {
   const candidates = [];
   if (desired && desired.mimeType) candidates.push(desired);
   // Fallbacks, in the unlikely case the configured format isn't supported here.
-  candidates.push({ mimeType: 'video/webm;codecs=vp8', extension: 'webm' });
-  candidates.push({ mimeType: 'video/webm;codecs=vp9', extension: 'webm' });
+  const opus = hasAudio ? ',opus' : '';
+  candidates.push({ mimeType: 'video/webm;codecs=vp8' + opus, extension: 'webm' });
+  candidates.push({ mimeType: 'video/webm;codecs=vp9' + opus, extension: 'webm' });
   candidates.push({ mimeType: 'video/webm', extension: 'webm' });
 
   for (let i = 0; i < candidates.length; i++) {
@@ -55,19 +56,28 @@ function releaseCaptureStream() {
       return false;
     }
 
-    const constraints = {
-      audio: false,
-      video: {
-        mandatory: {
-          chromeMediaSourceId: matchedSource.id,
-          chromeMediaSource: 'desktop'
-        }
+    const videoConstraint = {
+      mandatory: {
+        chromeMediaSourceId: matchedSource.id,
+        chromeMediaSource: 'desktop'
       }
+    };
+    // Desktop audio loopback via chromeMediaSource: 'desktop' - Chromium can't isolate
+    // audio to a single window, so this picks up the whole system's audio output, not
+    // just Flash's. Only reliably supported on Windows; falls back to video-only elsewhere.
+    const withAudioConstraints = {
+      audio: { mandatory: { chromeMediaSource: 'desktop' } },
+      video: videoConstraint
     };
 
     try {
       releaseCaptureStream();
-      captureStream = await navigator.mediaDevices.getUserMedia(constraints);
+      try {
+        captureStream = await navigator.mediaDevices.getUserMedia(withAudioConstraints);
+      } catch (audioErr) {
+        console.log("[AquaStar] Desktop audio capture unavailable, recording video only:", audioErr);
+        captureStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraint });
+      }
       await setupRecorder(captureStream);
       return true;
     } catch (e) {
@@ -81,7 +91,8 @@ function releaseCaptureStream() {
       mediaRecorder.stop();
     }
 
-    const format = await pickFormat();
+    const hasAudio = stream.getAudioTracks().length > 0;
+    const format = await pickFormat(hasAudio);
     currentExtension = format.extension;
     mediaRecorder = new MediaRecorder(stream, {
       mimeType: format.mimeType,
