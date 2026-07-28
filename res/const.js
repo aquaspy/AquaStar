@@ -154,11 +154,31 @@ const originalKeybinds = {
 }
 exports.originalKeybinds = originalKeybinds;
 
+// Screen recording (Ctrl+J) format choices, shown as a <select> in Settings.
+// Verified against this Electron's bundled Chromium via MediaRecorder.isTypeSupported() -
+// real "video/mp4" muxing isn't available (would need a much newer Chromium than the one
+// bundled here, which would drop PPAPI Flash support - see flash.js). H.264/MKV is kept
+// as the default since H.264 is by far the most widely compatible codec of the three.
+const recordingFormats = {
+    'h264-mkv': { mimeType: 'video/x-matroska;codecs=avc1', extension: 'mkv',  label: 'MKV (H.264)' },
+    'vp9-webm': { mimeType: 'video/webm;codecs=vp9',        extension: 'webm', label: 'WebM (VP9)'  },
+    'vp8-webm': { mimeType: 'video/webm;codecs=vp8',        extension: 'webm', label: 'WebM (VP8)'  }
+}
+exports.recordingFormats = recordingFormats;
+exports.defaultRecordingFormat = 'h264-mkv';
+exports.recordingFormatChoices = Object.keys(recordingFormats).map((id) => (
+    { id: id, label: recordingFormats[id].label }
+));
+exports.resolveRecordingFormat = function(id) {
+    return recordingFormats[id] || recordingFormats[exports.defaultRecordingFormat];
+}
+
 // Non-keybind settings. Saved to the same aquastar.json file as the keybinds
 // above, but shown in the Settings screen as plain fields instead of recorders.
 const originalOptions = {
     playerCharacter:   "",
     featurePlayerName: false,
+    recordingFormat:   exports.defaultRecordingFormat,
     // Dev-only escape hatch, warned about on enable in the Settings screen.
     // Keep this key last - new options should be added above it.
     enableDevTools:    false

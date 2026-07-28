@@ -107,11 +107,13 @@ exports.settingsMessages = {
     optionLabels: {
         playerCharacter:   "",
         featurePlayerName: "",
+        recordingFormat:   "",
         enableDevTools:    ""
     },
     optionHints: {
         playerCharacter:   "",
         featurePlayerName: "",
+        recordingFormat:   "",
         enableDevTools:    ""
     },
     optionWarnings: {

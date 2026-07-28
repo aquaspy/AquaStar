@@ -117,11 +117,13 @@ exports.settingsMessages = {
     optionLabels: {
         playerCharacter:   "Personagem",
         featurePlayerName: "Mostrar Personagem no Título da Janela",
+        recordingFormat:   "Formato de Gravação",
         enableDevTools:    "Ativar DevTools"
     },
     optionHints: {
         playerCharacter:   "Apenas letras e números. Usado pelo atalho da Char Page (Alt+P) para abrir direto neste personagem.",
         featurePlayerName: "Quando ativado, substitui \"AquaStar\" no título da janela principal pelo Personagem acima.",
+        recordingFormat:   "Formato do arquivo ao gravar a tela do jogo (Ctrl+J). MP4 não está disponível nesta versão do Electron.",
         enableDevTools:    "Abre o console de DevTools automaticamente ao iniciar."
     },
     optionWarnings: {

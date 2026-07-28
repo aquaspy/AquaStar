@@ -56,6 +56,14 @@
   }
   .text-input:focus { outline: none; border-color: #4da3ff; }
   .text-input.changed { border-color: #4da3ff; color: #9cc9ff; }
+  .select-input {
+    flex: 0 0 190px;
+    font-family: inherit;
+    background: #1b1b1b; border: 1px solid #333; border-radius: 4px;
+    padding: 5px 8px; color: #dcdcdc; cursor: pointer;
+  }
+  .select-input:focus { outline: none; border-color: #4da3ff; }
+  .select-input.changed { border-color: #4da3ff; color: #9cc9ff; }
   .switch {
     position: relative; display: inline-block;
     flex: 0 0 38px; width: 38px; height: 22px;
@@ -141,6 +149,7 @@
   const OPTION_TYPES = {
     playerCharacter:   'text',
     featurePlayerName: 'boolean',
+    recordingFormat:   'select',
     enableDevTools:    'boolean'
   };
 
@@ -188,7 +197,7 @@
     const st = rowState[key];
     if (!st) return;
     if (st.recording) stopRecording(key);
-    if (st.type === 'text-option') {
+    if (st.type === 'text-option' || st.type === 'select-option') {
       st.value = options[key] || '';
       st.comboEl.value = st.value;
       st.comboEl.classList.toggle('changed', st.value !== st.initial);
@@ -354,6 +363,42 @@
     return row;
   }
 
+  function buildSelectOptionRow(key, choices) {
+    const initialValue = (current[key] !== undefined ? current[key] : options[key]) || '';
+
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const selectEl = document.createElement('select');
+    selectEl.className = 'select-input';
+    (choices || []).forEach((choice) => {
+      const optionEl = document.createElement('option');
+      optionEl.value = choice.id;
+      optionEl.textContent = choice.label;
+      selectEl.appendChild(optionEl);
+    });
+    selectEl.value = initialValue;
+    selectEl.addEventListener('change', () => {
+      const st = rowState[key];
+      st.value = selectEl.value;
+      st.comboEl.classList.toggle('changed', st.value !== st.initial);
+      refreshSaveState();
+    });
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'small';
+    resetBtn.textContent = messages.resetButton;
+    resetBtn.onclick = () => { resetRowToDefault(key); refreshSaveState(); };
+
+    row.appendChild(_buildOptionLabel(key));
+    row.appendChild(selectEl);
+    row.appendChild(resetBtn);
+
+    rowState[key] = { comboEl: selectEl, initial: initialValue, value: initialValue, recording: false, type: 'select-option' };
+
+    return row;
+  }
+
   function buildBooleanOptionRow(key) {
     const initialValue = (current[key] !== undefined ? current[key] : options[key]) === true;
 
@@ -415,6 +460,9 @@
     const rowsEl = document.getElementById('rows');
     Object.keys(defaults).forEach((key) => rowsEl.appendChild(buildRow(key)));
 
+    // Choices for 'select' type options, keyed by option name.
+    const optionChoices = { recordingFormat: kb.recordingFormatChoices || [] };
+
     const optionKeys = Object.keys(options);
     if (optionKeys.length) {
       const heading = document.createElement('div');
@@ -422,8 +470,10 @@
       heading.textContent = messages.optionsHeading || '';
       rowsEl.appendChild(heading);
       optionKeys.forEach((key) => {
-        const builder = OPTION_TYPES[key] === 'boolean' ? buildBooleanOptionRow : buildTextOptionRow;
-        rowsEl.appendChild(builder(key));
+        const type = OPTION_TYPES[key];
+        if (type === 'boolean') rowsEl.appendChild(buildBooleanOptionRow(key));
+        else if (type === 'select') rowsEl.appendChild(buildSelectOptionRow(key, optionChoices[key]));
+        else rowsEl.appendChild(buildTextOptionRow(key));
       });
     }
 

@@ -2,6 +2,7 @@ const { ipcRenderer } = require("electron");
 
 let mediaRecorder;
 let captureStream;
+let currentExtension = 'webm';
 const recordedChunks = [];
 
 function getRecordName () {
@@ -9,19 +10,28 @@ function getRecordName () {
   return "Recording-" +
     t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate() + "_" +
     t.getHours() + "-" + t.getMinutes() +  "-" +
-    t.getSeconds() + ".webm";
+    t.getSeconds() + "." + currentExtension;
 }
 
-function pickMimeType() {
-  const candidates = [
-    'video/webm; codecs=vp8',
-    'video/webm; codecs=vp9',
-    'video/webm'
-  ];
-  for (let i = 0; i < candidates.length; i++) {
-    if (MediaRecorder.isTypeSupported(candidates[i])) return candidates[i];
+async function pickFormat() {
+  let desired = null;
+  try {
+    desired = await ipcRenderer.invoke('getRecordingFormat');
+  } catch (e) {
+    console.log("[AquaStar] getRecordingFormat error:", e);
   }
-  return 'video/webm';
+
+  const candidates = [];
+  if (desired && desired.mimeType) candidates.push(desired);
+  // Fallbacks, in the unlikely case the configured format isn't supported here.
+  candidates.push({ mimeType: 'video/webm;codecs=vp8', extension: 'webm' });
+  candidates.push({ mimeType: 'video/webm;codecs=vp9', extension: 'webm' });
+  candidates.push({ mimeType: 'video/webm', extension: 'webm' });
+
+  for (let i = 0; i < candidates.length; i++) {
+    if (MediaRecorder.isTypeSupported(candidates[i].mimeType)) return candidates[i];
+  }
+  return { mimeType: 'video/webm', extension: 'webm' };
 }
 
 function releaseCaptureStream() {
@@ -58,7 +68,7 @@ function releaseCaptureStream() {
     try {
       releaseCaptureStream();
       captureStream = await navigator.mediaDevices.getUserMedia(constraints);
-      setupRecorder(captureStream);
+      await setupRecorder(captureStream);
       return true;
     } catch (e) {
       console.log("[AquaStar] getUserMedia error:", e);
@@ -66,14 +76,15 @@ function releaseCaptureStream() {
     }
   }
 
-  function setupRecorder(stream) {
+  async function setupRecorder(stream) {
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       mediaRecorder.stop();
     }
 
-    const mimeType = pickMimeType();
+    const format = await pickFormat();
+    currentExtension = format.extension;
     mediaRecorder = new MediaRecorder(stream, {
-      mimeType: mimeType,
+      mimeType: format.mimeType,
       videoBitsPerSecond: 6000000
     });
 

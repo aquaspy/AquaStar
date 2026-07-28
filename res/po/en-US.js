@@ -116,11 +116,13 @@ exports.settingsMessages = {
     optionLabels: {
         playerCharacter:   "Player Character",
         featurePlayerName: "Show Player Character in Window Title",
+        recordingFormat:   "Recording Format",
         enableDevTools:    "Enable DevTools"
     },
     optionHints: {
         playerCharacter:   "Letters and numbers only. Used by the Char Page shortcut (Alt+P) to open straight to this character.",
         featurePlayerName: "When on, replaces \"AquaStar\" in the main window title with your Player Character above.",
+        recordingFormat:   "File format used when recording the game screen (Ctrl+J). MP4 isn't available on this Electron version.",
         enableDevTools:    "Opens the DevTools console automatically on startup."
     },
     optionWarnings: {
