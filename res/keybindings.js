@@ -1,7 +1,9 @@
-const inst     = require('./instances.js');
-const constant = require('./const.js');
-const locale   = require('./locale.js');
-const fs       = require('fs');
+const inst          = require('./instances.js');
+const constant      = require('./const.js');
+const windowsMenu   = require('./windows/menu.js');
+const ipcRecording  = require('./ipc/recording.js');
+const locale        = require('./locale.js');
+const fs            = require('fs');
 const { globalShortcut, BrowserWindow, ipcMain, app } = require('electron');
 const electronLocalshortcut = require('electron-localshortcut');
 
@@ -70,9 +72,9 @@ const processKeybings = function (){
     addKeybind(k.newTest , ()=>{inst.newBrowserWindow(constant.testingAQW)});
     
     // Show help message
-    addKeybind(k.help,     (focusedWin)=>{constant.showHelpMessage(focusedWin)});
+    addKeybind(k.help,     (focusedWin)=>{windowsMenu.showHelpMessage(focusedWin)});
 
-    addKeybind(k.about,    (focusedWin)=>{constant.showAboutMessage(focusedWin)});
+    addKeybind(k.about,    (focusedWin)=>{windowsMenu.showAboutMessage(focusedWin)});
 
     // Open Settings screen - customize keybindings
     addKeybind(k.settings, ()=>{inst.openSettingsWindow()});
@@ -91,13 +93,13 @@ const processKeybings = function (){
     // F2 / Ctrl+J must use globalShortcut — Flash PPAPI eats before-input-event keys
     addGlobalKeybind(k.sshot, (focusedWin) => { inst.takeSS(focusedWin); }, false, true);
     addGlobalKeybind(k.record, (focusedWin) => {
-        if(!constant.wasRecording()){
+        if(!ipcRecording.wasRecording()){
             inst.notifyWin(focusedWin,
                 constant.titleMessages.recording + "! " + focusedWin.getTitle(),
                 false);
             recordingWinId = focusedWin.id;
 
-            constant.triggerRecording(focusedWin);
+            ipcRecording.triggerRecording(focusedWin);
             focusedWin.setIcon(constant.nativeImageRedIcon)
         }
         else {
@@ -109,7 +111,7 @@ const processKeybings = function (){
             else {
                 const recordWin = BrowserWindow.fromId(recordingWinId) || focusedWin;
                 inst.notifyWin(recordWin, inst.getSavedTitle(recordWin));
-                constant.triggerRecording(recordWin);
+                ipcRecording.triggerRecording(recordWin);
                 recordWin.setIcon(constant.nativeImageIcon)
             }
         }
@@ -205,7 +207,7 @@ ipcMain.handle('getKeybindings', () => {
     };
 });
 
-// Game window preload (preload_capture.js) asks this before starting MediaRecorder -
+// Game window preload (res/features/capture/preload_capture.js) asks this before starting MediaRecorder -
 // it can't read aquastar.json itself (no Node access needed there beyond IPC).
 ipcMain.handle('getRecordingFormat', (event, hasAudio) => {
     return constant.resolveRecordingFormat(finalKeybinds.recordingFormat, hasAudio);

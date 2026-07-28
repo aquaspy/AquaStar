@@ -6,8 +6,8 @@
 const fs       = require('fs');
 const path     = require('path');
 const { app, ipcMain, clipboard } = require('electron');
-const constant = require('./const.js');
-const locale   = require('./locale.js');
+const constant = require('../../const.js');
+const locale   = require('../../locale.js');
 
 const remindersJsonFileName = constant.appName.toLocaleLowerCase() + '_reminders.json'; // "aquastar_reminders.json"
 const remindersJsonPath = path.join(app.getPath('appData'), remindersJsonFileName);

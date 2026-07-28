@@ -25,11 +25,14 @@ No tests, lint, typecheck, or CI exist in this repo.
 |------|---------|
 | `main.js` | Entry point. Creates main window, registers webRequest filters (ad block, UA spoof, SWF logging), sets up menu |
 | `res/flash.js` | Picks platform/arch-specific PPAPI binary from `FlashPlayer/` and registers it with `app.commandLine.appendSwitch` |
-| `res/const.js` | URLs, window configs, default keybindings, i18n (en-US + pt-BR), debug toggle |
+| `res/const.js` | Core app-wide constants: URLs, default keybindings/options, icon paths, locale bootstrap. No window configs or IPC handlers live here anymore - see `res/windows/` and `res/ipc/` below |
 | `res/instances.js` | Window factory, screenshot/charpage capture, context menus, child-window handling |
-| `res/keybindings.js` | Loads `aquastar.json` overrides from appData or install dir |
-| `res/preload_capture.js` | Preload for game windows (screen recording IPC) |
-| `res/preload_charpage.js` | Preload for hidden 4K charpage window (Alt+K screenshot) |
+| `res/keybindings.js` | Registers every app keybind (`electron-localshortcut`/`globalShortcut`); also owns the Settings screen's own IPC (load/save `aquastar.json`) since that's tightly coupled to keybind state |
+| `res/windows/config.js` | `BrowserWindow` configs + `file://` URLs for every window the app opens (main/game/wiki/charpage/settings/reminders) |
+| `res/windows/menu.js` | Builds the app/context menu; Help and About dialogs |
+| `res/ipc/recording.js` | Screen-recording IPC (save-dialog, write-file, desktop-capturer source lookup, recording-toggle state) |
+| `res/ipc/wikiFetch.js` | Main-process fetch of AQW Wiki pages for WikiView, so the request isn't subject to a page's CORS policy |
+| `res/features/<name>/` | Each self-contained window feature's own files together: `reminders/` (reminders.js + reminders.html + preload_reminders.js + reminders_default.json), `settings/` (settings.html + preload_settings.js), `wikiview/` (wikiviewsource.js + preload_wikiview.js + jquery.min.js), `capture/` (preload_capture.js, for game windows), `charpage/` (preload_charpage.js, for the hidden 4K charpage window) |
 
 ## Runtime behavior
 

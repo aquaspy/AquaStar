@@ -1,7 +1,9 @@
-const constant              = require('./const.js');
-const keybinds              = require('./keybindings.js');
-const socketProxy           = require('./socketProxy.js');
-const {BrowserWindow, Menu} = require('electron');
+const constant               = require('./const.js');
+const windowConfig           = require('./windows/config.js');
+const windowsMenu            = require('./windows/menu.js');
+const keybinds               = require('./keybindings.js');
+const socketProxy            = require('./socketProxy.js');
+const {BrowserWindow, Menu}  = require('electron');
 
 let usedAltPagesNumbers = [];
 
@@ -20,9 +22,9 @@ let lastFocusedWindow = null;
 function newBrowserWindow(new_path, isMainWin=false){
     var config;
     var originalPath = new_path;
-    if (isMainWin) config = constant.mainConfig;
-    else if (_isGameWindow(new_path)) config = constant.gameConfig;
-    else config = constant.winConfig;
+    if (isMainWin) config = windowConfig.mainConfig;
+    else if (_isGameWindow(new_path)) config = windowConfig.gameConfig;
+    else config = windowConfig.winConfig;
     
     // Ruffle mode (experimental, opt-in via Settings) only covers what it's actually
     // eligible for (main AQW / new instance / Testing AQW) - anything else, including
@@ -111,7 +113,7 @@ function _windowAddContext(newWin){
     
     // Context Menu part
     var contextMenu = Menu.buildFromTemplate( 
-        constant.getMenu(keybinds.keybinds,takeSS,true));
+        windowsMenu.getMenu(keybinds.keybinds,takeSS,true));
     newWin.webContents.on("context-menu",(e,param)=>{
         contextMenu.popup({
             window: newWin,
@@ -122,7 +124,7 @@ function _windowAddContext(newWin){
     
     // "Child Windows follow the same rule" part
     const openChildWindow = (url) => {
-        const childWin = new BrowserWindow(constant.winConfig);
+        const childWin = new BrowserWindow(windowConfig.winConfig);
         childWin.loadURL(url);
         _windowAddContext(childWin);
         return childWin;
@@ -165,8 +167,8 @@ function _windowAddContext(newWin){
         "for (var i=0;i<rem.lenght;i++) rem[i].remove()");
         // ----------------------------------------------------------------------------------------------
         // Another bonus: Wiki link preview (WikiView), made by biglavis over at https://github.com/biglavis
-        //  Available on the file wikiviewsource.js. same folder as this one.
-        
+        //  Available on the file res/features/wikiview/wikiviewsource.js.
+
         const checkWiki     = /aqwwiki\.wikidot\.com\/.+/gi
         const checkCharPage = /account\.aq\.com\/CharPage\?id=.+/gi
         const checkAccountAq= /account\.aq\.com\/AQW\/(Inventory|BuyBack|WheelProgress|House)/gi
@@ -177,9 +179,10 @@ function _windowAddContext(newWin){
         const isViewUrl = bWiki || bCp || bAcc
 
         if (isViewUrl){
-            var wikiview = fs.readFileSync(path.join(__dirname,'wikiviewsource.js'), 'utf8');
+            const wikiviewDir = path.join(__dirname, 'features', 'wikiview');
+            var wikiview = fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
             if (bWiki){
-                const jquery = fs.readFileSync(path.join(__dirname,'jquery.min.js'), 'utf8');
+                const jquery = fs.readFileSync(path.join(wikiviewDir, 'jquery.min.js'), 'utf8');
                 wikiview = jquery + wikiview
             }
             newWin.webContents.executeJavaScript(wikiview);
@@ -243,7 +246,7 @@ function charPagePrint(){
         }
         else {
             //VALID! Lets start...
-            const newWin = new BrowserWindow(constant.charConfig);
+            const newWin = new BrowserWindow(windowConfig.charConfig);
             newWin.setMenuBarVisibility(false);
             _notifyWindow(focusedWindow,constant.titleMessages.loadingCharpage, false);
             newWin.loadURL(url);
@@ -388,10 +391,10 @@ function openSettingsWindow(){
         settingsWin.focus();
         return settingsWin;
     }
-    settingsWin = new BrowserWindow(constant.settingsConfig);
+    settingsWin = new BrowserWindow(windowConfig.settingsConfig);
     settingsWin.setMenuBarVisibility(false);
     settingsWin.setTitle("AquaStar - Settings");
-    settingsWin.loadURL(constant.settingsUrl);
+    settingsWin.loadURL(windowConfig.settingsUrl);
     settingsWin.on('closed', () => { settingsWin = null; });
     return settingsWin;
 }
@@ -403,10 +406,10 @@ function openRemindersWindow(){
         remindersWin.focus();
         return remindersWin;
     }
-    remindersWin = new BrowserWindow(constant.remindersConfig);
+    remindersWin = new BrowserWindow(windowConfig.remindersConfig);
     remindersWin.setMenuBarVisibility(false);
     remindersWin.setTitle("AquaStar - Reminders");
-    remindersWin.loadURL(constant.remindersUrl);
+    remindersWin.loadURL(windowConfig.remindersUrl);
     remindersWin.on('closed', () => { remindersWin = null; });
     return remindersWin;
 }

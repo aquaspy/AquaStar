@@ -11,11 +11,16 @@ app.allowRendererProcessReuse = false;
 const path     = require('path')
 const fs       = require('fs');
 
-const flash       = require('./res/flash.js');
-const keyb        = require('./res/keybindings.js');
-const reminders   = require('./res/reminders.js');
-const inst        = require('./res/instances.js');
-const socketProxy = require('./res/socketProxy.js');
+const flash         = require('./res/flash.js');
+const keyb          = require('./res/keybindings.js');
+const reminders     = require('./res/features/reminders/reminders.js');
+// IPC-only modules (register their ipcMain handlers as a side effect of being required -
+// nothing else calls into them directly, so main.js must require them explicitly).
+const ipcRecording  = require('./res/ipc/recording.js');
+const ipcWikiFetch  = require('./res/ipc/wikiFetch.js');
+const inst          = require('./res/instances.js');
+const windowsMenu   = require('./res/windows/menu.js');
+const socketProxy   = require('./res/socketProxy.js');
 // Important Variables - in const.js
 const constant = require('./res/const.js');
 
@@ -41,7 +46,7 @@ function createWindow () {
     }
     else {
         Menu.setApplicationMenu(
-            Menu.buildFromTemplate(constant.getMenu(finalkeyb, inst.charPagePrint)));
+            Menu.buildFromTemplate(windowsMenu.getMenu(finalkeyb, inst.charPagePrint)));
         win.setMenuBarVisibility(false); //Remove menu so only wiki shows it
     }
     
