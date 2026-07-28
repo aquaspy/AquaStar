@@ -197,6 +197,7 @@ ipcMain.handle('getKeybindings', () => {
         defaults: Object.assign({}, constant.originalKeybinds),
         options:  Object.assign({}, constant.originalOptions),
         recordingFormatChoices: constant.recordingFormatChoices,
+        renderModeChoices: constant.renderModeChoices,
         savePath: _keybindSaveTarget()
     };
 });

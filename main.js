@@ -11,9 +11,10 @@ app.allowRendererProcessReuse = false;
 const path     = require('path')
 const fs       = require('fs');
 
-const flash    = require('./res/flash.js');
-const keyb     = require('./res/keybindings.js');
-const inst     = require('./res/instances.js');
+const flash       = require('./res/flash.js');
+const keyb        = require('./res/keybindings.js');
+const inst        = require('./res/instances.js');
+const socketProxy = require('./res/socketProxy.js');
 // Important Variables - in const.js
 const constant = require('./res/const.js');
 
@@ -116,7 +117,11 @@ app.on('second-instance', () => {
   }
 })
 app.on('ready', createWindow)
-app.on('will-quit', () => keyb.unregisterGlobalShortcuts())
+app.on('will-quit', () => {
+  keyb.unregisterGlobalShortcuts();
+  // No-op if a Ruffle-mode window never started it.
+  socketProxy.stop();
+})
 app.on('window-all-closed', () => {
   // On macOS it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q

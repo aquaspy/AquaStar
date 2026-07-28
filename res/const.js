@@ -1,8 +1,9 @@
 const {app, BrowserWindow}  = require("electron");
-const path   = require("path");
-const locale = require("./locale.js");
-const fs     = require("fs");
-const url    = require("url");
+const path        = require("path");
+const locale      = require("./locale.js");
+const fs          = require("fs");
+const url         = require("url");
+const socketProxy = require("./socketProxy.js");
 
 // WARNING - ENABLES DEBUG MODE:
 const isDebugBuild = false;
@@ -115,6 +116,25 @@ exports.wrapSwfUrl = function(swfUrl) {
     return swfWrapperUrl + '?swf=' + encodeURIComponent(swfUrl);
 }
 
+// Ruffle (open-source Flash emulator) as an alternative to the PPAPI Flash plugin -
+// see res/ruffle_wrapper.html. Only covers what AquaStar loads directly (main AQW,
+// new instance, Testing AQW); DragonFable is intentionally left out for now, and the
+// AQW Char Page already loads Ruffle unconditionally from Artix's own page regardless
+// of this setting, so it needs no wrapper of its own.
+const ruffleWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_wrapper.html'));
+exports.isRuffleEligible = function(swfUrl) {
+    if (!swfUrl) return false;
+    if (swfUrl === exports.mainPath) return true;
+    // testingAQW carries a random cache-busting "?ver=" suffix per call, so match by prefix.
+    if (swfUrl.indexOf('https://game.aq.com/game/gamefiles/Loader_Spider.swf') === 0) return true;
+    return false;
+}
+exports.wrapRuffleUrl = function(swfUrl) {
+    if (!swfUrl) return swfUrl;
+    return ruffleWrapperUrl + '?swf=' + encodeURIComponent(swfUrl) +
+        '&proxy=' + encodeURIComponent(socketProxy.proxyUrl);
+}
+
 exports.settingsUrl = _getFileUrl(path.join(appRoot, 'res', 'settings.html'));
 
 /// -------------------------------
@@ -176,12 +196,26 @@ exports.resolveRecordingFormat = function(id, hasAudio) {
     };
 }
 
+// Which Flash runtime to use for the SWFs AquaStar loads directly, shown as a <select>
+// in Settings. "flash" (default) keeps the exact current PPAPI plugin behavior. "ruffle"
+// is new and marked experimental - see isRuffleEligible()/wrapRuffleUrl() above.
+const renderModes = {
+    'flash':  { label: 'Flash Player' },
+    'ruffle': { label: 'Ruffle (Experimental)' }
+}
+exports.renderModes = renderModes;
+exports.defaultRenderMode = 'flash';
+exports.renderModeChoices = Object.keys(renderModes).map((id) => (
+    { id: id, label: renderModes[id].label }
+));
+
 // Non-keybind settings. Saved to the same aquastar.json file as the keybinds
 // above, but shown in the Settings screen as plain fields instead of recorders.
 const originalOptions = {
     playerCharacter:   "",
     featurePlayerName: false,
     recordingFormat:   exports.defaultRecordingFormat,
+    renderMode:        exports.defaultRenderMode,
     // Dev-only escape hatch, warned about on enable in the Settings screen.
     // Keep this key last - new options should be added above it.
     enableDevTools:    false

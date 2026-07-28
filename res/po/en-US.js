@@ -115,15 +115,18 @@ exports.settingsMessages = {
         playerCharacter:   "Player Character",
         featurePlayerName: "Show Player Character in Window Title",
         recordingFormat:   "Recording Format",
+        renderMode:        "Flash Renderer",
         enableDevTools:    "Enable DevTools"
     },
     optionHints: {
         playerCharacter:   "Letters and numbers only. Used by the Char Page shortcut (Alt+P) to open straight to this character.",
         featurePlayerName: "When on, replaces \"AquaStar\" in the main window title with your Player Character above.",
         recordingFormat:   "File format used when recording the game screen (Ctrl+J). MP4 isn't available on this Electron version.",
+        renderMode:        "Which Flash runtime loads AQW (main, new instance, Testing). DragonFable and the Char Page are unaffected.",
         enableDevTools:    "Opens the DevTools console automatically on startup."
     },
     optionWarnings: {
+        renderMode:     "Ruffle is an experimental, open-source Flash emulator. It may be slower, less stable, or behave differently than the real Flash Player, especially in crowded rooms. Switch anyway?",
         enableDevTools: "This option is for developers. Normal players usually don't need it. Enable anyway?"
     }
 }

@@ -106,15 +106,18 @@ exports.settingsMessages = {
         playerCharacter:   "",
         featurePlayerName: "",
         recordingFormat:   "",
+        renderMode:        "",
         enableDevTools:    ""
     },
     optionHints: {
         playerCharacter:   "",
         featurePlayerName: "",
         recordingFormat:   "",
+        renderMode:        "",
         enableDevTools:    ""
     },
     optionWarnings: {
+        renderMode:     "",
         enableDevTools: ""
     }
 }

@@ -1,5 +1,6 @@
 const constant              = require('./const.js');
 const keybinds              = require('./keybindings.js');
+const socketProxy           = require('./socketProxy.js');
 const {BrowserWindow, Menu} = require('electron');
 
 let usedAltPagesNumbers = [];
@@ -23,8 +24,16 @@ function newBrowserWindow(new_path, isMainWin=false){
     else if (_isGameWindow(new_path)) config = constant.gameConfig;
     else config = constant.winConfig;
     
+    // Ruffle mode (experimental, opt-in via Settings) only covers what it's actually
+    // eligible for (main AQW / new instance / Testing AQW) - anything else, including
+    // DragonFable, falls straight through to the exact same Flash path as always.
+    var renderMode = (keybinds.keybinds && keybinds.keybinds.renderMode) || constant.defaultRenderMode;
+    if (renderMode === 'ruffle' && constant.isRuffleEligible(new_path)) {
+        socketProxy.start();
+        new_path = constant.wrapRuffleUrl(new_path);
+    }
     // Wrap game SWFs in an HTML page with wmode=direct for maximum performance
-    if (constant.useDirectWmode && _isGameWindow(new_path)) {
+    else if (constant.useDirectWmode && _isGameWindow(new_path)) {
         new_path = constant.wrapSwfUrl(new_path);
     }
     

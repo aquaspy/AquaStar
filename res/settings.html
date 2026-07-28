@@ -150,11 +150,15 @@
     playerCharacter:   'text',
     featurePlayerName: 'boolean',
     recordingFormat:   'select',
+    renderMode:        'select',
     enableDevTools:    'boolean'
   };
 
   // Boolean options that need an explicit confirm before flipping on.
   const WARN_ON_ENABLE_KEYS = new Set(['enableDevTools']);
+
+  // Select options that need an explicit confirm when switched to a specific value.
+  const SELECT_WARN_ON_VALUE = { renderMode: 'ruffle' };
 
   // Accelerators are stored/sent as Electron's "CmdOrCtrl" internally (that's what
   // electron-localshortcut expects); only the on-screen text is swapped per OS.
@@ -380,6 +384,14 @@
     selectEl.value = initialValue;
     selectEl.addEventListener('change', () => {
       const st = rowState[key];
+      const warnValue = SELECT_WARN_ON_VALUE[key];
+      if (warnValue && selectEl.value === warnValue) {
+        const warnText = messages.optionWarnings && messages.optionWarnings[key];
+        if (warnText && !window.confirm(warnText)) {
+          selectEl.value = st.value;
+          return;
+        }
+      }
       st.value = selectEl.value;
       st.comboEl.classList.toggle('changed', st.value !== st.initial);
       refreshSaveState();
@@ -461,7 +473,10 @@
     Object.keys(defaults).forEach((key) => rowsEl.appendChild(buildRow(key)));
 
     // Choices for 'select' type options, keyed by option name.
-    const optionChoices = { recordingFormat: kb.recordingFormatChoices || [] };
+    const optionChoices = {
+      recordingFormat: kb.recordingFormatChoices || [],
+      renderMode:      kb.renderModeChoices || []
+    };
 
     const optionKeys = Object.keys(options);
     if (optionKeys.length) {

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html style="margin:0;padding:0;width:100%;height:100%;overflow:hidden;">
+<head>
+<meta charset="UTF-8">
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; }
+  #container, #container * { width:100% !important; height:100% !important; }
+</style>
+</head>
+<body>
+<div id="container"></div>
+
+<!-- Vendored locally (not the unpkg CDN) so this works fully offline, same as the bundled Flash plugin. -->
+<script src="ruffle/ruffle.js"></script>
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var swfUrl = params.get('swf');
+  var proxyUrl = params.get('proxy');
+  if (!swfUrl) return;
+
+  // Same-origin AQW client SWFs always talk to Artix's game servers over raw TCP -
+  // something Ruffle (sandboxed, no raw sockets) can't do directly. It needs every
+  // (host, port) pair it might connect to pre-registered here, redirected through our
+  // local WebSocket<->TCP relay (res/socketProxy.js) instead.
+  var SERVERS_API = 'https://game.aq.com/game/api/data/servers';
+
+  // Used only if SERVERS_API is unreachable. Refresh via:
+  // curl -sL https://game.aq.com/game/api/data/servers | python3 -m json.tool
+  var FALLBACK_HOSTS = {
+    'sock7.aq.com':        [5588, 5589, 5591, 5592, 5593, 5594, 843],
+    'sock8.aq.com':        [5588, 5589, 5590, 5591, 5593, 843],
+    'euro.aqw.artix.com':  [5588, 843],
+    'asia.game.artix.com': [5588, 843]
+  };
+
+  function addHostPort(map, host, port) {
+    if (!host || !port) return;
+    if (!map.has(host)) map.set(host, new Set());
+    map.get(host).add(port);
+    map.get(host).add(843); // Flash cross-domain policy socket
+  }
+
+  function mapToSocketProxies(map) {
+    var proxies = [];
+    map.forEach(function (ports, host) {
+      ports.forEach(function (port) {
+        proxies.push({ host: host, port: port, proxyUrl: proxyUrl + '?host=' + encodeURIComponent(host) + '&port=' + port });
+      });
+    });
+    return proxies;
+  }
+
+  async function buildSocketProxies() {
+    var map = new Map();
+    Object.keys(FALLBACK_HOSTS).forEach(function (host) {
+      FALLBACK_HOSTS[host].forEach(function (port) { addHostPort(map, host, port); });
+    });
+
+    try {
+      var res = await fetch(SERVERS_API);
+      var servers = await res.json();
+      servers.forEach(function (s) { addHostPort(map, s.sIP, s.iPort); });
+    } catch (e) {
+      console.log('[AquaStar] Artix server API unavailable, using fallback hosts only:', e);
+    }
+
+    return mapToSocketProxies(map);
+  }
+
+  window.addEventListener('DOMContentLoaded', async function () {
+    var socketProxy = proxyUrl ? await buildSocketProxies() : [];
+
+    var ruffle = window.RufflePlayer.newest();
+    var player = ruffle.createPlayer();
+    document.getElementById('container').appendChild(player);
+
+    player.load({
+      url: swfUrl,
+      allowScriptAccess: true,
+      allowNetworking: 'all',
+      allowFullscreen: true,
+      splashScreen: false,
+      preloader: false,
+      socketProxy: socketProxy
+    }).catch(function (e) { console.error('[AquaStar] Ruffle load failed:', e); });
+  });
+})();
+</script>
+</body>
+</html>
