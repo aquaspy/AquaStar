@@ -28,8 +28,8 @@ function _buildSeedState() {
         console.log('[AquaStar] Failed to read ' + remindersDefaultPath + ': ' + e.message);
     }
     const SEASONAL_EVENT_KEYS = [
-        'nulgathBirthday', 'carnival', 'dageBirthday', 'aprilFools', 'starFestival',
-        'friday13', 'pirateDay', 'anniversary', 'blackFriday', 'frostval'
+        'nulgathBirthday', 'carnival', 'dageBirthday', 'aprilFools', 'mayThe4th', 'starFestival',
+        'kalaSeason', 'friday13', 'pirateDay', 'anniversary', 'blackFriday', 'frostval'
     ];
     const quests = (Array.isArray(raw.quests) ? raw.quests : []).map((q) => ({
         id: _genId('q'),
@@ -37,12 +37,13 @@ function _buildSeedState() {
         joinCommand: typeof q.joinCommand === 'string' ? q.joinCommand : '',
         type: q.type === 'weekly' ? 'weekly' : 'daily',
         category: ['class', 'ultra', 'other'].indexOf(q.category) !== -1 ? q.category : 'other',
+        member: q.member === true,
         seasonal: q.seasonal === true && SEASONAL_EVENT_KEYS.indexOf(q.seasonalEvent) !== -1,
         seasonalEvent: (q.seasonal === true && SEASONAL_EVENT_KEYS.indexOf(q.seasonalEvent) !== -1) ? q.seasonalEvent : null,
         done: {},
         hidden: false
     }));
-    return { characters: [], quests: quests, showCompleted: true };
+    return { characters: [], quests: quests, showCompleted: true, showMemberDailies: true };
 }
 
 function _loadReminders() {
@@ -56,11 +57,12 @@ function _loadReminders() {
         return {
             characters: Array.isArray(parsed.characters) ? parsed.characters : [],
             quests:     Array.isArray(parsed.quests) ? parsed.quests : [],
-            showCompleted: parsed.showCompleted !== false
+            showCompleted: parsed.showCompleted !== false,
+            showMemberDailies: parsed.showMemberDailies !== false
         };
     } catch (e) {
         console.log('[AquaStar] Failed to parse ' + remindersJsonPath + ': ' + e.message);
-        return { characters: [], quests: [], showCompleted: true };
+        return { characters: [], quests: [], showCompleted: true, showMemberDailies: true };
     }
 }
 
@@ -76,7 +78,8 @@ ipcMain.handle('saveReminders', (event, fullState) => {
     const toSave = {
         characters: Array.isArray(fullState && fullState.characters) ? fullState.characters : [],
         quests:     Array.isArray(fullState && fullState.quests) ? fullState.quests : [],
-        showCompleted: (fullState && fullState.showCompleted) !== false
+        showCompleted: (fullState && fullState.showCompleted) !== false,
+        showMemberDailies: (fullState && fullState.showMemberDailies) !== false
     };
     fs.writeFileSync(remindersJsonPath, JSON.stringify(toSave, null, 4));
     return { savedTo: remindersJsonPath };

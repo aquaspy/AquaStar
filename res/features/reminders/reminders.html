@@ -39,6 +39,7 @@
   .quest-row .drag-handle { flex:0 0 auto; color:#6f6f6f; cursor:grab; padding:0 2px; user-select:none; font-size:13px; }
   .quest-row .drag-handle:active { cursor:grabbing; }
   .quest-row .qname { flex:1 1 160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .quest-row .qname.member { color:#ffd76a; }
   .quest-row .qtype { flex:0 0 56px; font-size:11px; color:#6f6f6f; text-transform:uppercase; }
   .quest-row .qcategory {
     flex:0 0 92px; font-size:10px; padding:2px 7px; border-radius:10px;
@@ -63,11 +64,14 @@
 
   .icon-btn { display:inline-flex; align-items:center; justify-content:center; padding:5px 7px; line-height:0; }
 
-  #archiveSection, #seasonalSection { flex:0 0 auto; border-top:1px solid #2c2c2c; padding:0 18px; }
+  #archiveSection, #seasonalSection { flex:0 0 auto; border-top:1px solid #2c2c2c; }
   #archiveSection.hidden, #seasonalSection.hidden { display:none; }
-  .archive-toggle { cursor:pointer; padding:8px 0; color:#9a9a9a; font-size:12px; user-select:none; }
+  .archive-toggle { cursor:pointer; padding:8px 18px; color:#9a9a9a; font-size:12px; user-select:none; }
   .archive-toggle:hover { color:#e6e6e6; }
-  #archiveRows, #seasonalRows { max-height:180px; overflow-y:auto; }
+  /* Padding lives on the scrolling element itself (like #rows does), not a non-scrolling
+     wrapper around it - otherwise the scrollbar renders inset from the window edge instead
+     of flush with #rows's scrollbar above it. */
+  #archiveRows, #seasonalRows { max-height:180px; overflow-y:auto; padding:0 18px; box-sizing:border-box; }
   #archiveRows .quest-row { opacity:0.7; }
 
   .form-checkbox { display:flex; align-items:center; gap:5px; font-size:12px; color:#9a9a9a; white-space:nowrap; }
@@ -131,6 +135,11 @@
       <span class="slider"></span>
     </label>
     <span id="showCompletedLabel" class="toolbar-label"></span>
+    <label class="switch">
+      <input type="checkbox" id="showMemberDailiesToggle">
+      <span class="slider"></span>
+    </label>
+    <span id="showMemberDailiesLabel" class="toolbar-label"></span>
   </div>
   <div id="tabs"></div>
   <div id="addQuestForm">
@@ -146,6 +155,10 @@
       <option value="other"></option>
     </select>
     <label class="form-checkbox">
+      <input type="checkbox" id="questMemberInput">
+      <span id="questMemberLabel"></span>
+    </label>
+    <label class="form-checkbox">
       <input type="checkbox" id="questSeasonalInput">
       <span id="questSeasonalLabel"></span>
     </label>
@@ -154,7 +167,9 @@
       <option value="carnival"></option>
       <option value="dageBirthday"></option>
       <option value="aprilFools"></option>
+      <option value="mayThe4th"></option>
       <option value="starFestival"></option>
+      <option value="kalaSeason"></option>
       <option value="friday13"></option>
       <option value="pirateDay"></option>
       <option value="anniversary"></option>
@@ -446,8 +461,8 @@
   // pinned to a calendar month; friday13 has none since it recurs on whichever months
   // actually contain a Friday the 13th that year.
   const SEASONAL_EVENT_KEYS = [
-    'nulgathBirthday', 'carnival', 'dageBirthday', 'aprilFools', 'starFestival',
-    'friday13', 'pirateDay', 'anniversary', 'blackFriday', 'frostval'
+    'nulgathBirthday', 'carnival', 'dageBirthday', 'aprilFools', 'mayThe4th', 'starFestival',
+    'kalaSeason', 'friday13', 'pirateDay', 'anniversary', 'blackFriday', 'frostval'
   ];
   function isSeasonal(quest) {
     return !!quest.seasonal && SEASONAL_EVENT_KEYS.indexOf(quest.seasonalEvent) !== -1;
@@ -457,6 +472,12 @@
   }
   function seasonalLabelOf(quest) {
     return (messages.seasonalEvents[quest.seasonalEvent] || {}).label || '';
+  }
+
+  // Member is a simple orthogonal boolean tag (unlike seasonal, it has no sub-type) -
+  // flags quests that need an active membership to access.
+  function isMember(quest) {
+    return !!quest.member;
   }
 
   // "Next Friday the 13th" shown near Server Time - deliberately does NOT check whether
@@ -481,18 +502,31 @@
     return formatTimeRemaining(nextReset.getTime() - now.getTime());
   }
 
-  // Reorders within the visible (non-hidden, non-seasonal) subset only - hidden/seasonal
-  // quests keep whatever relative order they already had, since those lists aren't draggable.
+  // Reorders within whichever section (main / seasonal / hidden) the dragged quest belongs
+  // to - dragging across sections is a no-op since each renders as its own separate list.
+  // Quests outside that section keep their original relative position in state.quests.
+  function questSectionOf(quest) {
+    if (quest.hidden) return 'hidden';
+    if (isSeasonal(quest)) return 'seasonal';
+    return 'main';
+  }
   function reorderQuest(draggedId, targetId) {
     if (draggedId === targetId) return;
-    const rest = state.quests.filter((q) => q.hidden || q.seasonal);
-    const visible = state.quests.filter((q) => !q.hidden && !q.seasonal);
-    const fromIdx = visible.findIndex((q) => q.id === draggedId);
-    const toIdx = visible.findIndex((q) => q.id === targetId);
+    const draggedQuest = state.quests.find((q) => q.id === draggedId);
+    const targetQuest = state.quests.find((q) => q.id === targetId);
+    if (!draggedQuest || !targetQuest) return;
+    const section = questSectionOf(draggedQuest);
+    if (questSectionOf(targetQuest) !== section) return;
+
+    const group = state.quests.filter((q) => questSectionOf(q) === section);
+    const fromIdx = group.findIndex((q) => q.id === draggedId);
+    const toIdx = group.findIndex((q) => q.id === targetId);
     if (fromIdx === -1 || toIdx === -1) return;
-    const [moved] = visible.splice(fromIdx, 1);
-    visible.splice(toIdx, 0, moved);
-    state.quests = visible.concat(rest);
+    const [moved] = group.splice(fromIdx, 1);
+    group.splice(toIdx, 0, moved);
+
+    let cursor = 0;
+    state.quests = state.quests.map((q) => (questSectionOf(q) === section ? group[cursor++] : q));
     persistState();
     renderQuestRows();
   }
@@ -535,10 +569,13 @@
       });
     }
 
+    // Member has no dedicated column - it's a rare tag (most quests aren't member-only),
+    // so reserving fixed-width space for it on every row wasted horizontal space. Instead
+    // it's a star prefix + gold color on the name itself, costing nothing when absent.
     const nameEl = document.createElement('div');
-    nameEl.className = 'qname';
-    nameEl.textContent = quest.name;
-    nameEl.title = quest.name;
+    nameEl.className = 'qname' + (isMember(quest) ? ' member' : '');
+    nameEl.textContent = (isMember(quest) ? messages.memberBadgeShort + ' ' : '') + quest.name;
+    nameEl.title = quest.name + (isMember(quest) ? ' - ' + messages.memberBadgeTitle : '');
 
     const typeEl = document.createElement('div');
     typeEl.className = 'qtype';
@@ -661,9 +698,10 @@
     if (seasonalExpanded) {
       // Same done-last sort/tint as the main list, but never filtered out by "Show completed" -
       // seasonal quests are occasional check-ins, not something you want to disappear once done.
+      // Draggable, same as the main list - reorderQuest() only reorders within this section.
       seasonalQuests.slice()
         .sort((a, b) => (isDoneNow(a) ? 1 : 0) - (isDoneNow(b) ? 1 : 0))
-        .forEach((quest) => rowsEl.appendChild(buildQuestRow(quest, { archived: false, draggable: false })));
+        .forEach((quest) => rowsEl.appendChild(buildQuestRow(quest, { archived: false, draggable: true })));
     }
   }
 
@@ -679,11 +717,15 @@
       renderArchiveSection([]);
       return;
     }
-    // Hidden quests are pulled out first (regardless of seasonal), then seasonal quests get
-    // their own section, so a quest lands in exactly one of: main list / Seasonal / Hidden.
+    // Hidden quests are pulled out first (regardless of seasonal), then member dailies are
+    // filtered (for characters without membership), then seasonal quests get their own
+    // section, so a quest lands in exactly one of: main list / Seasonal / Hidden.
     const nonHidden = state.quests.filter((q) => !q.hidden);
-    const seasonalQuests = nonHidden.filter((q) => isSeasonal(q));
-    let visibleQuests = nonHidden.filter((q) => !isSeasonal(q));
+    const memberFiltered = state.showMemberDailies
+      ? nonHidden
+      : nonHidden.filter((q) => !(q.member && q.type === 'daily'));
+    const seasonalQuests = memberFiltered.filter((q) => isSeasonal(q));
+    let visibleQuests = memberFiltered.filter((q) => !isSeasonal(q));
     if (state.showCompleted) {
       // Not-done quests first, done ones sink to the bottom - purely a display-time sort,
       // the underlying state.quests order (which drag-and-drop reordering controls) is untouched.
@@ -706,6 +748,7 @@
     messages = msgs;
     state = remindersResult.data;
     if (state.showCompleted === undefined) state.showCompleted = true;
+    if (state.showMemberDailies === undefined) state.showMemberDailies = true;
 
     document.title = messages.title;
     document.getElementById('heading').textContent = messages.heading;
@@ -718,6 +761,14 @@
       persistState();
       renderQuestRows();
     });
+    document.getElementById('showMemberDailiesLabel').textContent = messages.showMemberDailiesLabel;
+    const showMemberDailiesToggle = document.getElementById('showMemberDailiesToggle');
+    showMemberDailiesToggle.checked = state.showMemberDailies;
+    showMemberDailiesToggle.addEventListener('change', () => {
+      state.showMemberDailies = showMemberDailiesToggle.checked;
+      persistState();
+      renderQuestRows();
+    });
     document.getElementById('questNameInput').placeholder = messages.questNamePlaceholder;
     document.getElementById('questJoinInput').placeholder = messages.questJoinPlaceholder;
     document.getElementById('questTypeInput').options[0].textContent = messages.dailyLabel;
@@ -725,6 +776,7 @@
     document.getElementById('questCategoryInput').options[0].textContent = messages.categoryClassLabel;
     document.getElementById('questCategoryInput').options[1].textContent = messages.categoryUltraLabel;
     document.getElementById('questCategoryInput').options[2].textContent = messages.categoryOtherLabel;
+    document.getElementById('questMemberLabel').textContent = messages.memberToggleLabel;
     document.getElementById('questSeasonalLabel').textContent = messages.seasonalToggleLabel;
     SEASONAL_EVENT_KEYS.forEach((key, i) => {
       document.getElementById('questSeasonalEventInput').options[i].textContent = messages.seasonalEvents[key].label;
@@ -744,6 +796,7 @@
       const joinInput = document.getElementById('questJoinInput');
       const typeInput = document.getElementById('questTypeInput');
       const categoryInput = document.getElementById('questCategoryInput');
+      const memberInput = document.getElementById('questMemberInput');
       const name = nameInput.value.trim();
       if (!name) return;
       state.quests.push({
@@ -751,11 +804,13 @@
         joinCommand: joinInput.value.trim(),
         type: typeInput.value === 'weekly' ? 'weekly' : 'daily',
         category: categoryInput.value,
+        member: memberInput.checked,
         seasonal: seasonalToggleInput.checked,
         seasonalEvent: seasonalToggleInput.checked ? seasonalEventInput.value : null,
         done: {}
       });
       nameInput.value = ''; joinInput.value = '';
+      memberInput.checked = false;
       seasonalToggleInput.checked = false;
       seasonalEventInput.disabled = true;
       persistState();
