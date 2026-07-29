@@ -47,13 +47,15 @@ For a example of the defaults, check out the OriginalKeybinds variable on const.
     "forward": "Alt+F",
     "backward": "Alt+B",
     "help": [ "Alt+H", "CmdOrCtrl+H", "F1" ] ,
-    "settings": "Alt+9"
+    "settings": "Alt+9",
+    "reminders": "Alt+T",
+    "record": "Ctrl+J"
 }
 ```
 
  - **NOTE** : In the example file, there is also a "swfLog" mode (as of 1.5 version). Dont worry about it unless you want to log every swf the game uses. Intended for Devs, uses **true** and **false**(no quotes) values only.
 
- - **NOTE2** : there is also a "customUrl" mode. With commas, insert a URL (like https://www.coololdflashgame.org/my-favorite-child-game.swf), and it will run. **Wont work in "custom swf"** mode, but can be used the same way if you have the flash file downloaded. a **null** value disables it and reverts back to the default AQW.
+ - **NOTE2** : there is also a "customUrl" mode. With commas, insert a URL (like https://www.coololdflashgame.org/my-favorite-child-game.swf), and it will run. **Wont work in "custom swf"** mode, but can be used the same way if you have the flash file downloaded. a **null** (or empty `""`) value disables it and reverts back to the default AQW. This one also has a friendlier way to set it - see the "Custom SWF File" section of the Settings screen below, which also lets you pick/remove the "custom swf" file itself through a file dialog instead of copying it into the folder by hand.
 
  - **NOTE3** : there is also a "enableDevTools" mode. When **true**, opens the DevTools console automatically on startup, same as an actual Debug build does, but without needing to rebuild the app. Uses **true** and **false** (no quotes) values only.
 
@@ -86,6 +88,10 @@ https://www.electronjs.org/docs/latest/api/accelerator
 ## Sounds complicated, will there be a Custom menu for it?
 
 Yes! There is now a Settings screen (default keybind `Alt+9`, also available through the window menu on non-game windows) where you can record and save new keybindings without touching any JSON by hand. It still writes to the same `aquastar.json` file described above, so everything on this page still applies - the screen is just a friendlier way to edit it. Changes require restarting AquaStar to take effect (the Settings screen has a "Restart AquaStar Now" button for that).
+
+The same screen also has an "Other Options" section (Player Character, recording format, Flash renderer, DevTools...) and a "Custom SWF File" section (the `customUrl` option from NOTE2 above, plus picking/removing the `aqlite_old.swf` file itself through a native file dialog) - so most of what this page describes can be done there instead of hand-editing `aquastar.json`.
+
+There's also a Reminders screen (default keybind `Alt+T`) for tracking daily/weekly/seasonal in-game tasks per character - unrelated to keybind customization, just another screen you'll find next to Settings.
 
 ## Heey, i did a change and it failed! 
 

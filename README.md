@@ -59,10 +59,11 @@ After version 1.2: Now that AQLite is "dead", as its merged into official game, 
  - Saving your character from flash character page with high resolution (as high as you monitor can render) into a .png in your pc!
  - Colour customization is shown in char page when its saved.
  - And also a keybinding to save your char page!
- - Custom keybindings! just create a aquastar.json in the designed folder!
+ - Custom keybindings! Either create a aquastar.json in the designed folder, or use the in-app Settings screen (Alt+9) to record and save them without touching any JSON.
  - Record the game screen!
  - (For devs and content creators only) Logging of the SWF URLs! Enable it with a aquastar.json file (more on KEYBINDING.MD and aquastar_testing.json)
- - (For those looking at your childhood) Load a custom URL into the launcher for old flash games/content! Enable it with a aquastar.json file (more on KEYBINDING.MD and aquastar_testing.json)
+ - (For those looking at your childhood) Load a custom URL into the launcher for old flash games/content! Set it in a aquastar.json file, or from the "Custom SWF File" section of the Settings screen (Alt+9), which also lets you pick a local .swf file directly with a file dialog.
+ - Reminders (Alt+9's neighbor, Alt+T)! A per-character tracker for daily/weekly/seasonal in-game tasks (ultra bosses, class farming, seasonal events...), with a "time until reset" countdown synced to the game's server clock.
 
 # How to build it yourself
 
@@ -82,7 +83,9 @@ get it from your own system (win64 and linux are already supported, and mac's on
 
 Put the aqlite.swf file in the SAME FOLDER of main.js (the project root), if isnt there by any reason.
 
-Install the dependencies using NPM (nw-flash-trust, electron@4.2.12 and electron-builder) like:
+Install the dependencies using NPM (nw-flash-trust, electron@11.5.0 and electron-builder) like:
+
+(Electron is intentionally pinned to 11.5.0 in package.json - it's the last release built on a Chromium that still supports PPAPI Flash. Don't bump it without a Flash alternative in place.)
 
 ```bash
   cd path/to/project/folder
@@ -116,7 +119,7 @@ PS: DO NOT run ./build.sh as it will build EVERY supported version at the same t
 - Up to 0.5, there is no confirmation to Screenshot took, but they are saved not in the same folder, but in the Pictures file in your User folder. Press F1 and you will see where it is.
 
 ### aqlite_old.swf is in the same folder, but doesnt work.
-- Check the F1 menu, and see if the path is the same as the one your file is. Its not the shortcut folder, so it must be the .exe's real location!
+- Check the F1 menu, and see if the path is the same as the one your file is. Its not the shortcut folder, so it must be the .exe's real location! The "Custom SWF File" section of the Settings screen (Alt+9) also shows whether it's currently detected, and lets you pick/remove it with a file dialog instead of doing it by hand.
 
 ### I need to reinstall it everytime i need to open the game?
 - On windows, unlike with official aqlite and linux versions, windows's version is an installer. So next time you want to open the game, try searching it on the windows menu.

@@ -9,7 +9,7 @@ Custom Electron launcher for AdventureQuest Worlds using native Pepper Flash (PP
 - `npm run dist` – package for current OS (`dist/`)
 - `npm run dist-w` / `dist-l` / `dist-m` – Windows / Linux (AppImage + deb) / Mac (zip + dmg locally; CI builds zip only)
 - `./build.sh` – **legacy local release script** for multi-arch Linux/Windows. Prefer GitHub Releases via tag (see below).
-- **GitHub Release:** bump `version` in `package.json`, commit, then `git tag v1.8.0 && git push origin v1.8.0` — the Release workflow builds all platforms and attaches installers to the GitHub Release.
+- **GitHub Release:** bump `version` in `package.json`, commit, then `git tag vX.Y.Z && git push origin vX.Y.Z` (matching the new version, e.g. current is `1.9.1`) — the Release workflow builds all platforms and attaches installers to the GitHub Release.
 
 No tests, lint, typecheck, or CI exist in this repo.
 
@@ -17,7 +17,7 @@ No tests, lint, typecheck, or CI exist in this repo.
 
 - **Electron is pinned to `11.5.0`.** This is the last Electron release on Chromium 87, the final Chromium line that supports PPAPI Flash (removed in Chromium 88 / Electron 12+). Do not upgrade to Electron 12+ without a Flash alternative (e.g. Ruffle).
 - **`asar: false` is required.** The PPAPI Flash plugin must exist as a real file on disk (`FlashPlayer/*.so`, `*.dll`, `*.plugin`). Electron passes the path directly to Chromium.
-- **The app runs without `app.enableSandbox()`** in the main process because Electron needs filesystem access to locate the Flash plugin. Game/main windows use `sandbox: false` so PPAPI Flash loads; wiki windows use `sandbox: true` and `plugins: false`.
+- **The app runs without `app.enableSandbox()`** in the main process because Electron needs filesystem access to locate the Flash plugin. Game/main windows use `sandbox: false` so PPAPI Flash loads; wiki/settings/reminders-style windows use `sandbox: true`. Plugins (Flash) stay enabled on every window type regardless - see `res/windows/config.js`.
 
 ## Architecture
 
@@ -37,17 +37,19 @@ No tests, lint, typecheck, or CI exist in this repo.
 ## Runtime behavior
 
 - **Default game URL:** `https://game.aq.com/game/gamefiles/Loader3.swf?ver=a`
-- **Override:** Drop `aqlite_old.swf` in the project root (or install dir). If present, it loads the local file instead of the remote URL.
-- **Custom URL override:** Set `"customUrl": "https://..."` in `aquastar.json` (only works when not using `aqlite_old.swf`).
+- **Override:** Drop `aqlite_old.swf` in the project root (or install dir), or use the "Custom SWF File" section of the Settings screen (Alt+9) to pick one via a file dialog - it copies the file to that same location. If present, it loads the local file instead of the remote URL, and takes priority over the custom URL option below. Restart required either way.
+- **Custom URL override:** Set `"customUrl": "https://..."` in `aquastar.json`, or the same "Custom SWF File" section in Settings (it's a plain text field there too). Ignored whenever `aqlite_old.swf` is present.
 - **SWF logging:** Set `"swfLog": true` in `aquastar.json` to log all `game.aq.com/game/*` requests to `Pictures/AquaStar Screenshots/SWFLogging/`.
-- **Custom keybindings:** Create `aquastar.json` in appData or install dir. See `aquastar_testing.json` for an example and `KEYBINDING.md` for docs.
+- **Custom keybindings:** Create `aquastar.json` in appData or install dir, or use the Settings screen (Alt+9) which writes the same file. See `aquastar_testing.json` for an example and `KEYBINDING.md` for docs.
+- **Reminders (Alt+T):** per-character daily/weekly (and seasonal) quest tracker. Stored in `aquastar_reminders.json` in appData, seeded once from `res/features/reminders/reminders_default.json` on first run - after that the user's own file is authoritative.
 
 ## Important quirks
 
 - Game SWFs are loaded through **`res/swf_wrapper.html`** with `wmode=direct` (GPU direct-to-screen). Set `"useDirectWmode": false` in `aquastar.json` to disable the wrapper.
 - **Background throttling is disabled** via Chromium flags in `res/flash.js` and `backgroundThrottling: false` on game/main windows.
-- **Wiki windows** use `plugins: false` to avoid spawning a PPAPI instance per tab (RAM savings).
+- **Plugins (Flash) are enabled on every window type**, including wiki/settings/reminders - see the comment in `res/windows/config.js` (Char Page compatibility, not worth the special-casing).
 - **F2 / Ctrl+J** use `globalShortcut` because Flash PPAPI consumes keyboard events before `before-input-event`.
+- **WikiView's hover-preview image** is fetched from the main process (`res/ipc/wikiFetch.js`), not the renderer - a page-side `fetch()` to aqwwiki.wikidot.com from an account.aq.com window would be blocked by CORS.
 - **Screen recording** saves WebM (VP8 preferred). Native MP4 is not supported on Chromium 87; upgrading to Electron 12+ drops Flash.
 - **User-Agent** for `*.aq.com` requests matches Artix Game Launcher: native Chromium UA with any `Artix...` token stripped, plus `artixmode: launcher` header (no hardcoded ArtixGameLauncher string).
 - **Ad blocking** blocks known ad domains only via `session.webRequest.onBeforeRequest` (aq.com traffic is not filtered).
@@ -60,7 +62,9 @@ After making changes:
 3. Test `F2` screenshot saves to `Pictures/AquaStar Screenshots`
 4. Test `Ctrl+J` screen recording saves WebM to a chosen path
 5. Test `Alt+K` on a charpage (opens hidden 4K window, captures, closes)
-6. If modifying build/packaging, test `npm run pack` first (`--dir`, no installer)
+6. Test `Alt+9` (Settings opens; keybind recording, Other Options, and the Custom SWF File section - choosing/removing a file - all save correctly)
+7. Test `Alt+T` (Reminders opens; add a character and a quest, mark it done, restart the app, confirm it persisted)
+8. If modifying build/packaging, test `npm run pack` first (`--dir`, no installer)
 
 ## Build artifacts
 

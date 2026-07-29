@@ -19,5 +19,7 @@
     "swfLog": false,
     "customUrl": null,
     "useDirectWmode": true,
-    "settings": "Alt+9"
+    "settings": "Alt+9",
+    "reminders": "Alt+T",
+    "record": "Ctrl+J"
 }
