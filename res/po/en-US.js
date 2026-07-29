@@ -117,6 +117,7 @@ exports.settingsMessages = {
     optionLabels: {
         playerCharacter:   "Player Character",
         featurePlayerName: "Show Player Character in Window Title",
+        customUrl:         "Custom Game URL",
         recordingFormat:   "Recording Format",
         renderMode:        "Flash Renderer",
         enableDevTools:    "Enable DevTools"
@@ -124,10 +125,21 @@ exports.settingsMessages = {
     optionHints: {
         playerCharacter:   "Letters and numbers only. Used by the Char Page shortcut (Alt+P) to open straight to this character.",
         featurePlayerName: "When on, replaces \"AquaStar\" in the main window title with your Player Character above.",
+        customUrl:         "Loads a different SWF/game URL instead of the default AQW game. Leave empty for the default. Ignored if a custom SWF file (below) is active.",
         recordingFormat:   "File format used when recording the game screen (Ctrl+J). MP4 isn't available on this Electron version.",
         renderMode:        "Which Flash runtime loads AQW (main, new instance, Testing). DragonFable and the Char Page are unaffected.",
         enableDevTools:    "Opens the DevTools console automatically on startup."
     },
+    customSwfHeading      : "Custom SWF File",
+    customSwfLabel        : "Local SWF File",
+    customSwfHint         : "Overrides the default AQW game entirely with a local .swf file - takes priority over the Custom Game URL option above. Takes effect after restarting AquaStar.",
+    customSwfActiveLabel  : "Active: ",
+    customSwfInactiveLabel: "Not set - using the default AQW game.",
+    customSwfChooseButton : "Choose File...",
+    customSwfRemoveButton : "Remove",
+    customSwfRemoveConfirm: "Remove the custom SWF file? AquaStar will go back to loading the default AQW game after a restart.",
+    customSwfChosenMessage: "Custom SWF file set. Restart AquaStar to use it.",
+    customSwfRemovedMessage: "Custom SWF file removed. Restart AquaStar to apply.",
     optionWarnings: {
         renderMode:     "Ruffle is an experimental, open-source Flash emulator. It may be slower, less stable, or behave differently than the real Flash Player, especially in crowded rooms. Switch anyway?",
         enableDevTools: "This option is for developers. Normal players usually don't need it. Enable anyway?"

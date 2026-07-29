@@ -4,7 +4,8 @@ const windowsMenu   = require('./windows/menu.js');
 const ipcRecording  = require('./ipc/recording.js');
 const locale        = require('./locale.js');
 const fs            = require('fs');
-const { globalShortcut, BrowserWindow, ipcMain, app } = require('electron');
+const path          = require('path');
+const { globalShortcut, BrowserWindow, ipcMain, app, dialog } = require('electron');
 const electronLocalshortcut = require('electron-localshortcut');
 
 var finalKeybinds = {};
@@ -58,7 +59,9 @@ const processKeybings = function (){
     
     /// Shhh... secreat stuff
     if (k.swfLog == true) constant.enableSWFLogging();
-    if (k.customUrl != undefined && k.customUrl != null) constant.changeMainUrl(k.customUrl);
+    // Truthy check on purpose - customUrl now always exists (default ""), via originalOptions,
+    // so an empty-string default must NOT be treated as "override with an empty URL".
+    if (k.customUrl) constant.changeMainUrl(k.customUrl);
     if (k.useDirectWmode !== undefined) constant.setUseDirectWmode(k.useDirectWmode);
     if (k.enableDevTools == true) constant.enableDevTools();
 
@@ -232,4 +235,39 @@ ipcMain.handle('saveKeybindings', (event, updatedBinds) => {
 ipcMain.on('restartApp', () => {
     app.relaunch();
     app.exit(0);
+});
+
+/// -------------------------------
+/// Settings screen IPC - custom AQLite SWF file (aqlite_old.swf) management.
+/// Presence of this exact file (checked once at boot in const.js) is what puts the app
+/// into "custom swf" mode, which takes priority over the customUrl option above.
+/// -------------------------------
+
+function _customSwfPath() {
+    return path.join(constant.appDirectoryPath, 'aqlite_old.swf');
+}
+
+ipcMain.handle('getCustomSwfStatus', () => {
+    const target = _customSwfPath();
+    return { exists: fs.existsSync(target), path: target };
+});
+
+ipcMain.handle('chooseCustomSwf', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const result = await dialog.showOpenDialog(win, {
+        title: 'Select a custom AQLite SWF file',
+        filters: [{ name: 'Flash SWF', extensions: ['swf'] }],
+        properties: ['openFile']
+    });
+    if (result.canceled || !result.filePaths.length) return { canceled: true };
+
+    const target = _customSwfPath();
+    fs.copyFileSync(result.filePaths[0], target);
+    return { canceled: false, exists: true, path: target };
+});
+
+ipcMain.handle('removeCustomSwf', () => {
+    const target = _customSwfPath();
+    if (fs.existsSync(target)) fs.unlinkSync(target);
+    return { exists: fs.existsSync(target), path: target };
 });

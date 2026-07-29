@@ -108,6 +108,7 @@ exports.settingsMessages = {
     optionLabels: {
         playerCharacter:   "",
         featurePlayerName: "",
+        customUrl:         "",
         recordingFormat:   "",
         renderMode:        "",
         enableDevTools:    ""
@@ -115,10 +116,21 @@ exports.settingsMessages = {
     optionHints: {
         playerCharacter:   "",
         featurePlayerName: "",
+        customUrl:         "",
         recordingFormat:   "",
         renderMode:        "",
         enableDevTools:    ""
     },
+    customSwfHeading      : "",
+    customSwfLabel        : "",
+    customSwfHint         : "",
+    customSwfActiveLabel  : "",
+    customSwfInactiveLabel: "",
+    customSwfChooseButton : "",
+    customSwfRemoveButton : "",
+    customSwfRemoveConfirm: "",
+    customSwfChosenMessage: "",
+    customSwfRemovedMessage: "",
     optionWarnings: {
         renderMode:     "",
         enableDevTools: ""

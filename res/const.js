@@ -223,6 +223,10 @@ exports.renderModeChoices = Object.keys(renderModes).map((id) => (
 const originalOptions = {
     playerCharacter:   "",
     featurePlayerName: false,
+    // Overrides the AQW game SWF loaded on startup. Ignored when a custom SWF file
+    // (aqlite_old.swf, managed just below in the Settings screen) is active - see
+    // changeMainUrl() and the "isOldAqlite" guard inside it.
+    customUrl:         "",
     recordingFormat:   exports.defaultRecordingFormat,
     renderMode:        exports.defaultRenderMode,
     // Dev-only escape hatch, warned about on enable in the Settings screen.

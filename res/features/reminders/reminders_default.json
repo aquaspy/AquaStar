@@ -1,6 +1,8 @@
 {
     "quests": [
         { "name": "Example Daily Quest", "joinCommand": "/join example", "type": "daily", "category": "other" },
-        { "name": "Example Weekly Quest", "joinCommand": "/join example", "type": "weekly", "category": "other" }
+        { "name": "Example Weekly Quest", "joinCommand": "/join example", "type": "weekly", "category": "other" },
+        { "name": "Example Seasonal Daily Quest", "joinCommand": "/join example", "type": "daily", "category": "other", "seasonal": true, "seasonalEvent": "frostval" },
+        { "name": "Example Seasonal Weekly Quest", "joinCommand": "/join example", "type": "weekly", "category": "ultra", "seasonal": true, "seasonalEvent": "nulgathBirthday" }
     ]
 }
