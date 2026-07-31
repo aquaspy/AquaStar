@@ -26,16 +26,22 @@ function newBrowserWindow(new_path, isMainWin=false){
     else if (_isGameWindow(new_path)) config = windowConfig.gameConfig;
     else config = windowConfig.winConfig;
     
-    // Ruffle mode (experimental, opt-in via Settings) only covers what it's actually
-    // eligible for (main AQW / new instance / Testing AQW) - anything else, including
-    // DragonFable, falls straight through to the exact same Flash path as always.
+    // Ruffle mode (Settings): AQW main/new/Testing + DragonFable. Char Page is
+    // unaffected (Artix's own page already ships Ruffle).
     var renderMode = (keybinds.keybinds && keybinds.keybinds.renderMode) || constant.defaultRenderMode;
     if (renderMode === 'ruffle' && constant.isRuffleEligible(new_path)) {
         socketProxy.start();
         new_path = constant.wrapRuffleUrl(new_path);
     }
-    // Wrap game SWFs in an HTML page with wmode=direct for maximum performance
-    else if (constant.useDirectWmode && _isGameWindow(new_path)) {
+    // Flash path for DragonFable: always use the HTML embed so the 750x550 stage
+    // letterboxes into the window (scale=showall). Bare .swf navigation leaves it
+    // at native stage size. wmode=opaque + base= keep relative DFversion.asp /
+    // gamefiles/* loads working (wmode=direct from file:// breaks them).
+    else if (originalPath === constant.df_url) {
+        new_path = constant.wrapSwfUrl(new_path, { wmode: 'opaque', scale: 'showall' });
+    }
+    // Wrap AQW SWFs in an HTML page with wmode=direct for maximum performance.
+    else if (constant.useDirectWmode && _isGameWindow(new_path, false)) {
         new_path = constant.wrapSwfUrl(new_path);
     }
     
