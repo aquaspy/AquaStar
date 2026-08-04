@@ -69,21 +69,41 @@
   }
 
   window.addEventListener('DOMContentLoaded', async function () {
-    var socketProxy = proxyUrl ? await buildSocketProxies() : [];
+    // AQW needs the TCP↔WebSocket relay. DragonFable talks HTTP for its loader
+    // (DFversion.asp / gamefiles/* relative to the SWF URL) and does not use the
+    // AQW sock* hosts - skip the servers API round-trip for DF only.
+    var isDragonFable = /dragonfable\.com/i.test(swfUrl) || /DFLoader\.swf/i.test(swfUrl);
+    var socketProxy = (proxyUrl && !isDragonFable) ? await buildSocketProxies() : [];
+
+    // Same fix as Flash <param name="base">: DFLoader resolves DFversion.asp and
+    // gamefiles/* as relative URLs. Without base=, Ruffle resolves them against
+    // this file:// wrapper page and shows "Error loading Game Engine!!".
+    var swfBase = '';
+    try {
+      var u = new URL(swfUrl);
+      swfBase = u.origin + u.pathname.replace(/[^/]*$/, '');
+    } catch (e) {}
 
     var ruffle = window.RufflePlayer.newest();
     var player = ruffle.createPlayer();
     document.getElementById('container').appendChild(player);
 
-    player.load({
+    var loadOpts = {
       url: swfUrl,
       allowScriptAccess: true,
       allowNetworking: 'all',
       allowFullscreen: true,
       splashScreen: false,
       preloader: false,
+      // Match Flash scale=showall: letterbox (black bars) instead of stretching.
+      letterbox: 'on',
       socketProxy: socketProxy
-    }).catch(function (e) { console.error('[AquaStar] Ruffle load failed:', e); });
+    };
+    if (swfBase) loadOpts.base = swfBase;
+
+    player.load(loadOpts).catch(function (e) {
+      console.error('[AquaStar] Ruffle load failed:', e);
+    });
   });
 })();
 </script>

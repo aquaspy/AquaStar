@@ -1,6 +1,6 @@
 {
   "name": "AquaStar",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "A custom aqlite launcher",
   "homepage": "https://github.com/aquaspy/AquaStar",
   "main": "main.js",
@@ -55,6 +55,7 @@
       ],
       "maintainer": "aquastar",
       "synopsis": "AQW launcher with native Flash",
+      "icon": "build/icons",
       "target": [
         {
           "target": "AppImage",

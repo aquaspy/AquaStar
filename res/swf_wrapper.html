@@ -15,6 +15,18 @@
     var swfUrl = params.get('swf');
     if (!swfUrl) return;
 
+    // Optional overrides (DragonFable passes wmode=opaque&scale=showall).
+    var wmode = params.get('wmode') || 'direct';
+    var scale = params.get('scale') || 'showall';
+
+    // Base directory of the SWF so relative ActionScript loads resolve against the
+    // game origin, not this file:// wrapper page (critical for DFLoader.swf).
+    var swfBase = '';
+    try {
+      var u = new URL(swfUrl);
+      swfBase = u.origin + u.pathname.replace(/[^/]*$/, '');
+    } catch (e) {}
+
     var obj = document.createElement('object');
     obj.type = 'application/x-shockwave-flash';
     obj.data = swfUrl;
@@ -22,13 +34,19 @@
     obj.height = '100%';
 
     var cfg = [
-      {name:'wmode', value:'direct'},
+      {name:'wmode', value: wmode},
+      {name:'scale', value: scale},
+      {name:'salign', value: 't'},
       {name:'allowscriptaccess', value:'always'},
       {name:'allowfullscreen', value:'true'},
-      {name:'quality', value:'best'}
+      {name:'quality', value:'best'},
+      {name:'bgcolor', value:'#000000'},
+      {name:'base', value: swfBase},
+      {name:'allownetworking', value:'all'}
     ];
 
     cfg.forEach(function(p) {
+      if (!p.value && p.value !== '') return;
       var el = document.createElement('param');
       el.name = p.name;
       el.value = p.value;

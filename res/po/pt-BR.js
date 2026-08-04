@@ -128,7 +128,7 @@ exports.settingsMessages = {
         featurePlayerName: "Quando ativado, substitui \"AquaStar\" no título da janela principal pelo Personagem acima.",
         customUrl:         "Carrega um SWF/URL de jogo diferente ao invés do AQW padrão. Deixe vazio para usar o padrão. Ignorado se um arquivo SWF customizado (abaixo) estiver ativo.",
         recordingFormat:   "Formato do arquivo ao gravar a tela do jogo (Ctrl+J). MP4 não está disponível nesta versão do Electron.",
-        renderMode:        "Qual runtime Flash carrega o AQW (principal, nova instância, Testing). DragonFable e a Char Page não são afetados.",
+        renderMode:        "Qual runtime Flash carrega o AQW (principal, nova instância, Testing) e o DragonFable (Alt+1). A Char Page não é afetada (a Artix já usa Ruffle lá).",
         enableDevTools:    "Abre o console de DevTools automaticamente ao iniciar."
     },
     customSwfHeading      : "Arquivo SWF Customizado",

@@ -53,7 +53,8 @@ Object.defineProperty(exports, 'testingAQW', {
                (Math.floor(Math.random() * 900) + 100);
     }
 });
-exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=2'
+// Same SWF the official web.asp embeds (ver= is only a cache-buster; bytes are identical).
+exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=668201'
 
 // Export farm
 
@@ -121,20 +122,26 @@ exports.setUseDirectWmode = (val) => {
 }
 
 const swfWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'swf_wrapper.html'));
-exports.wrapSwfUrl = function(swfUrl) {
+// opts: optional { wmode, scale } forwarded to swf_wrapper.html query string.
+// AQW uses defaults (wmode=direct). DragonFable needs opaque + showall + the wrapper's
+// base= param so relative DFversion.asp / gamefiles/* loads still hit play.dragonfable.com.
+exports.wrapSwfUrl = function(swfUrl, opts) {
     if (!swfUrl) return swfUrl;
-    return swfWrapperUrl + '?swf=' + encodeURIComponent(swfUrl);
+    var q = '?swf=' + encodeURIComponent(swfUrl);
+    if (opts && opts.wmode) q += '&wmode=' + encodeURIComponent(opts.wmode);
+    if (opts && opts.scale) q += '&scale=' + encodeURIComponent(opts.scale);
+    return swfWrapperUrl + q;
 }
 
 // Ruffle (open-source Flash emulator) as an alternative to the PPAPI Flash plugin -
-// see res/ruffle_wrapper.html. Only covers what AquaStar loads directly (main AQW,
-// new instance, Testing AQW); DragonFable is intentionally left out for now, and the
-// AQW Char Page already loads Ruffle unconditionally from Artix's own page regardless
-// of this setting, so it needs no wrapper of its own.
+// see res/ruffle_wrapper.html. Covers main AQW / new instance / Testing AQW / DragonFable
+// when Settings → renderMode is "ruffle". The AQW Char Page already loads Ruffle from
+// Artix's own page regardless of this setting, so it needs no wrapper of its own.
 const ruffleWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_wrapper.html'));
 exports.isRuffleEligible = function(swfUrl) {
     if (!swfUrl) return false;
     if (swfUrl === exports.mainPath) return true;
+    if (swfUrl === exports.df_url) return true;
     // testingAQW carries a random cache-busting "?ver=" suffix per call, so match by prefix.
     if (swfUrl.indexOf('https://game.aq.com/game/gamefiles/Loader_Spider.swf') === 0) return true;
     return false;
