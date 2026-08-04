@@ -40,7 +40,7 @@
         { "name": "Experiment 107: Elder's Blood", "joinCommand": "/join arcangrove", "type": "daily", "category": "other" },
         { "name": "Nightmare Fire / Links to the Past (Cysero Hammer)", "joinCommand": "/join deadmoor", "type": "daily", "category": "other" },
         { "name": "Four Horseman Badges", "joinCommand": "/join undervoid", "type": "daily", "category": "other", "seasonal": true, "seasonalEvent": "dageBirthday" },
-        { "name": "Odd's 'n' Ends (Crypto Token)", "joinCommand": "", "type": "daily", "category": "other" },
+        { "name": "Odd's 'n' Ends (Crypto Token)", "joinCommand": "/join curio", "type": "daily", "category": "other" },
         { "name": "Shadow Embargo (Legion Castle)", "joinCommand": "/join akiba", "type": "daily", "category": "other" },
         { "name": "Friendship", "joinCommand": "/join battleodium", "type": "daily", "category": "other" },
         { "name": "Seal of Light/Darkness", "joinCommand": "/join alteonbattle", "type": "daily", "category": "other" },
