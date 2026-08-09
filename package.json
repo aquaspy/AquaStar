@@ -85,8 +85,9 @@
     "icon": "Icon/Icon.png"
   },
   "dependencies": {
-    "nw-flash-trust": "^0.3.0",
     "electron-localshortcut": "3.2.1",
+    "extract-zip": "^1.7.0",
+    "nw-flash-trust": "^0.3.0",
     "ws": "^8.21.1"
   }
 }

@@ -62,6 +62,7 @@ exports.menuMessages = {
     menuSocialMedia  : "Redes sociais",
     menuWiki         : "AQW Wiki",
     menuDesign       : "Design Notes",
+    menuBalancePatchNotes: "Balance/Class Patch Notes",
     menuAccount      : "AQW Account",
     menuPortal       : "Portal Battleon",
     menuHeromart     : "Heromart",

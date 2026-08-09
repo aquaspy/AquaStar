@@ -52,6 +52,7 @@ exports.menuMessages = {
     menuSocialMedia  : "",
     menuWiki         : "",
     menuDesign       : "",
+    menuBalancePatchNotes: "",
     menuAccount      : "",
     menuPortal       : "",
     menuHeromart     : "",

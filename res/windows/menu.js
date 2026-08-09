@@ -52,6 +52,7 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             submenu: [
                 generateLink(menuMessages.menuWiki,constant.wikiReleases,keybinds.wiki),
                 generateLink(menuMessages.menuDesign,constant.designNotes,keybinds.design),
+                generateLink(menuMessages.menuBalancePatchNotes,constant.balancePatchNotes),
                 generateLink(menuMessages.menuAccount,constant.accountAq,keybinds.account),
                 generateLink(menuMessages.menuCharpage,constant.charLookup,keybinds.charpage),
                 // No keybind now...

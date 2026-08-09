@@ -46,8 +46,21 @@ jobs:
       - run: |
           mkdir artifacts
           Copy-Item -Path dist\*.exe -Destination artifacts\AquaStar-Setup-x64.exe
+      # Build from the x64 staging directory so the portable executable receives
+      # the same x64 PPAPI Flash binary as the NSIS installer.
+      - run: |
+          Push-Location work-win-x64
+          npx electron-builder --win portable --x64 --publish never --config.artifactName='AquaStar-Portable-x64-${version}.${ext}'
+          Pop-Location
+          Copy-Item -Path work-win-x64\dist\AquaStar-Portable-x64-*.exe -Destination artifacts\
       - run: bash scripts/build-arch.sh win ia32
       - run: Copy-Item -Path dist\*.exe -Destination artifacts\AquaStar-Setup-ia32.exe
+      # The ia32 staging directory contains pepflashplayer32bits.dll.
+      - run: |
+          Push-Location work-win-ia32
+          npx electron-builder --win portable --ia32 --publish never --config.artifactName='AquaStar-Portable-ia32-${version}.${ext}'
+          Pop-Location
+          Copy-Item -Path work-win-ia32\dist\AquaStar-Portable-ia32-*.exe -Destination artifacts\
       - uses: actions/upload-artifact@v4
         with:
           name: aquastar-windows

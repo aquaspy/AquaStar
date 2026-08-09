@@ -52,6 +52,7 @@ const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
 // Links with keybinds
 const charLookup   = 'https://account.aq.com/CharPage';
 const designNotes  = 'https://www.aq.com/gamedesignnotes/';
+const balancePatchNotes = 'https://www.aq.com/gamedesignnotes/AQW-Balance-PatchNotes-9515';
 const accountAq    = 'https://account.aq.com/';
 const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
 
@@ -83,6 +84,7 @@ exports.githubPage       = githubPage;
 exports.wikiReleases     = wikiReleases;
 exports.accountAq        = accountAq;
 exports.designNotes      = designNotes;
+exports.balancePatchNotes = balancePatchNotes;
 exports.charLookup       = charLookup;
 exports.heromart         = heromart;
 exports.battleon         = battleon;
