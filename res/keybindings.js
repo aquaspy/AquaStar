@@ -7,6 +7,7 @@ const fs            = require('fs');
 const path          = require('path');
 const { globalShortcut, BrowserWindow, ipcMain, app, dialog } = require('electron');
 const electronLocalshortcut = require('electron-localshortcut');
+const ruffleUpdate    = require('./ruffleUpdate.js');
 
 var finalKeybinds = {};
 var recordingWinId = 0;
@@ -196,7 +197,7 @@ exports.addKeybinding = processKeybings;
 // Whichever file is actually taking effect gets the write - inPathJsonPath wins the
 // merge in customKeybinds() when both exist, so writing to appdata only would be a silent no-op.
 function _keybindSaveTarget(){
-    return fs.existsSync(constant.inPathJsonPath) ? constant.inPathJsonPath : constant.appdataJsonPath;
+    return constant.appdataJsonPath;
 }
 
 ipcMain.handle('getKeybindings', () => {
@@ -206,6 +207,7 @@ ipcMain.handle('getKeybindings', () => {
         options:  Object.assign({}, constant.originalOptions),
         recordingFormatChoices: constant.recordingFormatChoices,
         renderModeChoices: constant.renderModeChoices,
+        ruffleUpdateChannelChoices: constant.ruffleUpdateChannelChoices,
         savePath: _keybindSaveTarget()
     };
 });
@@ -231,6 +233,28 @@ ipcMain.handle('saveKeybindings', (event, updatedBinds) => {
     fs.writeFileSync(target, JSON.stringify(existing, null, 4));
     return { savedTo: target };
 });
+
+ipcMain.handle('updateRuffle', async (event, requestedChannel) => {
+    try {
+        const channel = requestedChannel === 'nightly' ? 'nightly' : 'latest';
+        return Object.assign({ ok: true }, await ruffleUpdate.downloadLatest(
+            constant.appDataDirectory,
+            channel,
+            path.join(constant.appRootPath, 'res', 'ruffle', 'ruffle.js')
+        ));
+    } catch (e) {
+        return { ok: false, error: e.message || String(e) };
+    }
+});
+
+ipcMain.handle('getRuffleStatus', () => {
+    const status = ruffleUpdate.getStatus(constant.appDataDirectory, path.join(constant.appRootPath, 'res', 'ruffle', 'ruffle.js'));
+    status.isActive = finalKeybinds.renderMode === 'ruffle';
+    status.configuredChannel = finalKeybinds.ruffleUpdateChannel === 'nightly' ? 'nightly' : 'latest';
+    return status;
+});
+
+ipcMain.handle('restoreBundledRuffle', () => ruffleUpdate.restoreBundled(constant.appDataDirectory));
 
 ipcMain.on('restartApp', () => {
     app.relaunch();

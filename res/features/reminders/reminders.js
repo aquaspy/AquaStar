@@ -10,8 +10,14 @@ const constant = require('../../const.js');
 const locale   = require('../../locale.js');
 
 const remindersJsonFileName = constant.appName.toLocaleLowerCase() + '_reminders.json'; // "aquastar_reminders.json"
-const remindersJsonPath = path.join(app.getPath('appData'), remindersJsonFileName);
+const legacyRemindersJsonPath = path.join(app.getPath('appData'), remindersJsonFileName);
+const remindersJsonPath = path.join(constant.appDataDirectory, remindersJsonFileName);
 const remindersDefaultPath = path.join(__dirname, 'reminders_default.json');
+
+if (!fs.existsSync(remindersJsonPath) && fs.existsSync(legacyRemindersJsonPath)) {
+    try { fs.copyFileSync(legacyRemindersJsonPath, remindersJsonPath); }
+    catch (e) { console.log('[AquaStar] Could not migrate reminders: ' + e.message); }
+}
 
 function _genId(prefix) {
     return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);

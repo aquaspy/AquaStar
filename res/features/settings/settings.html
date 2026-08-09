@@ -92,6 +92,8 @@
   button.small { padding: 5px 10px; font-size: 11px; }
   button.primary { background: #2b6fce; border-color: #2b6fce; color: #fff; }
   button.primary:hover { background: #3a7fe0; }
+  button.danger { background: #8d3030; border-color: #a64646; color: #fff; }
+  button.danger:hover { background: #a63a3a; }
   button:disabled { opacity: .45; cursor: default; }
 
   footer {
@@ -155,6 +157,8 @@
     customUrl:         'text',
     recordingFormat:   'select',
     renderMode:        'select',
+    ruffleUpdateChannel: 'select',
+    ruffleAutoUpdate:  'boolean',
     enableDevTools:    'boolean'
   };
 
@@ -229,6 +233,7 @@
   }
 
   let messages, defaults, current, options;
+  let updateChannelChoices = [];
   // key -> { comboEl, initial: string, value: string, recording: bool, type: 'keybind'|'option' }
   const rowState = {};
   let activeRecordingKey = null;
@@ -531,6 +536,85 @@
     return [heading, urlRow, row];
   }
 
+  function buildRuffleSection() {
+    const heading = document.createElement('div');
+    heading.className = 'section-heading';
+    heading.textContent = messages.ruffleHeading || 'Ruffle';
+    const statusRow = document.createElement('div');
+    statusRow.className = 'row';
+    const statusLabel = document.createElement('div');
+    statusLabel.className = 'label';
+    statusLabel.textContent = messages.ruffleStatusLabel || 'Ruffle selected at startup';
+    const statusValue = document.createElement('span');
+    statusValue.className = 'swf-status';
+    statusRow.appendChild(statusLabel);
+    statusRow.appendChild(statusValue);
+    const updateRow = document.createElement('div');
+    updateRow.className = 'row';
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = messages.ruffleUpdateLabel || 'Update Ruffle';
+    const hint = document.createElement('span');
+    hint.className = 'hint';
+    hint.textContent = messages.ruffleUpdateHint || '';
+    label.appendChild(hint);
+    const update = document.createElement('button');
+    update.className = 'small';
+    update.textContent = messages.ruffleUpdateButton || 'Download nightly update';
+    update.onclick = async () => {
+      update.disabled = true;
+      setStatus(messages.ruffleDownloadingMessage || 'Downloading Ruffle...', true);
+      const selectedChannel = rowState.ruffleUpdateChannel ? rowState.ruffleUpdateChannel.value : 'latest';
+      const result = await api.updateRuffle(selectedChannel);
+      update.disabled = false;
+      if (result.ok) {
+        if (result.restartRequired) {
+          setStatus(messages.ruffleUpdatedMessage || 'Ruffle downloaded. Restart AquaStar to apply it.', true);
+          document.getElementById('restartBtn').disabled = false;
+        } else if (result.bundledAlreadyCurrent) setStatus(messages.ruffleBundledAlreadyCurrentMessage || 'The bundled Ruffle is already the latest stable version.');
+        else setStatus(messages.ruffleAlreadyCurrentMessage || 'Ruffle is already up to date.');
+      } else setStatus((messages.ruffleUpdateFailedMessage || 'Could not update Ruffle: ') + result.error);
+    };
+    updateRow.appendChild(label);
+    updateRow.appendChild(update);
+    api.getRuffleStatus().then((ruffle) => {
+      const configuredChannel = ruffle.configuredChannel === 'nightly'
+        ? (messages.ruffleNightlyLabel || 'Nightly') : (messages.ruffleLatestLabel || 'Latest (Stable)');
+      const selected = ruffle.loaded.source === 'downloaded'
+        ? ((ruffle.loaded.channel === 'nightly' ? (messages.ruffleNightlyLabel || 'Nightly') :
+            ruffle.loaded.channel === 'latest' ? (messages.ruffleLatestLabel || 'Latest (Stable)') :
+            (messages.ruffleDownloadedLabel || 'Downloaded version')))
+        : (messages.ruffleBundledLabel || 'Bundled fallback');
+      statusValue.textContent = (ruffle.isActive ? '' : (messages.ruffleInactiveLabel || 'Ruffle is not active; Flash Player is selected.\n')) +
+        (messages.ruffleConfiguredChannelLabel || 'Configured update channel: ') + configuredChannel + '\n' +
+        (messages.ruffleLoadedLabel || 'Selected at startup: ') + selected + ' — ' + ruffle.loaded.version + '\n' +
+        (messages.ruffleFallbackLabel || 'Fallback: ') + ruffle.fallback.version;
+      statusValue.style.whiteSpace = 'pre-line';
+      statusValue.classList.add('active');
+    }).catch(() => { statusValue.textContent = messages.ruffleStatusUnavailable || 'Runtime status unavailable.'; });
+    const restoreRow = document.createElement('div');
+    restoreRow.className = 'row';
+    const restoreLabel = document.createElement('div');
+    restoreLabel.className = 'label';
+    restoreLabel.textContent = messages.ruffleRestoreLabel || 'Restore bundled Ruffle';
+    const restoreHint = document.createElement('span');
+    restoreHint.className = 'hint';
+    restoreHint.textContent = messages.ruffleRestoreHint || '';
+    restoreLabel.appendChild(restoreHint);
+    const restore = document.createElement('button');
+    restore.className = 'small danger';
+    restore.textContent = messages.ruffleRestoreButton || 'Restore bundled version';
+    restore.onclick = async () => {
+      if (!window.confirm(messages.ruffleRestoreConfirm || 'Restore the bundled Ruffle version after restart?')) return;
+      await api.restoreBundledRuffle();
+      setStatus(messages.ruffleRestoreMessage || 'Bundled Ruffle will be restored after restart.', true);
+      document.getElementById('restartBtn').disabled = false;
+    };
+    restoreRow.appendChild(restoreLabel);
+    restoreRow.appendChild(restore);
+    return [heading, statusRow, updateRow, buildSelectOptionRow('ruffleUpdateChannel', updateChannelChoices), buildBooleanOptionRow('ruffleAutoUpdate'), restoreRow];
+  }
+
   async function refreshCustomSwfStatus() {
     const status = await api.getCustomSwfStatus();
     customSwfStatusEl.textContent = status.exists
@@ -562,8 +646,9 @@
       recordingFormat: kb.recordingFormatChoices || [],
       renderMode:      kb.renderModeChoices || []
     };
+    updateChannelChoices = kb.ruffleUpdateChannelChoices || [];
 
-    const optionKeys = Object.keys(options).filter((key) => !CUSTOM_SWF_SECTION_KEYS.has(key));
+    const optionKeys = Object.keys(options).filter((key) => !CUSTOM_SWF_SECTION_KEYS.has(key) && key !== 'ruffleUpdateChannel' && key !== 'ruffleAutoUpdate');
     if (optionKeys.length) {
       const heading = document.createElement('div');
       heading.className = 'section-heading';
@@ -578,6 +663,7 @@
     }
 
     buildCustomSwfSection().forEach((el) => rowsEl.appendChild(el));
+    buildRuffleSection().forEach((el) => rowsEl.appendChild(el));
     await refreshCustomSwfStatus();
 
     document.getElementById('saveBtn').textContent = messages.saveButton;

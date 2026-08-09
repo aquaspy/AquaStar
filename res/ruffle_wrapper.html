@@ -10,13 +10,12 @@
 <body>
 <div id="container"></div>
 
-<!-- Vendored locally (not the unpkg CDN) so this works fully offline, same as the bundled Flash plugin. -->
-<script src="ruffle/ruffle.js"></script>
 <script>
 (function () {
   var params = new URLSearchParams(window.location.search);
   var swfUrl = params.get('swf');
   var proxyUrl = params.get('proxy');
+  var ruffleUrl = params.get('ruffle') || 'ruffle/ruffle.js';
   if (!swfUrl) return;
 
   // Same-origin AQW client SWFs always talk to Artix's game servers over raw TCP -
@@ -68,7 +67,7 @@
     return mapToSocketProxies(map);
   }
 
-  window.addEventListener('DOMContentLoaded', async function () {
+  async function startPlayer() {
     // AQW needs the TCP↔WebSocket relay. DragonFable talks HTTP for its loader
     // (DFversion.asp / gamefiles/* relative to the SWF URL) and does not use the
     // AQW sock* hosts - skip the servers API round-trip for DF only.
@@ -104,7 +103,15 @@
     player.load(loadOpts).catch(function (e) {
       console.error('[AquaStar] Ruffle load failed:', e);
     });
-  });
+  }
+
+  // The bundled player remains the offline fallback. When an update exists this
+  // loads its self-hosted JS/WASM files from AquaStar's AppData directory instead.
+  var script = document.createElement('script');
+  script.src = ruffleUrl;
+  script.onload = startPlayer;
+  script.onerror = function () { console.error('[AquaStar] Could not load Ruffle:', ruffleUrl); };
+  document.head.appendChild(script);
 })();
 </script>
 </body>

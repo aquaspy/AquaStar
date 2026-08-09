@@ -20,6 +20,27 @@ const appRoot = __dirname.substring(0,__dirname.lastIndexOf(path.sep));
 const appCurrentDirectory = process.cwd();
 const appVersion  = require('electron').app.getVersion();
 const appName     = "AquaStar";
+// Keep mutable data outside the installation. This also works for portable/readonly
+// installs and avoids replacing files that an older AquaStar still expects.
+const appDataDirectory = path.join(app.getPath("appData"), appName);
+if (!fs.existsSync(appDataDirectory)) fs.mkdirSync(appDataDirectory, { recursive: true });
+// A downloaded update is staged as ruffle-next while the app is running. Promote
+// it only on the next launch, so no browser process ever reads files mid-replace.
+const stagedRuffleDirectory = path.join(appDataDirectory, 'ruffle-next');
+const currentRuffleDirectory = path.join(appDataDirectory, 'ruffle-current');
+const restoreBundledRuffleMarker = path.join(appDataDirectory, 'restore-bundled-ruffle');
+if (fs.existsSync(restoreBundledRuffleMarker)) {
+    try {
+        if (fs.existsSync(currentRuffleDirectory)) fs.rmdirSync(currentRuffleDirectory, { recursive: true });
+        if (fs.existsSync(stagedRuffleDirectory)) fs.rmdirSync(stagedRuffleDirectory, { recursive: true });
+        fs.unlinkSync(restoreBundledRuffleMarker);
+    } catch (e) { console.log('[AquaStar] Could not restore bundled Ruffle: ' + e.message); }
+} else if (fs.existsSync(path.join(stagedRuffleDirectory, 'ruffle.js'))) {
+    try {
+        if (fs.existsSync(currentRuffleDirectory)) fs.rmdirSync(currentRuffleDirectory, { recursive: true });
+        fs.renameSync(stagedRuffleDirectory, currentRuffleDirectory);
+    } catch (e) { console.log('[AquaStar] Could not activate downloaded Ruffle: ' + e.message); }
+}
 
 /// Pictures save location.
 const sshotPath   = path.join(app.getPath("pictures"),"AquaStar Screenshots");
@@ -75,6 +96,7 @@ exports.appName          = appName;
 exports.appVersion       = appVersion;
 exports.appRootPath      = appRoot;
 exports.appDirectoryPath = appCurrentDirectory;
+exports.appDataDirectory = appDataDirectory;
 exports.sshotPath        = sshotPath;
 
 /// Icon Stuff
@@ -149,7 +171,8 @@ exports.isRuffleEligible = function(swfUrl) {
 exports.wrapRuffleUrl = function(swfUrl) {
     if (!swfUrl) return swfUrl;
     return ruffleWrapperUrl + '?swf=' + encodeURIComponent(swfUrl) +
-        '&proxy=' + encodeURIComponent(socketProxy.proxyUrl);
+        '&proxy=' + encodeURIComponent(socketProxy.proxyUrl) +
+        '&ruffle=' + encodeURIComponent(exports.rufflePlayerUrl);
 }
 
 /// -------------------------------
@@ -225,6 +248,14 @@ exports.renderModeChoices = Object.keys(renderModes).map((id) => (
     { id: id, label: renderModes[id].label }
 ));
 
+const ruffleUpdateChannels = {
+    latest:  { label: 'Latest (Stable)' },
+    nightly: { label: 'Nightly (Experimental)' }
+};
+exports.ruffleUpdateChannelChoices = Object.keys(ruffleUpdateChannels).map((id) => (
+    { id: id, label: ruffleUpdateChannels[id].label }
+));
+
 // Non-keybind settings. Saved to the same aquastar.json file as the keybinds
 // above, but shown in the Settings screen as plain fields instead of recorders.
 const originalOptions = {
@@ -236,6 +267,8 @@ const originalOptions = {
     customUrl:         "",
     recordingFormat:   exports.defaultRecordingFormat,
     renderMode:        exports.defaultRenderMode,
+    ruffleUpdateChannel: 'latest',
+    ruffleAutoUpdate:  false,
     // Dev-only escape hatch, warned about on enable in the Settings screen.
     // Keep this key last - new options should be added above it.
     enableDevTools:    false
@@ -263,15 +296,35 @@ exports.resolveAppDisplayName = function(k) {
 
 // Finding out which one to load and if it should load...
 var keybingJsonFileName = appName.toLocaleLowerCase() + '.json';
-var appdataJsonPath = path.join(app.getPath("appData"), keybingJsonFileName)
+var legacyAppdataJsonPath = path.join(app.getPath("appData"), keybingJsonFileName);
+var appdataJsonPath = path.join(appDataDirectory, keybingJsonFileName);
 var inPathJsonPath  = path.join(appCurrentDirectory, keybingJsonFileName);
+// One-time non-destructive migration. App-directory files remain readable so old
+// portable installations continue to work; the new canonical copy is independent.
+if (!fs.existsSync(appdataJsonPath)) {
+    var migrationSource = fs.existsSync(inPathJsonPath) ? inPathJsonPath : legacyAppdataJsonPath;
+    if (fs.existsSync(migrationSource)) {
+        try { fs.copyFileSync(migrationSource, appdataJsonPath); }
+        catch (e) { console.log('[AquaStar] Could not migrate settings: ' + e.message); }
+    }
+}
 var listValidKeybindLocations = [];
-if (fs.existsSync(appdataJsonPath)) { listValidKeybindLocations.push(appdataJsonPath) }
-if (fs.existsSync(inPathJsonPath))  { listValidKeybindLocations.push(inPathJsonPath)  }
+if (fs.existsSync(legacyAppdataJsonPath)) { listValidKeybindLocations.push(legacyAppdataJsonPath) }
+if (fs.existsSync(inPathJsonPath))        { listValidKeybindLocations.push(inPathJsonPath) }
+if (fs.existsSync(appdataJsonPath))       { listValidKeybindLocations.push(appdataJsonPath) }
 
 exports.listValidKeybindLocations = listValidKeybindLocations;
 exports.appdataJsonPath = appdataJsonPath;
 exports.inPathJsonPath  = inPathJsonPath;
+exports.legacyAppdataJsonPath = legacyAppdataJsonPath;
+
+// The bundled web/WASM player is always the safe fallback. A downloaded nightly
+// is selected only after it was fully validated and promoted at application start.
+const bundledRufflePlayerPath = path.join(appRoot, 'res', 'ruffle', 'ruffle.js');
+const downloadedRufflePlayerPath = path.join(currentRuffleDirectory, 'ruffle.js');
+exports.rufflePlayerUrl = _getFileUrl(fs.existsSync(downloadedRufflePlayerPath)
+    ? downloadedRufflePlayerPath : bundledRufflePlayerPath);
+exports.ruffleDirectory = appDataDirectory;
 
 // Custom aqlite stuff
 var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));

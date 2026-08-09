@@ -21,6 +21,7 @@ const ipcWikiFetch  = require('./res/ipc/wikiFetch.js');
 const inst          = require('./res/instances.js');
 const windowsMenu   = require('./res/windows/menu.js');
 const socketProxy   = require('./res/socketProxy.js');
+const ruffleUpdate  = require('./res/ruffleUpdate.js');
 // Important Variables - in const.js
 const constant = require('./res/const.js');
 
@@ -34,6 +35,20 @@ function createWindow () {
 
     // Keybindings now in keybindings.js
     const finalkeyb = keyb.addKeybinding();
+
+    // Best-effort background check: it deliberately never delays startup.
+    if (finalkeyb.ruffleAutoUpdate === true) {
+        ruffleUpdate.downloadLatest(
+            constant.appDataDirectory,
+            finalkeyb.ruffleUpdateChannel,
+            path.join(constant.appRootPath, 'res', 'ruffle', 'ruffle.js')
+        ).then((result) => {
+            if (result && result.restartRequired) {
+                const { Notification } = require('electron');
+                new Notification({ title: 'AquaStar', body: 'A new Ruffle version was downloaded. Restart AquaStar to apply it.' }).show();
+            }
+        }).catch((e) => console.log('[AquaStar] Ruffle auto-update failed: ' + e.message));
+    }
 
     // Lang setup. Has to be after Ready event.
     constant.setLocale(app.getLocale(),finalkeyb);
