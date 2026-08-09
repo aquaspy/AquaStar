@@ -88,5 +88,8 @@
     "nw-flash-trust": "^0.3.0",
     "electron-localshortcut": "3.2.1",
     "ws": "^8.21.1"
+  },
+  "overrides": {
+    "minimist": "1.2.6"
   }
 }
