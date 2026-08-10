@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const extract = require('extract-zip');
+const yauzl = require('yauzl');
 
 const RELEASES_URL = 'https://api.github.com/repos/ruffle-rs/ruffle/releases?per_page=30';
 const LATEST_URL = 'https://api.github.com/repos/ruffle-rs/ruffle/releases/latest';
@@ -46,6 +46,49 @@ async function download(url, destination) {
         out.on('finish', () => out.close(resolve));
         out.on('error', reject);
         res.on('error', reject);
+    });
+}
+
+// Ruffle's self-hosted archive only needs ordinary files. Keeping extraction here
+// avoids extract-zip's larger dependency tree, which Electron Builder 22 copies
+// twice on Linux when asar is disabled.
+function extractArchive(zipPath, destination) {
+    return new Promise((resolve, reject) => {
+        yauzl.open(zipPath, { lazyEntries: true }, (openError, zipfile) => {
+            if (openError) return reject(openError);
+            const root = path.resolve(destination);
+            let finished = false;
+            function fail(error) {
+                if (finished) return;
+                finished = true;
+                zipfile.close();
+                reject(error);
+            }
+            zipfile.on('error', fail);
+            zipfile.on('end', () => { if (!finished) { finished = true; resolve(); } });
+            zipfile.on('entry', (entry) => {
+                const safeName = entry.fileName.replace(/\\/g, '/');
+                const output = path.resolve(root, safeName);
+                if (output !== root && !output.startsWith(root + path.sep)) {
+                    return fail(new Error('Archive contains an unsafe path: ' + entry.fileName));
+                }
+                if (/\/$/.test(safeName)) {
+                    fs.mkdirSync(output, { recursive: true });
+                    zipfile.readEntry();
+                    return;
+                }
+                fs.mkdirSync(path.dirname(output), { recursive: true });
+                zipfile.openReadStream(entry, (streamError, input) => {
+                    if (streamError) return fail(streamError);
+                    const outputStream = fs.createWriteStream(output);
+                    input.on('error', fail);
+                    outputStream.on('error', fail);
+                    outputStream.on('close', () => { if (!finished) zipfile.readEntry(); });
+                    input.pipe(outputStream);
+                });
+            });
+            zipfile.readEntry();
+        });
     });
 }
 
@@ -118,7 +161,7 @@ exports.downloadLatest = async function (dataDirectory, channel, bundledPlayerPa
     removeIfPresent(stagedDirectory);
     try {
         await download(release.url, zipPath);
-        await new Promise((resolve, reject) => extract(zipPath, { dir: extractDirectory }, (err) => err ? reject(err) : resolve()));
+        await extractArchive(zipPath, extractDirectory);
         const playerDirectory = findPlayer(extractDirectory);
         if (!playerDirectory) throw new Error('Downloaded archive does not contain ruffle.js');
         // A sibling .wasm is essential. This rejects desktop/extension packages even
