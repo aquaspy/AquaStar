@@ -104,6 +104,13 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             click() {
                 require('../instances.js').openTodoWindow();
             }
+        },
+        {
+            label: menuMessages.menuInventory,
+            accelerator: keybinds.inventory,
+            click() {
+                require('../instances.js').openInventoryWindow();
+            }
         }
     ];
     if (isContext){

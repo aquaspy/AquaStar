@@ -53,7 +53,8 @@ const processKeybings = function (){
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
     
     if(constant.isDebugBuild){
-        addKeybind('Alt+I', (fw)=>{fw.webContents.openDevTools()},true);        
+        // Alt+I is now the Inventory screen's keybind - moved off this debug-only shortcut.
+        addKeybind('Alt+Shift+I', (fw)=>{fw.webContents.openDevTools()},true);
     }
     
     const k = customKeybinds();
@@ -88,6 +89,9 @@ const processKeybings = function (){
 
     // Open To-Do screen - per-character task list (drops, shop items, quest rewards...)
     addKeybind(k.todo, ()=>{inst.openTodoWindow()});
+
+    // Open Inventory screen - synced account.aq.com Inventory/BuyBack browser
+    addKeybind(k.inventory, ()=>{inst.openInventoryWindow()});
 
     // Toggle Fullscreen
     addKeybind(k.fullscreen,(focusedWin) => {

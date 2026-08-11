@@ -67,7 +67,8 @@ exports.menuMessages = {
     menuReloadPage   : "",
     menuSettings     : "",
     menuReminders    : "",
-    menuTodo         : ""
+    menuTodo         : "",
+    menuInventory    : ""
 }
 
 exports.settingsMessages = {
@@ -105,6 +106,7 @@ exports.settingsMessages = {
         settings:    "",
         reminders:   "",
         todo:        "",
+        inventory:   "",
         record:      ""
     },
     optionsHeading: "",
@@ -114,6 +116,7 @@ exports.settingsMessages = {
         customUrl:         "",
         recordingFormat:   "",
         renderMode:        "",
+        autoSync:          "",
         enableDevTools:    ""
     },
     optionHints: {
@@ -122,6 +125,7 @@ exports.settingsMessages = {
         customUrl:         "",
         recordingFormat:   "",
         renderMode:        "",
+        autoSync:          "",
         enableDevTools:    ""
     },
     customSwfHeading      : "",
@@ -261,4 +265,41 @@ exports.todoMessages = {
     removeTabTitle     : "",
     savingLabel        : "",
     savedLabel         : ""
+}
+
+exports.inventoryMessages = {
+    title              : "",
+    heading            : "",
+    description        : "",
+    inventoryTabLabel  : "",
+    buyBackTabLabel    : "",
+    syncButton         : "",
+    syncingLabel       : "",
+    syncedLabel        : "",
+    justNowLabel       : "",
+    neverSyncedLabel   : "",
+    syncErrorUnauthenticated: "",
+    syncErrorNetwork  : "",
+    filterNamePlaceholder: "",
+    filterTypeAll      : "",
+    filterAllLabel     : "",
+    filterBankLabel    : "",
+    filterInventoryOnlyLabel: "",
+    filterMemberLabel  : "",
+    filterNonMemberOnlyLabel: "",
+    emptyStateLabel    : "",
+    noCharactersLabel  : "",
+    columnName         : "",
+    columnType         : "",
+    columnCount        : "",
+    columnBank         : "",
+    columnMember       : "",
+    columnAdded        : "",
+    columnCost         : "",
+    columnRarity       : "",
+    columnInserted     : "",
+    bankBadge          : "",
+    inventoryBadge     : "",
+    memberBadge        : "",
+    normalBadge        : ""
 }

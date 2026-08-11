@@ -178,20 +178,33 @@ function _windowAddContext(newWin){
         const checkWiki     = /aqwwiki\.wikidot\.com\/.+/gi
         const checkCharPage = /account\.aq\.com\/CharPage\?id=.+/gi
         const checkAccountAq= /account\.aq\.com\/AQW\/(Inventory|BuyBack|WheelProgress|House)/gi
+        const checkAccountHome = /account\.aq\.com\/Home/gi
 
         const bWiki = checkWiki.test(url)
         const bCp   = checkCharPage.test(url)
         const bAcc  = checkAccountAq.test(url)
+        const bHome = checkAccountHome.test(url)
         const isViewUrl = bWiki || bCp || bAcc
 
         if (isViewUrl){
             const wikiviewDir = path.join(__dirname, 'features', 'wikiview');
-            var wikiview = fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
+            // hoverPreview.js is the shared fetch/extract/position engine (also used by the
+            // Inventory window); wikiviewsource.js only wires up which elements trigger it.
+            const hoverPreview = fs.readFileSync(path.join(wikiviewDir, 'hoverPreview.js'), 'utf8');
+            var wikiview = hoverPreview + fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
             if (bWiki){
                 const jquery = fs.readFileSync(path.join(wikiviewDir, 'jquery.min.js'), 'utf8');
                 wikiview = jquery + wikiview
             }
             newWin.webContents.executeJavaScript(wikiview);
+        }
+
+        // Floating "Sync Now" button on the logged-in account.aq.com landing page, for
+        // manually triggering an Inventory/BuyBack sync without opening the Inventory
+        // window itself. See res/features/inventory/accountSyncButton.js.
+        if (bHome){
+            const syncBtnSrc = fs.readFileSync(path.join(__dirname, 'features', 'inventory', 'accountSyncButton.js'), 'utf8');
+            newWin.webContents.executeJavaScript(syncBtnSrc);
         }
     });
 }
@@ -435,6 +448,21 @@ function openTodoWindow(){
     return todoWin;
 }
 
+// Inventory screen - singleton window, just refocus if already open.
+let inventoryWin = null;
+function openInventoryWindow(){
+    if (inventoryWin && !inventoryWin.isDestroyed()) {
+        inventoryWin.focus();
+        return inventoryWin;
+    }
+    inventoryWin = new BrowserWindow(windowConfig.inventoryConfig);
+    inventoryWin.setMenuBarVisibility(false);
+    inventoryWin.setTitle("AquaStar - Inventory");
+    inventoryWin.loadURL(windowConfig.inventoryUrl);
+    inventoryWin.on('closed', () => { inventoryWin = null; });
+    return inventoryWin;
+}
+
 function _mkdir (filepath){
     try { fs.lstatSync(filepath).isDirectory() }
     catch (ex) {
@@ -452,6 +480,7 @@ exports.charPagePrint       = charPagePrint;
 exports.openSettingsWindow  = openSettingsWindow;
 exports.openRemindersWindow = openRemindersWindow;
 exports.openTodoWindow      = openTodoWindow;
+exports.openInventoryWindow = openInventoryWindow;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;

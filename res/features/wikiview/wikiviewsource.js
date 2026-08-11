@@ -5,187 +5,105 @@
 // This is the version 1.0.1
 // Jquery file recommended is https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js
 
-let mousePos = { x: -1, y: -1 };
-    $(document).mousemove(function(event) {
-        mousePos.x = event.clientX;
-        mousePos.y = event.clientY;
- 
-        if (!mouseOn) removePreview();
-    });
- 
-let mouseOn = false; // flag to prevent spam
-let timeout = null;
- 
+// The actual "fetch the wiki page, extract its image(s), show/hide a preview near the
+// cursor" engine lives in hoverPreview.js now (hovered/unhovered/showPreview/removePreview
+// etc.) - shared with the Inventory window. This file only wires up which elements on
+// wiki/account.aq.com pages should trigger a hover in the first place. Whatever injects
+// this script must load hoverPreview.js (and jQuery) first - see res/instances.js.
+
 $("#page-content a, .card.m-2.m-lg-3 a").on({
     mouseover: function() { hovered(this.href); },
     mouseout: function() { unhovered(); }
 });
- 
+
 $("#inventoryRendered").on("mouseover", function() {
     $(this).find("a").on({
         mouseover: function() { hovered(this.href); },
         mouseout: function() { unhovered(); }
     });
 });
- 
+
+// These build a link from the item's plain name rather than a real <a href>, so they go
+// through hoveredName() - it retries the wiki's disambiguation suffixes ((AC), (Merge)...)
+// when the bare name has no page of its own. See hoverPreview.js.
 $("#listinvFull, #wheel, table.table.table-sm.table-bordered").on("mouseover", function() {
     console.log("hovered");
     $(this).find("tbody td:first-child").on({
-        mouseover: function() { hovered("http://aqwwiki.wikidot.com/" + this.textContent.split(/\sx\d+/)[0]); },
+        mouseover: function() { hoveredName(this.textContent.split(/\sx\d+/)[0].trim()); },
         mouseout: function() { unhovered(); }
     });
 });
- 
+
 $("#listinvBuyBk").on("mouseover", function() {
     $(this).find("tbody td:nth-child(2)").on({
-        mouseover: function() { hovered("http://aqwwiki.wikidot.com/" + this.textContent); },
+        mouseover: function() { hoveredName(this.textContent.trim()); },
         mouseout: function() { unhovered(); }
     });
 });
- 
-function hovered(link) {
-    if (!mouseOn) {
-        mouseOn = true;
-        // show preview if hovered for 100ms
-        timeout = setTimeout(function() {
-            removePreview(); // remove previous preview
-            showPreview(link);
-        }, 100);
+
+// --- Inventory ownership badge + character switcher, aqwwiki.wikidot.com item pages only.
+// (This script also runs on account.aq.com/CharPage, which has no #page-title and no
+// aquastarWiki.matchWikiItem use, so this whole block is gated to the wiki domain itself.)
+if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
+    window.aquastarWiki && typeof window.aquastarWiki.matchWikiItem === "function") {
+
+    const AQWE_BANK_ICON = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 6L8 2l6 4"/><path d="M1.5 6.5h13"/><path d="M3 7v6M6.3 7v6M9.7 7v6M13 7v6"/><path d="M1.5 13.5h13"/></svg>';
+    const AQWE_BAG_ICON = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="5.5" width="10" height="8.5" rx="1.5"/><path d="M6 5.5V4a2 2 0 0 1 4 0v1.5"/></svg>';
+    const AQWE_BUYBACK_ICON = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3.5v4h4"/><path d="M3.5 9.8A5.5 5.5 0 1 0 5 4.2L3 7.5"/></svg>';
+
+    function aqweBadge(icon, count, title, bg, color) {
+        return '<span title="' + title + '" style="display:inline-flex;align-items:center;gap:3px;' +
+            'background:' + bg + ';color:' + color + ';border-radius:10px;padding:2px 6px;' +
+            'font-size:11px;vertical-align:middle;">' + icon + count + '</span>';
     }
-}
- 
-function unhovered() {
-    clearTimeout(timeout);
-    mouseOn = false;
-}
- 
-// wikimg.php (whoasked.freewebhostmost.com) is gone - it used to scrape the wiki page
-// server-side and hand back just the item's own image(s). We fetch the page ourselves
-// and do the same filtering locally - see extractItemImages() below.
-// On aqwwiki itself that fetch is same-origin and works directly. On account.aq.com
-// (Inventory/BuyBack/Wheel/CharPage) it isn't - a page-side fetch() to aqwwiki.wikidot.com
-// gets blocked by CORS. preload_wikiview.js bridges that: when present, it asks the main
-// process to make the request instead (a plain HTTP request there, no CORS to hit) and
-// hands the raw HTML back over IPC.
-function fetchWikiHtml(link) {
-    if (window.aquastarWiki && typeof window.aquastarWiki.fetchWikiPage === "function") {
-        return window.aquastarWiki.fetchWikiPage(link).then(function(result) {
-            if (!result || !result.ok) throw new Error((result && result.error) || "IPC fetch failed");
-            return result.html;
+
+    function renderOwnershipBadges(match) {
+        if (!match || !match.owned) return;
+        const badges = [];
+        if (match.bank > 0) badges.push(aqweBadge(AQWE_BANK_ICON, match.bank, 'In your bank (x' + match.bank + ')', 'rgba(52,152,219,0.18)', '#7ec8f2'));
+        if (match.inventory > 0) badges.push(aqweBadge(AQWE_BAG_ICON, match.inventory, 'In your inventory (x' + match.inventory + ')', 'rgba(154,154,154,0.16)', '#b0b0b0'));
+        if (match.buyback > 0) badges.push(aqweBadge(AQWE_BUYBACK_ICON, match.buyback, 'In your Buy Back history (x' + match.buyback + ')', 'rgba(230,168,52,0.18)', '#f0c987'));
+        if (badges.length === 0) return;
+        $('#page-title').first().append('<span id="aquastarOwnBadges" style="display:inline-flex;gap:4px;margin-left:10px;">' + badges.join('') + '</span>');
+    }
+
+    function refreshOwnershipBadge() {
+        $('#aquastarOwnBadges').remove();
+        const title = $('#page-title').first().text().trim();
+        if (!title) return;
+        window.aquastarWiki.matchWikiItem(title).then(renderOwnershipBadges).catch(function () {});
+    }
+
+    // Only shown once 2+ characters have been synced - stays out of the way entirely for
+    // the common single-character case, per res/features/inventory/inventory.js's
+    // "lastActiveCharId" being the one thing this chip needs to read/write.
+    function renderCharSwitcher(data) {
+        $('#aquastarCharSwitcher').remove();
+        const charIds = Object.keys(data.characters);
+        if (charIds.length < 2) return;
+
+        const select = $('<select id="aquastarCharSwitcher"></select>').css({
+            position: 'fixed', top: '12px', right: '12px', zIndex: 99999,
+            background: '#232323', color: '#e6e6e6', border: '1px solid #383838',
+            borderRadius: '4px', padding: '5px 8px', fontFamily: 'sans-serif',
+            fontSize: '12px', cursor: 'pointer'
         });
-    }
-    // No bridge available (e.g. preload missing) - fall back to a direct fetch,
-    // which still works when we're same-origin with the wiki.
-    return fetch(link).then(function(response) { return response.text(); });
-}
-
-function showPreview(link) {
-    if (link.startsWith("http://aqwwiki.wikidot.com/")) {
-        fetchWikiHtml(link)
-            .then(function(html) {
-                // parse text. The explicit <base> keeps any relative image URLs anchored
-                // to the wiki even when this script is actually running on account.aq.com -
-                // DOMParser otherwise resolves relative URLs against the current window's
-                // location, not the page the HTML came from.
-                return new DOMParser().parseFromString('<base href="http://aqwwiki.wikidot.com/">' + html, "text/html");
-            })
-            .then(function(doc) {
-                // get images
-                let images = extractItemImages(doc);
-
-                if (images.length > 0) {
-                    let maxwidth = window.innerWidth*0.45 + "px";
-                    let maxheight = window.innerHeight*0.65 + "px";
-
-                    removePreview(); // remove previous preview
-                    $("body").append('<div id="preview" style="position:fixed;"></div>');
-
-                    // add images to new div
-                    images.forEach(function (img) {
-                        if (images.length == 1)
-                            $("#preview").append('<img style="max-width:' + maxwidth + '; max-height:' + maxheight + '; height:auto; width:auto;" src="' + img.src + '">');
-                        else
-                            $("#preview").append('<img style="height:' + maxheight + ';" src="' + img.src + '">');
-                    });
-
-                    // wait for images to load then position div
-                    waitForImg("#preview img:last", function() {
-                        $("#preview").css("top", mousePos.y - (mousePos.y / window.innerHeight) * $("#preview").height() + "px");
-                        if (mousePos.x < window.innerWidth / 2)
-                            $("#preview").css("left", mousePos.x + 100 + "px");
-                        else
-                            $("#preview").css("right", window.innerWidth - mousePos.x + 100 + "px");
-                    });
-                }
-            })
-            .catch(function(err) {
-                console.log("Failed to fetch page: ", err);
-            });
-    }
-}
-
-// Finds the item's own appearance image(s) on an AQW Wiki item page - replicating what
-// the now-defunct wikimg.php proxy used to return. Armors show Male/Female versions in
-// a tabbed widget; both come back (in that order) so showPreview displays them side by
-// side. Everything else (weapons, capes, unisex items, ...) has a single image in the
-// page content.
-function extractItemImages(doc) {
-    let $content = $(doc).find("#page-content").first();
-    if ($content.length === 0) return [];
-
-    // Armor gender variants use wikidot's tabview widget. Only treat it as a gender split
-    // if the tabs are actually labeled Male/Female - the same widget gets reused elsewhere
-    // on the wiki (e.g. mystery chest reward tables) for unrelated things.
-    let genderImages = null;
-    $content.find(".yui-navset").each(function () {
-        let $navset = $(this);
-        let $tabs = $navset.children("ul.yui-nav").children("li");
-        let $panels = $navset.children("div.yui-content").children("div");
-        let male = null, female = null;
-
-        $tabs.each(function (i) {
-            let $label = $(this).find("a em").first();
-            if ($label.length === 0) $label = $(this).find("a").first();
-            let label = $label.text().trim().toLowerCase();
-            let img = $panels.eq(i).find("img")[0];
-            if (!img) return;
-            if (label === "male") male = img;
-            else if (label === "female") female = img;
+        charIds.forEach(function (charId) {
+            const character = data.characters[charId];
+            $('<option></option>')
+                .attr('value', charId)
+                .text(character.name || ('Character ' + charId))
+                .prop('selected', charId === data.lastActiveCharId)
+                .appendTo(select);
         });
+        select.on('change', function () {
+            window.aquastarWiki.setInventoryActiveChar(this.value).then(refreshOwnershipBadge);
+        });
+        $('body').append(select);
+    }
 
-        if (male || female) {
-            genderImages = [male, female].filter(Boolean);
-            return false; // found it, stop looking at other tabviews on the page
-        }
-    });
-    if (genderImages) return genderImages;
-
-    // No gender tabview - take the first real image, skipping the small UI "tag" badge
-    // icons (costs AC, seasonal item, etc.) sprinkled throughout the page text.
-    let fallback = null;
-    $content.find("img").each(function () {
-        if (!/wdfiles\.com\/local--files\/image-tags\//i.test(this.src)) {
-            fallback = this;
-            return false;
-        }
-    });
-    return fallback ? [fallback] : [];
-}
- 
-function removePreview() {
-    $("#preview").remove();
-}
- 
-function waitForImg(selector, callback) {
-    let wait = setInterval(function(){
-        try {
-            if( $(selector)[0].complete ) {
-                callback();
-                clearInterval(wait);
-            }
-        }
-        catch {
-            clearInterval(wait);
-        }
-    }, 25);
+    window.aquastarWiki.getInventory().then(function (result) {
+        renderCharSwitcher(result.data);
+        refreshOwnershipBadge();
+    }).catch(function () {});
 }

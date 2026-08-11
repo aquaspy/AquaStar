@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html style="margin:0;padding:0;width:100%;height:100%;">
+<head>
+<meta charset="UTF-8">
+<title>AquaStar - Inventory</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #121212; color: #e6e6e6;
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    font-size: 13px;
+  }
+  #app { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
+
+  header { padding: 14px 18px 8px 18px; border-bottom: 1px solid #2c2c2c; flex: 0 0 auto; }
+  header h1 { margin: 0 0 4px 0; font-size: 16px; }
+  header p#description { margin: 0; color: #9a9a9a; line-height: 1.4; }
+
+  #tabs { display:flex; align-items:center; gap:6px; padding:10px 18px 0 18px; flex-wrap:wrap; flex:0 0 auto; }
+  .tab { background:#1b1b1b; border:1px solid #333; border-radius:4px 4px 0 0; padding:6px 10px; color:#9a9a9a; font-size:12px; cursor:pointer; }
+  .tab.active { background:#232323; color:#e6e6e6; border-color:#4da3ff; }
+
+  #syncBar { display:flex; align-items:center; gap:10px; padding:10px 18px; border-bottom:1px solid #2c2c2c; flex:0 0 auto; flex-wrap:wrap; }
+  #syncStatus { font-size:12px; color:#9a9a9a; }
+  #syncStatus.error { color:#f28b7a; }
+
+  #viewToggle { display:flex; gap:6px; padding:8px 18px 0 18px; flex:0 0 auto; }
+  #viewToggle button.active { background:#2b6fce; border-color:#2b6fce; color:#fff; }
+
+  #filterBar { display:flex; gap:8px; align-items:center; padding:8px 18px; border-bottom:1px solid #2c2c2c; flex:0 0 auto; background:#161616; flex-wrap:wrap; }
+  #filterBar .text-input { flex:1 1 200px; }
+  #filterBar .select-input { flex:0 0 140px; }
+
+  #rows { flex: 1 1 auto; overflow-y: auto; padding: 4px 18px; }
+  .item-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #202020; }
+  .item-row .iname { flex:1 1 160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .item-row .itype {
+    flex:0 0 130px; font-size:10px; padding:2px 7px; border-radius:10px;
+    text-transform:uppercase; white-space:nowrap; letter-spacing:.02em;
+    text-align:center; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box;
+    background:rgba(154,154,154,0.18); color:#b0b0b0;
+  }
+  .item-row .icount { flex:0 0 50px; text-align:right; font-family:"Consolas","Courier New",monospace; color:#9cc9ff; }
+  .item-row .ibadge { flex:0 0 60px; font-size:10px; text-align:center; padding:2px 6px; border-radius:10px; box-sizing:border-box; }
+  .ibadge.bank { background:rgba(52,152,219,0.18); color:#7ec8f2; }
+  .ibadge.member { background:rgba(255,215,106,0.18); color:#ffd76a; }
+  .ibadge.inv, .ibadge.normal { background:rgba(154,154,154,0.14); color:#8a8a8a; }
+  .item-row .idate { flex:0 0 150px; text-align:right; color:#6f6f6f; font-size:11px; }
+
+  .text-input { flex:0 0 190px; font-family:inherit; background:#1b1b1b; border:1px solid #333; border-radius:4px; padding:5px 8px; color:#dcdcdc; }
+  .text-input:focus { outline:none; border-color:#4da3ff; }
+  .select-input { flex:0 0 130px; font-family:inherit; background:#1b1b1b; border:1px solid #333; border-radius:4px; padding:5px 8px; color:#dcdcdc; cursor:pointer; }
+  .select-input:focus { outline:none; border-color:#4da3ff; }
+
+  .form-checkbox { display:flex; align-items:center; gap:5px; font-size:12px; color:#9a9a9a; white-space:nowrap; }
+  .form-checkbox input { cursor:pointer; }
+
+  button { background:#232323; color:#e6e6e6; border:1px solid #383838; border-radius:4px; padding:6px 12px; cursor:pointer; font-size:12px; }
+  button:hover { background:#2c2c2c; }
+  button:active { background:#1a1a1a; }
+  button.small { padding:5px 10px; font-size:11px; }
+  button.primary { background:#2b6fce; border-color:#2b6fce; color:#fff; }
+  button.primary:hover { background:#3a7fe0; }
+  button:disabled { opacity:0.6; cursor:default; }
+
+  #noCharsHint, #emptyHint { color:#6f6f6f; padding:20px 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="heading">Inventory</h1>
+    <p id="description"></p>
+  </header>
+  <div id="tabs"></div>
+  <div id="syncBar">
+    <span id="syncStatus"></span>
+    <button id="syncBtn" class="primary small"></button>
+  </div>
+  <div id="viewToggle">
+    <button id="viewInventoryBtn" class="small active"></button>
+    <button id="viewBuyBackBtn" class="small"></button>
+  </div>
+  <div id="filterBar">
+    <input id="filterNameInput" class="text-input" type="text" spellcheck="false">
+    <select id="filterTypeInput" class="select-input">
+      <option value="all"></option>
+    </select>
+    <select id="filterLocationInput" class="select-input">
+      <option value="all"></option>
+      <option value="bank"></option>
+      <option value="inventory"></option>
+    </select>
+    <select id="filterMemberInput" class="select-input">
+      <option value="all"></option>
+      <option value="member"></option>
+      <option value="nonmember"></option>
+    </select>
+  </div>
+  <div id="rows"></div>
+</div>
+
+<script src="../wikiview/jquery.min.js"></script>
+<script src="../wikiview/hoverPreview.js"></script>
+<script>
+(function () {
+  const api = window.aquastarInventory;
+  let messages, state, activeCharId = null, activeView = 'inventory';
+  let filterName = '', filterType = 'all', filterLocation = 'all', filterMember = 'all';
+
+  function setStatus(text, isError) {
+    const el = document.getElementById('syncStatus');
+    el.textContent = text || '';
+    el.classList.toggle('error', !!isError);
+  }
+
+  function formatRelativeTime(isoString) {
+    if (!isoString) return null;
+    const then = new Date(isoString).getTime();
+    if (isNaN(then)) return null;
+    const diffMs = Date.now() - then;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return messages.justNowLabel;
+    if (mins < 60) return mins + 'm';
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + 'h';
+    const days = Math.floor(hours / 24);
+    return days + 'd';
+  }
+
+  function formatDate(isoString) {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString();
+  }
+
+  function activeCharacter() {
+    return activeCharId ? state.characters[activeCharId] : null;
+  }
+
+  function renderTabs() {
+    const tabsEl = document.getElementById('tabs');
+    tabsEl.innerHTML = '';
+    Object.keys(state.characters).forEach((charId) => {
+      const character = state.characters[charId];
+      const tab = document.createElement('div');
+      tab.className = 'tab' + (charId === activeCharId ? ' active' : '');
+      tab.textContent = character.name || ('Character ' + charId);
+      tab.onclick = () => {
+        activeCharId = charId;
+        api.setActiveChar(charId);
+        renderTabs();
+        renderFilterTypeOptions();
+        renderRows();
+      };
+      tabsEl.appendChild(tab);
+    });
+  }
+
+  // Type options are rebuilt per character/view since each character's synced data (and
+  // Inventory vs BuyBack) has its own distinct set of item types.
+  function renderFilterTypeOptions() {
+    const select = document.getElementById('filterTypeInput');
+    const character = activeCharacter();
+    const items = character ? (activeView === 'inventory' ? character.inventory : character.buyback) : [];
+    const types = Array.from(new Set(items.map((it) => it.type).filter(Boolean))).sort();
+    select.innerHTML = '';
+    const allOpt = document.createElement('option');
+    allOpt.value = 'all';
+    allOpt.textContent = messages.filterTypeAll;
+    select.appendChild(allOpt);
+    types.forEach((type) => {
+      const opt = document.createElement('option');
+      opt.value = type;
+      opt.textContent = type;
+      select.appendChild(opt);
+    });
+    select.value = types.indexOf(filterType) !== -1 ? filterType : 'all';
+    if (select.value === 'all') filterType = 'all';
+  }
+
+  // Hover-preview (hoverPreview.js, shared with WikiView's injected script). Goes through
+  // hoveredName() rather than hovered() since we only have the item's plain name, not a
+  // real wiki URL - it retries the wiki's disambiguation suffixes ((AC), (Merge)...) when
+  // the bare name has no page of its own (e.g. "Proto Legion Dark Caster" only exists as
+  // "Proto Legion Dark Caster (Merge)").
+  function wireHoverPreview(el, itemName) {
+    el.addEventListener('mouseover', () => { hoveredName(itemName); });
+    el.addEventListener('mouseout', () => { unhovered(); });
+  }
+
+  function buildInventoryRow(item) {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'iname';
+    nameEl.textContent = item.name;
+    nameEl.title = item.name;
+    wireHoverPreview(nameEl, item.name);
+
+    const typeEl = document.createElement('div');
+    typeEl.className = 'itype';
+    typeEl.textContent = item.type;
+
+    const countEl = document.createElement('div');
+    countEl.className = 'icount';
+    countEl.textContent = item.count;
+
+    const bankEl = document.createElement('div');
+    bankEl.className = 'ibadge ' + (item.bank ? 'bank' : 'inv');
+    bankEl.textContent = item.bank ? messages.bankBadge : messages.inventoryBadge;
+
+    const memberEl = document.createElement('div');
+    memberEl.className = 'ibadge ' + (item.member ? 'member' : 'normal');
+    memberEl.textContent = item.member ? messages.memberBadge : messages.normalBadge;
+
+    const dateEl = document.createElement('div');
+    dateEl.className = 'idate';
+    dateEl.textContent = formatDate(item.added);
+
+    row.appendChild(nameEl);
+    row.appendChild(typeEl);
+    row.appendChild(countEl);
+    row.appendChild(bankEl);
+    row.appendChild(memberEl);
+    row.appendChild(dateEl);
+    return row;
+  }
+
+  function buildBuyBackRow(item) {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'iname';
+    nameEl.textContent = item.name;
+    nameEl.title = item.name;
+    wireHoverPreview(nameEl, item.name);
+
+    const typeEl = document.createElement('div');
+    typeEl.className = 'itype';
+    typeEl.textContent = item.type;
+
+    const costEl = document.createElement('div');
+    costEl.className = 'icount';
+    costEl.textContent = item.cost;
+
+    const rarityEl = document.createElement('div');
+    rarityEl.className = 'ibadge bank';
+    rarityEl.textContent = item.rarityName || '';
+
+    const spacerEl = document.createElement('div');
+    spacerEl.className = 'ibadge member';
+
+    const dateEl = document.createElement('div');
+    dateEl.className = 'idate';
+    dateEl.textContent = formatDate(item.inserted);
+
+    row.appendChild(nameEl);
+    row.appendChild(typeEl);
+    row.appendChild(costEl);
+    row.appendChild(rarityEl);
+    row.appendChild(spacerEl);
+    row.appendChild(dateEl);
+    return row;
+  }
+
+  function matchesFilters(item) {
+    if (filterName && item.name.toLowerCase().indexOf(filterName) === -1) return false;
+    if (filterType !== 'all' && item.type !== filterType) return false;
+    if (activeView === 'inventory') {
+      if (filterLocation === 'bank' && !item.bank) return false;
+      if (filterLocation === 'inventory' && item.bank) return false;
+      if (filterMember === 'member' && !item.member) return false;
+      if (filterMember === 'nonmember' && item.member) return false;
+    }
+    return true;
+  }
+
+  function renderSyncStatus() {
+    const character = activeCharacter();
+    if (!character) { setStatus(''); return; }
+    const time = activeView === 'inventory' ? character.lastInventorySync : character.lastBuyBackSync;
+    if (!time) { setStatus(messages.neverSyncedLabel); return; }
+    setStatus(messages.syncedLabel + formatRelativeTime(time));
+  }
+
+  function renderRows() {
+    const rowsEl = document.getElementById('rows');
+    rowsEl.innerHTML = '';
+    renderSyncStatus();
+
+    const character = activeCharacter();
+    if (!character) {
+      const hint = document.createElement('div');
+      hint.id = 'noCharsHint';
+      hint.textContent = messages.noCharactersLabel;
+      rowsEl.appendChild(hint);
+      return;
+    }
+
+    const items = (activeView === 'inventory' ? character.inventory : character.buyback).filter(matchesFilters);
+    if (items.length === 0) {
+      const hint = document.createElement('div');
+      hint.id = 'emptyHint';
+      hint.textContent = messages.emptyStateLabel;
+      rowsEl.appendChild(hint);
+      return;
+    }
+    const buildRow = activeView === 'inventory' ? buildInventoryRow : buildBuyBackRow;
+    items.forEach((item) => rowsEl.appendChild(buildRow(item)));
+  }
+
+  function setView(view) {
+    activeView = view;
+    document.getElementById('viewInventoryBtn').classList.toggle('active', view === 'inventory');
+    document.getElementById('viewBuyBackBtn').classList.toggle('active', view === 'buyback');
+    filterType = 'all';
+    renderFilterTypeOptions();
+    renderRows();
+  }
+
+  async function doSync() {
+    const btn = document.getElementById('syncBtn');
+    btn.disabled = true;
+    setStatus(messages.syncingLabel);
+    const result = await api.syncNow();
+    btn.disabled = false;
+    if (!result.ok) {
+      setStatus(result.error === 'unauthenticated' ? messages.syncErrorUnauthenticated : messages.syncErrorNetwork, true);
+      return;
+    }
+    const reloaded = await api.getInventory();
+    state = reloaded.data;
+    activeCharId = String(result.charId);
+    renderTabs();
+    renderFilterTypeOptions();
+    renderRows();
+  }
+
+  async function init() {
+    const [msgs, invResult] = await Promise.all([api.getMessages(), api.getInventory()]);
+    messages = msgs;
+    state = invResult.data;
+
+    document.title = messages.title;
+    document.getElementById('heading').textContent = messages.heading;
+    document.getElementById('description').textContent = messages.description;
+    document.getElementById('syncBtn').textContent = messages.syncButton;
+    document.getElementById('syncBtn').onclick = doSync;
+    document.getElementById('viewInventoryBtn').textContent = messages.inventoryTabLabel;
+    document.getElementById('viewBuyBackBtn').textContent = messages.buyBackTabLabel;
+    document.getElementById('viewInventoryBtn').onclick = () => setView('inventory');
+    document.getElementById('viewBuyBackBtn').onclick = () => setView('buyback');
+
+    document.getElementById('filterNameInput').placeholder = messages.filterNamePlaceholder;
+    document.getElementById('filterNameInput').addEventListener('input', (e) => {
+      filterName = e.target.value.trim().toLowerCase();
+      renderRows();
+    });
+    document.getElementById('filterTypeInput').addEventListener('change', (e) => {
+      filterType = e.target.value;
+      renderRows();
+    });
+    const filterLocationInput = document.getElementById('filterLocationInput');
+    filterLocationInput.options[0].textContent = messages.filterAllLabel;
+    filterLocationInput.options[1].textContent = messages.filterBankLabel;
+    filterLocationInput.options[2].textContent = messages.filterInventoryOnlyLabel;
+    filterLocationInput.addEventListener('change', (e) => {
+      filterLocation = e.target.value;
+      renderRows();
+    });
+    const filterMemberInput = document.getElementById('filterMemberInput');
+    filterMemberInput.options[0].textContent = messages.filterAllLabel;
+    filterMemberInput.options[1].textContent = messages.filterMemberLabel;
+    filterMemberInput.options[2].textContent = messages.filterNonMemberOnlyLabel;
+    filterMemberInput.addEventListener('change', (e) => {
+      filterMember = e.target.value;
+      renderRows();
+    });
+
+    const charIds = Object.keys(state.characters);
+    activeCharId = (state.lastActiveCharId && state.characters[state.lastActiveCharId])
+      ? state.lastActiveCharId
+      : (charIds.length ? charIds[0] : null);
+
+    renderTabs();
+    renderFilterTypeOptions();
+    renderRows();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

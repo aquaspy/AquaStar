@@ -209,6 +209,7 @@ const originalKeybinds = {
     settings: "Alt+9", //TODO - Make a screen and do your stuff XD. This is for future proofing
     reminders: "Alt+T",
     todo:     "Alt+Y",
+    inventory: "Alt+I",
     record:   "Ctrl+J"
 }
 exports.originalKeybinds = originalKeybinds;
@@ -272,6 +273,10 @@ const originalOptions = {
     renderMode:        exports.defaultRenderMode,
     ruffleUpdateChannel: 'latest',
     ruffleAutoUpdate:  false,
+    // Periodic background Inventory/BuyBack sync (res/features/inventory/inventory.js).
+    // Off by default - manual "Sync Now" (in-window or the account.aq.com/Home button)
+    // always works regardless of this setting.
+    autoSync:          false,
     // Dev-only escape hatch, warned about on enable in the Settings screen.
     // Keep this key last - new options should be added above it.
     enableDevTools:    false
