@@ -196,6 +196,7 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
             const headers = Array.from(headerRow.querySelectorAll('th')).map(mergeShopText);
             const nameIndex = headers.findIndex(function (header) { return /^Name$/i.test(header); });
             const priceIndex = headers.findIndex(function (header) { return /^Price$/i.test(header); });
+            const rankIndex = headers.findIndex(function (header) { return /^(Rank|Reputation)$/i.test(header); });
             if (nameIndex < 0 || priceIndex < 0) return;
 
             table.querySelectorAll('tr').forEach(function (row) {
@@ -203,6 +204,7 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
                 if (cells.length <= Math.max(nameIndex, priceIndex)) return;
                 const nameCell = cells[nameIndex];
                 const priceCell = cells[priceIndex];
+                const rankCell = rankIndex >= 0 ? cells[rankIndex] : null;
                 const categoryIcon = cells[0] && cells[0].querySelector('img[alt]');
                 const nameLink = nameCell.querySelector('a[href]');
                 if (!nameLink) return;
@@ -223,6 +225,10 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
                 });
                 // Gold costs do not have an item link, but are still a material cost.
                 const gold = mergeShopText(priceCell).match(/([\d,]+)\s*Gold\b/i);
+                const rankText = rankCell ? mergeShopText(rankCell) : '';
+                const rankMatch = rankText.match(/Rank\s*(\d+)\s*(.*)/i);
+                const factionLink = rankCell && rankCell.querySelector('a[href]');
+                const faction = factionLink ? mergeShopText(factionLink) : (rankMatch ? rankMatch[2].trim() : '');
                 products.set(key, {
                     key: key,
                     name: name,
@@ -233,6 +239,7 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
                     // dedicated misc.png category icon.
                     buybackEligible: !categoryIcon || !/^misc\.png$/i.test(categoryIcon.alt),
                     requirements: requirements,
+                    reputation: rankMatch && faction ? { faction: faction, rank: parseInt(rankMatch[1], 10) } : null,
                     gold: gold ? parseInt(gold[1].replace(/,/g, ''), 10) : 0
                 });
                 const checkbox = document.createElement('input');
@@ -251,11 +258,15 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
 
     function mergeShopTotals(products, mode) {
         const totals = new Map();
+        const reputations = new Map();
         const acPurchased = new Set();
         const add = function (key, name, quantity) {
             const entry = totals.get(key) || { name: name, quantity: 0 };
             entry.quantity += quantity;
             totals.set(key, entry);
+        };
+        const addReputation = function (faction, rank) {
+            reputations.set(faction, Math.max(reputations.get(faction) || 0, rank));
         };
         const recursive = mode === 'dependencies' || mode === 'buyback';
         const buyback = mode === 'buyback';
@@ -271,6 +282,7 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
             if (stack.has(product.key)) return; // malformed cyclic shop data: never loop
             const nextStack = new Set(stack);
             nextStack.add(product.key);
+            if (product.reputation) addReputation(product.reputation.faction, product.reputation.rank);
             product.requirements.forEach(function (requirement) {
                 const dependency = products.get(requirement.key);
                 const quantity = multiplier * requirement.quantity;
@@ -284,8 +296,13 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
             if (!product.checkbox.checked) return;
             addPrice(product, 1, new Set());
         });
-        return Array.from(totals.values()).filter(function (entry) { return entry.quantity > 0; })
-            .sort(function (a, b) { return a.name.localeCompare(b.name); });
+        return {
+            materials: Array.from(totals.values()).filter(function (entry) { return entry.quantity > 0; })
+                .sort(function (a, b) { return a.name.localeCompare(b.name); }),
+            reputations: Array.from(reputations.entries()).map(function (entry) {
+                return { faction: entry[0], rank: entry[1] };
+            }).sort(function (a, b) { return a.faction.localeCompare(b.faction); })
+        };
     }
 
     function renderMergeShopCalculator(messages) {
@@ -306,12 +323,17 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
 
         const output = panel.querySelector('#aquastarMergeShopTotals');
         const redraw = function () {
-            const totals = mergeShopTotals(products, panel.querySelector('#aquastarMergeShopMode').value);
-            output.innerHTML = totals.length
-                ? '<ul style="margin:4px 0 0 18px;padding:0;columns:2;">' + totals.map(function (entry) {
+            const result = mergeShopTotals(products, panel.querySelector('#aquastarMergeShopMode').value);
+            const materials = result.materials.length
+                ? '<ul style="margin:4px 0 0 18px;padding:0;columns:2;">' + result.materials.map(function (entry) {
                     return '<li>' + entry.name.replace(/&/g, '&amp;').replace(/</g, '&lt;') + ' <strong>x' + entry.quantity + '</strong></li>';
-                }).join('') + '</ul>'
-                : '<span>' + messages.mergeEmpty + '</span>';
+                }).join('') + '</ul>' : '<span>' + messages.mergeEmpty + '</span>';
+            const reputation = result.reputations.length
+                ? '<div style="margin-top:7px;"><strong>' + messages.mergeReputationLabel + '</strong>' +
+                    '<ul style="margin:4px 0 0 18px;padding:0;">' + result.reputations.map(function (entry) {
+                        return '<li>' + entry.faction.replace(/&/g, '&amp;').replace(/</g, '&lt;') + ' <strong>Rank ' + entry.rank + '</strong></li>';
+                    }).join('') + '</ul></div>' : '';
+            output.innerHTML = materials + reputation;
         };
         panel.querySelector('#aquastarMergeShopMode').addEventListener('change', redraw);
         products.forEach(function (product) {
@@ -325,6 +347,7 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
         mergeDependencies: 'Include dependencies',
         mergeBuyback: 'Dependencies with Buy Back',
         mergeEmpty: 'No materials listed.',
+        mergeReputationLabel: 'Reputation required:',
         mergeSelectItem: 'Select item'
     };
     if (typeof window.aquastarWiki.getMessages === 'function') {

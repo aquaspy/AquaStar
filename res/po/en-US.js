@@ -351,5 +351,6 @@ exports.wikiMessages = {
     mergeDependencies: "Include dependencies",
     mergeBuyback: "Dependencies with Buy Back",
     mergeEmpty: "No materials listed.",
+    mergeReputationLabel: "Reputation required:",
     mergeSelectItem: "Select item"
 }

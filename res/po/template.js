@@ -309,5 +309,6 @@ exports.wikiMessages = {
     mergeDependencies: "",
     mergeBuyback: "",
     mergeEmpty: "",
+    mergeReputationLabel: "",
     mergeSelectItem: ""
 }
