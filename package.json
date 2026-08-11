@@ -1,6 +1,6 @@
 {
   "name": "AquaStar",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "description": "A custom aqlite launcher",
   "homepage": "https://github.com/aquaspy/AquaStar",
   "main": "main.js",
