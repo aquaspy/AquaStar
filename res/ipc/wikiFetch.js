@@ -8,7 +8,7 @@
 const { ipcMain, net } = require('electron');
 
 ipcMain.handle('fetchWikiPage', async (event, targetUrl) => {
-    if (typeof targetUrl !== 'string' || !/^https?:\/\/aqwwiki\.wikidot\.com\//i.test(targetUrl)) {
+    if (typeof targetUrl !== 'string' || !/^https:\/\/aqwwiki\.wikidot\.com\//i.test(targetUrl)) {
         return { ok: false, error: 'blocked' };
     }
 
