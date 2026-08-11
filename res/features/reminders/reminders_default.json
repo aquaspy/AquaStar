@@ -1,5 +1,8 @@
 {
     "quests": [
+        { "name": "Free Treasure Chest Keys", "joinCommand": "/join battleon", "type": "monthly", "category": "other", "member": true },
+        { "name": "Gears of Doom", "joinCommand": "/join doom", "type": "weekly", "category": "other"},
+        { "name": "Wheel of Doom (Member free spin)", "joinCommand": "/join doom", "type": "daily", "category": "other", "member": true},
         { "name": "Tokens of Collection", "joinCommand": "/join terrarium", "type": "daily", "category": "class" },
         { "name": "ShadowScythe Class Daily", "joinCommand": "/join shadowfall", "type": "daily", "category": "class" },
         { "name": "My Final Recipe (Deathknight Lord)", "joinCommand": "/join bonecastle", "type": "daily", "category": "class", "member": true },
@@ -7,6 +10,7 @@
         { "name": "Condensed Grace Quest", "joinCommand": "/join ultragramielhub", "type": "weekly", "category": "class" },
         { "name": "Glacera Ice Token", "joinCommand": "/join frozentower", "type": "daily", "category": "class" },
         { "name": "Lucky Clovers", "joinCommand": "/join luck", "type": "daily", "category": "class", "seasonal": true, "seasonalEvent": "dageBirthday" },
+        { "name": "Galactic Omniblade Series", "joinCommand": "/join blackfridaywar", "type": "monthly", "category": "other", "seasonal": true, "seasonalEvent": "blackFriday" },
 
         { "name": "Ultra Ezrajal", "joinCommand": "/join ultraezrajal", "type": "daily", "category": "ultra" },
         { "name": "Ultra Warden", "joinCommand": "/join ultrawarden", "type": "daily", "category": "ultra" },
