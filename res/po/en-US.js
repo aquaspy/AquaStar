@@ -352,5 +352,7 @@ exports.wikiMessages = {
     mergeBuyback: "Dependencies with Buy Back",
     mergeEmpty: "No materials listed.",
     mergeReputationLabel: "Reputation required:",
+    mergeSelectAll: "Select all",
+    mergeClearAll: "Clear all",
     mergeSelectItem: "Select item"
 }

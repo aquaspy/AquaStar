@@ -310,5 +310,7 @@ exports.wikiMessages = {
     mergeBuyback: "",
     mergeEmpty: "",
     mergeReputationLabel: "",
+    mergeSelectAll: "",
+    mergeClearAll: "",
     mergeSelectItem: ""
 }

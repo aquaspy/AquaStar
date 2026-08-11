@@ -185,6 +185,15 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
         return match ? parseInt(match[1].replace(/,/g, ''), 10) : 1;
     }
 
+    function mergeShopTabPanel(element) {
+        let current = element;
+        while (current && current.parentElement) {
+            if (current.parentElement.classList.contains('yui-content')) return current;
+            current = current.parentElement;
+        }
+        return null;
+    }
+
     function collectMergeShopProducts() {
         const products = new Map();
         $('#page-content table.wiki-content-table').each(function () {
@@ -240,6 +249,7 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
                     buybackEligible: !categoryIcon || !/^misc\.png$/i.test(categoryIcon.alt),
                     requirements: requirements,
                     reputation: rankMatch && faction ? { faction: faction, rank: parseInt(rankMatch[1], 10) } : null,
+                    tabPanel: mergeShopTabPanel(table),
                     gold: gold ? parseInt(gold[1].replace(/,/g, ''), 10) : 0
                 });
                 const checkbox = document.createElement('input');
@@ -318,7 +328,9 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
             '<select id="aquastarMergeShopMode">' +
             '<option value="dependencies">' + messages.mergeDependencies + '</option>' +
             '<option value="buyback">' + messages.mergeBuyback + '</option>' +
-            '</select><div id="aquastarMergeShopTotals" style="margin:5px 0 0 0;"></div>';
+            '</select> <a href="#" id="aquastarMergeShopSelectAll">' + messages.mergeSelectAll + '</a> / ' +
+            '<a href="#" id="aquastarMergeShopClearAll">' + messages.mergeClearAll + '</a>' +
+            '<div id="aquastarMergeShopTotals" style="margin:5px 0 0 0;"></div>';
         $('#breadcrumbs').after(panel);
 
         const output = panel.querySelector('#aquastarMergeShopTotals');
@@ -339,6 +351,43 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
         products.forEach(function (product) {
             product.checkbox.addEventListener('change', redraw);
         });
+        function setSelection(productList, checked) {
+            productList.forEach(function (product) { product.checkbox.checked = checked; });
+            redraw();
+        }
+        panel.querySelector('#aquastarMergeShopSelectAll').addEventListener('click', function (event) {
+            event.preventDefault();
+            setSelection(Array.from(products.values()), true);
+        });
+        panel.querySelector('#aquastarMergeShopClearAll').addEventListener('click', function (event) {
+            event.preventDefault();
+            setSelection(Array.from(products.values()), false);
+        });
+        // YUI tabs keep their panels in the DOM and only toggle display, so these controls
+        // act on one tab without losing its checkbox state when the player comes back.
+        const panels = Array.from(new Set(Array.from(products.values()).map(function (product) {
+            return product.tabPanel;
+        }).filter(Boolean)));
+        panels.forEach(function (tabPanel) {
+            const tabProducts = Array.from(products.values()).filter(function (product) {
+                return product.tabPanel === tabPanel;
+            });
+            const controls = document.createElement('div');
+            controls.className = 'aquastarMergeShopTabControls';
+            controls.style.cssText = 'margin:5px 0 2px;font-size:90%;';
+            controls.innerHTML = 'AquaStar: <a href="#">' + messages.mergeSelectAll + '</a> / <a href="#">' + messages.mergeClearAll + '</a>';
+            const firstTable = tabPanel.querySelector('table.wiki-content-table');
+            if (firstTable) firstTable.parentNode.insertBefore(controls, firstTable);
+            const links = controls.querySelectorAll('a');
+            links[0].addEventListener('click', function (event) {
+                event.preventDefault();
+                setSelection(tabProducts, true);
+            });
+            links[1].addEventListener('click', function (event) {
+                event.preventDefault();
+                setSelection(tabProducts, false);
+            });
+        });
         redraw();
     }
 
@@ -348,6 +397,8 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
         mergeBuyback: 'Dependencies with Buy Back',
         mergeEmpty: 'No materials listed.',
         mergeReputationLabel: 'Reputation required:',
+        mergeSelectAll: 'Select all',
+        mergeClearAll: 'Clear all',
         mergeSelectItem: 'Select item'
     };
     if (typeof window.aquastarWiki.getMessages === 'function') {
