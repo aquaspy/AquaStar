@@ -245,36 +245,68 @@ async function syncActiveCharacter() {
     return { ok: true, charId: charIdResult.charId, charName: userResult.name, syncedAt: nowIso };
 }
 
-// The AQW wiki disambiguates items that can be acquired more than one way (a drop AND a
-// merge-shop version, an AC-shop version...) by stacking parenthetical qualifiers onto the
-// page name - e.g. "Proto Legion Dark Caster (Merge)", "Legion DoomKnight (Class) (AC)".
-// Different acquisition method, but the same item as far as a player cares, so matching
-// strips every trailing parenthetical group before comparing names. (Loosely mirrors what
-// res/features/wikiview/hoverPreview.js does when trying to find the page in the first
-// place - that side has to enumerate specific suffixes to construct a URL, this side just
-// needs a normalized key to compare against, so it can be more aggressive.)
+// Item names must remain exact.  In particular, "Voucher of Nulgath" and "Voucher of
+// Nulgath (Non-Member)" are different items and must never be added together merely
+// because one is a parenthetical variant of the other.
 function _normalizeItemName(name) {
-    if (typeof name !== 'string') return '';
-    let normalized = name.trim();
-    for (;;) {
-        const next = normalized.replace(/\s*\([^()]*\)\s*$/, '');
-        if (next === normalized) break;
-        normalized = next;
-    }
-    return normalized.toLowerCase();
+    return typeof name === 'string' ? name.trim().toLowerCase() : '';
 }
+
+// The Wiki labels old Unidentified drops with their revealed identity, whereas the AQW
+// inventory API still calls them "Unidentified N".  These are intentionally explicit
+// aliases, rather than fuzzy matching: a page can only count the single numbered item that
+// AQW assigns to it.
+const WIKI_UNIDENTIFIED_ALIASES = {
+    'trig buster': 'Unidentified 1',
+    "sharkbait's true head": 'Unidentified 2',
+    'dragon bone hammer': 'Unidentified 3',
+    'small hammer': 'Unidentified 4',
+    'rounded stone hammer': 'Unidentified 5',
+    'parasitic hacker': 'Unidentified 6',
+    'star dagger': 'Unidentified 7',
+    'bee sting dagger': 'Unidentified 8',
+    'ordinary iron wing helm': 'Unidentified 9',
+    'bag of dirt': 'Unidentified 10',
+    'bone walking cane': 'Unidentified 12',
+    'the contract of nulgath': 'Unidentified 13',
+    'worn axe': 'Unidentified 14',
+    'emblem mace': 'Unidentified 15',
+    'iron plate hammer': 'Unidentified 16',
+    'duck on a stick': 'Unidentified 17',
+    'dark cyclops face': 'Unidentified 18',
+    'koi fish in a sphere': 'Unidentified 19',
+    'dragonbone blade': 'Unidentified 20',
+    'dragonbone axe': 'Unidentified 21',
+    'essence of the hex void': 'Unidentified 22',
+    'essence of the blood void': 'Unidentified 23',
+    'essence of the void fiend': 'Unidentified 24',
+    'essence of the shadow void': 'Unidentified 25',
+    'ordinary cape': 'Unidentified 26',
+    'chameleon cape': 'Unidentified 27',
+    'spinal tap': 'Unidentified 28',
+    'mysterious walking cane': 'Unidentified 29',
+    'platinum twin blade': 'Unidentified 30',
+    'platinum battle shank': 'Unidentified 31',
+    'cruel dagger of nulgath': 'Unidentified 32',
+    'primal dagger tooth': 'Unidentified 33',
+    'ball of malignant essence': 'Unidentified 34',
+    'essence of the almighty archfiend': 'Unidentified 35',
+    'the contract of lae': 'Unidentified 36',
+    'bone slasher': 'Unidentified 65',
+    'tyrant bone slasher': 'Unidentified 66'
+};
 
 // Checks the given (or currently active) character's synced data for an item matching the
 // wiki page title. BuyBack entries aren't stackable counts like inventory items - each row
 // is its own past sale, so "buyback" here is how many times that item shows up in the
 // BuyBack history, not a quantity.
-function matchWikiItem(wikiTitle, charId) {
-    const state = _loadInventory();
+function _matchWikiItemInState(state, wikiTitle, charId) {
     const resolvedCharId = charId || state.lastActiveCharId;
     const character = resolvedCharId ? state.characters[String(resolvedCharId)] : null;
     if (!character) return { owned: false, bank: 0, inventory: 0, buyback: 0, matchedName: null };
 
-    const target = _normalizeItemName(wikiTitle);
+    const displayedName = _normalizeItemName(wikiTitle);
+    const target = _normalizeItemName(WIKI_UNIDENTIFIED_ALIASES[displayedName] || wikiTitle);
     if (!target) return { owned: false, bank: 0, inventory: 0, buyback: 0, matchedName: null };
 
     let bank = 0, inventoryCount = 0, buyback = 0, matchedName = null;
@@ -293,6 +325,10 @@ function matchWikiItem(wikiTitle, charId) {
     });
 
     return { owned: (bank + inventoryCount + buyback) > 0, bank: bank, inventory: inventoryCount, buyback: buyback, matchedName: matchedName };
+}
+
+function matchWikiItem(wikiTitle, charId) {
+    return _matchWikiItemInState(_loadInventory(), wikiTitle, charId);
 }
 
 ipcMain.handle('getInventory', () => {
@@ -324,6 +360,33 @@ ipcMain.handle('setInventoryActiveChar', (event, charId) => {
 // script's character-switcher chip keeps up to date via setInventoryActiveChar above.
 ipcMain.handle('matchWikiItem', (event, wikiTitle) => {
     return matchWikiItem(wikiTitle);
+});
+
+// Wiki pages can contain a fairly long list of linked requirements (merge shops, quest
+// rewards, etc.).  Resolve them from one in-memory read instead of making the renderer
+// send one IPC call per link, each of which would otherwise reopen the JSON file.
+ipcMain.handle('matchWikiItems', (event, wikiTitles) => {
+    if (!Array.isArray(wikiTitles)) return {};
+    const titles = wikiTitles.filter((title) => typeof title === 'string').slice(0, 500);
+    const state = _loadInventory();
+    const charId = state.lastActiveCharId;
+    const results = {};
+    titles.forEach((title) => {
+        results[title] = _matchWikiItemInState(state, title, charId);
+    });
+    return results;
+});
+
+// Kept in the main process so the Inventory window remains sandboxed.  The destination is
+// deliberately built from a plain item name and restricted to AQW Wiki's own domain.
+ipcMain.handle('openInventoryItemWiki', (event, itemName) => {
+    if (typeof itemName !== 'string' || !itemName.trim()) return { ok: false };
+    const slug = itemName.trim().toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    if (!slug) return { ok: false };
+    require('../../instances.js').newBrowserWindow('http://aqwwiki.wikidot.com/' + slug);
+    return { ok: true };
 });
 
 const AUTO_SYNC_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours

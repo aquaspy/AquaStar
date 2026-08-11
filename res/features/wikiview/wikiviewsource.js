@@ -47,14 +47,15 @@ $("#listinvBuyBk").on("mouseover", function() {
 if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
     window.aquastarWiki && typeof window.aquastarWiki.matchWikiItem === "function") {
 
-    const AQWE_BANK_ICON = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 6L8 2l6 4"/><path d="M1.5 6.5h13"/><path d="M3 7v6M6.3 7v6M9.7 7v6M13 7v6"/><path d="M1.5 13.5h13"/></svg>';
-    const AQWE_BAG_ICON = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="5.5" width="10" height="8.5" rx="1.5"/><path d="M6 5.5V4a2 2 0 0 1 4 0v1.5"/></svg>';
-    const AQWE_BUYBACK_ICON = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3.5v4h4"/><path d="M3.5 9.8A5.5 5.5 0 1 0 5 4.2L3 7.5"/></svg>';
+    const AQWE_BANK_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 6L8 2l6 4"/><path d="M1.5 6.5h13"/><path d="M3 7v6M6.3 7v6M9.7 7v6M13 7v6"/><path d="M1.5 13.5h13"/></svg>';
+    const AQWE_BAG_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="5.5" width="10" height="8.5" rx="1.5"/><path d="M6 5.5V4a2 2 0 0 1 4 0v1.5"/></svg>';
+    const AQWE_BUYBACK_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3.5v4h4"/><path d="M3.5 9.8A5.5 5.5 0 1 0 5 4.2L3 7.5"/></svg>';
 
-    function aqweBadge(icon, count, title, bg, color) {
+    function aqweBadge(icon, count, title, bg, color, compact) {
+        const renderedIcon = compact ? icon.replace('width="16" height="16"', 'width="12" height="12"') : icon;
         return '<span title="' + title + '" style="display:inline-flex;align-items:center;gap:3px;' +
-            'background:' + bg + ';color:' + color + ';border-radius:10px;padding:6px 12px;' +
-            'font-size:11px;vertical-align:middle;">' + icon + count + '</span>';
+            'background:' + bg + ';color:' + color + ';border-radius:10px;padding:' + (compact ? '3px 6px' : '6px 12px') + ';' +
+            'font-size:' + (compact ? '10px' : '13px') + ';vertical-align:middle;">' + renderedIcon + count + '</span>';
     }
 
     function renderOwnershipBadges(match) {
@@ -70,8 +71,55 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
     function refreshOwnershipBadge() {
         $('#aquastarOwnBadges').remove();
         const title = $('#page-title').first().text().trim();
-        if (!title) return;
-        window.aquastarWiki.matchWikiItem(title).then(renderOwnershipBadges).catch(function () {});
+        // Some Wikidot item pages decorate #page-title with extra page text, while their
+        // URL remains the clean item slug.  Check both forms so aliases such as
+        // "The Contract of Nulgath" -> "Unidentified 13" work at the top of the page as
+        // well as in a quest/merge link.
+        const slugTitle = decodeURIComponent(location.pathname)
+            .replace(/^\/+|\/+$/g, '')
+            .replace(/-\d+$/, '') // dragonbone-blade-1 is still Dragonbone Blade
+            .replace(/-/g, ' ');
+        const candidates = [title, slugTitle].filter(Boolean);
+        if (candidates.length === 0) return;
+        if (typeof window.aquastarWiki.matchWikiItems === 'function') {
+            window.aquastarWiki.matchWikiItems(candidates).then(function (matches) {
+                const match = candidates.map(function (candidate) { return matches[candidate]; })
+                    .filter(function (candidateMatch) { return candidateMatch && candidateMatch.owned; })[0];
+                if (match && match.owned) renderOwnershipBadges(match);
+            }).catch(function () {});
+        } else {
+            window.aquastarWiki.matchWikiItem(title).then(renderOwnershipBadges).catch(function () {});
+        }
+        renderLinkedItemBadges();
+    }
+
+    // Merge requirements, quest rewards and shop entries are all ordinary AQW Wiki links.
+    // Decorating every content link whose label actually matches local inventory data makes
+    // this robust across their differing markup (including the yui-content tab panels),
+    // while links such as navigation/category links simply receive no badge.
+    function renderLinkedItemBadges() {
+        if (typeof window.aquastarWiki.matchWikiItems !== 'function') return;
+        $('.aquastarLinkedOwnBadges').remove();
+        const links = $('#page-content a[href]').filter(function () {
+            const text = $(this).text().replace(/\s+/g, ' ').trim();
+            return text.length > 0 && text.length <= 120 && !$(this).closest('#page-title').length;
+        }).toArray();
+        const titles = Array.from(new Set(links.map(function (link) {
+            return $(link).text().replace(/\s+/g, ' ').trim();
+        })));
+        if (titles.length === 0) return;
+        window.aquastarWiki.matchWikiItems(titles).then(function (matches) {
+            links.forEach(function (link) {
+                const title = $(link).text().replace(/\s+/g, ' ').trim();
+                const match = matches[title];
+                if (!match || !match.owned) return;
+                const badges = [];
+                if (match.bank > 0) badges.push(aqweBadge(AQWE_BANK_ICON, match.bank, 'In your bank (x' + match.bank + ')', 'rgba(52,152,219,0.18)', '#7ec8f2', true));
+                if (match.inventory > 0) badges.push(aqweBadge(AQWE_BAG_ICON, match.inventory, 'In your inventory (x' + match.inventory + ')', 'rgba(154,154,154,0.16)', '#b0b0b0', true));
+                if (match.buyback > 0) badges.push(aqweBadge(AQWE_BUYBACK_ICON, match.buyback, 'In your Buy Back history (x' + match.buyback + ')', 'rgba(230,168,52,0.18)', '#f0c987', true));
+                if (badges.length) $(link).after('<span class="aquastarLinkedOwnBadges" style="display:inline-flex;gap:2px;margin-left:5px;vertical-align:middle;">' + badges.join('') + '</span>');
+            });
+        }).catch(function () {});
     }
 
     // Only shown once 2+ characters have been synced - stays out of the way entirely for

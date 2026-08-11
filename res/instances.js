@@ -178,12 +178,14 @@ function _windowAddContext(newWin){
         const checkWiki     = /aqwwiki\.wikidot\.com\/.+/gi
         const checkCharPage = /account\.aq\.com\/CharPage\?id=.+/gi
         const checkAccountAq= /account\.aq\.com\/AQW\/(Inventory|BuyBack|WheelProgress|House)/gi
-        const checkAccountHome = /account\.aq\.com\/Home/gi
+        const checkAccountSite = /^https?:\/\/account\.aq\.com(?:\/|$)/i
+        const checkAccountLogin = /^https?:\/\/account\.aq\.com\/Login(?:\/|$)/i
 
         const bWiki = checkWiki.test(url)
         const bCp   = checkCharPage.test(url)
         const bAcc  = checkAccountAq.test(url)
-        const bHome = checkAccountHome.test(url)
+        const bAccountSite = checkAccountSite.test(url)
+        const bAccountLogin = checkAccountLogin.test(url)
         const isViewUrl = bWiki || bCp || bAcc
 
         if (isViewUrl){
@@ -199,10 +201,10 @@ function _windowAddContext(newWin){
             newWin.webContents.executeJavaScript(wikiview);
         }
 
-        // Floating "Sync Now" button on the logged-in account.aq.com landing page, for
-        // manually triggering an Inventory/BuyBack sync without opening the Inventory
-        // window itself. See res/features/inventory/accountSyncButton.js.
-        if (bHome){
+        // Give every account.aq.com page a manual sync entry point.  The injected installer
+        // waits for a hydrated DOM and restores itself after client-side page changes; see
+        // res/features/inventory/accountSyncButton.js.
+        if (bAccountSite && !bAccountLogin){
             const syncBtnSrc = fs.readFileSync(path.join(__dirname, 'features', 'inventory', 'accountSyncButton.js'), 'utf8');
             newWin.webContents.executeJavaScript(syncBtnSrc);
         }

@@ -15,5 +15,6 @@ contextBridge.exposeInMainWorld("aquastarWiki", {
   // pages - see res/features/inventory/inventory.js for all three handlers.
   getInventory: () => ipcRenderer.invoke("getInventory"),
   setInventoryActiveChar: (charId) => ipcRenderer.invoke("setInventoryActiveChar", charId),
-  matchWikiItem: (title) => ipcRenderer.invoke("matchWikiItem", title)
+  matchWikiItem: (title) => ipcRenderer.invoke("matchWikiItem", title),
+  matchWikiItems: (titles) => ipcRenderer.invoke("matchWikiItems", titles)
 });
