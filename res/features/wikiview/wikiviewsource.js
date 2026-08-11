@@ -187,47 +187,64 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
 
     function collectMergeShopProducts() {
         const products = new Map();
-        $('#page-content table.wiki-content-table tr').each(function () {
-            const cells = this.querySelectorAll('td');
-            if (cells.length < 3) return; // table heading or non-shop table
-            const nameCell = cells[1];
-            const priceCell = cells[2];
-            const nameLink = nameCell.querySelector('a[href]');
-            if (!nameLink) return;
-            const key = mergeShopKey(nameLink.href);
-            const name = mergeShopText(nameLink);
-            if (!key || !name) return;
+        $('#page-content table.wiki-content-table').each(function () {
+            const table = this;
+            const headerRow = Array.from(table.querySelectorAll('tr')).find(function (row) {
+                return row.querySelectorAll('th').length > 0;
+            });
+            if (!headerRow) return;
+            const headers = Array.from(headerRow.querySelectorAll('th')).map(mergeShopText);
+            const nameIndex = headers.findIndex(function (header) { return /^Name$/i.test(header); });
+            const priceIndex = headers.findIndex(function (header) { return /^Price$/i.test(header); });
+            if (nameIndex < 0 || priceIndex < 0) return;
 
-            const requirements = [];
-            priceCell.querySelectorAll('a[href]').forEach(function (link) {
-                const requirementName = mergeShopText(link);
-                const requirementKey = mergeShopKey(link.href);
-                if (!requirementName || !requirementKey) return;
-                requirements.push({
-                    key: requirementKey,
-                    name: requirementName,
-                    quantity: mergeShopQuantityAfter(link)
+            table.querySelectorAll('tr').forEach(function (row) {
+                const cells = row.querySelectorAll('td');
+                if (cells.length <= Math.max(nameIndex, priceIndex)) return;
+                const nameCell = cells[nameIndex];
+                const priceCell = cells[priceIndex];
+                const categoryIcon = cells[0] && cells[0].querySelector('img[alt]');
+                const nameLink = nameCell.querySelector('a[href]');
+                if (!nameLink) return;
+                const key = mergeShopKey(nameLink.href);
+                const name = mergeShopText(nameLink);
+                if (!key || !name) return;
+
+                const requirements = [];
+                priceCell.querySelectorAll('a[href]').forEach(function (link) {
+                    const requirementName = mergeShopText(link);
+                    const requirementKey = mergeShopKey(link.href);
+                    if (!requirementName || !requirementKey) return;
+                    requirements.push({
+                        key: requirementKey,
+                        name: requirementName,
+                        quantity: mergeShopQuantityAfter(link)
+                    });
                 });
+                // Gold costs do not have an item link, but are still a material cost.
+                const gold = mergeShopText(priceCell).match(/([\d,]+)\s*Gold\b/i);
+                products.set(key, {
+                    key: key,
+                    name: name,
+                    legend: !!nameCell.querySelector('img[alt="legendsmall.png"]'),
+                    ac: !!nameCell.querySelector('img[alt="acsmall.png"]'),
+                    // AQW also marks merge materials as AC.  Only equipment can be
+                    // reacquired through Buy Back; the Wiki denotes materials with its
+                    // dedicated misc.png category icon.
+                    buybackEligible: !categoryIcon || !/^misc\.png$/i.test(categoryIcon.alt),
+                    requirements: requirements,
+                    gold: gold ? parseInt(gold[1].replace(/,/g, ''), 10) : 0
+                });
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'aquastarMergeShopItem';
+                checkbox.checked = true;
+                checkbox.title = name;
+                checkbox.setAttribute('aria-label', name);
+                checkbox.style.margin = '0 4px 0 0';
+                nameCell.insertBefore(checkbox, nameLink);
+                products.get(key).checkbox = checkbox;
             });
-            // Gold costs do not have an item link, but are still a material cost.
-            const gold = mergeShopText(priceCell).match(/([\d,]+)\s*Gold\b/i);
-            products.set(key, {
-                key: key,
-                name: name,
-                legend: !!nameCell.querySelector('img[alt="legendsmall.png"]'),
-                ac: !!nameCell.querySelector('img[alt="acsmall.png"]'),
-                requirements: requirements,
-                gold: gold ? parseInt(gold[1].replace(/,/g, ''), 10) : 0
-            });
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'aquastarMergeShopItem';
-            checkbox.checked = true;
-            checkbox.title = name;
-            checkbox.setAttribute('aria-label', name);
-            checkbox.style.margin = '0 4px 0 0';
-            nameCell.insertBefore(checkbox, nameLink);
-            products.get(key).checkbox = checkbox;
         });
         return products;
     }
@@ -244,7 +261,7 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
         const buyback = mode === 'buyback';
 
         function addPrice(product, multiplier, stack) {
-            if (buyback && product.ac) {
+            if (buyback && product.ac && product.buybackEligible) {
                 // An AC item can be bought once and then reacquired from Buy Back at no
                 // material cost.  Its first acquisition still has its full listed price.
                 if (acPurchased.has(product.key)) return;
