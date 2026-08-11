@@ -346,3 +346,11 @@ exports.inventoryMessages = {
     memberBadge        : "Member",
     normalBadge        : "Normal"
 }
+
+exports.wikiMessages = {
+    mergeMaterialsTitle: "AquaStar: Materiais da loja",
+    mergeDependencies: "Incluir dependências",
+    mergeBuyback: "Dependências com Buy Back",
+    mergeEmpty: "Nenhum material listado.",
+    mergeSelectItem: "Selecionar item"
+}

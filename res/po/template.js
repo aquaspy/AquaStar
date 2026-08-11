@@ -303,3 +303,11 @@ exports.inventoryMessages = {
     memberBadge        : "",
     normalBadge        : ""
 }
+
+exports.wikiMessages = {
+    mergeMaterialsTitle: "",
+    mergeDependencies: "",
+    mergeBuyback: "",
+    mergeEmpty: "",
+    mergeSelectItem: ""
+}

@@ -7,6 +7,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 // raw HTML back here.
 contextBridge.exposeInMainWorld("aquastarWiki", {
   fetchWikiPage: (url) => ipcRenderer.invoke("fetchWikiPage", url),
+  getMessages: () => ipcRenderer.invoke("getWikiMessages"),
   // Used by the floating "Sync Now" button injected on account.aq.com/Home
   // (res/features/inventory/accountSyncButton.js) - see res/features/inventory/inventory.js
   // for the 'syncInventoryNow' handler itself.

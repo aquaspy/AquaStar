@@ -339,6 +339,10 @@ ipcMain.handle('getInventoryMessages', () => {
     return locale.strings.inventoryMessages;
 });
 
+ipcMain.handle('getWikiMessages', () => {
+    return locale.strings.wikiMessages;
+});
+
 ipcMain.handle('syncInventoryNow', async () => {
     try {
         return await syncActiveCharacter();
