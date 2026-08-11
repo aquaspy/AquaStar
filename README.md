@@ -55,6 +55,7 @@ As after version 1.2 AQLite is a part of vanilla game, what we offer is support 
  - TODO list (Tasks) (Alt + Y). Write down what you need the most, and do when you feel like it.
  - Sync inventory (Alt + I). Browse your inventory and check what you have or not.
     - They also show on wiki. Which also tells you if you have the item or not!
+ - Ruffle support (experimentally). We allow you to test ruffle in the game and also update own version as you need it.
  - And maybe something I forgot
 
 # How to build it yourself
