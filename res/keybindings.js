@@ -86,6 +86,9 @@ const processKeybings = function (){
     // Open Reminders screen - daily/weekly quest tracker per character
     addKeybind(k.reminders, ()=>{inst.openRemindersWindow()});
 
+    // Open To-Do screen - per-character task list (drops, shop items, quest rewards...)
+    addKeybind(k.todo, ()=>{inst.openTodoWindow()});
+
     // Toggle Fullscreen
     addKeybind(k.fullscreen,(focusedWin) => {
         focusedWin.setFullScreen(!focusedWin.isFullScreen());

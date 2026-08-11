@@ -420,6 +420,21 @@ function openRemindersWindow(){
     return remindersWin;
 }
 
+// To-Do screen - singleton window, just refocus if already open.
+let todoWin = null;
+function openTodoWindow(){
+    if (todoWin && !todoWin.isDestroyed()) {
+        todoWin.focus();
+        return todoWin;
+    }
+    todoWin = new BrowserWindow(windowConfig.todoConfig);
+    todoWin.setMenuBarVisibility(false);
+    todoWin.setTitle("AquaStar - To-Do List");
+    todoWin.loadURL(windowConfig.todoUrl);
+    todoWin.on('closed', () => { todoWin = null; });
+    return todoWin;
+}
+
 function _mkdir (filepath){
     try { fs.lstatSync(filepath).isDirectory() }
     catch (ex) {
@@ -436,6 +451,7 @@ exports.newBrowserWindow    = newBrowserWindow;
 exports.charPagePrint       = charPagePrint;
 exports.openSettingsWindow  = openSettingsWindow;
 exports.openRemindersWindow = openRemindersWindow;
+exports.openTodoWindow      = openTodoWindow;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;

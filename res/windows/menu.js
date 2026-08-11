@@ -97,6 +97,13 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             click() {
                 require('../instances.js').openRemindersWindow();
             }
+        },
+        {
+            label: menuMessages.menuTodo,
+            accelerator: keybinds.todo,
+            click() {
+                require('../instances.js').openTodoWindow();
+            }
         }
     ];
     if (isContext){

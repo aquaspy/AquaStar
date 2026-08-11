@@ -32,7 +32,7 @@ No tests, lint, typecheck, or CI exist in this repo.
 | `res/windows/menu.js` | Builds the app/context menu; Help and About dialogs |
 | `res/ipc/recording.js` | Screen-recording IPC (save-dialog, write-file, desktop-capturer source lookup, recording-toggle state) |
 | `res/ipc/wikiFetch.js` | Main-process fetch of AQW Wiki pages for WikiView, so the request isn't subject to a page's CORS policy |
-| `res/features/<name>/` | Each self-contained window feature's own files together: `reminders/` (reminders.js + reminders.html + preload_reminders.js + reminders_default.json), `settings/` (settings.html + preload_settings.js), `wikiview/` (wikiviewsource.js + preload_wikiview.js + jquery.min.js), `capture/` (preload_capture.js, for game windows), `charpage/` (preload_charpage.js, for the hidden 4K charpage window) |
+| `res/features/<name>/` | Each self-contained window feature's own files together: `reminders/` (reminders.js + reminders.html + preload_reminders.js + reminders_default.json), `todo/` (todo.js + todo.html + preload_todo.js), `common/` (list_window_common.js - shared renderer-side logic for Reminders and To-Do, see below), `settings/` (settings.html + preload_settings.js), `wikiview/` (wikiviewsource.js + preload_wikiview.js + jquery.min.js), `capture/` (preload_capture.js, for game windows), `charpage/` (preload_charpage.js, for the hidden 4K charpage window) |
 
 ## Runtime behavior
 
@@ -41,7 +41,8 @@ No tests, lint, typecheck, or CI exist in this repo.
 - **Custom URL override:** Set `"customUrl": "https://..."` in `aquastar.json`, or the same "Custom SWF File" section in Settings (it's a plain text field there too). Ignored whenever `aqlite_old.swf` is present.
 - **SWF logging:** Set `"swfLog": true` in `aquastar.json` to log all `game.aq.com/game/*` requests to `Pictures/AquaStar Screenshots/SWFLogging/`.
 - **Custom keybindings:** Create `aquastar.json` in appData or install dir, or use the Settings screen (Alt+9) which writes the same file. See `aquastar_testing.json` for an example and `KEYBINDING.md` for docs.
-- **Reminders (Alt+T):** per-character daily/weekly (and seasonal) quest tracker. Stored in `aquastar_reminders.json` in appData, seeded once from `res/features/reminders/reminders_default.json` on first run - after that the user's own file is authoritative.
+- **Reminders (Alt+T):** per-character daily/weekly/monthly (and seasonal) quest tracker, with a name/type/category filter bar. Stored in `aquastar_reminders.json` in appData, seeded once from `res/features/reminders/reminders_default.json` on first run - after that the user's own file is authoritative. The hidden/archived-quest list is shared across characters by default; a toolbar toggle switches it to per-character (each quest's `hiddenBy` map holds a `__shared__` key plus one key per character id), and switching back to shared prompts for which character's list becomes the new shared one.
+- **To-Do List (Alt+Y):** per-character task list (drop / daily drop / shop-merge / quest-reward categories, optional wiki link, priority star that always sorts to the top of the list, seasonal tagging). Stored in `aquastar_todo.json` in appData - no default seed file, starts empty. Unlike Reminders there's no recurring type or `done` map: "hidden" doubles as "completed" (same shared-vs-per-character toggle as Reminders' hidden list). Wiki links open in AquaStar's own tabbed window via `instances.newBrowserWindow` (not the OS browser), restricted to `http(s)://` in `todo.js`'s `todoOpenLink` handler. Shares its date/reset math, seasonal-event keys, hidden-map helpers, drag-reorder, and prompt/choice modals with Reminders via `res/features/common/list_window_common.js` (`window.ListWindowCommon`, loaded as a plain `<script>` tag) - update that file, not both windows separately, when touching that shared logic.
 
 ## Important quirks
 
@@ -64,7 +65,8 @@ After making changes:
 5. Test `Alt+K` on a charpage (opens hidden 4K window, captures, closes)
 6. Test `Alt+9` (Settings opens; keybind recording, Other Options, and the Custom SWF File section - choosing/removing a file - all save correctly)
 7. Test `Alt+T` (Reminders opens; add a character and a quest, mark it done, restart the app, confirm it persisted)
-8. If modifying build/packaging, test `npm run pack` first (`--dir`, no installer)
+8. Test `Alt+Y` (To-Do opens; add a character and a task with a wiki link, mark priority, mark complete, restart the app, confirm it persisted)
+9. If modifying build/packaging, test `npm run pack` first (`--dir`, no installer)
 
 ## Build artifacts
 

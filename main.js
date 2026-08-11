@@ -14,6 +14,7 @@ const fs       = require('fs');
 const flash         = require('./res/flash.js');
 const keyb          = require('./res/keybindings.js');
 const reminders     = require('./res/features/reminders/reminders.js');
+const todo          = require('./res/features/todo/todo.js');
 // IPC-only modules (register their ipcMain handlers as a side effect of being required -
 // nothing else calls into them directly, so main.js must require them explicitly).
 const ipcRecording  = require('./res/ipc/recording.js');

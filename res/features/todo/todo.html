@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html style="margin:0;padding:0;width:100%;height:100%;">
+<head>
+<meta charset="UTF-8">
+<title>AquaStar - To-Do List</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #121212; color: #e6e6e6;
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    font-size: 13px;
+  }
+  #app { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
+
+  header { padding: 14px 18px 8px 18px; border-bottom: 1px solid #2c2c2c; flex: 0 0 auto; }
+  .header-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  header h1 { margin: 0 0 4px 0; font-size: 16px; }
+  header p#description { margin: 0; color: #9a9a9a; line-height: 1.4; }
+  #serverTime { flex:0 0 auto; font-size:12px; color:#9cc9ff; white-space:nowrap; font-family:"Consolas","Courier New",monospace; padding-top:2px; text-align:right; }
+  #serverTime .label { display:block; color:#6f6f6f; font-family:inherit; font-size:10px; text-transform:uppercase; letter-spacing:.03em; }
+  #nextFriday13Row { margin-top:6px; color:#e0a3f0; }
+
+  #tabs { display:flex; align-items:center; gap:6px; padding:10px 18px 0 18px; flex-wrap:wrap; flex:0 0 auto; }
+  .tab { background:#1b1b1b; border:1px solid #333; border-radius:4px 4px 0 0; padding:6px 10px; color:#9a9a9a; font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer; }
+  .tab.active { background:#232323; color:#e6e6e6; border-color:#4da3ff; }
+  .tab .tabBtn { color:#6f6f6f; cursor:pointer; padding:0 2px; font-size:11px; }
+  .tab .tabBtn:hover { color:#e6e6e6; }
+  .tabAddBtn { background:transparent; border:1px dashed #383838; color:#9a9a9a; }
+  .tabAddBtn:hover { color:#e6e6e6; border-color:#4da3ff; }
+
+  #addTaskForm { display:flex; gap:8px; align-items:center; padding:10px 18px; border-bottom:1px solid #2c2c2c; flex-wrap:wrap; flex:0 0 auto; }
+
+  #rows { flex: 1 1 auto; overflow-y: auto; padding: 4px 18px; }
+  .task-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #202020; border-radius:4px; }
+  .task-row.priority { background: rgba(255,215,106,0.06); }
+  .task-row.dragging { opacity:0.4; }
+  .task-row.drag-over { border-top:2px solid #4da3ff; }
+  .task-row .drag-handle { flex:0 0 auto; color:#6f6f6f; cursor:grab; padding:0 2px; user-select:none; font-size:13px; }
+  .task-row .drag-handle:active { cursor:grabbing; }
+  .task-row .tpriority-btn { background:transparent; border:none; padding:2px 4px; font-size:15px; line-height:1; cursor:pointer; color:#5a5a5a; }
+  .task-row .tpriority-btn.active { color:#ffd76a; }
+  .task-row .tname { flex:1 1 160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .task-row .tlink-btn { flex:0 0 auto; }
+  .task-row .tjoin {
+    flex:0 0 150px; font-family:"Consolas","Courier New",monospace;
+    background:#1b1b1b; border:1px solid #333; border-radius:4px;
+    padding:5px 8px; color:#dcdcdc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .task-row .tcategory {
+    flex:0 0 110px; font-size:10px; padding:2px 7px; border-radius:10px;
+    text-transform:uppercase; white-space:nowrap; letter-spacing:.02em;
+    text-align:center; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box;
+  }
+  .tcategory.drop           { background:rgba(46,204,113,0.18);  color:#6fe0a0; }
+  .tcategory.dailyDrop      { background:rgba(52,152,219,0.18);  color:#7ec8f2; }
+  .tcategory.shopMerge      { background:rgba(231,76,150,0.18);  color:#f28fc0; }
+  .tcategory.questReward    { background:rgba(230,168,52,0.18);  color:#f0c987; }
+  .tcategory.hardFarm       { background:rgba(231,76,60,0.18);   color:#f28b7a; }
+  .tcategory.reputationFarm { background:rgba(103,58,183,0.18);  color:#b39ddb; }
+  .task-row .tseasonal {
+    flex:0 0 40px; font-size:10px; padding:2px 4px; border-radius:10px;
+    text-transform:uppercase; white-space:nowrap; letter-spacing:.02em;
+    text-align:center; box-sizing:border-box;
+  }
+  .tseasonal.active { background:rgba(255,182,193,0.18); color:#ffb6c1; }
+
+  .icon-btn { display:inline-flex; align-items:center; justify-content:center; padding:5px 7px; line-height:0; }
+
+  #completedSection, #seasonalSection { flex:0 0 auto; border-top:1px solid #2c2c2c; }
+  #completedSection.hidden, #seasonalSection.hidden { display:none; }
+  .archive-toggle { cursor:pointer; padding:8px 18px; color:#9a9a9a; font-size:12px; user-select:none; }
+  .archive-toggle:hover { color:#e6e6e6; }
+  /* Padding lives on the scrolling element itself (like #rows does), not a non-scrolling
+     wrapper around it - otherwise the scrollbar renders inset from the window edge instead
+     of flush with #rows's scrollbar above it. */
+  #completedRows, #seasonalRows { max-height:180px; overflow-y:auto; padding:0 18px; box-sizing:border-box; }
+  #completedRows .task-row { opacity:0.7; }
+
+  .form-checkbox { display:flex; align-items:center; gap:5px; font-size:12px; color:#9a9a9a; white-space:nowrap; }
+  .form-checkbox input { cursor:pointer; }
+
+  .text-input { flex:0 0 190px; font-family:inherit; background:#1b1b1b; border:1px solid #333; border-radius:4px; padding:5px 8px; color:#dcdcdc; }
+  .text-input:focus { outline:none; border-color:#4da3ff; }
+  .select-input { flex:0 0 110px; font-family:inherit; background:#1b1b1b; border:1px solid #333; border-radius:4px; padding:5px 8px; color:#dcdcdc; cursor:pointer; }
+  .select-input:focus { outline:none; border-color:#4da3ff; }
+
+  .switch { position:relative; display:inline-block; flex:0 0 38px; width:38px; height:22px; }
+  .switch input { position:absolute; opacity:0; width:0; height:0; }
+  .switch .slider { position:absolute; top:0; left:0; right:0; bottom:0; background:#1b1b1b; border:1px solid #383838; border-radius:22px; cursor:pointer; transition:background-color .15s, border-color .15s; }
+  .switch .slider::before { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#9a9a9a; transition:transform .15s, background-color .15s; }
+  .switch input:checked + .slider { background:#2b6fce; border-color:#2b6fce; }
+  .switch input:checked + .slider::before { transform:translateX(16px); background:#fff; }
+  .switch input:focus-visible + .slider { outline: 2px solid #4da3ff; outline-offset: 2px; }
+
+  button { background:#232323; color:#e6e6e6; border:1px solid #383838; border-radius:4px; padding:6px 12px; cursor:pointer; font-size:12px; }
+  button:hover { background:#2c2c2c; }
+  button:active { background:#1a1a1a; }
+  button.small { padding:5px 10px; font-size:11px; }
+  button.primary { background:#2b6fce; border-color:#2b6fce; color:#fff; }
+  button.primary:hover { background:#3a7fe0; }
+
+  footer { flex:0 0 auto; padding:8px 18px 12px 18px; border-top:1px solid #2c2c2c; }
+  #status { min-height:15px; color:#7fd08a; font-size:12px; }
+  #noCharsHint { color:#6f6f6f; padding:20px 0; }
+
+  #toolbar { display:flex; align-items:center; gap:8px; padding:10px 18px 0 18px; flex:0 0 auto; flex-wrap:wrap; row-gap:6px; }
+  .toolbar-label { font-size:12px; color:#9a9a9a; margin-right:8px; }
+
+  #filterBar { display:flex; gap:8px; align-items:center; padding:8px 18px; border-bottom:1px solid #2c2c2c; flex:0 0 auto; background:#161616; flex-wrap:wrap; }
+  #filterBar .text-input { flex:1 1 200px; }
+  #filterBar .select-input { flex:0 0 140px; }
+
+  /* Electron does not implement window.prompt() (it silently resolves to null with no
+     UI shown) - alert()/confirm() map to native dialogs and work fine, but text-entry
+     prompts need this hand-rolled modal instead. */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:1000; }
+  .modal-overlay.open { display:flex; }
+  .modal-box { background:#1b1b1b; border:1px solid #333; border-radius:6px; padding:16px; width:260px; display:flex; flex-direction:column; gap:10px; }
+  .modal-box .modal-label { font-size:12px; color:#e6e6e6; }
+  .modal-box .text-input { flex:0 0 auto; width:100%; box-sizing:border-box; }
+  .modal-buttons { display:flex; justify-content:flex-end; gap:8px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="header-row">
+      <div>
+        <h1 id="heading">To-Do List</h1>
+        <p id="description"></p>
+      </div>
+      <div id="serverTime">
+        <span class="label" id="serverTimeLabel"></span><span id="serverTimeValue"></span>
+        <div id="nextFriday13Row"><span class="label" id="nextFriday13Label"></span><span id="nextFriday13Value"></span></div>
+      </div>
+    </div>
+  </header>
+  <div id="toolbar">
+    <label class="switch">
+      <input type="checkbox" id="individualHiddenToggle">
+      <span class="slider"></span>
+    </label>
+    <span id="individualHiddenLabel" class="toolbar-label"></span>
+  </div>
+  <div id="tabs"></div>
+  <div id="filterBar">
+    <input id="filterNameInput" class="text-input" type="text" spellcheck="false">
+    <select id="filterCategoryInput" class="select-input">
+      <option value="all"></option>
+      <option value="drop"></option>
+      <option value="dailyDrop"></option>
+      <option value="shopMerge"></option>
+      <option value="questReward"></option>
+      <option value="hardFarm"></option>
+      <option value="reputationFarm"></option>
+    </select>
+  </div>
+  <div id="addTaskForm">
+    <input id="taskNameInput" class="text-input" type="text" spellcheck="false">
+    <input id="taskLinkInput" class="text-input" type="text" spellcheck="false">
+    <input id="taskJoinInput" class="text-input" type="text" spellcheck="false">
+    <select id="taskCategoryInput" class="select-input">
+      <option value="drop"></option>
+      <option value="dailyDrop"></option>
+      <option value="shopMerge"></option>
+      <option value="questReward"></option>
+      <option value="hardFarm"></option>
+      <option value="reputationFarm"></option>
+    </select>
+    <label class="form-checkbox">
+      <input type="checkbox" id="taskPriorityInput">
+      <span id="taskPriorityLabel"></span>
+    </label>
+    <label class="form-checkbox">
+      <input type="checkbox" id="taskSeasonalInput">
+      <span id="taskSeasonalLabel"></span>
+    </label>
+    <select id="taskSeasonalEventInput" class="select-input" disabled>
+      <option value="nulgathBirthday"></option>
+      <option value="carnival"></option>
+      <option value="dageBirthday"></option>
+      <option value="aprilFools"></option>
+      <option value="mayThe4th"></option>
+      <option value="starFestival"></option>
+      <option value="kalaSeason"></option>
+      <option value="friday13"></option>
+      <option value="pirateDay"></option>
+      <option value="anniversary"></option>
+      <option value="blackFriday"></option>
+      <option value="frostval"></option>
+    </select>
+    <button id="addTaskBtn" class="primary small"></button>
+  </div>
+  <div id="rows"></div>
+  <div id="seasonalSection" class="hidden">
+    <div id="seasonalToggle" class="archive-toggle"></div>
+    <div id="seasonalRows" style="display:none;"></div>
+  </div>
+  <div id="completedSection" class="hidden">
+    <div id="completedToggle" class="archive-toggle"></div>
+    <div id="completedRows" style="display:none;"></div>
+  </div>
+  <footer><span id="status"></span></footer>
+</div>
+
+<div id="promptOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <div id="promptLabel" class="modal-label"></div>
+    <input id="promptInput" class="text-input" type="text" spellcheck="false">
+    <div class="modal-buttons">
+      <button id="promptCancelBtn" class="small"></button>
+      <button id="promptOkBtn" class="primary small"></button>
+    </div>
+  </div>
+</div>
+
+<div id="baseCharOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <div id="baseCharLabel" class="modal-label"></div>
+    <select id="baseCharSelect" class="select-input" style="flex:0 0 auto; width:100%; box-sizing:border-box;"></select>
+    <div class="modal-buttons">
+      <button id="baseCharCancelBtn" class="small"></button>
+      <button id="baseCharOkBtn" class="primary small"></button>
+    </div>
+  </div>
+</div>
+
+<script src="../common/list_window_common.js"></script>
+<script>
+(function () {
+  const api = window.aquastarTodo;
+  const Common = window.ListWindowCommon;
+  let messages, state, activeCharId = null;
+  let draggedTaskId = null;
+  let completedExpanded = false;
+  let seasonalExpanded = false;
+  // Filter bar state - transient/in-memory only (not persisted to disk), same as any
+  // search box: it resets to "show everything" the next time the window is opened.
+  let filterName = '';
+  let filterCategory = 'all';
+
+  const LINK_ICON = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9.5L9.5 6.5"/><path d="M7.8 4.3l.9-.9a2.5 2.5 0 0 1 3.5 3.5l-1.2 1.2"/><path d="M8.2 11.7l-.9.9a2.5 2.5 0 0 1-3.5-3.5l1.2-1.2"/></svg>';
+  // Plain inline SVGs (not emoji) so the copy button's icon renders identically across
+  // platforms/fonts - swapped to a checkmark briefly after a successful copy.
+  const COPY_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5.5" y="5.5" width="8.5" height="8.5" rx="1.3"/><path d="M3.3 10.2H2.7A1.2 1.2 0 0 1 1.5 9V2.7A1.2 1.2 0 0 1 2.7 1.5H9a1.2 1.2 0 0 1 1.2 1.2v.6"/></svg>';
+  const CHECK_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3 3 7-7"/></svg>';
+
+  function setStatus(text) { document.getElementById('status').textContent = text || ''; }
+
+  function persistState() {
+    setStatus(messages.savingLabel);
+    api.saveTodo(state).then(() => setStatus(messages.savedLabel));
+  }
+
+  function isTaskHidden(task) {
+    return Common.isItemHidden(task, state.individualHiddenMode, activeCharId);
+  }
+  function setTaskHidden(task, value) {
+    Common.setItemHidden(task, value, state.individualHiddenMode, activeCharId);
+  }
+
+  function showPromptModal(labelText, defaultValue) {
+    return Common.showPromptModal(messages, labelText, defaultValue);
+  }
+  function showBaseCharacterModal() {
+    return Common.showChoiceModal(messages, messages.baseCharacterPrompt,
+      state.characters.map((c) => ({ id: c.id, label: c.name })));
+  }
+
+  function renderTabs() {
+    const tabsEl = document.getElementById('tabs');
+    tabsEl.innerHTML = '';
+    state.characters.forEach((character) => {
+      const tab = document.createElement('div');
+      tab.className = 'tab' + (character.id === activeCharId ? ' active' : '');
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = character.name;
+      nameSpan.onclick = () => { activeCharId = character.id; renderTabs(); renderTaskRows(); };
+
+      const renameBtn = document.createElement('span');
+      renameBtn.className = 'tabBtn';
+      renameBtn.title = messages.renameTabTitle;
+      renameBtn.textContent = '✎';
+      renameBtn.onclick = (e) => { e.stopPropagation(); renameCharacterTab(character); };
+
+      const removeBtn = document.createElement('span');
+      removeBtn.className = 'tabBtn';
+      removeBtn.title = messages.removeTabTitle;
+      removeBtn.textContent = '✕';
+      removeBtn.onclick = (e) => { e.stopPropagation(); removeCharacterTab(character); };
+
+      tab.appendChild(nameSpan);
+      tab.appendChild(renameBtn);
+      tab.appendChild(removeBtn);
+      tabsEl.appendChild(tab);
+    });
+
+    const addTab = document.createElement('div');
+    addTab.className = 'tab tabAddBtn';
+    addTab.textContent = messages.addCharacterTab;
+    addTab.onclick = addCharacterTab;
+    tabsEl.appendChild(addTab);
+  }
+
+  async function addCharacterTab() {
+    const name = await showPromptModal(messages.promptCharacterName, '');
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const character = { id: Common.genId('c'), name: trimmed };
+    state.characters.push(character);
+    activeCharId = character.id;
+    persistState();
+    renderTabs();
+    renderTaskRows();
+  }
+
+  async function renameCharacterTab(character) {
+    const name = await showPromptModal(messages.promptCharacterName, character.name);
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    character.name = trimmed;
+    persistState();
+    renderTabs();
+  }
+
+  function removeCharacterTab(character) {
+    if (!window.confirm(messages.confirmDeleteCharacter)) return;
+    state.characters = state.characters.filter((c) => c.id !== character.id);
+    state.tasks.forEach((t) => {
+      if (t.hiddenBy) delete t.hiddenBy[character.id];
+    });
+    if (activeCharId === character.id) {
+      activeCharId = state.characters.length ? state.characters[0].id : null;
+    }
+    persistState();
+    renderTabs();
+    renderTaskRows();
+  }
+
+  const CATEGORY_KEYS = ['drop', 'dailyDrop', 'shopMerge', 'questReward', 'hardFarm', 'reputationFarm'];
+  function categoryKeyOf(task) {
+    return CATEGORY_KEYS.indexOf(task.category) !== -1 ? task.category : 'drop';
+  }
+  function categoryLabelOf(task) {
+    const key = categoryKeyOf(task);
+    if (key === 'dailyDrop') return messages.categoryDailyDropLabel;
+    if (key === 'shopMerge') return messages.categoryShopMergeLabel;
+    if (key === 'questReward') return messages.categoryQuestRewardLabel;
+    if (key === 'hardFarm') return messages.categoryHardFarmLabel;
+    if (key === 'reputationFarm') return messages.categoryReputationFarmLabel;
+    return messages.categoryDropLabel;
+  }
+
+  function matchesFilters(task) {
+    if (filterName && task.name.toLowerCase().indexOf(filterName) === -1) return false;
+    if (filterCategory !== 'all' && categoryKeyOf(task) !== filterCategory) return false;
+    return true;
+  }
+
+  // Seasonal is a separate, orthogonal tag from category - an item can be both (e.g. a
+  // seasonal shop item) or seasonal on its own. Event keys/labels live in
+  // list_window_common.js, shared with the Reminders window.
+  const SEASONAL_EVENT_KEYS = Common.SEASONAL_EVENT_KEYS;
+  function isSeasonal(task) {
+    return Common.isSeasonal(task);
+  }
+  function seasonalShortOf(task) {
+    return (messages.seasonalEvents[task.seasonalEvent] || {}).short || '';
+  }
+  function seasonalLabelOf(task) {
+    return (messages.seasonalEvents[task.seasonalEvent] || {}).label || '';
+  }
+
+  function getNextFriday13Text(now) {
+    return Common.getNextFriday13Text(now, messages);
+  }
+
+  // Reorders within whichever section (main / seasonal / completed) the dragged task
+  // belongs to - dragging across sections is a no-op since each renders as its own list.
+  function taskSectionOf(task) {
+    if (isTaskHidden(task)) return 'completed';
+    if (isSeasonal(task)) return 'seasonal';
+    return 'main';
+  }
+  function reorderTask(draggedId, targetId) {
+    const reordered = Common.reorderInSection(state.tasks, draggedId, targetId, taskSectionOf);
+    if (reordered === state.tasks) return; // no-op: same id, not found, or cross-section drag
+    state.tasks = reordered;
+    persistState();
+    renderTaskRows();
+  }
+
+  // opts.completed controls the Complete/Reopen button label; opts.draggable controls
+  // whether the row gets a drag handle (Completed rows aren't draggable, same as
+  // Reminders' archive section - Seasonal and the main list both are).
+  function buildTaskRow(task, opts) {
+    opts = opts || {};
+    const row = document.createElement('div');
+    row.className = 'task-row' + (task.priority ? ' priority' : '');
+
+    if (opts.draggable) {
+      const handle = document.createElement('span');
+      handle.className = 'drag-handle';
+      handle.draggable = true;
+      handle.title = messages.dragHandleTitle;
+      handle.textContent = '⠿'; // braille all-dots glyph, reads as a plain 2x3 grip icon
+      row.appendChild(handle);
+
+      row.addEventListener('dragstart', () => {
+        draggedTaskId = task.id;
+        row.classList.add('dragging');
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('dragging');
+        document.querySelectorAll('.task-row.drag-over').forEach((el) => el.classList.remove('drag-over'));
+        draggedTaskId = null;
+      });
+      row.addEventListener('dragover', (e) => {
+        if (!draggedTaskId || draggedTaskId === task.id) return;
+        e.preventDefault();
+        row.classList.add('drag-over');
+      });
+      row.addEventListener('dragleave', () => { row.classList.remove('drag-over'); });
+      row.addEventListener('drop', (e) => {
+        e.preventDefault();
+        row.classList.remove('drag-over');
+        if (draggedTaskId && draggedTaskId !== task.id) reorderTask(draggedTaskId, task.id);
+      });
+    }
+
+    const priorityBtn = document.createElement('button');
+    priorityBtn.className = 'tpriority-btn' + (task.priority ? ' active' : '');
+    priorityBtn.title = messages.priorityToggleTitle;
+    priorityBtn.textContent = task.priority ? '★' : '☆'; // filled / outline star
+    priorityBtn.onclick = () => {
+      task.priority = !task.priority;
+      persistState();
+      renderTaskRows();
+    };
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'tname';
+    nameEl.textContent = task.name;
+    nameEl.title = task.name;
+
+    const categoryEl = document.createElement('div');
+    categoryEl.className = 'tcategory ' + categoryKeyOf(task);
+    categoryEl.textContent = categoryLabelOf(task);
+
+    // Always rendered (fixed width) even when not seasonal, so every row's columns after
+    // this one stay aligned regardless of which tasks happen to be seasonal.
+    const seasonalEl = document.createElement('div');
+    seasonalEl.className = 'tseasonal' + (isSeasonal(task) ? ' active' : '');
+    if (isSeasonal(task)) {
+      seasonalEl.textContent = seasonalShortOf(task);
+      seasonalEl.title = seasonalLabelOf(task);
+    }
+
+    const completeBtn = document.createElement('button');
+    completeBtn.className = 'small';
+    completeBtn.textContent = opts.completed ? messages.reopenButton : messages.completeButton;
+    completeBtn.onclick = () => {
+      setTaskHidden(task, !opts.completed);
+      persistState();
+      renderTaskRows();
+    };
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'small';
+    deleteBtn.textContent = messages.deleteButton;
+    deleteBtn.onclick = () => {
+      if (!window.confirm(messages.confirmDeleteTask)) return;
+      state.tasks = state.tasks.filter((t) => t.id !== task.id);
+      persistState();
+      renderTaskRows();
+    };
+
+    row.appendChild(priorityBtn);
+    row.appendChild(nameEl);
+    if (task.wikiLink) {
+      const linkBtn = document.createElement('button');
+      linkBtn.className = 'small icon-btn tlink-btn';
+      linkBtn.innerHTML = LINK_ICON;
+      linkBtn.title = messages.wikiLinkButtonTitle;
+      linkBtn.onclick = () => { api.openLink(task.wikiLink); };
+      row.appendChild(linkBtn);
+    }
+    if (task.joinCommand) {
+      const joinEl = document.createElement('div');
+      joinEl.className = 'tjoin';
+      joinEl.textContent = task.joinCommand;
+      joinEl.title = task.joinCommand;
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'small icon-btn';
+      copyBtn.innerHTML = COPY_ICON;
+      copyBtn.title = messages.copyButton;
+      copyBtn.onclick = () => {
+        api.copyText(task.joinCommand);
+        copyBtn.innerHTML = CHECK_ICON;
+        copyBtn.title = messages.copiedLabel;
+        setTimeout(() => { copyBtn.innerHTML = COPY_ICON; copyBtn.title = messages.copyButton; }, 1200);
+      };
+
+      row.appendChild(joinEl);
+      row.appendChild(copyBtn);
+    }
+    row.appendChild(categoryEl);
+    row.appendChild(seasonalEl);
+    row.appendChild(completeBtn);
+    row.appendChild(deleteBtn);
+
+    return row;
+  }
+
+  function renderCompletedSection(completedTasks) {
+    const wrapEl = document.getElementById('completedSection');
+    const toggleEl = document.getElementById('completedToggle');
+    const rowsEl = document.getElementById('completedRows');
+
+    if (!activeCharId || completedTasks.length === 0) {
+      wrapEl.classList.add('hidden');
+      return;
+    }
+    wrapEl.classList.remove('hidden');
+    toggleEl.textContent = (completedExpanded ? '▾ ' : '▸ ') + messages.completedToggleLabel + ' (' + completedTasks.length + ')';
+    rowsEl.style.display = completedExpanded ? '' : 'none';
+    rowsEl.innerHTML = '';
+    if (completedExpanded) {
+      completedTasks.forEach((task) => rowsEl.appendChild(buildTaskRow(task, { completed: true, draggable: false })));
+    }
+  }
+
+  function renderSeasonalSection(seasonalTasks) {
+    const wrapEl = document.getElementById('seasonalSection');
+    const toggleEl = document.getElementById('seasonalToggle');
+    const rowsEl = document.getElementById('seasonalRows');
+
+    if (!activeCharId || seasonalTasks.length === 0) {
+      wrapEl.classList.add('hidden');
+      return;
+    }
+    wrapEl.classList.remove('hidden');
+    toggleEl.textContent = (seasonalExpanded ? '▾ ' : '▸ ') + messages.seasonalSectionLabel + ' (' + seasonalTasks.length + ')';
+    rowsEl.style.display = seasonalExpanded ? '' : 'none';
+    rowsEl.innerHTML = '';
+    if (seasonalExpanded) {
+      // Priority tasks list first here too, same stable-partition sort as the main list.
+      seasonalTasks.slice()
+        .sort((a, b) => (b.priority ? 1 : 0) - (a.priority ? 1 : 0))
+        .forEach((task) => rowsEl.appendChild(buildTaskRow(task, { completed: false, draggable: true })));
+    }
+  }
+
+  function renderTaskRows() {
+    const rowsEl = document.getElementById('rows');
+    rowsEl.innerHTML = '';
+    if (!activeCharId) {
+      const hint = document.createElement('div');
+      hint.id = 'noCharsHint';
+      hint.textContent = messages.noCharactersHint;
+      rowsEl.appendChild(hint);
+      renderSeasonalSection([]);
+      renderCompletedSection([]);
+      return;
+    }
+    // Completed tasks are pulled out first (regardless of seasonal), then the name/category
+    // filter bar narrows the rest, then seasonal tasks get their own section, so a task
+    // lands in exactly one of: main list / Seasonal / Completed.
+    const filteredTasks = state.tasks.filter((t) => matchesFilters(t));
+    const nonCompleted = filteredTasks.filter((t) => !isTaskHidden(t));
+    const seasonalTasks = nonCompleted.filter((t) => isSeasonal(t));
+    // Priority tasks always list first - a stable partition sort, so the underlying
+    // state.tasks order (which drag-and-drop reordering controls) is untouched, and this
+    // still applies on top of whatever the filter bar narrowed down to.
+    let visibleTasks = nonCompleted.filter((t) => !isSeasonal(t))
+      .slice()
+      .sort((a, b) => (b.priority ? 1 : 0) - (a.priority ? 1 : 0));
+    visibleTasks.forEach((task) => rowsEl.appendChild(buildTaskRow(task, { completed: false, draggable: true })));
+
+    renderSeasonalSection(seasonalTasks);
+    renderCompletedSection(filteredTasks.filter((t) => isTaskHidden(t)));
+  }
+
+  async function init() {
+    const [msgs, todoResult] = await Promise.all([api.getMessages(), api.getTodo()]);
+    messages = msgs;
+    state = todoResult.data;
+    if (state.individualHiddenMode === undefined) state.individualHiddenMode = false;
+
+    document.title = messages.title;
+    document.getElementById('heading').textContent = messages.heading;
+    document.getElementById('description').textContent = messages.description;
+    document.getElementById('serverTimeLabel').textContent = messages.serverTimeLabel;
+    document.getElementById('nextFriday13Label').textContent = messages.nextFriday13Label;
+
+    document.getElementById('individualHiddenLabel').textContent = messages.individualHiddenLabel;
+    const individualHiddenToggle = document.getElementById('individualHiddenToggle');
+    individualHiddenToggle.checked = state.individualHiddenMode;
+    individualHiddenToggle.addEventListener('change', async () => {
+      const turningOn = individualHiddenToggle.checked;
+      if (turningOn) {
+        // Shared -> Individual: every character starts out identical to the current shared
+        // state, then diverges independently from here on.
+        state.tasks.forEach((t) => {
+          if (!t.hiddenBy) t.hiddenBy = {};
+          const sharedVal = !!t.hiddenBy[Common.SHARED_HIDDEN_KEY];
+          state.characters.forEach((c) => { t.hiddenBy[c.id] = sharedVal; });
+        });
+        state.individualHiddenMode = true;
+        persistState();
+        renderTaskRows();
+      } else {
+        // Individual -> Shared: adopt one character's completed set as the new shared one.
+        // Skip the picker when there's nothing to choose (0 or 1 characters).
+        let baseCharId = null;
+        if (state.characters.length === 1) {
+          baseCharId = state.characters[0].id;
+        } else if (state.characters.length > 1) {
+          baseCharId = await showBaseCharacterModal();
+          if (baseCharId === null) {
+            individualHiddenToggle.checked = true; // cancelled - revert the visual toggle
+            return;
+          }
+        }
+        if (baseCharId) {
+          state.tasks.forEach((t) => {
+            if (!t.hiddenBy) t.hiddenBy = {};
+            t.hiddenBy[Common.SHARED_HIDDEN_KEY] = !!t.hiddenBy[baseCharId];
+          });
+        }
+        state.individualHiddenMode = false;
+        persistState();
+        renderTaskRows();
+      }
+    });
+
+    document.getElementById('filterNameInput').placeholder = messages.filterNamePlaceholder;
+    document.getElementById('filterNameInput').addEventListener('input', (e) => {
+      filterName = e.target.value.trim().toLowerCase();
+      renderTaskRows();
+    });
+    const filterCategoryInput = document.getElementById('filterCategoryInput');
+    filterCategoryInput.options[0].textContent = messages.filterAllLabel;
+    filterCategoryInput.options[1].textContent = messages.categoryDropLabel;
+    filterCategoryInput.options[2].textContent = messages.categoryDailyDropLabel;
+    filterCategoryInput.options[3].textContent = messages.categoryShopMergeLabel;
+    filterCategoryInput.options[4].textContent = messages.categoryQuestRewardLabel;
+    filterCategoryInput.options[5].textContent = messages.categoryHardFarmLabel;
+    filterCategoryInput.options[6].textContent = messages.categoryReputationFarmLabel;
+    filterCategoryInput.addEventListener('change', (e) => {
+      filterCategory = e.target.value;
+      renderTaskRows();
+    });
+
+    document.getElementById('taskNameInput').placeholder = messages.taskNamePlaceholder;
+    document.getElementById('taskLinkInput').placeholder = messages.wikiLinkPlaceholder;
+    document.getElementById('taskJoinInput').placeholder = messages.joinCommandPlaceholder;
+    const taskCategoryInput = document.getElementById('taskCategoryInput');
+    taskCategoryInput.options[0].textContent = messages.categoryDropLabel;
+    taskCategoryInput.options[1].textContent = messages.categoryDailyDropLabel;
+    taskCategoryInput.options[2].textContent = messages.categoryShopMergeLabel;
+    taskCategoryInput.options[3].textContent = messages.categoryQuestRewardLabel;
+    taskCategoryInput.options[4].textContent = messages.categoryHardFarmLabel;
+    taskCategoryInput.options[5].textContent = messages.categoryReputationFarmLabel;
+    document.getElementById('taskPriorityLabel').textContent = messages.priorityToggleLabel;
+    document.getElementById('taskSeasonalLabel').textContent = messages.seasonalToggleLabel;
+    SEASONAL_EVENT_KEYS.forEach((key, i) => {
+      document.getElementById('taskSeasonalEventInput').options[i].textContent = messages.seasonalEvents[key].label;
+    });
+    document.getElementById('addTaskBtn').textContent = messages.addTaskButton;
+
+    const seasonalToggleInput = document.getElementById('taskSeasonalInput');
+    const seasonalEventInput = document.getElementById('taskSeasonalEventInput');
+    seasonalToggleInput.addEventListener('change', () => {
+      seasonalEventInput.disabled = !seasonalToggleInput.checked;
+    });
+
+    document.getElementById('addTaskBtn').onclick = () => {
+      const nameInput = document.getElementById('taskNameInput');
+      const linkInput = document.getElementById('taskLinkInput');
+      const joinInput = document.getElementById('taskJoinInput');
+      const categoryInput = document.getElementById('taskCategoryInput');
+      const priorityInput = document.getElementById('taskPriorityInput');
+      const name = nameInput.value.trim();
+      if (!name) return;
+      state.tasks.push({
+        id: Common.genId('t'), name: name,
+        wikiLink: linkInput.value.trim(),
+        joinCommand: joinInput.value.trim(),
+        category: categoryInput.value,
+        priority: priorityInput.checked,
+        seasonal: seasonalToggleInput.checked,
+        seasonalEvent: seasonalToggleInput.checked ? seasonalEventInput.value : null,
+        hiddenBy: {}
+      });
+      nameInput.value = ''; linkInput.value = ''; joinInput.value = '';
+      priorityInput.checked = false;
+      seasonalToggleInput.checked = false;
+      seasonalEventInput.disabled = true;
+      persistState();
+      renderTaskRows();
+    };
+
+    document.getElementById('completedToggle').onclick = () => {
+      completedExpanded = !completedExpanded;
+      renderTaskRows();
+    };
+    document.getElementById('seasonalToggle').onclick = () => {
+      seasonalExpanded = !seasonalExpanded;
+      renderTaskRows();
+    };
+
+    const serverTimeValueEl = document.getElementById('serverTimeValue');
+    const nextFriday13ValueEl = document.getElementById('nextFriday13Value');
+    function refreshClock() {
+      const now = new Date();
+      serverTimeValueEl.textContent = Common.formatServerTimeText(now);
+      nextFriday13ValueEl.textContent = getNextFriday13Text(now);
+    }
+    refreshClock();
+    setInterval(refreshClock, 1000);
+
+    activeCharId = state.characters.length ? state.characters[0].id : null;
+    renderTabs();
+    renderTaskRows();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

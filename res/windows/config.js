@@ -97,3 +97,23 @@ exports.remindersConfig = {
     }
 };
 exports.remindersUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'reminders', 'reminders.html'));
+
+// To-Do screen - same per-character list shape as Reminders (see
+// res/features/common/list_window_common.js) but without the type/join/time columns, so a
+// narrower window still fits its own fixed-width columns (priority star, category, seasonal).
+exports.todoConfig = {
+    width: 960,
+    height: 620,
+    useContentSize: true,
+    icon: iconPath,
+    resizable: true,
+    webPreferences: {
+        nodeIntegration: false,
+        sandbox: true,
+        webviewTag: false,
+        preload: path.join(appRoot, 'res', 'features', 'todo', 'preload_todo.js'),
+        plugins: false,
+        contextIsolation: true
+    }
+};
+exports.todoUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'todo', 'todo.html'));

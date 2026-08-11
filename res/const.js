@@ -208,6 +208,7 @@ const originalKeybinds = {
     ],
     settings: "Alt+9", //TODO - Make a screen and do your stuff XD. This is for future proofing
     reminders: "Alt+T",
+    todo:     "Alt+Y",
     record:   "Ctrl+J"
 }
 exports.originalKeybinds = originalKeybinds;

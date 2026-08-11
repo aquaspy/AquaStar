@@ -40,7 +40,7 @@
   .quest-row .drag-handle:active { cursor:grabbing; }
   .quest-row .qname { flex:1 1 160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .quest-row .qname.member { color:#ffd76a; }
-  .quest-row .qtype { flex:0 0 56px; font-size:11px; color:#6f6f6f; text-transform:uppercase; }
+  .quest-row .qtype { flex:0 0 62px; font-size:11px; color:#6f6f6f; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .quest-row .qcategory {
     flex:0 0 92px; font-size:10px; padding:2px 7px; border-radius:10px;
     text-transform:uppercase; white-space:nowrap; letter-spacing:.02em;
@@ -101,8 +101,12 @@
   #status { min-height:15px; color:#7fd08a; font-size:12px; }
   #noCharsHint { color:#6f6f6f; padding:20px 0; }
 
-  #toolbar { display:flex; align-items:center; gap:8px; padding:10px 18px 0 18px; flex:0 0 auto; }
-  .toolbar-label { font-size:12px; color:#9a9a9a; }
+  #toolbar { display:flex; align-items:center; gap:8px; padding:10px 18px 0 18px; flex:0 0 auto; flex-wrap:wrap; row-gap:6px; }
+  .toolbar-label { font-size:12px; color:#9a9a9a; margin-right:8px; }
+
+  #filterBar { display:flex; gap:8px; align-items:center; padding:8px 18px; border-bottom:1px solid #2c2c2c; flex:0 0 auto; background:#161616; flex-wrap:wrap; }
+  #filterBar .text-input { flex:1 1 200px; }
+  #filterBar .select-input { flex:0 0 130px; }
 
   /* Electron does not implement window.prompt() (it silently resolves to null with no
      UI shown) - alert()/confirm() map to native dialogs and work fine, but text-entry
@@ -140,14 +144,35 @@
       <span class="slider"></span>
     </label>
     <span id="showMemberDailiesLabel" class="toolbar-label"></span>
+    <label class="switch">
+      <input type="checkbox" id="individualHiddenToggle">
+      <span class="slider"></span>
+    </label>
+    <span id="individualHiddenLabel" class="toolbar-label"></span>
   </div>
   <div id="tabs"></div>
+  <div id="filterBar">
+    <input id="filterNameInput" class="text-input" type="text" spellcheck="false">
+    <select id="filterTypeInput" class="select-input">
+      <option value="all"></option>
+      <option value="daily"></option>
+      <option value="weekly"></option>
+      <option value="monthly"></option>
+    </select>
+    <select id="filterCategoryInput" class="select-input">
+      <option value="all"></option>
+      <option value="class"></option>
+      <option value="ultra"></option>
+      <option value="other"></option>
+    </select>
+  </div>
   <div id="addQuestForm">
     <input id="questNameInput" class="text-input" type="text" spellcheck="false">
     <input id="questJoinInput" class="text-input" type="text" spellcheck="false">
     <select id="questTypeInput" class="select-input">
       <option value="daily"></option>
       <option value="weekly"></option>
+      <option value="monthly"></option>
     </select>
     <select id="questCategoryInput" class="select-input">
       <option value="class"></option>
@@ -201,166 +226,61 @@
   </div>
 </div>
 
+<div id="baseCharOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <div id="baseCharLabel" class="modal-label"></div>
+    <select id="baseCharSelect" class="select-input" style="flex:0 0 auto; width:100%; box-sizing:border-box;"></select>
+    <div class="modal-buttons">
+      <button id="baseCharCancelBtn" class="small"></button>
+      <button id="baseCharOkBtn" class="primary small"></button>
+    </div>
+  </div>
+</div>
+
+<script src="../common/list_window_common.js"></script>
 <script>
 (function () {
   const api = window.aquastarReminders;
+  const Common = window.ListWindowCommon;
   let messages, state, activeCharId = null;
   let draggedQuestId = null;
   let archiveExpanded = false;
   let seasonalExpanded = false;
+  // Filter bar state - transient/in-memory only (not persisted to disk), same as any
+  // search box: it resets to "show everything" the next time the window is opened.
+  let filterName = '';
+  let filterType = 'all';
+  let filterCategory = 'all';
 
   // Plain inline SVGs (not emoji) so the copy button's icon renders identically across
   // platforms/fonts - swapped to a checkmark briefly after a successful copy.
   const COPY_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5.5" y="5.5" width="8.5" height="8.5" rx="1.3"/><path d="M3.3 10.2H2.7A1.2 1.2 0 0 1 1.5 9V2.7A1.2 1.2 0 0 1 2.7 1.5H9a1.2 1.2 0 0 1 1.2 1.2v.6"/></svg>';
   const CHECK_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3 3 7-7"/></svg>';
 
-  function genId(prefix) {
-    return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
-  }
+  // Date/reset math, seasonal keys, hidden-map helpers, drag-reorder and the modal helpers
+  // all live in list_window_common.js now, shared with the To-Do window - see that file for
+  // the DST-aware implementation details.
+  function genId(prefix) { return Common.genId(prefix); }
 
-  // --- Reset-time math (America/New_York, DST-aware). No external libraries -
-  // Intl.DateTimeFormat already handles EST/EDT transitions given the IANA name. ---
-
-  function _getPartsInTZ(date, timeZone) {
-    const fmt = new Intl.DateTimeFormat('en-US', {
-      timeZone: timeZone,
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false, weekday: 'short'
-    });
-    const raw = {};
-    fmt.formatToParts(date).forEach((p) => { if (p.type !== 'literal') raw[p.type] = p.value; });
-    let hour = parseInt(raw.hour, 10);
-    if (hour === 24) hour = 0; // Chromium/ICU quirk: hour12:false can render midnight as "24"
-    return {
-      year: parseInt(raw.year, 10), month: parseInt(raw.month, 10), day: parseInt(raw.day, 10),
-      hour: hour, minute: parseInt(raw.minute, 10), second: parseInt(raw.second, 10),
-      weekday: raw.weekday // "Mon".."Sun"
-    };
-  }
-
-  function _etOffsetMinutes(date) {
-    const utc = _getPartsInTZ(date, 'UTC');
-    const et  = _getPartsInTZ(date, 'America/New_York');
-    const utcAsEpoch = Date.UTC(utc.year, utc.month - 1, utc.day, utc.hour, utc.minute, utc.second);
-    const etAsEpoch  = Date.UTC(et.year,  et.month  - 1, et.day,  et.hour,  et.minute,  et.second);
-    return (etAsEpoch - utcAsEpoch) / 60000; // -300 EST / -240 EDT
-  }
-
-  // Precise UTC epoch-ms of "America/New_York Y-M-D 00:00:00". US DST transitions always
-  // land at 2am local, never at midnight, so every calendar day has exactly one well-defined
-  // local-midnight instant - sampling the offset at the naive UTC-interpreted guess is safe.
-  function _etMidnightUtcMs(year, month, day) {
-    const guess = Date.UTC(year, month - 1, day, 0, 0, 0);
-    const offsetMin = _etOffsetMinutes(new Date(guess));
-    return guess - offsetMin * 60000;
-  }
-
-  function _addCalendarDays(year, month, day, delta) {
-    const d = new Date(Date.UTC(year, month - 1, day));
-    d.setUTCDate(d.getUTCDate() + delta);
-    return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
-  }
-
-  function getPreviousDailyReset(now) {
-    const p = _getPartsInTZ(now, 'America/New_York');
-    return new Date(_etMidnightUtcMs(p.year, p.month, p.day));
-  }
-
-  function getNextDailyReset(now) {
-    const prev = getPreviousDailyReset(now);
-    const p = _getPartsInTZ(prev, 'America/New_York');
-    const nextCal = _addCalendarDays(p.year, p.month, p.day, 1);
-    return new Date(_etMidnightUtcMs(nextCal.year, nextCal.month, nextCal.day));
-  }
-
-  // Weekly reset = the Thursday -> Friday midnight transition, America/New_York local time.
-  function getPreviousWeeklyReset(now) {
-    let resetDate = getPreviousDailyReset(now);
-    let p = _getPartsInTZ(resetDate, 'America/New_York');
-    while (p.weekday !== 'Fri') {
-      const prevCal = _addCalendarDays(p.year, p.month, p.day, -1);
-      resetDate = new Date(_etMidnightUtcMs(prevCal.year, prevCal.month, prevCal.day));
-      p = _getPartsInTZ(resetDate, 'America/New_York');
-    }
-    return resetDate;
-  }
-
-  function getNextWeeklyReset(now) {
-    let resetDate = getNextDailyReset(now);
-    let p = _getPartsInTZ(resetDate, 'America/New_York');
-    while (p.weekday !== 'Fri') {
-      const nextCal = _addCalendarDays(p.year, p.month, p.day, 1);
-      resetDate = new Date(_etMidnightUtcMs(nextCal.year, nextCal.month, nextCal.day));
-      p = _getPartsInTZ(resetDate, 'America/New_York');
-    }
-    return resetDate;
-  }
-
-  const _serverTimeFmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
-  });
-  function formatServerTimeText(now) {
-    return _serverTimeFmt.format(now);
-  }
-
-  function formatTimeRemaining(msRemaining) {
-    if (msRemaining <= 0) return '0m';
-    const totalMinutes = Math.ceil(msRemaining / 60000);
-    const days = Math.floor(totalMinutes / 1440);
-    const hours = Math.floor((totalMinutes % 1440) / 60);
-    const mins = totalMinutes % 60;
-    if (days > 0) return days + 'd ' + hours + 'h';
-    if (hours > 0) return hours + 'h ' + mins + 'm';
-    return mins + 'm';
-  }
-
-  // Derived "done for the current period" check - pure comparison against the last-done
-  // timestamp, no background job needed. A reset simply makes this return false again.
   function isDoneForCurrentPeriod(quest, lastDoneMs, now) {
     if (!lastDoneMs) return false;
-    const periodStart = quest.type === 'weekly' ? getPreviousWeeklyReset(now) : getPreviousDailyReset(now);
+    const periodStart = quest.type === 'weekly' ? Common.getPreviousWeeklyReset(now)
+      : quest.type === 'monthly' ? Common.getPreviousMonthlyReset(now)
+      : Common.getPreviousDailyReset(now);
     return lastDoneMs >= periodStart.getTime();
   }
 
   // --- UI ---
 
-  // Electron doesn't implement window.prompt() - it resolves to null instantly with no
-  // dialog shown (window.alert/confirm map to native dialogs and DO work; prompt doesn't
-  // have a native equivalent and Electron never shimmed it). This hand-rolled modal
-  // replaces every text-entry prompt in this window.
   function showPromptModal(labelText, defaultValue) {
-    return new Promise((resolve) => {
-      const overlay = document.getElementById('promptOverlay');
-      const labelEl = document.getElementById('promptLabel');
-      const inputEl = document.getElementById('promptInput');
-      const okBtn = document.getElementById('promptOkBtn');
-      const cancelBtn = document.getElementById('promptCancelBtn');
+    return Common.showPromptModal(messages, labelText, defaultValue);
+  }
 
-      labelEl.textContent = labelText;
-      inputEl.value = defaultValue || '';
-      okBtn.textContent = messages.promptOkButton;
-      cancelBtn.textContent = messages.promptCancelButton;
-      overlay.classList.add('open');
-      inputEl.focus();
-      inputEl.select();
-
-      function cleanup(result) {
-        overlay.classList.remove('open');
-        inputEl.removeEventListener('keydown', onKeyDown);
-        okBtn.onclick = null;
-        cancelBtn.onclick = null;
-        resolve(result);
-      }
-      function onKeyDown(e) {
-        if (e.key === 'Enter') { e.preventDefault(); cleanup(inputEl.value); }
-        else if (e.key === 'Escape') { e.preventDefault(); cleanup(null); }
-      }
-      inputEl.addEventListener('keydown', onKeyDown);
-      okBtn.onclick = () => cleanup(inputEl.value);
-      cancelBtn.onclick = () => cleanup(null);
-    });
+  // Shown when switching the hidden-list mode from individual back to shared - the user
+  // picks which character's current hidden set becomes the new shared one for everybody.
+  function showBaseCharacterModal() {
+    return Common.showChoiceModal(messages, messages.baseCharacterPrompt,
+      state.characters.map((c) => ({ id: c.id, label: c.name })));
   }
 
   function setStatus(text) { document.getElementById('status').textContent = text || ''; }
@@ -432,7 +352,10 @@
   function removeCharacterTab(character) {
     if (!window.confirm(messages.confirmDeleteCharacter)) return;
     state.characters = state.characters.filter((c) => c.id !== character.id);
-    state.quests.forEach((q) => { delete q.done[character.id]; });
+    state.quests.forEach((q) => {
+      delete q.done[character.id];
+      if (q.hiddenBy) delete q.hiddenBy[character.id];
+    });
     if (activeCharId === character.id) {
       activeCharId = state.characters.length ? state.characters[0].id : null;
     }
@@ -443,6 +366,17 @@
 
   function isDoneNow(quest) {
     return isDoneForCurrentPeriod(quest, quest.done[activeCharId], new Date());
+  }
+
+  // Hidden state is a map (quest.hiddenBy), same shape as `done` - either shared across every
+  // character (the historical/default behavior) or tracked separately per character
+  // (state.individualHiddenMode), depending on the toolbar toggle. Map mechanics live in
+  // list_window_common.js (shared with the To-Do window's "completed" state).
+  function isQuestHidden(quest) {
+    return Common.isItemHidden(quest, state.individualHiddenMode, activeCharId);
+  }
+  function setQuestHidden(quest, value) {
+    Common.setItemHidden(quest, value, state.individualHiddenMode, activeCharId);
   }
 
   const CATEGORY_KEYS = ['class', 'ultra', 'other'];
@@ -456,16 +390,19 @@
     return messages.categoryOtherLabel;
   }
 
+  function matchesFilters(quest) {
+    if (filterName && quest.name.toLowerCase().indexOf(filterName) === -1) return false;
+    if (filterType !== 'all' && quest.type !== filterType) return false;
+    if (filterCategory !== 'all' && categoryKeyOf(quest) !== filterCategory) return false;
+    return true;
+  }
+
   // Seasonal is a separate, orthogonal tag from category (class/ultra/other) - a quest can
-  // be both (e.g. a seasonal ultra boss (iara)) or seasonal on its own. `month` is 1-12 for events
-  // pinned to a calendar month; friday13 has none since it recurs on whichever months
-  // actually contain a Friday the 13th that year.
-  const SEASONAL_EVENT_KEYS = [
-    'nulgathBirthday', 'carnival', 'dageBirthday', 'aprilFools', 'mayThe4th', 'starFestival',
-    'kalaSeason', 'friday13', 'pirateDay', 'anniversary', 'blackFriday', 'frostval'
-  ];
+  // be both (e.g. a seasonal ultra boss (iara)) or seasonal on its own. Event keys/labels
+  // live in list_window_common.js, shared with the To-Do window.
+  const SEASONAL_EVENT_KEYS = Common.SEASONAL_EVENT_KEYS;
   function isSeasonal(quest) {
-    return !!quest.seasonal && SEASONAL_EVENT_KEYS.indexOf(quest.seasonalEvent) !== -1;
+    return Common.isSeasonal(quest);
   }
   function seasonalShortOf(quest) {
     return (messages.seasonalEvents[quest.seasonalEvent] || {}).short || '';
@@ -484,49 +421,35 @@
   // the 13th has already passed this month, per design: if the current calendar month
   // contains a Friday the 13th at all, it counts as "This Month".
   function getNextFriday13Text(now) {
-    const p = _getPartsInTZ(now, 'America/New_York');
-    for (let i = 0; i < 24; i++) {
-      const y = p.year + Math.floor((p.month - 1 + i) / 12);
-      const m = ((p.month - 1 + i) % 12) + 1;
-      const weekday = _getPartsInTZ(new Date(_etMidnightUtcMs(y, m, 13)), 'America/New_York').weekday;
-      if (weekday === 'Fri') {
-        return i === 0 ? messages.thisMonthLabel : messages.monthNames[m - 1];
-      }
-    }
-    return '';
+    return Common.getNextFriday13Text(now, messages);
   }
 
   function nextResetText(quest) {
     const now = new Date();
-    const nextReset = quest.type === 'weekly' ? getNextWeeklyReset(now) : getNextDailyReset(now);
-    return formatTimeRemaining(nextReset.getTime() - now.getTime());
+    const nextReset = quest.type === 'weekly' ? Common.getNextWeeklyReset(now)
+      : quest.type === 'monthly' ? Common.getNextMonthlyReset(now)
+      : Common.getNextDailyReset(now);
+    return Common.formatTimeRemaining(nextReset.getTime() - now.getTime());
+  }
+
+  function typeLabelOf(quest) {
+    if (quest.type === 'weekly') return messages.weeklyLabel;
+    if (quest.type === 'monthly') return messages.monthlyLabel;
+    return messages.dailyLabel;
   }
 
   // Reorders within whichever section (main / seasonal / hidden) the dragged quest belongs
   // to - dragging across sections is a no-op since each renders as its own separate list.
   // Quests outside that section keep their original relative position in state.quests.
   function questSectionOf(quest) {
-    if (quest.hidden) return 'hidden';
+    if (isQuestHidden(quest)) return 'hidden';
     if (isSeasonal(quest)) return 'seasonal';
     return 'main';
   }
   function reorderQuest(draggedId, targetId) {
-    if (draggedId === targetId) return;
-    const draggedQuest = state.quests.find((q) => q.id === draggedId);
-    const targetQuest = state.quests.find((q) => q.id === targetId);
-    if (!draggedQuest || !targetQuest) return;
-    const section = questSectionOf(draggedQuest);
-    if (questSectionOf(targetQuest) !== section) return;
-
-    const group = state.quests.filter((q) => questSectionOf(q) === section);
-    const fromIdx = group.findIndex((q) => q.id === draggedId);
-    const toIdx = group.findIndex((q) => q.id === targetId);
-    if (fromIdx === -1 || toIdx === -1) return;
-    const [moved] = group.splice(fromIdx, 1);
-    group.splice(toIdx, 0, moved);
-
-    let cursor = 0;
-    state.quests = state.quests.map((q) => (questSectionOf(q) === section ? group[cursor++] : q));
+    const reordered = Common.reorderInSection(state.quests, draggedId, targetId, questSectionOf);
+    if (reordered === state.quests) return; // no-op: same id, not found, or cross-section drag
+    state.quests = reordered;
     persistState();
     renderQuestRows();
   }
@@ -579,7 +502,7 @@
 
     const typeEl = document.createElement('div');
     typeEl.className = 'qtype';
-    typeEl.textContent = quest.type === 'weekly' ? messages.weeklyLabel : messages.dailyLabel;
+    typeEl.textContent = typeLabelOf(quest);
 
     const categoryEl = document.createElement('div');
     categoryEl.className = 'qcategory ' + categoryKeyOf(quest);
@@ -635,7 +558,7 @@
     hideBtn.className = 'small';
     hideBtn.textContent = opts.archived ? messages.unhideButton : messages.hideButton;
     hideBtn.onclick = () => {
-      quest.hidden = !opts.archived;
+      setQuestHidden(quest, !opts.archived);
       persistState();
       renderQuestRows();
     };
@@ -717,10 +640,11 @@
       renderArchiveSection([]);
       return;
     }
-    // Hidden quests are pulled out first (regardless of seasonal), then member dailies are
-    // filtered (for characters without membership), then seasonal quests get their own
+    // Hidden quests are pulled out first (regardless of seasonal), then the name/type/category
+    // filter bar and member-dailies toggle narrow the rest, then seasonal quests get their own
     // section, so a quest lands in exactly one of: main list / Seasonal / Hidden.
-    const nonHidden = state.quests.filter((q) => !q.hidden);
+    const filteredQuests = state.quests.filter((q) => matchesFilters(q));
+    const nonHidden = filteredQuests.filter((q) => !isQuestHidden(q));
     const memberFiltered = state.showMemberDailies
       ? nonHidden
       : nonHidden.filter((q) => !(q.member && q.type === 'daily'));
@@ -736,7 +660,7 @@
     visibleQuests.forEach((quest) => rowsEl.appendChild(buildQuestRow(quest, { archived: false, draggable: true })));
 
     renderSeasonalSection(seasonalQuests);
-    renderArchiveSection(state.quests.filter((q) => q.hidden));
+    renderArchiveSection(filteredQuests.filter((q) => isQuestHidden(q)));
   }
 
   function tick() {
@@ -749,6 +673,7 @@
     state = remindersResult.data;
     if (state.showCompleted === undefined) state.showCompleted = true;
     if (state.showMemberDailies === undefined) state.showMemberDailies = true;
+    if (state.individualHiddenMode === undefined) state.individualHiddenMode = false;
 
     document.title = messages.title;
     document.getElementById('heading').textContent = messages.heading;
@@ -769,10 +694,74 @@
       persistState();
       renderQuestRows();
     });
+    document.getElementById('individualHiddenLabel').textContent = messages.individualHiddenLabel;
+    const individualHiddenToggle = document.getElementById('individualHiddenToggle');
+    individualHiddenToggle.checked = state.individualHiddenMode;
+    individualHiddenToggle.addEventListener('change', async () => {
+      const turningOn = individualHiddenToggle.checked;
+      if (turningOn) {
+        // Shared -> Individual: every character starts out identical to the current shared
+        // state, then diverges independently from here on.
+        state.quests.forEach((q) => {
+          if (!q.hiddenBy) q.hiddenBy = {};
+          const sharedVal = !!q.hiddenBy[Common.SHARED_HIDDEN_KEY];
+          state.characters.forEach((c) => { q.hiddenBy[c.id] = sharedVal; });
+        });
+        state.individualHiddenMode = true;
+        persistState();
+        renderQuestRows();
+      } else {
+        // Individual -> Shared: adopt one character's hidden set as the new shared one.
+        // Skip the picker when there's nothing to choose (0 or 1 characters).
+        let baseCharId = null;
+        if (state.characters.length === 1) {
+          baseCharId = state.characters[0].id;
+        } else if (state.characters.length > 1) {
+          baseCharId = await showBaseCharacterModal();
+          if (baseCharId === null) {
+            individualHiddenToggle.checked = true; // cancelled - revert the visual toggle
+            return;
+          }
+        }
+        if (baseCharId) {
+          state.quests.forEach((q) => {
+            if (!q.hiddenBy) q.hiddenBy = {};
+            q.hiddenBy[Common.SHARED_HIDDEN_KEY] = !!q.hiddenBy[baseCharId];
+          });
+        }
+        state.individualHiddenMode = false;
+        persistState();
+        renderQuestRows();
+      }
+    });
+    document.getElementById('filterNameInput').placeholder = messages.filterNamePlaceholder;
+    document.getElementById('filterNameInput').addEventListener('input', (e) => {
+      filterName = e.target.value.trim().toLowerCase();
+      renderQuestRows();
+    });
+    const filterTypeInput = document.getElementById('filterTypeInput');
+    filterTypeInput.options[0].textContent = messages.filterAllLabel;
+    filterTypeInput.options[1].textContent = messages.dailyLabel;
+    filterTypeInput.options[2].textContent = messages.weeklyLabel;
+    filterTypeInput.options[3].textContent = messages.monthlyLabel;
+    filterTypeInput.addEventListener('change', (e) => {
+      filterType = e.target.value;
+      renderQuestRows();
+    });
+    const filterCategoryInput = document.getElementById('filterCategoryInput');
+    filterCategoryInput.options[0].textContent = messages.filterAllLabel;
+    filterCategoryInput.options[1].textContent = messages.categoryClassLabel;
+    filterCategoryInput.options[2].textContent = messages.categoryUltraLabel;
+    filterCategoryInput.options[3].textContent = messages.categoryOtherLabel;
+    filterCategoryInput.addEventListener('change', (e) => {
+      filterCategory = e.target.value;
+      renderQuestRows();
+    });
     document.getElementById('questNameInput').placeholder = messages.questNamePlaceholder;
     document.getElementById('questJoinInput').placeholder = messages.questJoinPlaceholder;
     document.getElementById('questTypeInput').options[0].textContent = messages.dailyLabel;
     document.getElementById('questTypeInput').options[1].textContent = messages.weeklyLabel;
+    document.getElementById('questTypeInput').options[2].textContent = messages.monthlyLabel;
     document.getElementById('questCategoryInput').options[0].textContent = messages.categoryClassLabel;
     document.getElementById('questCategoryInput').options[1].textContent = messages.categoryUltraLabel;
     document.getElementById('questCategoryInput').options[2].textContent = messages.categoryOtherLabel;
@@ -799,15 +788,17 @@
       const memberInput = document.getElementById('questMemberInput');
       const name = nameInput.value.trim();
       if (!name) return;
+      const type = (typeInput.value === 'weekly' || typeInput.value === 'monthly') ? typeInput.value : 'daily';
       state.quests.push({
         id: genId('q'), name: name,
         joinCommand: joinInput.value.trim(),
-        type: typeInput.value === 'weekly' ? 'weekly' : 'daily',
+        type: type,
         category: categoryInput.value,
         member: memberInput.checked,
         seasonal: seasonalToggleInput.checked,
         seasonalEvent: seasonalToggleInput.checked ? seasonalEventInput.value : null,
-        done: {}
+        done: {},
+        hiddenBy: {}
       });
       nameInput.value = ''; joinInput.value = '';
       memberInput.checked = false;
@@ -830,7 +821,7 @@
     const nextFriday13ValueEl = document.getElementById('nextFriday13Value');
     function refreshClock() {
       const now = new Date();
-      serverTimeValueEl.textContent = formatServerTimeText(now);
+      serverTimeValueEl.textContent = Common.formatServerTimeText(now);
       nextFriday13ValueEl.textContent = getNextFriday13Text(now);
     }
     refreshClock();
