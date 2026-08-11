@@ -17,6 +17,25 @@ let winTimeRef = {};
 let winNames   = {}; // Fake dictionary
 let lastFocusedWindow = null;
 
+// A navigation can replace the renderer between did-finish-load and Electron actually
+// evaluating an injected script.  executeJavaScript then rejects; always consume that
+// rejection so a transient page race never becomes a Node unhandled-rejection warning.
+function _executeJavaScriptSafely(webContents, source, label) {
+    try {
+        return webContents.executeJavaScript(source).catch((error) => {
+            if (!webContents.isDestroyed()) {
+                console.log('[AquaStar] ' + label + ' skipped: ' + error.message);
+            }
+            return null;
+        });
+    } catch (error) {
+        if (!webContents.isDestroyed()) {
+            console.log('[AquaStar] ' + label + ' skipped: ' + error.message);
+        }
+        return Promise.resolve(null);
+    }
+}
+
 
 // New page function
 function newBrowserWindow(new_path, isMainWin=false){
@@ -152,13 +171,13 @@ function _windowAddContext(newWin){
                     "(document.getElementsByClassName('" + objName + "')[0] == undefined)? false : true":
                     "(document.getElementById('" + objName + "') == undefined)? false : true;";
 
-                newWin.webContents.executeJavaScript(codeTest).then((popUpExists) =>{
+                _executeJavaScriptSafely(newWin.webContents, codeTest, 'Page cleanup check').then((popUpExists) =>{
                     if (popUpExists) {
                         var codeNuke;
                         codeNuke = (isClass)? 
                             "document.getElementsByClassName('" + objName + "')[0].innerHTML = ''":
                             "document.getElementById('" + objName + "').innerHTML = ''";
-                        newWin.webContents.executeJavaScript(codeNuke);
+                        _executeJavaScriptSafely(newWin.webContents, codeNuke, 'Page cleanup');
                     }
                 });
             }
@@ -169,8 +188,9 @@ function _windowAddContext(newWin){
         // Ads. Bc wiki is being too trashy to get ad revenue from me.
         testAndDelete("wikidot","wad-aqwwiki-above-content",false);
         testAndDelete("wikidot","wad-aqwwiki-below-content",false);
-        newWin.webContents.executeJavaScript("var rem = document.getElementsByTagName('iframe');" +
-        "for (var i=0;i<rem.lenght;i++) rem[i].remove()");
+        _executeJavaScriptSafely(newWin.webContents,
+            "var rem = document.getElementsByTagName('iframe');" +
+            "for (var i=0;i<rem.lenght;i++) rem[i].remove()", 'Frame cleanup');
         // ----------------------------------------------------------------------------------------------
         // Another bonus: Wiki link preview (WikiView), made by biglavis over at https://github.com/biglavis
         //  Available on the file res/features/wikiview/wikiviewsource.js.
@@ -178,20 +198,40 @@ function _windowAddContext(newWin){
         const checkWiki     = /aqwwiki\.wikidot\.com\/.+/gi
         const checkCharPage = /account\.aq\.com\/CharPage\?id=.+/gi
         const checkAccountAq= /account\.aq\.com\/AQW\/(Inventory|BuyBack|WheelProgress|House)/gi
+        const checkAccountSite = /^https?:\/\/account\.aq\.com(?:\/|$)/i
+        const checkAccountLogin = /^https?:\/\/account\.aq\.com\/Login(?:\/|$)/i
 
         const bWiki = checkWiki.test(url)
         const bCp   = checkCharPage.test(url)
         const bAcc  = checkAccountAq.test(url)
+        const bAccountSite = checkAccountSite.test(url)
+        const bAccountLogin = checkAccountLogin.test(url)
         const isViewUrl = bWiki || bCp || bAcc
 
         if (isViewUrl){
             const wikiviewDir = path.join(__dirname, 'features', 'wikiview');
-            var wikiview = fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
+            // hoverPreview.js is the shared fetch/extract/position engine (also used by the
+            // Inventory window); wikiviewsource.js only wires up which elements trigger it.
+            const hoverPreview = fs.readFileSync(path.join(wikiviewDir, 'hoverPreview.js'), 'utf8');
+            var wikiview = hoverPreview + fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
             if (bWiki){
                 const jquery = fs.readFileSync(path.join(wikiviewDir, 'jquery.min.js'), 'utf8');
                 wikiview = jquery + wikiview
             }
-            newWin.webContents.executeJavaScript(wikiview);
+            // did-finish-load can fire again for a restored page.  The enhancement source
+            // contains top-level declarations, so evaluating it twice in the same renderer
+            // would throw a redeclaration error even though the first injection succeeded.
+            wikiview = 'if (!window.__aquastarWikiViewInjected) { window.__aquastarWikiViewInjected = true;\n' +
+                wikiview + '\n}';
+            _executeJavaScriptSafely(newWin.webContents, wikiview, 'Wiki enhancement');
+        }
+
+        // Give every account.aq.com page a manual sync entry point.  The injected installer
+        // waits for a hydrated DOM and restores itself after client-side page changes; see
+        // res/features/inventory/accountSyncButton.js.
+        if (bAccountSite && !bAccountLogin){
+            const syncBtnSrc = fs.readFileSync(path.join(__dirname, 'features', 'inventory', 'accountSyncButton.js'), 'utf8');
+            _executeJavaScriptSafely(newWin.webContents, syncBtnSrc, 'Account sync button');
         }
     });
 }
@@ -246,7 +286,7 @@ function charPagePrint(){
     if( !url.includes(constant.charLookup + "?id=")) { return };
 
     let code = `(document.getElementsByTagName("object")[0] == undefined)? false : true;`;
-    focusedWindow.webContents.executeJavaScript(code).then((flashExists) =>{
+    _executeJavaScriptSafely(focusedWindow.webContents, code, 'Char page check').then((flashExists) =>{
         if(!flashExists){
             _notifyWindow(focusedWindow,constant.titleMessages.invalidCharpage);
         }
@@ -435,6 +475,21 @@ function openTodoWindow(){
     return todoWin;
 }
 
+// Inventory screen - singleton window, just refocus if already open.
+let inventoryWin = null;
+function openInventoryWindow(){
+    if (inventoryWin && !inventoryWin.isDestroyed()) {
+        inventoryWin.focus();
+        return inventoryWin;
+    }
+    inventoryWin = new BrowserWindow(windowConfig.inventoryConfig);
+    inventoryWin.setMenuBarVisibility(false);
+    inventoryWin.setTitle("AquaStar - Inventory");
+    inventoryWin.loadURL(windowConfig.inventoryUrl);
+    inventoryWin.on('closed', () => { inventoryWin = null; });
+    return inventoryWin;
+}
+
 function _mkdir (filepath){
     try { fs.lstatSync(filepath).isDirectory() }
     catch (ex) {
@@ -452,6 +507,7 @@ exports.charPagePrint       = charPagePrint;
 exports.openSettingsWindow  = openSettingsWindow;
 exports.openRemindersWindow = openRemindersWindow;
 exports.openTodoWindow      = openTodoWindow;
+exports.openInventoryWindow = openInventoryWindow;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;

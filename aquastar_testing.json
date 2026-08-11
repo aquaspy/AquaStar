@@ -1,4 +1,4 @@
-{  
+{
     "wiki": "Alt+W",
     "account": "Alt+A",
     "design": "Alt+D",
@@ -15,11 +15,21 @@
     "forward": "Alt+F",
     "backward": "Alt+B",
     "help": [ "Alt+H", "CmdOrCtrl+H", "F1" ] ,
-
-    "swfLog": false,
-    "customUrl": null,
-    "useDirectWmode": true,
     "settings": "Alt+9",
     "reminders": "Alt+T",
-    "record": "Ctrl+J"
+    "todo": "Alt+Y",
+    "inventory": "Alt+I",
+    "record": "Ctrl+J",
+
+    "swfLog": false,
+    "playerCharacter": "",
+    "featurePlayerName": false,
+    "customUrl": "",
+    "recordingFormat": "h264-mkv",
+    "renderMode": "flash",
+    "ruffleUpdateChannel": "latest",
+    "ruffleAutoUpdate": false,
+    "autoSync": false,
+    "enableDevTools": false,
+    "useDirectWmode": true
 }

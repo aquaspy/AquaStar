@@ -117,3 +117,23 @@ exports.todoConfig = {
     }
 };
 exports.todoUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'todo', 'todo.html'));
+
+// Inventory screen - same per-character list shape as Reminders/Todo. Own preload merges
+// the synced-data bridge (aquastarInventory) with a re-exposed aquastarWiki.fetchWikiPage
+// so hover-preview (res/features/wikiview/hoverPreview.js) works inside this window too.
+exports.inventoryConfig = {
+    width: 1040,
+    height: 620,
+    useContentSize: true,
+    icon: iconPath,
+    resizable: true,
+    webPreferences: {
+        nodeIntegration: false,
+        sandbox: true,
+        webviewTag: false,
+        preload: path.join(appRoot, 'res', 'features', 'inventory', 'preload_inventory.js'),
+        plugins: false,
+        contextIsolation: true
+    }
+};
+exports.inventoryUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'inventory', 'inventory.html'));

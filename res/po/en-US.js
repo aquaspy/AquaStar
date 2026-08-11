@@ -76,7 +76,8 @@ exports.menuMessages = {
     menuReloadPage   : "Reload this page",
     menuSettings     : "Settings",
     menuReminders    : "Reminders",
-    menuTodo         : "To-Do List"
+    menuTodo         : "To-Do List",
+    menuInventory    : "Inventory"
 }
 
 exports.settingsMessages = {
@@ -114,6 +115,7 @@ exports.settingsMessages = {
         settings:    "Open Settings (this screen)",
         reminders:   "Open Reminders",
         todo:        "Open To-Do List",
+        inventory:   "Open Inventory",
         record:      "Record Game Screen"
     },
     optionsHeading: "Other Options",
@@ -125,6 +127,7 @@ exports.settingsMessages = {
         renderMode:        "Flash Renderer",
         ruffleUpdateChannel: "Ruffle Update Channel",
         ruffleAutoUpdate:  "Automatically download updates",
+        autoSync:          "Auto Sync Inventory",
         enableDevTools:    "Enable DevTools"
     },
     optionHints: {
@@ -135,6 +138,7 @@ exports.settingsMessages = {
         renderMode:        "Which Flash runtime loads AQW (main, new instance, Testing) and DragonFable (Alt+1). The Char Page is unaffected (Artix already uses Ruffle there).",
         ruffleUpdateChannel: "Latest uses Ruffle's most recent stable release. Nightly includes newer experimental changes. To apply a channel change, fully close AquaStar and open it again; do not use only the Restart button.",
         ruffleAutoUpdate:  "Checks the selected channel in the background every time AquaStar opens. A download is applied after restart.",
+        autoSync:          "Periodically syncs your Inventory/BuyBack data from account.aq.com in the background (about every 2 hours) once you've logged in there at least once via Alt+A. When off, sync only happens when you use a Sync Now button (in the Inventory window or on account.aq.com/Home).",
         enableDevTools:    "Opens the DevTools console automatically on startup."
     },
     customSwfHeading      : "Custom SWF File",
@@ -303,4 +307,52 @@ exports.todoMessages = {
     removeTabTitle     : "Remove",
     savingLabel        : "Saving...",
     savedLabel         : "Saved"
+}
+
+exports.inventoryMessages = {
+    title              : "AquaStar - Inventory",
+    heading            : "Inventory",
+    description        : "Browse your synced account.aq.com Inventory and BuyBack data, per character.",
+    inventoryTabLabel  : "Inventory",
+    buyBackTabLabel    : "Buy Back",
+    syncButton         : "Sync Now",
+    syncingLabel       : "Syncing...",
+    syncedLabel        : "Last synced: ",
+    justNowLabel       : "just now",
+    neverSyncedLabel   : "Never synced",
+    syncErrorUnauthenticated: "Not logged in. Open the Account Page (Alt+A) and log in, then try again.",
+    syncErrorNetwork  : "Could not reach account.aq.com. Check your connection and try again.",
+    filterNamePlaceholder: "Search items...",
+    filterTypeAll      : "All Types",
+    filterAllLabel     : "All",
+    filterBankLabel    : "Bank only",
+    filterInventoryOnlyLabel: "Inventory only",
+    filterMemberLabel  : "Member only",
+    filterNonMemberOnlyLabel: "Non-member only",
+    emptyStateLabel    : "No items found. Try syncing or adjusting filters.",
+    noCharactersLabel  : "No characters synced yet. Log in via Alt+A, then Sync Now.",
+    columnName         : "Name",
+    columnType         : "Type",
+    columnCount        : "Count",
+    columnBank         : "Bank",
+    columnMember       : "Member",
+    columnAdded        : "Added",
+    columnCost         : "Cost",
+    columnRarity       : "Rarity",
+    columnInserted     : "Sold",
+    bankBadge          : "Bank",
+    inventoryBadge     : "Inventory",
+    memberBadge        : "Member",
+    normalBadge        : "Normal"
+}
+
+exports.wikiMessages = {
+    mergeMaterialsTitle: "AquaStar: Shop materials",
+    mergeDependencies: "Include dependencies",
+    mergeBuyback: "Dependencies with Buy Back",
+    mergeEmpty: "No materials listed.",
+    mergeReputationLabel: "Reputation required:",
+    mergeSelectAll: "Select all",
+    mergeClearAll: "Clear all",
+    mergeSelectItem: "Select item"
 }

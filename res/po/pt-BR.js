@@ -77,7 +77,8 @@ exports.menuMessages = {
     menuReloadPage   : "Recaregar a página",
     menuSettings     : "Configurações",
     menuReminders    : "Lembretes",
-    menuTodo         : "Lista de Tarefas"
+    menuTodo         : "Lista de Tarefas",
+    menuInventory    : "Inventário"
 }
 
 exports.settingsMessages = {
@@ -115,6 +116,7 @@ exports.settingsMessages = {
         settings:    "Abrir Configurações (esta tela)",
         reminders:   "Abrir Lembretes",
         todo:        "Abrir Lista de Tarefas",
+        inventory:   "Abrir Inventário",
         record:      "Gravar a Tela do Jogo"
     },
     optionsHeading: "Outras Opções",
@@ -126,6 +128,7 @@ exports.settingsMessages = {
         renderMode:        "Renderizador de Flash",
         ruffleUpdateChannel: "Canal de Atualização do Ruffle",
         ruffleAutoUpdate:  "Baixar atualizações automaticamente",
+        autoSync:          "Auto Sincronizar Inventário",
         enableDevTools:    "Ativar DevTools"
     },
     optionHints: {
@@ -136,6 +139,7 @@ exports.settingsMessages = {
         renderMode:        "Qual runtime Flash carrega o AQW (principal, nova instância, Testing) e o DragonFable (Alt+1). A Char Page não é afetada (a Artix já usa Ruffle lá).",
         ruffleUpdateChannel: "Latest usa a versão estável mais recente do Ruffle. Nightly inclui mudanças experimentais mais novas. Para aplicar uma troca de canal, feche o AquaStar completamente e abra-o novamente; não use somente o botão Reiniciar.",
         ruffleAutoUpdate:  "Verifica o canal selecionado em segundo plano sempre que o AquaStar abre. O download é aplicado depois de reiniciar.",
+        autoSync:          "Sincroniza periodicamente seus dados de Inventário/BuyBack do account.aq.com em segundo plano (a cada ~2 horas), depois de você logar lá pelo menos uma vez via Alt+A. Quando desligado, a sincronização só acontece quando você usa um botão Sincronizar Agora (na janela de Inventário ou no account.aq.com/Home).",
         enableDevTools:    "Abre o console de DevTools automaticamente ao iniciar."
     },
     customSwfHeading      : "Arquivo SWF Customizado",
@@ -304,4 +308,52 @@ exports.todoMessages = {
     removeTabTitle     : "Remover",
     savingLabel        : "Salvando...",
     savedLabel         : "Salvo"
+}
+
+exports.inventoryMessages = {
+    title              : "AquaStar - Inventário",
+    heading            : "Inventário",
+    description        : "Navegue pelos dados de Inventário e BuyBack sincronizados do account.aq.com, por personagem.",
+    inventoryTabLabel  : "Inventário",
+    buyBackTabLabel    : "Buy Back",
+    syncButton         : "Sincronizar Agora",
+    syncingLabel       : "Sincronizando...",
+    syncedLabel        : "Última sincronização: ",
+    justNowLabel       : "agora mesmo",
+    neverSyncedLabel   : "Nunca sincronizado",
+    syncErrorUnauthenticated: "Não está logado. Abra a Página da Conta (Alt+A) e faça login, depois tente de novo.",
+    syncErrorNetwork  : "Não foi possível acessar account.aq.com. Verifique sua conexão e tente de novo.",
+    filterNamePlaceholder: "Buscar itens...",
+    filterTypeAll      : "Todos os Tipos",
+    filterAllLabel     : "Todos",
+    filterBankLabel    : "Apenas no banco",
+    filterInventoryOnlyLabel: "Apenas no inventário",
+    filterMemberLabel  : "Apenas member",
+    filterNonMemberOnlyLabel: "Apenas não member",
+    emptyStateLabel    : "Nenhum item encontrado. Tente sincronizar ou ajustar os filtros.",
+    noCharactersLabel  : "Nenhum personagem sincronizado ainda. Logue via Alt+A e depois Sincronize Agora.",
+    columnName         : "Nome",
+    columnType         : "Tipo",
+    columnCount        : "Quantidade",
+    columnBank         : "Banco",
+    columnMember       : "Member",
+    columnAdded        : "Adicionado",
+    columnCost         : "Custo",
+    columnRarity       : "Raridade",
+    columnInserted     : "Vendido",
+    bankBadge          : "Banco",
+    inventoryBadge     : "Inventário",
+    memberBadge        : "Member",
+    normalBadge        : "Normal"
+}
+
+exports.wikiMessages = {
+    mergeMaterialsTitle: "AquaStar: Materiais da loja",
+    mergeDependencies: "Incluir dependências",
+    mergeBuyback: "Dependências com Buy Back",
+    mergeEmpty: "Nenhum material listado.",
+    mergeReputationLabel: "Reputação necessária:",
+    mergeSelectAll: "Marcar todos",
+    mergeClearAll: "Desmarcar todos",
+    mergeSelectItem: "Selecionar item"
 }
