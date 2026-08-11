@@ -53,7 +53,7 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
 
     function aqweBadge(icon, count, title, bg, color) {
         return '<span title="' + title + '" style="display:inline-flex;align-items:center;gap:3px;' +
-            'background:' + bg + ';color:' + color + ';border-radius:10px;padding:2px 6px;' +
+            'background:' + bg + ';color:' + color + ';border-radius:10px;padding:6px 12px;' +
             'font-size:11px;vertical-align:middle;">' + icon + count + '</span>';
     }
 
