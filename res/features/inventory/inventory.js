@@ -245,11 +245,31 @@ async function syncActiveCharacter() {
     return { ok: true, charId: charIdResult.charId, charName: userResult.name, syncedAt: nowIso };
 }
 
-// Item names must remain exact.  In particular, "Voucher of Nulgath" and "Voucher of
-// Nulgath (Non-Member)" are different items and must never be added together merely
-// because one is a parenthetical variant of the other.
 function _normalizeItemName(name) {
     return typeof name === 'string' ? name.trim().toLowerCase() : '';
+}
+
+// Keep this in sync with WIKI_DISAMBIGUATION_SUFFIXES in
+// res/features/wikiview/hoverPreview.js. These are Wiki page disambiguators rather than
+// part of an item's in-game identity, so ownership intentionally treats the bare name and
+// a name ending in one of these suffixes as the same item. Other parenthetical names (for
+// example, "Voucher of Nulgath (Non-Member)") remain exact matches only.
+const WIKI_DISAMBIGUATION_SUFFIXES = ['', ' (AC)', ' (0 AC)', ' (Rare)', ' (Merge)', ' (Class)', ' (Quest)', ' (Sword)', ' (Pet)'];
+
+function _wikiBaseItemName(name) {
+    const normalized = _normalizeItemName(name);
+    const suffix = WIKI_DISAMBIGUATION_SUFFIXES
+        .slice(1)
+        .map(_normalizeItemName)
+        .find((candidate) => normalized.endsWith(candidate));
+    return suffix ? normalized.slice(0, -suffix.length).trim() : normalized;
+}
+
+function _matchesWikiItemName(inventoryName, target) {
+    const normalizedInventoryName = _normalizeItemName(inventoryName);
+    return WIKI_DISAMBIGUATION_SUFFIXES.some((suffix) => {
+        return normalizedInventoryName === target + _normalizeItemName(suffix);
+    });
 }
 
 // The Wiki labels old Unidentified drops with their revealed identity, whereas the AQW
@@ -305,20 +325,22 @@ function _matchWikiItemInState(state, wikiTitle, charId) {
     const character = resolvedCharId ? state.characters[String(resolvedCharId)] : null;
     if (!character) return { owned: false, bank: 0, inventory: 0, buyback: 0, matchedName: null };
 
-    const displayedName = _normalizeItemName(wikiTitle);
-    const target = _normalizeItemName(WIKI_UNIDENTIFIED_ALIASES[displayedName] || wikiTitle);
+    // The title shown in the Wiki is never changed. We only strip a recognized final
+    // disambiguation tag for this internal ownership lookup.
+    const displayedName = _wikiBaseItemName(wikiTitle);
+    const target = _normalizeItemName(WIKI_UNIDENTIFIED_ALIASES[displayedName] || displayedName);
     if (!target) return { owned: false, bank: 0, inventory: 0, buyback: 0, matchedName: null };
 
     let bank = 0, inventoryCount = 0, buyback = 0, matchedName = null;
     character.inventory.forEach((item) => {
-        if (_normalizeItemName(item.name) === target) {
+        if (_matchesWikiItemName(item.name, target)) {
             matchedName = matchedName || item.name;
             if (item.bank) bank += item.count;
             else inventoryCount += item.count;
         }
     });
     character.buyback.forEach((item) => {
-        if (_normalizeItemName(item.name) === target) {
+        if (_matchesWikiItemName(item.name, target)) {
             matchedName = matchedName || item.name;
             buyback += 1;
         }

@@ -481,7 +481,13 @@
 
     document.getElementById('filterNameInput').placeholder = messages.filterNamePlaceholder;
     document.getElementById('filterNameInput').addEventListener('input', (e) => {
-      filterName = e.target.value.trim().toLowerCase();
+      const query = e.target.value.trim().toLowerCase();
+      // Large inventories are costly to filter/render on every keystroke. Wait until the
+      // query is specific enough to be useful before narrowing the list. In particular,
+      // don't even re-render for the first two characters unless clearing an active search.
+      const nextFilterName = query.length >= 3 ? query : '';
+      if (nextFilterName === filterName) return;
+      filterName = nextFilterName;
       renderRows();
     });
     document.getElementById('filterTypeInput').addEventListener('change', (e) => {
