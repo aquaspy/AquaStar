@@ -77,7 +77,8 @@ exports.menuMessages = {
     menuSettings     : "Settings",
     menuReminders    : "Reminders",
     menuTodo         : "To-Do List",
-    menuInventory    : "Inventory"
+    menuInventory    : "Inventory",
+    menuStrategy     : "Strategy"
 }
 
 exports.settingsMessages = {
@@ -116,6 +117,7 @@ exports.settingsMessages = {
         reminders:   "Open Reminders",
         todo:        "Open To-Do List",
         inventory:   "Open Inventory",
+        strategy:    "Open Strategy",
         record:      "Record Game Screen"
     },
     optionsHeading: "Other Options",
@@ -307,6 +309,16 @@ exports.todoMessages = {
     removeTabTitle     : "Remove",
     savingLabel        : "Saving...",
     savedLabel         : "Saved"
+}
+
+exports.strategyMessages = {
+    title:"AquaStar - Strategy", heading:"Strategy", description:"Plan team compositions and notes for Ultra and Challenge bosses.",
+    addBoss:"Add Boss", manageClasses:"Manage Classes", saved:"Saved", empty:"No bosses yet. Add one to begin planning.",
+    ultra:"Ultra Boss", challenge:"Challenge Boss", weekly:"Weekly", daily:"Daily", players:"players", zone:"Zone", noJoin:"No /join set",
+    open:"Open Strategy", create:"Create Strategy", edit:"Edit", delete:"Delete", confirmDelete:"Delete this boss and its strategy?",
+    back:"All Bosses", team:"Team Composition", notes:"Strategy Notes", save:"Save Strategy", slot:"Player", noClass:"No class selected",
+    editBoss:"Edit Boss", name:"Name", join:"/Join command", reset:"Reset", kind:"Boss type", role:"Role", cancel:"Cancel", close:"Close", addClass:"Add Class",
+    roles:{support:"Support",dps:"DPS",tank:"Tank",dot:"Damage over Time (DoT)"}
 }
 
 exports.inventoryMessages = {

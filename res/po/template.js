@@ -68,7 +68,8 @@ exports.menuMessages = {
     menuSettings     : "",
     menuReminders    : "",
     menuTodo         : "",
-    menuInventory    : ""
+    menuInventory    : "",
+    menuStrategy     : ""
 }
 
 exports.settingsMessages = {
@@ -107,6 +108,7 @@ exports.settingsMessages = {
         reminders:   "",
         todo:        "",
         inventory:   "",
+        strategy:    "",
         record:      ""
     },
     optionsHeading: "",
@@ -265,6 +267,10 @@ exports.todoMessages = {
     removeTabTitle     : "",
     savingLabel        : "",
     savedLabel         : ""
+}
+
+exports.strategyMessages = {
+    title:"", heading:"", description:"", addBoss:"", manageClasses:"", saved:"", empty:"", ultra:"", challenge:"", weekly:"", daily:"", players:"", zone:"", noJoin:"", open:"", create:"", edit:"", delete:"", confirmDelete:"", back:"", team:"", notes:"", save:"", slot:"", noClass:"", editBoss:"", name:"", join:"", reset:"", kind:"", role:"", cancel:"", close:"", addClass:"", roles:{support:"",dps:"",tank:"",dot:""}
 }
 
 exports.inventoryMessages = {

@@ -492,6 +492,17 @@ function openInventoryWindow(){
     return inventoryWin;
 }
 
+let strategyWin = null;
+function openStrategyWindow(){
+    if (strategyWin && !strategyWin.isDestroyed()) { strategyWin.focus(); return strategyWin; }
+    strategyWin = new BrowserWindow(windowConfig.strategyConfig);
+    strategyWin.setMenuBarVisibility(false);
+    strategyWin.setTitle("AquaStar - Strategy");
+    strategyWin.loadURL(windowConfig.strategyUrl);
+    strategyWin.on('closed', () => { strategyWin = null; });
+    return strategyWin;
+}
+
 function _mkdir (filepath){
     try { fs.lstatSync(filepath).isDirectory() }
     catch (ex) {
@@ -510,6 +521,7 @@ exports.openSettingsWindow  = openSettingsWindow;
 exports.openRemindersWindow = openRemindersWindow;
 exports.openTodoWindow      = openTodoWindow;
 exports.openInventoryWindow = openInventoryWindow;
+exports.openStrategyWindow  = openStrategyWindow;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;

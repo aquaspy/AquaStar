@@ -78,7 +78,8 @@ exports.menuMessages = {
     menuSettings     : "Configurações",
     menuReminders    : "Lembretes",
     menuTodo         : "Lista de Tarefas",
-    menuInventory    : "Inventário"
+    menuInventory    : "Inventário",
+    menuStrategy     : "Estratégia"
 }
 
 exports.settingsMessages = {
@@ -117,6 +118,7 @@ exports.settingsMessages = {
         reminders:   "Abrir Lembretes",
         todo:        "Abrir Lista de Tarefas",
         inventory:   "Abrir Inventário",
+        strategy:    "Abrir Estratégia",
         record:      "Gravar a Tela do Jogo"
     },
     optionsHeading: "Outras Opções",
@@ -308,6 +310,16 @@ exports.todoMessages = {
     removeTabTitle     : "Remover",
     savingLabel        : "Salvando...",
     savedLabel         : "Salvo"
+}
+
+exports.strategyMessages = {
+    title:"AquaStar - Estratégia", heading:"Estratégia", description:"Planeje composições e anotações para Ultra e Challenge Bosses.",
+    addBoss:"Adicionar Boss", manageClasses:"Gerenciar Classes", saved:"Salvo", empty:"Nenhum boss cadastrado. Adicione um para começar.",
+    ultra:"Ultra Boss", challenge:"Challenge Boss", weekly:"Semanal", daily:"Diária", players:"jogadores", zone:"Zona", noJoin:"Sem /join definido",
+    open:"Abrir Estratégia", create:"Criar Estratégia", edit:"Editar", delete:"Excluir", confirmDelete:"Excluir este boss e sua estratégia?",
+    back:"Todos os Bosses", team:"Composição do Time", notes:"Notas da Estratégia", save:"Salvar Estratégia", slot:"Jogador", noClass:"Nenhuma classe selecionada",
+    editBoss:"Editar Boss", name:"Nome", join:"Comando /join", reset:"Reset", kind:"Tipo de boss", role:"Função", cancel:"Cancelar", close:"Fechar", addClass:"Adicionar Classe",
+    roles:{support:"Suporte",dps:"DPS",tank:"Tank",dot:"Dano ao Longo do Tempo (DoT)"}
 }
 
 exports.inventoryMessages = {

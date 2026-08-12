@@ -210,6 +210,7 @@ const originalKeybinds = {
     reminders: "Alt+T",
     todo:     "Alt+Y",
     inventory: "Alt+I",
+    strategy: "Alt+U",
     record:   "Ctrl+J"
 }
 exports.originalKeybinds = originalKeybinds;
