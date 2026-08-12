@@ -17,18 +17,21 @@
   header h1 { margin: 0 0 4px 0; font-size: 16px; }
   header p#description { margin: 0; color: #9a9a9a; line-height: 1.4; }
 
-  #tabs { display:flex; align-items:center; gap:6px; padding:10px 18px 0 18px; flex-wrap:wrap; flex:0 0 auto; }
+  #workspaceBar { display:flex; align-items:center; padding:10px 18px 0; border-bottom:1px solid #2c2c2c; flex:0 0 auto; }
+  #tabs { display:flex; align-items:center; gap:6px; flex-wrap:wrap; flex:1 1 auto; }
   .tab { background:#1b1b1b; border:1px solid #333; border-radius:4px 4px 0 0; padding:6px 10px; color:#9a9a9a; font-size:12px; cursor:pointer; }
   .tab.active { background:#232323; color:#e6e6e6; border-color:#4da3ff; }
 
-  #syncBar { display:flex; align-items:center; gap:10px; padding:10px 18px; border-bottom:1px solid #2c2c2c; flex:0 0 auto; flex-wrap:wrap; }
+  #controls { flex:0 0 auto; background:#161616; border-bottom:1px solid #2c2c2c; }
+  #primaryControls { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 18px 0; flex-wrap:wrap; }
+  #syncBar { display:flex; align-items:center; gap:10px; flex:0 0 auto; flex-wrap:wrap; }
   #syncStatus { font-size:12px; color:#9a9a9a; }
   #syncStatus.error { color:#f28b7a; }
 
-  #viewToggle { display:flex; gap:6px; padding:8px 18px 0 18px; flex:0 0 auto; }
+  #viewToggle { display:flex; gap:6px; flex:0 0 auto; }
   #viewToggle button.active { background:#2b6fce; border-color:#2b6fce; color:#fff; }
 
-  #filterBar { display:flex; gap:8px; align-items:center; padding:8px 18px; border-bottom:1px solid #2c2c2c; flex:0 0 auto; background:#161616; flex-wrap:wrap; }
+  #filterBar { display:flex; gap:8px; align-items:center; padding:8px 18px; flex:0 0 auto; flex-wrap:wrap; }
   #filterBar .text-input { flex:1 1 200px; }
   #filterBar .select-input { flex:0 0 140px; }
 
@@ -48,7 +51,11 @@
   .column-header .col-date { flex:0 0 150px; text-align:right; }
   .item-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #202020; }
   .item-row .iname { flex:1 1 160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#c9e2ff; cursor:pointer; }
+  .item-row .iname.member { color:#ffd76a; }
   .item-row .iname:hover { color:#79b8ff; text-decoration:underline; }
+  .item-row .iname.member:hover { color:#ffe49a; }
+  .iname-icon { display:inline-flex; align-items:center; height:1em; vertical-align:-0.12em; margin-left:4px; color:#ffd76a; line-height:1; text-decoration:none; }
+  .iname-icon.ac { width:12px; height:12px; }
   .item-row .itype {
     flex:0 0 130px; font-size:10px; padding:2px 7px; border-radius:10px;
     text-transform:uppercase; white-space:nowrap; letter-spacing:.02em;
@@ -58,7 +65,7 @@
   .item-row .icount { flex:0 0 50px; text-align:right; font-family:"Consolas","Courier New",monospace; color:#9cc9ff; }
   .item-row .ibadge { flex:0 0 60px; font-size:10px; text-align:center; padding:2px 6px; border-radius:10px; box-sizing:border-box; }
   .ibadge.bank { background:rgba(52,152,219,0.18); color:#7ec8f2; }
-  .ibadge.member { background:rgba(255,215,106,0.18); color:#ffd76a; }
+  .ibadge.ac { background:rgba(255,215,106,0.18); color:#ffd76a; }
   .ibadge.inv, .ibadge.normal { background:rgba(154,154,154,0.14); color:#8a8a8a; }
   .item-row .idate { flex:0 0 150px; text-align:right; color:#6f6f6f; font-size:11px; }
 
@@ -87,30 +94,39 @@
     <h1 id="heading">Inventory</h1>
     <p id="description"></p>
   </header>
-  <div id="tabs"></div>
-  <div id="syncBar">
-    <span id="syncStatus"></span>
-    <button id="syncBtn" class="primary small"></button>
-  </div>
-  <div id="viewToggle">
-    <button id="viewInventoryBtn" class="small active"></button>
-    <button id="viewBuyBackBtn" class="small"></button>
-  </div>
-  <div id="filterBar">
-    <input id="filterNameInput" class="text-input" type="text" spellcheck="false">
-    <select id="filterTypeInput" class="select-input">
-      <option value="all"></option>
-    </select>
-    <select id="filterLocationInput" class="select-input">
-      <option value="all"></option>
-      <option value="bank"></option>
-      <option value="inventory"></option>
-    </select>
-    <select id="filterMemberInput" class="select-input">
-      <option value="all"></option>
-      <option value="member"></option>
-      <option value="nonmember"></option>
-    </select>
+  <div id="workspaceBar"><div id="tabs"></div></div>
+  <div id="controls">
+    <div id="primaryControls">
+      <div id="viewToggle">
+        <button id="viewInventoryBtn" class="small active"></button>
+        <button id="viewBuyBackBtn" class="small"></button>
+      </div>
+      <div id="syncBar">
+        <span id="syncStatus"></span>
+        <button id="syncBtn" class="primary small"></button>
+      </div>
+    </div>
+    <div id="filterBar">
+      <input id="filterNameInput" class="text-input" type="text" spellcheck="false">
+      <select id="filterTypeInput" class="select-input">
+        <option value="all"></option>
+      </select>
+      <select id="filterLocationInput" class="select-input">
+        <option value="all"></option>
+        <option value="bank"></option>
+        <option value="inventory"></option>
+      </select>
+      <select id="filterMemberInput" class="select-input">
+        <option value="all"></option>
+        <option value="member"></option>
+        <option value="nonmember"></option>
+      </select>
+      <select id="filterCoinsInput" class="select-input">
+        <option value="all"></option>
+        <option value="ac"></option>
+        <option value="nonac"></option>
+      </select>
+    </div>
   </div>
   <div id="rows"></div>
 </div>
@@ -121,7 +137,7 @@
 (function () {
   const api = window.aquastarInventory;
   let messages, state, activeCharId = null, activeView = 'inventory';
-  let filterName = '', filterType = 'all', filterLocation = 'all', filterMember = 'all';
+  let filterName = '', filterType = 'all', filterLocation = 'all', filterMember = 'all', filterCoins = 'all';
   // Sort criteria are ordered from most to least important. Keeping earlier criteria
   // as tie-breakers gives the expected Type -> Name result after clicking Name, then Type.
   let sortCriteria = [{ key: 'name', direction: 'asc' }];
@@ -213,9 +229,23 @@
     row.className = 'item-row';
 
     const nameEl = document.createElement('div');
-    nameEl.className = 'iname';
+    nameEl.className = 'iname' + (item.member ? ' member' : '');
     nameEl.textContent = item.name;
     nameEl.title = item.name;
+    if (item.member) {
+      const memberIcon = document.createElement('span');
+      memberIcon.className = 'iname-icon';
+      memberIcon.textContent = '★';
+      memberIcon.title = messages.memberBadge;
+      nameEl.appendChild(memberIcon);
+    }
+    if (item.coins) {
+      const acIcon = document.createElement('span');
+      acIcon.className = 'iname-icon ac';
+      acIcon.title = messages.acBadge;
+      acIcon.innerHTML = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="5.7"/><path d="M8 4.4v7.2M10 5.8C9.5 5.2 8.8 5 8 5c-1 0-1.8.5-1.8 1.3 0 2 3.6.9 3.6 2.8 0 .9-.8 1.4-1.8 1.4-.9 0-1.7-.3-2.2-1"/></svg>';
+      nameEl.appendChild(acIcon);
+    }
     wireHoverPreview(nameEl, item.name);
     nameEl.addEventListener('click', () => { api.openItemWiki(item.name); });
 
@@ -231,10 +261,6 @@
     bankEl.className = 'ibadge ' + (item.bank ? 'bank' : 'inv');
     bankEl.textContent = item.bank ? messages.bankBadge : messages.inventoryBadge;
 
-    const memberEl = document.createElement('div');
-    memberEl.className = 'ibadge ' + (item.member ? 'member' : 'normal');
-    memberEl.textContent = item.member ? messages.memberBadge : messages.normalBadge;
-
     const dateEl = document.createElement('div');
     dateEl.className = 'idate';
     dateEl.textContent = formatDate(item.added);
@@ -243,7 +269,6 @@
     row.appendChild(typeEl);
     row.appendChild(countEl);
     row.appendChild(bankEl);
-    row.appendChild(memberEl);
     row.appendChild(dateEl);
     return row;
   }
@@ -271,9 +296,6 @@
     rarityEl.className = 'ibadge bank';
     rarityEl.textContent = item.rarityName || '';
 
-    const spacerEl = document.createElement('div');
-    spacerEl.className = 'ibadge member';
-
     const dateEl = document.createElement('div');
     dateEl.className = 'idate';
     dateEl.textContent = formatDate(item.inserted);
@@ -282,7 +304,6 @@
     row.appendChild(typeEl);
     row.appendChild(costEl);
     row.appendChild(rarityEl);
-    row.appendChild(spacerEl);
     row.appendChild(dateEl);
     return row;
   }
@@ -294,7 +315,6 @@
         { key: 'type', label: messages.columnType, className: 'col-type' },
         { key: 'count', label: messages.columnCount, className: 'col-count' },
         { key: 'bank', label: messages.columnBank, className: 'col-badge' },
-        { key: 'member', label: messages.columnMember, className: 'col-badge' },
         { key: 'added', label: messages.columnAdded, className: 'col-date' }
       ];
     }
@@ -303,7 +323,6 @@
       { key: 'type', label: messages.columnType, className: 'col-type' },
       { key: 'cost', label: messages.columnCost, className: 'col-count' },
       { key: 'rarityName', label: messages.columnRarity, className: 'col-badge' },
-      { key: null, label: '', className: 'col-badge' },
       { key: 'inserted', label: messages.columnInserted, className: 'col-date' }
     ];
   }
@@ -345,7 +364,7 @@
 
   function compareItems(a, b) {
     const numericColumns = ['count', 'cost'];
-    const booleanColumns = ['bank', 'member'];
+    const booleanColumns = ['bank'];
     const dateColumns = ['added', 'inserted'];
     for (const criterion of sortCriteria) {
       const key = criterion.key;
@@ -372,6 +391,8 @@
       if (filterLocation === 'inventory' && item.bank) return false;
       if (filterMember === 'member' && !item.member) return false;
       if (filterMember === 'nonmember' && item.member) return false;
+      if (filterCoins === 'ac' && !item.coins) return false;
+      if (filterCoins === 'nonac' && item.coins) return false;
     }
     return true;
   }
@@ -481,6 +502,14 @@
     filterMemberInput.options[2].textContent = messages.filterNonMemberOnlyLabel;
     filterMemberInput.addEventListener('change', (e) => {
       filterMember = e.target.value;
+      renderRows();
+    });
+    const filterCoinsInput = document.getElementById('filterCoinsInput');
+    filterCoinsInput.options[0].textContent = messages.filterAllLabel;
+    filterCoinsInput.options[1].textContent = messages.filterAcLabel;
+    filterCoinsInput.options[2].textContent = messages.filterNonAcLabel;
+    filterCoinsInput.addEventListener('change', (e) => {
+      filterCoins = e.target.value;
       renderRows();
     });
 

@@ -21,15 +21,15 @@
   #serverTime .label { display:block; color:#6f6f6f; font-family:inherit; font-size:10px; text-transform:uppercase; letter-spacing:.03em; }
   #nextFriday13Row { margin-top:6px; color:#e0a3f0; }
 
-  #tabs { display:flex; align-items:center; gap:6px; padding:10px 18px 0 18px; flex-wrap:wrap; flex:0 0 auto; }
+  #workspaceBar { display:flex; align-items:center; gap:12px; padding:10px 18px 0; border-bottom:1px solid #2c2c2c; flex:0 0 auto; }
+  #tabs { display:flex; align-items:center; gap:6px; flex:1 1 auto; min-width:0; flex-wrap:wrap; }
+  .workspace-actions { flex:0 0 auto; padding-bottom:10px; }
   .tab { background:#1b1b1b; border:1px solid #333; border-radius:4px 4px 0 0; padding:6px 10px; color:#9a9a9a; font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer; }
   .tab.active { background:#232323; color:#e6e6e6; border-color:#4da3ff; }
   .tab .tabBtn { color:#6f6f6f; cursor:pointer; padding:0 2px; font-size:11px; }
   .tab .tabBtn:hover { color:#e6e6e6; }
   .tabAddBtn { background:transparent; border:1px dashed #383838; color:#9a9a9a; }
   .tabAddBtn:hover { color:#e6e6e6; border-color:#4da3ff; }
-
-  #addQuestForm { display:flex; gap:8px; align-items:center; padding:10px 18px; border-bottom:1px solid #2c2c2c; flex-wrap:wrap; flex:0 0 auto; }
 
   #rows { flex: 1 1 auto; overflow-y: auto; padding: 4px 18px; }
   .quest-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #202020; border-radius:4px; }
@@ -101,10 +101,11 @@
   #status { min-height:15px; color:#7fd08a; font-size:12px; }
   #noCharsHint { color:#6f6f6f; padding:20px 0; }
 
-  #toolbar { display:flex; align-items:center; gap:8px; padding:10px 18px 0 18px; flex:0 0 auto; flex-wrap:wrap; row-gap:6px; }
-  .toolbar-label { font-size:12px; color:#9a9a9a; margin-right:8px; }
+  #toolbar { display:flex; align-items:center; gap:14px; padding:8px 18px; flex:0 0 auto; flex-wrap:wrap; row-gap:6px; background:#161616; border-bottom:1px solid #2c2c2c; }
+  .toolbar-option { display:flex; align-items:center; gap:6px; }
+  .toolbar-label { font-size:12px; color:#9a9a9a; }
 
-  #filterBar { display:flex; gap:8px; align-items:center; padding:8px 18px; border-bottom:1px solid #2c2c2c; flex:0 0 auto; background:#161616; flex-wrap:wrap; }
+  #filterBar { display:flex; gap:8px; align-items:center; padding:8px 18px; border-bottom:1px solid #2c2c2c; flex:0 0 auto; flex-wrap:wrap; }
   #filterBar .text-input { flex:1 1 200px; }
   #filterBar .select-input { flex:0 0 130px; }
 
@@ -113,9 +114,14 @@
      prompts need this hand-rolled modal instead. */
   .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:1000; }
   .modal-overlay.open { display:flex; }
-  .modal-box { background:#1b1b1b; border:1px solid #333; border-radius:6px; padding:16px; width:260px; display:flex; flex-direction:column; gap:10px; }
+  .modal-box { background:#1b1b1b; border:1px solid #333; border-radius:6px; padding:16px; width:260px; display:flex; flex-direction:column; gap:10px; box-shadow:0 18px 48px rgba(0,0,0,.35); }
+  .modal-box.wide { width:min(520px, calc(100vw - 36px)); max-height:calc(100vh - 36px); overflow-y:auto; }
   .modal-box .modal-label { font-size:12px; color:#e6e6e6; }
   .modal-box .text-input { flex:0 0 auto; width:100%; box-sizing:border-box; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .form-grid .full { grid-column:1 / -1; }
+  .form-grid .select-input { width:100%; box-sizing:border-box; }
+  .modal-toggle-row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   .modal-buttons { display:flex; justify-content:flex-end; gap:8px; }
 </style>
 </head>
@@ -133,24 +139,33 @@
       </div>
     </div>
   </header>
+  <div id="workspaceBar">
+    <div id="tabs"></div>
+    <div class="workspace-actions"><button id="openAddQuestBtn" class="primary small"></button></div>
+  </div>
   <div id="toolbar">
-    <label class="switch">
+    <label class="toolbar-option">
+      <span class="switch">
       <input type="checkbox" id="showCompletedToggle">
       <span class="slider"></span>
-    </label>
+      </span>
     <span id="showCompletedLabel" class="toolbar-label"></span>
-    <label class="switch">
+    </label>
+    <label class="toolbar-option">
+      <span class="switch">
       <input type="checkbox" id="showMemberDailiesToggle">
       <span class="slider"></span>
-    </label>
+      </span>
     <span id="showMemberDailiesLabel" class="toolbar-label"></span>
-    <label class="switch">
+    </label>
+    <label class="toolbar-option">
+      <span class="switch">
       <input type="checkbox" id="individualHiddenToggle">
       <span class="slider"></span>
-    </label>
+      </span>
     <span id="individualHiddenLabel" class="toolbar-label"></span>
+    </label>
   </div>
-  <div id="tabs"></div>
   <div id="filterBar">
     <input id="filterNameInput" class="text-input" type="text" spellcheck="false">
     <select id="filterTypeInput" class="select-input">
@@ -166,7 +181,10 @@
       <option value="other"></option>
     </select>
   </div>
-  <div id="addQuestForm">
+  <div id="addQuestOverlay" class="modal-overlay">
+    <div class="modal-box wide">
+      <div id="addQuestTitle" class="modal-label"></div>
+      <div id="addQuestForm" class="form-grid">
     <input id="questNameInput" class="text-input" type="text" spellcheck="false">
     <input id="questJoinInput" class="text-input" type="text" spellcheck="false">
     <select id="questTypeInput" class="select-input">
@@ -179,6 +197,7 @@
       <option value="ultra"></option>
       <option value="other"></option>
     </select>
+    <div class="modal-toggle-row full">
     <label class="form-checkbox">
       <input type="checkbox" id="questMemberInput">
       <span id="questMemberLabel"></span>
@@ -187,6 +206,7 @@
       <input type="checkbox" id="questSeasonalInput">
       <span id="questSeasonalLabel"></span>
     </label>
+    </div>
     <select id="questSeasonalEventInput" class="select-input" disabled>
       <option value="nulgathBirthday"></option>
       <option value="carnival"></option>
@@ -201,7 +221,12 @@
       <option value="blackFriday"></option>
       <option value="frostval"></option>
     </select>
-    <button id="addQuestBtn" class="primary small"></button>
+      </div>
+      <div class="modal-buttons">
+        <button id="cancelAddQuestBtn" class="small"></button>
+        <button id="addQuestBtn" class="primary small"></button>
+      </div>
+    </div>
   </div>
   <div id="rows"></div>
   <div id="seasonalSection" class="hidden">
@@ -296,10 +321,10 @@
     state.characters.forEach((character) => {
       const tab = document.createElement('div');
       tab.className = 'tab' + (character.id === activeCharId ? ' active' : '');
+      tab.onclick = () => { activeCharId = character.id; renderTabs(); renderQuestRows(); };
 
       const nameSpan = document.createElement('span');
       nameSpan.textContent = character.name;
-      nameSpan.onclick = () => { activeCharId = character.id; renderTabs(); renderQuestRows(); };
 
       const renameBtn = document.createElement('span');
       renameBtn.className = 'tabBtn';
@@ -647,7 +672,7 @@
     const nonHidden = filteredQuests.filter((q) => !isQuestHidden(q));
     const memberFiltered = state.showMemberDailies
       ? nonHidden
-      : nonHidden.filter((q) => !(q.member && q.type === 'daily'));
+      : nonHidden.filter((q) => !q.member);
     const seasonalQuests = memberFiltered.filter((q) => isSeasonal(q));
     let visibleQuests = memberFiltered.filter((q) => !isSeasonal(q));
     if (state.showCompleted) {
@@ -770,6 +795,18 @@
     SEASONAL_EVENT_KEYS.forEach((key, i) => {
       document.getElementById('questSeasonalEventInput').options[i].textContent = messages.seasonalEvents[key].label;
     });
+    const addQuestOverlay = document.getElementById('addQuestOverlay');
+    document.getElementById('openAddQuestBtn').textContent = messages.addQuestButton;
+    document.getElementById('addQuestTitle').textContent = messages.addQuestButton;
+    document.getElementById('cancelAddQuestBtn').textContent = messages.promptCancelButton;
+    document.getElementById('openAddQuestBtn').onclick = () => {
+      addQuestOverlay.classList.add('open');
+      document.getElementById('questNameInput').focus();
+    };
+    document.getElementById('cancelAddQuestBtn').onclick = () => addQuestOverlay.classList.remove('open');
+    addQuestOverlay.onclick = (event) => {
+      if (event.target === addQuestOverlay) addQuestOverlay.classList.remove('open');
+    };
     document.getElementById('addQuestBtn').textContent = messages.addQuestButton;
     document.getElementById('serverTimeLabel').textContent = messages.serverTimeLabel;
     document.getElementById('nextFriday13Label').textContent = messages.nextFriday13Label;
@@ -804,6 +841,7 @@
       memberInput.checked = false;
       seasonalToggleInput.checked = false;
       seasonalEventInput.disabled = true;
+      addQuestOverlay.classList.remove('open');
       persistState();
       renderQuestRows();
     };

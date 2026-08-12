@@ -287,20 +287,21 @@ exports.inventoryMessages = {
     filterInventoryOnlyLabel: "",
     filterMemberLabel  : "",
     filterNonMemberOnlyLabel: "",
+    filterAcLabel      : "",
+    filterNonAcLabel   : "",
     emptyStateLabel    : "",
     noCharactersLabel  : "",
     columnName         : "",
     columnType         : "",
     columnCount        : "",
     columnBank         : "",
-    columnMember       : "",
     columnAdded        : "",
     columnCost         : "",
     columnRarity       : "",
     columnInserted     : "",
     bankBadge          : "",
     inventoryBadge     : "",
-    memberBadge        : "",
+    acBadge            : "",
     normalBadge        : ""
 }
 
