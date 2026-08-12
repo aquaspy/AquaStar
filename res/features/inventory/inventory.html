@@ -33,6 +33,19 @@
   #filterBar .select-input { flex:0 0 140px; }
 
   #rows { flex: 1 1 auto; overflow-y: auto; padding: 4px 18px; }
+  .column-header { display:flex; align-items:center; gap:8px; padding:5px 0 4px; border-bottom:1px solid #353535; }
+  .column-header button {
+    min-width:0; border:0; border-radius:0; padding:0; background:transparent; color:#9a9a9a;
+    font:inherit; font-size:10px; font-weight:600; letter-spacing:.04em; text-align:left;
+    text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .column-header button:hover, .column-header button.active { background:transparent; color:#c9e2ff; }
+  .column-header button.active::after { content:attr(data-direction); margin-left:4px; color:#79b8ff; }
+  .column-header .col-name { flex:1 1 160px; }
+  .column-header .col-type { flex:0 0 130px; text-align:center; }
+  .column-header .col-count { flex:0 0 50px; text-align:right; }
+  .column-header .col-badge { flex:0 0 60px; text-align:center; }
+  .column-header .col-date { flex:0 0 150px; text-align:right; }
   .item-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #202020; }
   .item-row .iname { flex:1 1 160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#c9e2ff; cursor:pointer; }
   .item-row .iname:hover { color:#79b8ff; text-decoration:underline; }
@@ -109,6 +122,9 @@
   const api = window.aquastarInventory;
   let messages, state, activeCharId = null, activeView = 'inventory';
   let filterName = '', filterType = 'all', filterLocation = 'all', filterMember = 'all';
+  // Sort criteria are ordered from most to least important. Keeping earlier criteria
+  // as tie-breakers gives the expected Type -> Name result after clicking Name, then Type.
+  let sortCriteria = [{ key: 'name', direction: 'asc' }];
 
   function setStatus(text, isError) {
     const el = document.getElementById('syncStatus');
@@ -271,6 +287,83 @@
     return row;
   }
 
+  function getColumns() {
+    if (activeView === 'inventory') {
+      return [
+        { key: 'name', label: messages.columnName, className: 'col-name' },
+        { key: 'type', label: messages.columnType, className: 'col-type' },
+        { key: 'count', label: messages.columnCount, className: 'col-count' },
+        { key: 'bank', label: messages.columnBank, className: 'col-badge' },
+        { key: 'member', label: messages.columnMember, className: 'col-badge' },
+        { key: 'added', label: messages.columnAdded, className: 'col-date' }
+      ];
+    }
+    return [
+      { key: 'name', label: messages.columnName, className: 'col-name' },
+      { key: 'type', label: messages.columnType, className: 'col-type' },
+      { key: 'cost', label: messages.columnCost, className: 'col-count' },
+      { key: 'rarityName', label: messages.columnRarity, className: 'col-badge' },
+      { key: null, label: '', className: 'col-badge' },
+      { key: 'inserted', label: messages.columnInserted, className: 'col-date' }
+    ];
+  }
+
+  function renderColumnHeader(rowsEl) {
+    const header = document.createElement('div');
+    header.className = 'column-header';
+    getColumns().forEach((column) => {
+      if (!column.key) {
+        const spacer = document.createElement('div');
+        spacer.className = column.className;
+        spacer.setAttribute('aria-hidden', 'true');
+        header.appendChild(spacer);
+        return;
+      }
+      const button = document.createElement('button');
+      button.type = 'button';
+      const sortIndex = sortCriteria.findIndex((criterion) => criterion.key === column.key);
+      const isPrimarySort = sortIndex === 0;
+      button.className = column.className + (isPrimarySort ? ' active' : '');
+      button.textContent = column.label;
+      button.title = column.label;
+      if (isPrimarySort) button.dataset.direction = sortCriteria[0].direction === 'asc' ? '▲' : '▼';
+      button.setAttribute('aria-sort', isPrimarySort ? (sortCriteria[0].direction === 'asc' ? 'ascending' : 'descending') : 'none');
+      button.onclick = () => {
+        if (isPrimarySort) {
+          sortCriteria[0].direction = sortCriteria[0].direction === 'asc' ? 'desc' : 'asc';
+        } else if (sortIndex !== -1) {
+          sortCriteria.unshift(sortCriteria.splice(sortIndex, 1)[0]);
+        } else {
+          sortCriteria.unshift({ key: column.key, direction: 'asc' });
+        }
+        renderRows();
+      };
+      header.appendChild(button);
+    });
+    rowsEl.appendChild(header);
+  }
+
+  function compareItems(a, b) {
+    const numericColumns = ['count', 'cost'];
+    const booleanColumns = ['bank', 'member'];
+    const dateColumns = ['added', 'inserted'];
+    for (const criterion of sortCriteria) {
+      const key = criterion.key;
+      let comparison;
+      if (numericColumns.indexOf(key) !== -1) {
+        comparison = (Number(a[key]) || 0) - (Number(b[key]) || 0);
+      } else if (booleanColumns.indexOf(key) !== -1) {
+        comparison = Number(!!a[key]) - Number(!!b[key]);
+      } else if (dateColumns.indexOf(key) !== -1) {
+        comparison = (new Date(a[key]).getTime() || 0) - (new Date(b[key]).getTime() || 0);
+      } else {
+        comparison = String(a[key] || '').localeCompare(String(b[key] || ''), undefined, { numeric: true, sensitivity: 'base' });
+      }
+      if (comparison) return comparison * (criterion.direction === 'asc' ? 1 : -1);
+    }
+    return 0;
+  }
+
   function matchesFilters(item) {
     if (filterName && item.name.toLowerCase().indexOf(filterName) === -1) return false;
     if (filterType !== 'all' && item.type !== filterType) return false;
@@ -305,7 +398,11 @@
       return;
     }
 
-    const items = (activeView === 'inventory' ? character.inventory : character.buyback).filter(matchesFilters);
+    const items = (activeView === 'inventory' ? character.inventory : character.buyback)
+      .filter(matchesFilters)
+      .map((item, index) => ({ item: item, index: index }))
+      .sort((a, b) => compareItems(a.item, b.item) || a.index - b.index)
+      .map((entry) => entry.item);
     if (items.length === 0) {
       const hint = document.createElement('div');
       hint.id = 'emptyHint';
@@ -314,11 +411,13 @@
       return;
     }
     const buildRow = activeView === 'inventory' ? buildInventoryRow : buildBuyBackRow;
+    renderColumnHeader(rowsEl);
     items.forEach((item) => rowsEl.appendChild(buildRow(item)));
   }
 
   function setView(view) {
     activeView = view;
+    sortCriteria = [{ key: 'name', direction: 'asc' }];
     document.getElementById('viewInventoryBtn').classList.toggle('active', view === 'inventory');
     document.getElementById('viewBuyBackBtn').classList.toggle('active', view === 'buyback');
     filterType = 'all';

@@ -11,7 +11,8 @@
     "dist-w": "electron-builder -w --publish never",
     "dist-l": "electron-builder -l --publish never",
     "dist-wl": "electron-builder -wl --publish never",
-    "dist-m": "electron-builder -m --publish never"
+    "dist-m": "electron-builder -m --publish never",
+    "loc": "node scripts/count-loc.js"
   },
   "keywords": [
     "aqw;",
