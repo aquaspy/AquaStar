@@ -417,8 +417,8 @@ ipcMain.handle('getInventoryItemCounts', (event, itemNames) => {
         const characterCounts = {};
         names.forEach((name) => { characterCounts[name] = { inventory: 0, bank: 0 }; });
         character.inventory.forEach((item) => {
-            // The defaults are normal consumables only. Do not report a tagged AC/member copy.
-            if (item.member || item.coins) return;
+            // Consumables are normal items except Dark Potion, whose only relevant version is AC.
+            if (item.member || (item.coins && _normalizeItemName(item.name) !== _normalizeItemName('Dark Potion'))) return;
             const originalName = wanted[_normalizeItemName(item.name)];
             if (!originalName) return;
             if (item.bank) characterCounts[originalName].bank += item.count;

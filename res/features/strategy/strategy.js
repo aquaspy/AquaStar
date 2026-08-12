@@ -78,7 +78,22 @@ function load() {
     try { return migrate(JSON.parse(fs.readFileSync(strategyJsonPath, 'utf8'))); }
     catch (error) { console.log('[AquaStar] Failed to parse ' + strategyJsonPath + ': ' + error.message); return migrate({}); }
 }
-function save(data) { const clean = migrate(data); fs.writeFileSync(strategyJsonPath, JSON.stringify(clean, null, 4)); return clean; }
+function save(data) {
+    // The renderer keeps its class list in memory while auxiliary class editors save through
+    // the preload. Preserve an existing favorite when that older renderer state submits an
+    // otherwise empty favorite object for the same class.
+    const previous = load();
+    const previousFavorites = {};
+    previous.classes.forEach((item) => { previousFavorites[item.id] = item.favorites || {}; });
+    if (data && Array.isArray(data.classes)) data.classes.forEach((item) => {
+        const favorite = item && item.favorites;
+        const old = item && previousFavorites[item.id];
+        if (old && favorite && !item.clearFavorites && !favorite.tonicId && !favorite.elixirId && !favorite.potionId) item.favorites = Object.assign({}, favorite, old);
+    });
+    const clean = migrate(data);
+    fs.writeFileSync(strategyJsonPath, JSON.stringify(clean, null, 4));
+    return clean;
+}
 
 let shortcutOwner = null;
 let registeredShortcut = null;

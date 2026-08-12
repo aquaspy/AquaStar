@@ -14,7 +14,7 @@ contextBridge.exposeInMainWorld('aquastarStrategy', strategyApi);
 // preload so it can call the inventory IPC directly without broadening the renderer bridge.
 window.addEventListener('DOMContentLoaded', () => {
   const timerStyle = document.createElement('style');
-  timerStyle.textContent = '#timerRolesPanel{border-color:#315b83;background:linear-gradient(135deg,#18283b,#191919)}#timerRolesPanel .role-filter{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0}#timerRolesPanel .role-filter>span{color:#9cc9ff;font-size:11px;text-transform:uppercase;letter-spacing:.05em}.role-filter-actions,.role-filter-options{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.role-filter-actions button{padding:5px 8px}.role-filter-chip{padding:5px 10px;border-radius:14px;background:#111c27;border-color:#345875;color:#9fb5c8}.role-filter-chip.active{color:#fff;background:#276fb8;border-color:#5ba4ed}.timer-role-row{display:grid;grid-template-columns:minmax(100px,1fr) 86px 86px minmax(110px,1fr) 90px minmax(110px,1fr) auto;gap:8px;align-items:end;padding:10px;margin-bottom:8px;background:#111b26;border:1px solid #284867;border-radius:6px}.timer-role-row label{display:block;color:#9fb0c0;font-size:11px}.timer-role-row input,.timer-role-row select{display:block;width:100%;margin-top:4px;padding:7px;background:#0d131a;border:1px solid #36526c;border-radius:4px;color:#e6f2ff}.timer-role-live{padding:12px;border:1px solid #315b83;border-radius:7px;background:#0c1722}.timer-role-live-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:7px}.timer-role-live-head strong{font-size:16px;color:#e1f0ff}.timer-role-next{color:#9cc9ff}.timer-role-track{height:30px;position:relative;overflow:hidden;border:1px solid #3d668c;border-radius:5px;background:#081019}.timer-role-fill{height:100%;width:0;background:linear-gradient(90deg,#236dbd,#70bdff);transition:width .08s linear}.timer-role-fire{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;color:#fff;background:repeating-linear-gradient(45deg,#c97718,#c97718 10px,#efad42 10px,#efad42 20px);opacity:0;transition:opacity .08s linear}.boss-general-info{margin-top:8px;padding:9px;border-left:3px solid #4f88bc;border-radius:3px;background:#152230;color:#cbdbea;white-space:pre-wrap;font-size:12px;line-height:1.45}@media(max-width:760px){.timer-role-row{grid-template-columns:repeat(2,minmax(0,1fr))}.timer-role-row button{grid-column:2;justify-self:end}}';
+  timerStyle.textContent = '#bossCards .card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}#bossCards .card-actions button{margin:0}.consumable-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:7px}.consumable-card{display:flex;gap:8px;align-items:flex-start;background:#181818;border:1px solid #36526c;border-radius:6px;padding:10px}.consumable-card strong{flex:1;font-size:12px}.consumable-card span{color:#9cc9ff;font-family:Consolas,monospace;font-size:11px;text-align:right;white-space:pre-line}.class-consumables{margin-top:8px;border:1px solid #315b83;border-radius:5px;background:#101b27}.class-consumables summary{padding:7px 9px;color:#b8d9f5;font-size:11px;cursor:pointer;user-select:none}.class-consumables .consumable-cards{padding:0 8px 8px}.class-consumables-empty{padding:0 9px 8px;color:#8e9cab;font-size:11px}#timerRolesPanel{border-color:#315b83;background:linear-gradient(135deg,#18283b,#191919)}#timerRolesPanel .role-filter{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0}#timerRolesPanel .role-filter>span{color:#9cc9ff;font-size:11px;text-transform:uppercase;letter-spacing:.05em}.role-filter-actions,.role-filter-options{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.role-filter-actions button{padding:5px 8px}.role-filter-chip{padding:5px 10px;border-radius:14px;background:#111c27;border-color:#345875;color:#9fb5c8}.role-filter-chip.active{color:#fff;background:#276fb8;border-color:#5ba4ed}.class-edit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:9px;background:#151f29;border-bottom:1px solid #29445d}.class-edit label{font-size:11px;color:#9fb5c8}.class-edit input,.class-edit select{display:block;width:100%;margin-top:3px;padding:6px;background:#0d131a;border:1px solid #36526c;border-radius:4px;color:#e6f2ff}.class-edit button{justify-self:start}.timer-role-row{display:grid;grid-template-columns:minmax(100px,1fr) 86px 86px minmax(110px,1fr) 90px minmax(110px,1fr) auto;gap:8px;align-items:end;padding:10px;margin-bottom:8px;background:#111b26;border:1px solid #284867;border-radius:6px}.timer-role-row label{display:block;color:#9fb0c0;font-size:11px}.timer-role-row input,.timer-role-row select{display:block;width:100%;margin-top:4px;padding:7px;background:#0d131a;border:1px solid #36526c;border-radius:4px;color:#e6f2ff}.timer-role-live{padding:12px;border:1px solid #315b83;border-radius:7px;background:#0c1722}.timer-role-live-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:7px}.timer-role-live-head strong{font-size:16px;color:#e1f0ff}.timer-role-next{color:#9cc9ff}.timer-role-track{height:30px;position:relative;overflow:hidden;border:1px solid #3d668c;border-radius:5px;background:#081019}.timer-role-fill{height:100%;width:0;background:linear-gradient(90deg,#236dbd,#70bdff);transition:width .08s linear}.timer-role-fire{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;color:#fff;background:repeating-linear-gradient(45deg,#c97718,#c97718 10px,#efad42 10px,#efad42 20px);opacity:0;transition:opacity .08s linear}.boss-general-info{margin-top:8px;padding:9px;border-left:3px solid #4f88bc;border-radius:3px;background:#152230;color:#cbdbea;white-space:pre-wrap;font-size:12px;line-height:1.45}@media(max-width:760px){.timer-role-row{grid-template-columns:repeat(2,minmax(0,1fr))}.timer-role-row button{grid-column:2;justify-self:end}.class-edit{grid-template-columns:1fr}}';
   document.head.appendChild(timerStyle);
   const bossInfoField = document.createElement('div');
   bossInfoField.className = 'field full';
@@ -44,6 +44,136 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     }, 0);
   });
+  const classFavorites = Object.create(null);
+  function rememberClassFavorites(data) {
+    (data.classes || []).forEach((item) => { classFavorites[item.id] = Object.assign({}, item.favorites || {}); });
+  }
+  strategyApi.get().then((result) => rememberClassFavorites(result.data));
+  function potionOptions(potions, kind, selected) {
+    return '<option value="">No preference</option>' + potions.filter((potion) => potion.kind === kind).map((potion) => '<option value="' + potion.id + '"' + (potion.id === selected ? ' selected' : '') + '>' + potion.name + '</option>').join('');
+  }
+  function installClassFavorites() {
+    const fields = document.getElementById('manageFields');
+    if (!fields || !document.getElementById('manageRole') || document.getElementById('classFavoriteTonic')) return;
+    strategyApi.get().then((result) => {
+      const tonic = document.createElement('div');
+      tonic.className = 'field';
+      tonic.innerHTML = '<label>Best tonic</label><select id="classFavoriteTonic">' + potionOptions(result.data.potions || [], 'tonic', '') + '</select>';
+      const elixir = document.createElement('div');
+      elixir.className = 'field';
+      elixir.innerHTML = '<label>Best elixir</label><select id="classFavoriteElixir">' + potionOptions(result.data.potions || [], 'elixir', '') + '</select>';
+      fields.appendChild(tonic);
+      fields.appendChild(elixir);
+    });
+  }
+  new MutationObserver(() => {
+    if (document.getElementById('manageModal').classList.contains('open')) installClassFavorites();
+  }).observe(document.getElementById('manageModal'), { attributes: true, attributeFilter: ['class'] });
+  function installClassEditButtons() {
+    const fields = document.getElementById('manageFields');
+    const list = document.getElementById('manageList');
+    if (!fields || !list || !document.getElementById('manageRole')) return;
+    strategyApi.get().then((result) => {
+      Array.from(list.querySelectorAll('.manage-row')).forEach((row, index) => {
+        if (row.querySelector('[data-edit-class]')) return;
+        const item = (result.data.classes || [])[index];
+        if (!item) return;
+        const edit = document.createElement('button');
+        edit.type = 'button'; edit.textContent = 'Edit'; edit.dataset.editClass = item.id;
+        edit.onclick = () => openClassEditor(row, item);
+        row.insertBefore(edit, row.querySelector('.danger'));
+      });
+    });
+  }
+  function openClassEditor(row, item) {
+    const previous = row.nextElementSibling;
+    if (previous && previous.classList.contains('class-edit')) previous.remove();
+    strategyApi.get().then((result) => {
+      const editor = document.createElement('div');
+      editor.className = 'class-edit';
+      editor.innerHTML = '<label>Name<input data-name></label><label>Role<select data-role><option value="support">Support</option><option value="dps">DPS</option><option value="tank">Tank</option><option value="dot">DoT</option></select></label><label>Best tonic<select data-tonic></select></label><label>Best elixir<select data-elixir></select></label><button type="button" class="primary" data-save>Save class</button>';
+      const current = (result.data.classes || []).find((entry) => entry.id === item.id) || item;
+      editor.querySelector('[data-name]').value = current.name;
+      editor.querySelector('[data-role]').value = current.role;
+      editor.querySelector('[data-tonic]').innerHTML = potionOptions(result.data.potions || [], 'tonic', (current.favorites || {}).tonicId);
+      editor.querySelector('[data-elixir]').innerHTML = potionOptions(result.data.potions || [], 'elixir', (current.favorites || {}).elixirId);
+      editor.querySelector('[data-save]').onclick = () => strategyApi.get().then((freshResult) => {
+        const updated = (freshResult.data.classes || []).find((entry) => entry.id === item.id);
+        if (!updated) return;
+        updated.name = editor.querySelector('[data-name]').value.trim() || updated.name;
+        updated.role = editor.querySelector('[data-role]').value;
+        updated.favorites = Object.assign({}, updated.favorites, { tonicId: editor.querySelector('[data-tonic]').value, elixirId: editor.querySelector('[data-elixir]').value });
+        updated.clearFavorites = !updated.favorites.tonicId && !updated.favorites.elixirId;
+        classFavorites[updated.id] = Object.assign({}, updated.favorites);
+        return strategyApi.save(freshResult.data).then(() => { editor.remove(); installClassEditButtons(); });
+      });
+      row.after(editor);
+    });
+  }
+  new MutationObserver(installClassEditButtons).observe(document.getElementById('manageList'), { childList: true });
+  document.getElementById('manageAdd').addEventListener('click', () => {
+    const name = (document.getElementById('manageName') || {}).value;
+    const tonic = (document.getElementById('classFavoriteTonic') || {}).value;
+    const elixir = (document.getElementById('classFavoriteElixir') || {}).value;
+    if (!name || (!tonic && !elixir)) return;
+    setTimeout(() => strategyApi.get().then((result) => {
+      const data = result.data;
+      (data.classes || []).forEach((item) => { if (classFavorites[item.id]) item.favorites = Object.assign({}, item.favorites, classFavorites[item.id]); });
+      const added = (data.classes || []).slice().reverse().find((item) => item.name === name);
+      if (!added) return;
+      added.favorites = Object.assign({}, added.favorites, { tonicId: tonic || '', elixirId: elixir || '' });
+      classFavorites[added.id] = Object.assign({}, added.favorites);
+      return strategyApi.save(data);
+    }), 0);
+  });
+  function createConsumableCard(potion, characters) {
+    const card = document.createElement('div');
+    card.className = 'consumable-card';
+    const name = document.createElement('strong');
+    name.textContent = potion.name;
+    const amount = document.createElement('span');
+    amount.textContent = characters.map((character) => character.name + ': I ' + character.inventory + ' · B ' + character.bank).join('\n');
+    card.append(name, amount);
+    return card;
+  }
+  function renderClassFavorites() {
+    const slots = document.getElementById('slots');
+    if (!slots || !slots.children.length) return;
+    strategyApi.get().then((result) => {
+      const data = result.data;
+      const favorites = Array.from(slots.children).map((slot) => {
+        const selectedClass = (data.classes || []).find((item) => item.id === (slot.querySelector('select') || {}).value);
+        if (!selectedClass) return [];
+        const favorite = selectedClass.favorites || {};
+        return (data.potions || []).filter((potion) => potion.id === favorite.tonicId || potion.id === favorite.elixirId);
+      });
+      const names = Array.from(new Set(favorites.flat().map((potion) => potion.name)));
+      return strategyApi.getInventoryCounts(names).then((counts) => ({ data: data, favorites: favorites, counts: counts }));
+    }).then(({ data, favorites, counts }) => {
+      Array.from(slots.children).forEach((slot) => {
+        const old = slot.querySelector('.class-consumables');
+        if (old) old.remove();
+        const classId = (slot.querySelector('select') || {}).value;
+        const selectedClass = (data.classes || []).find((item) => item.id === classId);
+        if (!selectedClass) return;
+        const index = Array.from(slots.children).indexOf(slot);
+        const potions = favorites[index] || [];
+        const detail = document.createElement('details');
+        detail.className = 'class-consumables';
+        detail.innerHTML = '<summary>Consumables for ' + selectedClass.name + '</summary><div class="consumable-cards"></div>';
+        const list = detail.querySelector('.consumable-cards');
+        potions.forEach((potion) => {
+          const ownedBy = ((counts[potion.name] || {}).characters || []).filter((character) => character.inventory > 0 || character.bank > 0);
+          if (ownedBy.length) list.appendChild(createConsumableCard(potion, ownedBy));
+        });
+        if (!potions.length) detail.insertAdjacentHTML('beforeend', '<div class="class-consumables-empty">No favorite tonic or elixir configured for this class.</div>');
+        else if (!list.children.length) detail.insertAdjacentHTML('beforeend', '<div class="class-consumables-empty">None of this class consumables are in the synced inventory.</div>');
+        slot.appendChild(detail);
+      });
+    }).catch(() => {});
+  }
+  new MutationObserver(renderClassFavorites).observe(document.getElementById('slots'), { childList: true });
+  document.getElementById('slots').addEventListener('change', renderClassFavorites);
   // Timer roles replace only the old shared Intro/Loop timeline. The rest of the Strategy
   // renderer remains untouched. This panel is installed when its editor becomes visible.
   let roleState = null;
@@ -242,19 +372,20 @@ window.addEventListener('DOMContentLoaded', () => {
   }).then(({ potions, counts }) => {
     potions.forEach((potion) => {
       const count = counts[potion.name] || { characters: [] };
+      const ownedBy = count.characters.filter((character) => character.inventory > 0 || character.bank > 0);
+      if (!ownedBy.length) return;
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;gap:8px;align-items:flex-start;background:#181818;border:1px solid #2d2d2d;border-radius:4px;padding:8px';
+      row.className = 'consumable-card';
       const name = document.createElement('strong');
       name.textContent = potion.name;
-      name.style.cssText = 'flex:1;font-size:12px';
       const amount = document.createElement('span');
-      amount.style.cssText = 'color:#9cc9ff;font-family:Consolas,monospace;font-size:11px;text-align:right;white-space:pre-line';
-      amount.textContent = count.characters.map((character) => {
+      amount.textContent = ownedBy.map((character) => {
         return character.name + ': I ' + character.inventory + ' · B ' + character.bank;
-      }).join('\n') || 'No synced characters';
+      }).join('\n');
       row.appendChild(name);
       row.appendChild(amount);
       list.appendChild(row);
     });
+    if (!list.children.length) section.remove();
   }).catch(() => {});
 });
