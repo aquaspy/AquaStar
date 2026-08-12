@@ -13,12 +13,19 @@ contextBridge.exposeInMainWorld('aquastarStrategy', strategyApi);
 // The Strategy page lists the curated consumables alongside boss cards. Keep this in the
 // preload so it can call the inventory IPC directly without broadening the renderer bridge.
 window.addEventListener('DOMContentLoaded', () => {
+  let strategyMessages = {};
+  strategyApi.messages().then((messages) => {
+    strategyMessages = messages || {};
+    const field = document.getElementById('bossGeneralInfo');
+    if (field) { field.previousElementSibling.textContent = T('generalBossInfo', 'General boss information'); field.placeholder = T('generalBossInfoHint', 'Shown read-only in this boss strategies'); }
+  }).catch(() => {});
+  const T = (key, fallback) => strategyMessages[key] || fallback;
   const timerStyle = document.createElement('style');
   timerStyle.textContent = '#bossCards .card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}#bossCards .card-actions button{margin:0}.consumable-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:7px}.consumable-card{display:flex;gap:8px;align-items:flex-start;background:#181818;border:1px solid #36526c;border-radius:6px;padding:10px}.consumable-card strong{flex:1;font-size:12px}.consumable-card span{color:#9cc9ff;font-family:Consolas,monospace;font-size:11px;text-align:right;white-space:pre-line}.class-consumables{margin-top:8px;border:1px solid #315b83;border-radius:5px;background:#101b27}.class-consumables summary{padding:7px 9px;color:#b8d9f5;font-size:11px;cursor:pointer;user-select:none}.class-consumables .consumable-cards{padding:0 8px 8px}.class-consumables-empty{padding:0 9px 8px;color:#8e9cab;font-size:11px}#timerRolesPanel{border-color:#315b83;background:linear-gradient(135deg,#18283b,#191919)}#timerRolesPanel .role-filter{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0}#timerRolesPanel .role-filter>span{color:#9cc9ff;font-size:11px;text-transform:uppercase;letter-spacing:.05em}.role-filter-actions,.role-filter-options{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.role-filter-actions button{padding:5px 8px}.role-filter-chip{padding:5px 10px;border-radius:14px;background:#111c27;border-color:#345875;color:#9fb5c8}.role-filter-chip.active{color:#fff;background:#276fb8;border-color:#5ba4ed}.class-edit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:9px;background:#151f29;border-bottom:1px solid #29445d}.class-edit label{font-size:11px;color:#9fb5c8}.class-edit input,.class-edit select{display:block;width:100%;margin-top:3px;padding:6px;background:#0d131a;border:1px solid #36526c;border-radius:4px;color:#e6f2ff}.class-edit button{justify-self:start}.timer-role-row{display:grid;grid-template-columns:minmax(100px,1fr) 86px 86px minmax(110px,1fr) 90px minmax(110px,1fr) auto;gap:8px;align-items:end;padding:10px;margin-bottom:8px;background:#111b26;border:1px solid #284867;border-radius:6px}.timer-role-row label{display:block;color:#9fb0c0;font-size:11px}.timer-role-row input,.timer-role-row select{display:block;width:100%;margin-top:4px;padding:7px;background:#0d131a;border:1px solid #36526c;border-radius:4px;color:#e6f2ff}.timer-role-live{padding:12px;border:1px solid #315b83;border-radius:7px;background:#0c1722}.timer-role-live-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:7px}.timer-role-live-head strong{font-size:16px;color:#e1f0ff}.timer-role-next{color:#9cc9ff}.timer-role-track{height:30px;position:relative;overflow:hidden;border:1px solid #3d668c;border-radius:5px;background:#081019}.timer-role-fill{height:100%;width:0;background:linear-gradient(90deg,#236dbd,#70bdff);transition:width .08s linear}.timer-role-fire{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;color:#fff;background:repeating-linear-gradient(45deg,#c97718,#c97718 10px,#efad42 10px,#efad42 20px);opacity:0;transition:opacity .08s linear}.boss-general-info{margin-top:8px;padding:9px;border-left:3px solid #4f88bc;border-radius:3px;background:#152230;color:#cbdbea;white-space:pre-wrap;font-size:12px;line-height:1.45}@media(max-width:760px){.timer-role-row{grid-template-columns:repeat(2,minmax(0,1fr))}.timer-role-row button{grid-column:2;justify-self:end}.class-edit{grid-template-columns:1fr}}';
   document.head.appendChild(timerStyle);
   const bossInfoField = document.createElement('div');
   bossInfoField.className = 'field full';
-  bossInfoField.innerHTML = '<label>General boss information</label><textarea id="bossGeneralInfo" placeholder="Shown read-only in this boss strategies"></textarea>';
+  bossInfoField.innerHTML = '<label>' + T('generalBossInfo', 'General boss information') + '</label><textarea id="bossGeneralInfo" placeholder="' + T('generalBossInfoHint', 'Shown read-only in this boss strategies') + '"></textarea>';
   const bossModalGrid = document.querySelector('#bossModal .grid');
   if (bossModalGrid) bossModalGrid.insertBefore(bossInfoField, bossModalGrid.children[2]);
   function syncBossGeneralInfo() {
@@ -50,7 +57,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   strategyApi.get().then((result) => rememberClassFavorites(result.data));
   function potionOptions(potions, kind, selected) {
-    return '<option value="">No preference</option>' + potions.filter((potion) => potion.kind === kind).map((potion) => '<option value="' + potion.id + '"' + (potion.id === selected ? ' selected' : '') + '>' + potion.name + '</option>').join('');
+    return '<option value="">' + T('noPreference', 'No preference') + '</option>' + potions.filter((potion) => potion.kind === kind).map((potion) => '<option value="' + potion.id + '"' + (potion.id === selected ? ' selected' : '') + '>' + potion.name + '</option>').join('');
   }
   function installClassFavorites() {
     const fields = document.getElementById('manageFields');
@@ -58,10 +65,10 @@ window.addEventListener('DOMContentLoaded', () => {
     strategyApi.get().then((result) => {
       const tonic = document.createElement('div');
       tonic.className = 'field';
-      tonic.innerHTML = '<label>Best tonic</label><select id="classFavoriteTonic">' + potionOptions(result.data.potions || [], 'tonic', '') + '</select>';
+      tonic.innerHTML = '<label>' + T('bestTonic', 'Best tonic') + '</label><select id="classFavoriteTonic">' + potionOptions(result.data.potions || [], 'tonic', '') + '</select>';
       const elixir = document.createElement('div');
       elixir.className = 'field';
-      elixir.innerHTML = '<label>Best elixir</label><select id="classFavoriteElixir">' + potionOptions(result.data.potions || [], 'elixir', '') + '</select>';
+      elixir.innerHTML = '<label>' + T('bestElixir', 'Best elixir') + '</label><select id="classFavoriteElixir">' + potionOptions(result.data.potions || [], 'elixir', '') + '</select>';
       fields.appendChild(tonic);
       fields.appendChild(elixir);
     });
@@ -79,7 +86,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const item = (result.data.classes || [])[index];
         if (!item) return;
         const edit = document.createElement('button');
-        edit.type = 'button'; edit.textContent = 'Edit'; edit.dataset.editClass = item.id;
+        edit.type = 'button'; edit.textContent = T('edit', 'Edit'); edit.dataset.editClass = item.id;
         edit.onclick = () => openClassEditor(row, item);
         row.insertBefore(edit, row.querySelector('.danger'));
       });
@@ -91,7 +98,7 @@ window.addEventListener('DOMContentLoaded', () => {
     strategyApi.get().then((result) => {
       const editor = document.createElement('div');
       editor.className = 'class-edit';
-      editor.innerHTML = '<label>Name<input data-name></label><label>Role<select data-role><option value="support">Support</option><option value="dps">DPS</option><option value="tank">Tank</option><option value="dot">DoT</option></select></label><label>Best tonic<select data-tonic></select></label><label>Best elixir<select data-elixir></select></label><button type="button" class="primary" data-save>Save class</button>';
+      editor.innerHTML = '<label>' + T('name', 'Name') + '<input data-name></label><label>' + T('role', 'Role') + '<select data-role><option value="support">Support</option><option value="dps">DPS</option><option value="tank">Tank</option><option value="dot">DoT</option></select></label><label>' + T('bestTonic', 'Best tonic') + '<select data-tonic></select></label><label>' + T('bestElixir', 'Best elixir') + '<select data-elixir></select></label><button type="button" class="primary" data-save>' + T('saveClass', 'Save class') + '</button>';
       const current = (result.data.classes || []).find((entry) => entry.id === item.id) || item;
       editor.querySelector('[data-name]').value = current.name;
       editor.querySelector('[data-role]').value = current.role;
@@ -160,14 +167,14 @@ window.addEventListener('DOMContentLoaded', () => {
         const potions = favorites[index] || [];
         const detail = document.createElement('details');
         detail.className = 'class-consumables';
-        detail.innerHTML = '<summary>Consumables for ' + selectedClass.name + '</summary><div class="consumable-cards"></div>';
+        detail.innerHTML = '<summary>' + T('consumablesFor', 'Consumables for') + ' ' + selectedClass.name + '</summary><div class="consumable-cards"></div>';
         const list = detail.querySelector('.consumable-cards');
         potions.forEach((potion) => {
           const ownedBy = ((counts[potion.name] || {}).characters || []).filter((character) => character.inventory > 0 || character.bank > 0);
           if (ownedBy.length) list.appendChild(createConsumableCard(potion, ownedBy));
         });
-        if (!potions.length) detail.insertAdjacentHTML('beforeend', '<div class="class-consumables-empty">No favorite tonic or elixir configured for this class.</div>');
-        else if (!list.children.length) detail.insertAdjacentHTML('beforeend', '<div class="class-consumables-empty">None of this class consumables are in the synced inventory.</div>');
+        if (!potions.length) detail.insertAdjacentHTML('beforeend', '<div class="class-consumables-empty">' + T('noFavoriteConsumables', 'No favorite tonic or elixir configured for this class.') + '</div>');
+        else if (!list.children.length) detail.insertAdjacentHTML('beforeend', '<div class="class-consumables-empty">' + T('noConsumablesInInventory', 'None of this class consumables are in the synced inventory.') + '</div>');
         slot.appendChild(detail);
       });
     }).catch(() => {});
@@ -205,7 +212,7 @@ window.addEventListener('DOMContentLoaded', () => {
       panel = document.createElement('section');
       panel.id = 'timerRolesPanel';
       panel.className = 'section';
-      panel.innerHTML = '<h3>Timer Roles</h3><p style="margin:0 0 10px;color:#a8b4c0">Each role has its own first-action offset and repeat interval. The action happens when its bar reaches the end.</p><div data-editor></div><button class="primary" data-add>Add role</button><div class="role-filter"><span>Show roles</span><div class="role-filter-actions"><button type="button" data-role-filter-all>All</button><button type="button" data-role-filter-clear>None</button></div><div class="role-filter-options" data-role-filter-options></div></div><div class="timer-actions" style="margin-top:10px"><button class="primary" data-role-toggle>Start timer</button></div><div data-live style="display:grid;gap:10px;margin-top:16px"></div>';
+      panel.innerHTML = '<h3>' + T('timerRoles', 'Timer Roles') + '</h3><p style="margin:0 0 10px;color:#a8b4c0">' + T('timerRolesHelp', 'Each role has its own first-action offset and repeat interval. The action happens when its bar reaches the end.') + '</p><div data-editor></div><button class="primary" data-add>' + T('addRole', 'Add role') + '</button><div class="role-filter"><span>' + T('showRoles', 'Show roles') + '</span><div class="role-filter-actions"><button type="button" data-role-filter-all>' + T('all', 'All') + '</button><button type="button" data-role-filter-clear>' + T('none', 'None') + '</button></div><div class="role-filter-options" data-role-filter-options></div></div><div class="timer-actions" style="margin-top:10px"><button class="primary" data-role-toggle>' + T('startTimer', 'Start timer') + '</button></div><div data-live style="display:grid;gap:10px;margin-top:16px"></div>';
       oldSection.parentNode.insertBefore(panel, oldSection);
       panel.querySelector('[data-role-toggle]').onclick = () => runnerStartedAt ? stopRoleRunner() : startRoleRunner();
       panel.querySelector('[data-role-filter-all]').onclick = () => { const strategy = currentRoleStrategy(); if (!strategy) return; strategy.timerRoles.forEach((role) => roleFilter.add(role.id)); renderRoleFilter(panel, strategy); applyRoleFilter(panel); };
@@ -262,7 +269,7 @@ window.addEventListener('DOMContentLoaded', () => {
       refreshRoleBar(panel, role);
     });
     panel.querySelector('[data-add]').onclick = () => { const role = { id: 'timerRole_' + Date.now().toString(36), name: 'T' + (current.timerRoles.length + 1), offset: 0, interval: 20, typeId: 'taunt', target: 'main', note: '' }; current.timerRoles.push(role); roleFilter.add(role.id); renderRoles(panel, current); };
-    panel.querySelector('[data-role-toggle]').textContent = runnerStartedAt ? 'Stop timer' : 'Start timer';
+    panel.querySelector('[data-role-toggle]').textContent = runnerStartedAt ? T('stopTimer', 'Stop timer') : T('startTimer', 'Start timer');
     renderRoleFilter(panel, current);
     applyRoleFilter(panel);
   }
@@ -295,7 +302,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function updateRoleToggle() {
     const button = document.querySelector('#timerRolesPanel [data-role-toggle]');
-    if (button) button.textContent = runnerStartedAt ? 'Stop timer' : 'Start timer';
+    if (button) button.textContent = runnerStartedAt ? T('stopTimer', 'Stop timer') : T('startTimer', 'Start timer');
   }
   function startRoleRunner() {
     const current = currentRoleStrategy();
@@ -324,12 +331,12 @@ window.addEventListener('DOMContentLoaded', () => {
       const until = sinceFirst < 0 ? -sinceFirst : role.interval - (sinceFirst % role.interval);
       const duration = sinceFirst < 0 ? role.offset : role.interval;
       bar.querySelector('[data-fill]').style.width = (duration ? Math.min(100, (1 - until / duration) * 100) : 100) + '%';
-      bar.querySelector('[data-next]').textContent = 'Action in ' + until.toFixed(1) + 's';
+      bar.querySelector('[data-next]').textContent = T('actionIn', 'Action in') + ' ' + until.toFixed(1) + 's';
       const cycle = sinceFirst < 0 ? -1 : Math.floor(sinceFirst / role.interval);
       if (sinceFirst >= 0 && firedCycles[role.id] !== cycle && until > role.interval - 0.10) {
         firedCycles[role.id] = cycle;
         const fire = bar.querySelector('[data-fire]');
-        fire.textContent = 'Função: ' + role.name + ' — ' + (roleState.timerTypes.find((item) => item.id === role.typeId) || {}).name + ' - ' + targetLabel(role.target);
+        fire.textContent = T('functionLabel', 'Function') + ': ' + role.name + ' — ' + (roleState.timerTypes.find((item) => item.id === role.typeId) || {}).name + ' - ' + targetLabel(role.target);
         fire.style.opacity = '1'; setTimeout(() => { fire.style.opacity = '0'; }, 1000);
       }
     });
@@ -357,7 +364,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const section = document.createElement('section');
   section.style.cssText = 'margin-top:18px';
   const title = document.createElement('h2');
-  title.textContent = 'Consumables';
+  title.textContent = T('consumables', 'Consumables');
   title.style.cssText = 'font-size:12px;color:#aaa;text-transform:uppercase;letter-spacing:.06em';
   const list = document.createElement('div');
   list.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:7px';
