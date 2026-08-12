@@ -133,27 +133,12 @@ function renderPreview(images) {
 // its own page, only "Proto Legion Dark Caster (Merge)" does (proto-legion-dark-caster-merge).
 // Tries the bare name first (the common case), then each known suffix in turn, stopping at
 // the first page that actually has an image. Gives up silently if none match - a missing
-// preview is a lot less disruptive than showing the wrong item's picture.
-const WIKI_DISAMBIGUATION_SUFFIXES = ['', ' (AC)', ' (0 AC)', ' (Rare)', ' (Merge)', ' (Class)', ' (Quest)', ' (Sword)', ' (Pet)'];
-
-// Exceptions: items whose page needs more than one tag stacked together (e.g. "(Class) (AC)")
-// - the generic chain above only ever appends a single suffix per attempt, so it will never
-// construct these on its own. Keyed by the item's plain in-game name (case-insensitive,
-// since the exact capitalization coming back from account.aq.com isn't always predictable);
-// add more entries here as they're found rather than growing the generic suffix list, since
-// these are specific known combinations, not "try every tag against every item".
-const WIKI_NAME_OVERRIDES = {
-    'Legion DoomKnight': ' (Class) (AC)'
-};
-
-function findNameOverride(name) {
-    const lower = name.toLowerCase();
-    const key = Object.keys(WIKI_NAME_OVERRIDES).filter(function(k) { return k.toLowerCase() === lower; })[0];
-    return key ? WIKI_NAME_OVERRIDES[key] : null;
-}
+// preview is a lot less disruptive than showing the wrong item's picture. Suffixes and
+// known multi-tag exceptions live in nameVariants.js, shared with inventory ownership.
+const wikiNameVariants = window.AquaStarWikiNameVariants;
 
 function showPreviewForName(name) {
-    const override = findNameOverride(name);
+    const override = wikiNameVariants.findNameOverride(name);
     if (override) {
         // Try the known-correct combo first; if even that doesn't resolve (e.g. the wiki
         // page moved), fall back to the generic single-suffix chain rather than giving up.
@@ -171,8 +156,8 @@ function showPreviewForName(name) {
 }
 
 function tryNameVariant(name, index) {
-    if (index >= WIKI_DISAMBIGUATION_SUFFIXES.length) return; // exhausted every variant
-    const link = 'http://aqwwiki.wikidot.com/' + name + WIKI_DISAMBIGUATION_SUFFIXES[index];
+    if (index >= wikiNameVariants.disambiguationSuffixes.length) return; // exhausted every variant
+    const link = 'http://aqwwiki.wikidot.com/' + name + wikiNameVariants.disambiguationSuffixes[index];
     fetchAndExtractImages(link)
         .then(function(images) {
             if (images.length > 0) renderPreview(images);

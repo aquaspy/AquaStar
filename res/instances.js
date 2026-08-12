@@ -210,10 +210,12 @@ function _windowAddContext(newWin){
 
         if (isViewUrl){
             const wikiviewDir = path.join(__dirname, 'features', 'wikiview');
-            // hoverPreview.js is the shared fetch/extract/position engine (also used by the
-            // Inventory window); wikiviewsource.js only wires up which elements trigger it.
+            // nameVariants.js provides shared suffix/exception data to both the hover
+            // preview and the main-process ownership matcher. It must run before the hover
+            // engine, which is also used by the standalone Inventory window.
+            const nameVariants = fs.readFileSync(path.join(wikiviewDir, 'nameVariants.js'), 'utf8');
             const hoverPreview = fs.readFileSync(path.join(wikiviewDir, 'hoverPreview.js'), 'utf8');
-            var wikiview = hoverPreview + fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
+            var wikiview = nameVariants + hoverPreview + fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
             if (bWiki){
                 const jquery = fs.readFileSync(path.join(wikiviewDir, 'jquery.min.js'), 'utf8');
                 wikiview = jquery + wikiview

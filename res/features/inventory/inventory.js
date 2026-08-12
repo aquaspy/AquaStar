@@ -15,6 +15,7 @@ const path     = require('path');
 const { app, ipcMain, net, session } = require('electron');
 const constant = require('../../const.js');
 const locale   = require('../../locale.js');
+const wikiNameVariants = require('../wikiview/nameVariants.js');
 
 const inventoryJsonFileName = constant.appName.toLocaleLowerCase() + '_inventory.json'; // "aquastar_inventory.json"
 const inventoryJsonPath = path.join(constant.appDataDirectory, inventoryJsonFileName);
@@ -249,26 +250,23 @@ function _normalizeItemName(name) {
     return typeof name === 'string' ? name.trim().toLowerCase() : '';
 }
 
-// Keep this in sync with WIKI_DISAMBIGUATION_SUFFIXES in
-// res/features/wikiview/hoverPreview.js. These are Wiki page disambiguators rather than
-// part of an item's in-game identity, so ownership intentionally treats the bare name and
-// a name ending in one of these suffixes as the same item. Other parenthetical names (for
-// example, "Voucher of Nulgath (Non-Member)") remain exact matches only.
-const WIKI_DISAMBIGUATION_SUFFIXES = ['', ' (AC)', ' (0 AC)', ' (Rare)', ' (Merge)', ' (Class)', ' (Quest)', ' (Sword)', ' (Pet)'];
+function _normalizeWikiSuffix(suffix) {
+    return typeof suffix === 'string' ? suffix.toLowerCase() : '';
+}
 
 function _wikiBaseItemName(name) {
     const normalized = _normalizeItemName(name);
-    const suffix = WIKI_DISAMBIGUATION_SUFFIXES
-        .slice(1)
-        .map(_normalizeItemName)
+    const suffix = wikiNameVariants.allKnownSuffixes
+        .filter((candidate) => candidate)
+        .map(_normalizeWikiSuffix)
         .find((candidate) => normalized.endsWith(candidate));
     return suffix ? normalized.slice(0, -suffix.length).trim() : normalized;
 }
 
 function _matchesWikiItemName(inventoryName, target) {
     const normalizedInventoryName = _normalizeItemName(inventoryName);
-    return WIKI_DISAMBIGUATION_SUFFIXES.some((suffix) => {
-        return normalizedInventoryName === target + _normalizeItemName(suffix);
+    return wikiNameVariants.getSuffixesForName(target).some((suffix) => {
+        return normalizedInventoryName === target + _normalizeWikiSuffix(suffix);
     });
 }
 
