@@ -24,6 +24,21 @@ function timerEvent(raw, types) {
         player: Number.isInteger(raw.player) && raw.player >= 0 && raw.player < 7 ? raw.player : 0,
         assignment: text(raw.assignment), label: text(raw.label) };
 }
+// A timer role is an independent recurring responsibility: e.g. T1 fires at 6s and every
+// 20s after that, while T2 fires at 16s and every 20s. It deliberately is not a shared
+// event timeline.
+function timerRole(raw, types) {
+    raw = raw || {};
+    return {
+        id: typeof raw.id === 'string' ? raw.id : id('timerRole'),
+        name: text(raw.name) || 'T1',
+        offset: Math.max(0, Number(raw.offset) || 0),
+        interval: Math.max(1, Number(raw.interval) || 1),
+        typeId: types.some((type) => type.id === raw.typeId) ? raw.typeId : types[0].id,
+        target: ['main', 'left', 'right'].indexOf(raw.target) !== -1 ? raw.target : 'main',
+        note: text(raw.note)
+    };
+}
 function strategy(raw, boss, types) {
     raw = raw || {};
     const slots = Array.isArray(raw.classIds) ? raw.classIds.slice(0, limit(boss)).map((value) => typeof value === 'string' ? value : '') : [];
@@ -32,6 +47,7 @@ function strategy(raw, boss, types) {
     return { id: typeof raw.id === 'string' ? raw.id : id('strategy'), name: text(raw.name) || 'Strategy', classIds: slots,
         bossNotes: typeof raw.bossNotes === 'string' ? raw.bossNotes : '',
         strategyNotes: typeof raw.strategyNotes === 'string' ? raw.strategyNotes : (typeof raw.notes === 'string' ? raw.notes : ''),
+        timerRoles: Array.isArray(raw.timerRoles) ? raw.timerRoles.map((item) => timerRole(item, types)) : [],
         timers: { intro: Array.isArray(rawTimers.intro) ? rawTimers.intro.map((item) => timerEvent(item, types)) : [],
             loop: Array.isArray(rawTimers.loop) ? rawTimers.loop.map((item) => timerEvent(item, types)) : [] } };
 }
@@ -48,7 +64,7 @@ function migrate(raw) {
         if (!potions.some((potion) => potion.name.toLowerCase() === item.name.toLowerCase())) potions.push(item);
     });
     const classes = (Array.isArray(raw.classes) ? raw.classes : []).map((item) => ({ id: typeof item.id === 'string' ? item.id : id('class'), name: text(item.name), role: ROLES.indexOf(item.role) !== -1 ? item.role : 'support', favorites: { tonicId: text(item.favorites && item.favorites.tonicId), elixirId: text(item.favorites && item.favorites.elixirId), potionId: text(item.favorites && item.favorites.potionId) } })).filter((item) => item.name);
-    const bosses = (Array.isArray(raw.bosses) ? raw.bosses : []).map((item) => ({ id: typeof item.id === 'string' ? item.id : id('boss'), name: text(item.name), joinCommand: text(item.joinCommand), reset: item.reset === 'daily' ? 'daily' : 'weekly', hasZone: item.hasZone === true, kind: item.kind === 'challenge' ? 'challenge' : 'ultra', strategies: [] })).filter((item) => item.name);
+    const bosses = (Array.isArray(raw.bosses) ? raw.bosses : []).map((item) => ({ id: typeof item.id === 'string' ? item.id : id('boss'), name: text(item.name), joinCommand: text(item.joinCommand), generalInfo: typeof item.generalInfo === 'string' ? item.generalInfo : '', reset: item.reset === 'daily' ? 'daily' : 'weekly', hasZone: item.hasZone === true, kind: item.kind === 'challenge' ? 'challenge' : 'ultra', strategies: [] })).filter((item) => item.name);
     // The first version stored strategies at the root. Adopt them under their boss.
     const legacy = Array.isArray(raw.strategies) ? raw.strategies : [];
     bosses.forEach((boss) => {
