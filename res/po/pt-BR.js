@@ -313,12 +313,13 @@ exports.todoMessages = {
 }
 
 exports.strategyMessages = {
-    title:"AquaStar - Estratégia", heading:"Estratégia", description:"Planeje composições e anotações para Ultra e Challenge Bosses.",
-    addBoss:"Adicionar Boss", manageClasses:"Gerenciar Classes", saved:"Salvo", empty:"Nenhum boss cadastrado. Adicione um para começar.",
-    ultra:"Ultra Boss", challenge:"Challenge Boss", weekly:"Semanal", daily:"Diária", players:"jogadores", zone:"Zona", noJoin:"Sem /join definido",
-    open:"Abrir Estratégia", create:"Criar Estratégia", edit:"Editar", delete:"Excluir", confirmDelete:"Excluir este boss e sua estratégia?",
-    back:"Todos os Bosses", team:"Composição do Time", notes:"Notas da Estratégia", save:"Salvar Estratégia", slot:"Jogador", noClass:"Nenhuma classe selecionada",
-    editBoss:"Editar Boss", name:"Nome", join:"Comando /join", reset:"Reset", kind:"Tipo de boss", role:"Função", cancel:"Cancelar", close:"Fechar", addClass:"Adicionar Classe",
+    title:"AquaStar - Estratégia", heading:"Estratégia", description:"Planeje composições, táticas e mecânicas cronometradas para Ultra e Challenge Bosses.",
+    addBoss:"Adicionar Boss", manageClasses:"Classes", managePotions:"Potes", manageTimerTypes:"Tipos de Timer", saved:"Salvo", emptyBosses:"Nenhum boss cadastrado. Adicione um para começar.", emptyStrategies:"Nenhuma estratégia cadastrada.",
+    ultra:"Ultra Boss", challenge:"Challenge Boss", weekly:"Semanal", daily:"Diária", players:"jogadores", zone:"Zona", noJoin:"Sem /join definido", main:"Boss", left:"Esquerda", right:"Direita",
+    open:"Abrir", edit:"Editar", delete:"Excluir", deleteBossConfirm:"Excluir este boss e todas as estratégias dele?", deleteStrategyConfirm:"Excluir esta estratégia?",
+    bosses:"Todos os Bosses", strategies:"Estratégias", addStrategy:"Adicionar Estratégia", editStrategy:"Editar Estratégia", team:"Composição do Time", bossNotes:"Detalhes do Boss", strategyNotes:"Detalhes da Estratégia", save:"Salvar", player:"Jogador", noClass:"Nenhuma classe selecionada",
+    editBoss:"Editar Boss", name:"Nome", join:"Comando /join", reset:"Reset", kind:"Tipo de boss", role:"Função", cancel:"Cancelar", close:"Fechar", add:"Adicionar",
+    timers:"Timers", intro:"Intro (executa uma vez)", loop:"Loop (repete)", addTimer:"Adicionar Timer", delay:"Intervalo (segundos)", timerType:"Efeito", target:"Alvo", assignment:"Função", timerLabel:"Nota", timerRunner:"Timer ao Vivo", startTimer:"Iniciar Timer", stopTimer:"Parar Timer", timerIdle:"Pronto — inicie o timer para executar a estratégia.", shortcut:"Atalho global de alternância (com esta estratégia aberta)", shortcutError:"Atalho indisponível", potionKind:"Categoria", tonic:"Tônico", elixir:"Elixir", potion:"Pote",
     roles:{support:"Suporte",dps:"DPS",tank:"Tank",dot:"Dano ao Longo do Tempo (DoT)"}
 }
 

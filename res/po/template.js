@@ -270,7 +270,7 @@ exports.todoMessages = {
 }
 
 exports.strategyMessages = {
-    title:"", heading:"", description:"", addBoss:"", manageClasses:"", saved:"", empty:"", ultra:"", challenge:"", weekly:"", daily:"", players:"", zone:"", noJoin:"", open:"", create:"", edit:"", delete:"", confirmDelete:"", back:"", team:"", notes:"", save:"", slot:"", noClass:"", editBoss:"", name:"", join:"", reset:"", kind:"", role:"", cancel:"", close:"", addClass:"", roles:{support:"",dps:"",tank:"",dot:""}
+    title:"", heading:"", description:"", addBoss:"", manageClasses:"", managePotions:"", manageTimerTypes:"", saved:"", emptyBosses:"", emptyStrategies:"", ultra:"", challenge:"", weekly:"", daily:"", players:"", zone:"", noJoin:"", main:"", left:"", right:"", open:"", edit:"", delete:"", deleteBossConfirm:"", deleteStrategyConfirm:"", bosses:"", strategies:"", addStrategy:"", editStrategy:"", team:"", bossNotes:"", strategyNotes:"", save:"", player:"", noClass:"", editBoss:"", name:"", join:"", reset:"", kind:"", role:"", cancel:"", close:"", add:"", timers:"", intro:"", loop:"", addTimer:"", delay:"", timerType:"", target:"", assignment:"", timerLabel:"", timerRunner:"", startTimer:"", stopTimer:"", timerIdle:"", shortcut:"", shortcutError:"", potionKind:"", tonic:"", elixir:"", potion:"", roles:{support:"",dps:"",tank:"",dot:""}
 }
 
 exports.inventoryMessages = {

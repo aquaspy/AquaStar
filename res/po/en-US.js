@@ -312,12 +312,13 @@ exports.todoMessages = {
 }
 
 exports.strategyMessages = {
-    title:"AquaStar - Strategy", heading:"Strategy", description:"Plan team compositions and notes for Ultra and Challenge bosses.",
-    addBoss:"Add Boss", manageClasses:"Manage Classes", saved:"Saved", empty:"No bosses yet. Add one to begin planning.",
-    ultra:"Ultra Boss", challenge:"Challenge Boss", weekly:"Weekly", daily:"Daily", players:"players", zone:"Zone", noJoin:"No /join set",
-    open:"Open Strategy", create:"Create Strategy", edit:"Edit", delete:"Delete", confirmDelete:"Delete this boss and its strategy?",
-    back:"All Bosses", team:"Team Composition", notes:"Strategy Notes", save:"Save Strategy", slot:"Player", noClass:"No class selected",
-    editBoss:"Edit Boss", name:"Name", join:"/Join command", reset:"Reset", kind:"Boss type", role:"Role", cancel:"Cancel", close:"Close", addClass:"Add Class",
+    title:"AquaStar - Strategy", heading:"Strategy", description:"Plan team compositions, tactics and timed mechanics for Ultra and Challenge bosses.",
+    addBoss:"Add Boss", manageClasses:"Classes", managePotions:"Potions", manageTimerTypes:"Timer Types", saved:"Saved", emptyBosses:"No bosses yet. Add one to begin planning.", emptyStrategies:"No strategies yet.",
+    ultra:"Ultra Boss", challenge:"Challenge Boss", weekly:"Weekly", daily:"Daily", players:"players", zone:"Zone", noJoin:"No /join set", main:"Boss", left:"Left", right:"Right",
+    open:"Open", edit:"Edit", delete:"Delete", deleteBossConfirm:"Delete this boss and all of its strategies?", deleteStrategyConfirm:"Delete this strategy?",
+    bosses:"All Bosses", strategies:"Strategies", addStrategy:"Add Strategy", editStrategy:"Edit Strategy", team:"Team Composition", bossNotes:"Boss Details", strategyNotes:"Strategy Details", save:"Save", player:"Player", noClass:"No class selected",
+    editBoss:"Edit Boss", name:"Name", join:"/Join command", reset:"Reset", kind:"Boss type", role:"Role", cancel:"Cancel", close:"Close", add:"Add",
+    timers:"Timers", intro:"Intro (runs once)", loop:"Loop (repeats)", addTimer:"Add Timer", delay:"Delay (seconds)", timerType:"Effect", target:"Target", assignment:"Assignment", timerLabel:"Note", timerRunner:"Live Timer", startTimer:"Start Timer", stopTimer:"Stop Timer", timerIdle:"Ready — start the timer to run this strategy.", shortcut:"Global toggle shortcut (while this strategy is open)", shortcutError:"Shortcut unavailable", potionKind:"Potion category", tonic:"Tonic", elixir:"Elixir", potion:"Potion",
     roles:{support:"Support",dps:"DPS",tank:"Tank",dot:"Damage over Time (DoT)"}
 }
 

@@ -401,6 +401,37 @@ ipcMain.handle('matchWikiItems', (event, wikiTitles) => {
     return results;
 });
 
+// Strategy's consumables panel needs quantities, not just an owned/not-owned badge. This
+// is deliberately exact-name matching: its curated potion list contains in-game names and
+// must not merge AC/member/tagged variants into a normal consumable total.
+ipcMain.handle('getInventoryItemCounts', (event, itemNames) => {
+    if (!Array.isArray(itemNames)) return {};
+    const names = itemNames.filter((name) => typeof name === 'string').slice(0, 200);
+    const wanted = {};
+    names.forEach((name) => { wanted[_normalizeItemName(name)] = name; });
+    const counts = {};
+    names.forEach((name) => { counts[name] = { characters: [] }; });
+    const state = _loadInventory();
+    Object.keys(state.characters).forEach((charId) => {
+        const character = state.characters[charId];
+        const characterCounts = {};
+        names.forEach((name) => { characterCounts[name] = { inventory: 0, bank: 0 }; });
+        character.inventory.forEach((item) => {
+            // The defaults are normal consumables only. Do not report a tagged AC/member copy.
+            if (item.member || item.coins) return;
+            const originalName = wanted[_normalizeItemName(item.name)];
+            if (!originalName) return;
+            if (item.bank) characterCounts[originalName].bank += item.count;
+            else characterCounts[originalName].inventory += item.count;
+        });
+        names.forEach((name) => {
+            const quantity = characterCounts[name];
+            counts[name].characters.push({ id: charId, name: character.name || ('Character ' + charId), inventory: quantity.inventory, bank: quantity.bank });
+        });
+    });
+    return counts;
+});
+
 // Kept in the main process so the Inventory window remains sandboxed.  The destination is
 // deliberately built from a plain item name and restricted to AQW Wiki's own domain.
 ipcMain.handle('openInventoryItemWiki', (event, itemName) => {
