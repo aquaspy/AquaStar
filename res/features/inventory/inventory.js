@@ -25,30 +25,36 @@ const BUYBACK_PAGE_SIZE = 100;
 
 function _migrateItem(raw) {
     raw = raw || {};
+    const name = typeof raw.name === 'string' ? raw.name.trimStart() : '';
+    const type = typeof raw.type === 'string' ? raw.type : '';
+    const added = typeof raw.added === 'string' ? raw.added : null;
     return {
         id:     Number.isFinite(raw.id) ? raw.id : null,
-        name:   typeof raw.name === 'string' ? raw.name : '',
-        type:   typeof raw.type === 'string' ? raw.type : '',
+        name:   name, type: type,
         count:  Number.isFinite(raw.count) ? raw.count : 0,
         bank:   raw.bank === true,
         coins:  raw.coins === true,
         member: raw.member === true,
-        added:  typeof raw.added === 'string' ? raw.added : null
+        added:  added,
+        searchName: name.toLowerCase(), sortName: name.toLowerCase(), addedAt: new Date(added).getTime() || 0
     };
 }
 
 function _migrateBuyBackItem(raw) {
     raw = raw || {};
+    const name = typeof raw.name === 'string' ? raw.name.trimStart() : '';
+    const type = typeof raw.type === 'string' ? raw.type : '';
+    const inserted = typeof raw.inserted === 'string' ? raw.inserted : null;
     return {
         itemId:     Number.isFinite(raw.itemId) ? raw.itemId : null,
-        name:       typeof raw.name === 'string' ? raw.name : '',
-        type:       typeof raw.type === 'string' ? raw.type : '',
+        name:       name, type: type,
         cost:       Number.isFinite(raw.cost) ? raw.cost : 0,
         amount:     Number.isFinite(raw.amount) ? raw.amount : 0,
-        inserted:   typeof raw.inserted === 'string' ? raw.inserted : null,
+        inserted:   inserted,
         typeId:     Number.isFinite(raw.typeId) ? raw.typeId : null,
         rarity:     Number.isFinite(raw.rarity) ? raw.rarity : null,
-        rarityName: typeof raw.rarityName === 'string' ? raw.rarityName : ''
+        rarityName: typeof raw.rarityName === 'string' ? raw.rarityName : '',
+        searchName: name.toLowerCase(), sortName: name.toLowerCase(), insertedAt: new Date(inserted).getTime() || 0
     };
 }
 
@@ -70,7 +76,7 @@ function _migrateCharacter(charId, raw) {
 
 function _loadInventory() {
     if (!fs.existsSync(inventoryJsonPath)) {
-        return { characters: {}, lastActiveCharId: '' };
+        return { characters: {}, lastActiveCharId: '', labels: _migrateLabels({}) };
     }
     try {
         const parsed = JSON.parse(fs.readFileSync(inventoryJsonPath));
@@ -81,15 +87,44 @@ function _loadInventory() {
         });
         return {
             characters: characters,
-            lastActiveCharId: typeof parsed.lastActiveCharId === 'string' ? parsed.lastActiveCharId : ''
+            lastActiveCharId: typeof parsed.lastActiveCharId === 'string' ? parsed.lastActiveCharId : '',
+            labels: _migrateLabels(parsed.labels)
         };
     } catch (e) {
         console.log('[AquaStar] Failed to parse ' + inventoryJsonPath + ': ' + e.message);
-        return { characters: {}, lastActiveCharId: '' };
+        return { characters: {}, lastActiveCharId: '', labels: _migrateLabels({}) };
     }
 }
 
+function _migrateLabels(raw) {
+    raw = raw || {};
+    const validColor = (value) => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : '#4da3ff';
+    const tags = (Array.isArray(raw.tags) ? raw.tags : []).map((tag) => ({
+        id: typeof tag.id === 'string' ? tag.id : 'label_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
+        name: typeof tag.name === 'string' ? tag.name.trim() : '', color: validColor(tag.color),
+        scope: tag.scope === 'global' || tag.scope === 'character' ? tag.scope : null
+    })).filter((tag) => tag.name);
+    const maps = (source) => {
+        const out = {};
+        if (!source || typeof source !== 'object') return out;
+        Object.keys(source).forEach((key) => { if (Array.isArray(source[key])) out[key] = source[key].filter((id) => tags.some((tag) => tag.id === id)); });
+        return out;
+    };
+    const characterItemLabels = {};
+    if (raw.characterItemLabels && typeof raw.characterItemLabels === 'object') Object.keys(raw.characterItemLabels).forEach((charId) => { characterItemLabels[charId] = maps(raw.characterItemLabels[charId]); });
+    // Older label data allowed the same tag in both maps. Infer its scope from an existing
+    // global assignment so migration remains visible while future assignments are unambiguous.
+    const globalItemLabels = maps(raw.globalItemLabels);
+    Object.keys(globalItemLabels).forEach((key) => globalItemLabels[key].forEach((id) => {
+        const tag = tags.find((entry) => entry.id === id);
+        if (tag && !tag.scope) tag.scope = 'global';
+    }));
+    tags.forEach((tag) => { if (!tag.scope) tag.scope = 'character'; });
+    return { tags: tags, globalItemLabels: globalItemLabels, characterItemLabels: characterItemLabels };
+}
+
 function _saveInventory(state) {
+    state.labels = _migrateLabels(state.labels);
     fs.writeFileSync(inventoryJsonPath, JSON.stringify(state, null, 4));
 }
 
@@ -355,6 +390,13 @@ ipcMain.handle('getInventory', () => {
     return { data: _loadInventory(), savePath: inventoryJsonPath };
 });
 
+ipcMain.handle('saveInventoryLabels', (event, labels) => {
+    const state = _loadInventory();
+    state.labels = _migrateLabels(labels);
+    _saveInventory(state);
+    return { labels: state.labels };
+});
+
 ipcMain.handle('getInventoryMessages', () => {
     return locale.strings.inventoryMessages;
 });
@@ -401,13 +443,42 @@ ipcMain.handle('matchWikiItems', (event, wikiTitles) => {
     return results;
 });
 
+// Strategy's consumables panel needs quantities, not just an owned/not-owned badge. This
+// is deliberately exact-name matching: its curated potion list contains in-game names and
+// must not merge AC/member/tagged variants into a normal consumable total.
+ipcMain.handle('getInventoryItemCounts', (event, itemNames) => {
+    if (!Array.isArray(itemNames)) return {};
+    const names = itemNames.filter((name) => typeof name === 'string').slice(0, 200);
+    const wanted = {};
+    names.forEach((name) => { wanted[_normalizeItemName(name)] = name; });
+    const counts = {};
+    names.forEach((name) => { counts[name] = { characters: [] }; });
+    const state = _loadInventory();
+    Object.keys(state.characters).forEach((charId) => {
+        const character = state.characters[charId];
+        const characterCounts = {};
+        names.forEach((name) => { characterCounts[name] = { inventory: 0, bank: 0 }; });
+        character.inventory.forEach((item) => {
+            // Consumables are normal items except Dark Potion, whose only relevant version is AC.
+            if (item.member || (item.coins && _normalizeItemName(item.name) !== _normalizeItemName('Dark Potion'))) return;
+            const originalName = wanted[_normalizeItemName(item.name)];
+            if (!originalName) return;
+            if (item.bank) characterCounts[originalName].bank += item.count;
+            else characterCounts[originalName].inventory += item.count;
+        });
+        names.forEach((name) => {
+            const quantity = characterCounts[name];
+            counts[name].characters.push({ id: charId, name: character.name || ('Character ' + charId), inventory: quantity.inventory, bank: quantity.bank });
+        });
+    });
+    return counts;
+});
+
 // Kept in the main process so the Inventory window remains sandboxed.  The destination is
 // deliberately built from a plain item name and restricted to AQW Wiki's own domain.
 ipcMain.handle('openInventoryItemWiki', (event, itemName) => {
     if (typeof itemName !== 'string' || !itemName.trim()) return { ok: false };
-    const slug = itemName.trim().toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
+    const slug = wikiNameVariants.toWikiSlug(itemName);
     if (!slug) return { ok: false };
     require('../../instances.js').newBrowserWindow('http://aqwwiki.wikidot.com/' + slug);
     return { ok: true };

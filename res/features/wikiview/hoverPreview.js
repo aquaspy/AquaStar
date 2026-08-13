@@ -88,7 +88,8 @@ function showPreview(link) {
 // Fetches a wiki page and pulls out its item image(s), or resolves to [] if the page
 // doesn't exist / has none - never rejects for a missing page, only for a genuine network
 // failure, so callers can treat "no images" as "try the next thing" rather than an error.
-function fetchAndExtractImages(link) {
+function fetchAndExtractImages(link, depth) {
+    depth = depth || 0;
     return fetchWikiHtml(link)
         .then(function(html) {
             // parse text. The explicit <base> keeps any relative image URLs anchored
@@ -98,8 +99,46 @@ function fetchAndExtractImages(link) {
             return new DOMParser().parseFromString('<base href="http://aqwwiki.wikidot.com/">' + html, "text/html");
         })
         .then(function(doc) {
+            if (depth < 2 && isDisambiguationPage(doc, link)) {
+                return tryDisambiguationLinks(doc, depth + 1);
+            }
             return extractItemImages(doc);
         });
+}
+
+// A Wiki disambiguation page has a bare breadcrumb, no item/category metadata, and a list
+// of page-content links. Its first image is often site/social chrome, not an AQW item.
+// Follow its item links until one resolves to a real item image instead.
+function isDisambiguationPage(doc, link) {
+    const $content = $(doc).find('#page-content').first();
+    if (!$content.length) return false;
+    const crumbs = $(doc).find('#breadcrumbs').text().replace(/\s+/g, ' ').trim();
+    const hasItemMetadata = $content.find('.page-tags, .wiki-content-table, .yui-navset').length > 0;
+    // Normal item pages include their category trail, e.g. "Wiki » Items » Misc. Items
+    // » Item Name". A true disambiguation page has only "Wiki » Title".
+    const breadcrumbLevels = (crumbs.match(/»/g) || []).length;
+    const contentLinks = $content.find('a[href]').length;
+    const result = !hasItemMetadata && breadcrumbLevels === 1 && /^AQWorlds Wiki\s*»/i.test(crumbs) && contentLinks > 0;
+    return result;
+}
+
+function tryDisambiguationLinks(doc, depth) {
+    const links = [];
+    $(doc).find('#page-content a[href]').each(function () {
+        const href = $(this).attr('href') || '';
+        if (!href || /^(#|javascript:|mailto:)/i.test(href) || /(^|\/)category:/i.test(href)) return;
+        let url;
+        try { url = new URL(href, 'http://aqwwiki.wikidot.com/').href; } catch (e) { return; }
+        if (!/^http:\/\/aqwwiki\.wikidot\.com\//i.test(url) || links.indexOf(url) !== -1) return;
+        links.push(url);
+    });
+    function next(index) {
+        if (index >= links.length) return Promise.resolve([]);
+        return fetchAndExtractImages(links[index], depth).then(function (images) {
+            return images.length ? images : next(index + 1);
+        }).catch(function () { return next(index + 1); });
+    }
+    return next(0);
 }
 
 function renderPreview(images) {
@@ -138,11 +177,18 @@ function renderPreview(images) {
 const wikiNameVariants = window.AquaStarWikiNameVariants;
 
 function showPreviewForName(name) {
+    const pageOverride = wikiNameVariants.findPageOverride(name);
+    if (pageOverride) {
+        fetchAndExtractImages('http://aqwwiki.wikidot.com/' + pageOverride)
+            .then(function(images) { if (images.length > 0) renderPreview(images); })
+            .catch(function() {});
+        return;
+    }
     const override = wikiNameVariants.findNameOverride(name);
     if (override) {
         // Try the known-correct combo first; if even that doesn't resolve (e.g. the wiki
         // page moved), fall back to the generic single-suffix chain rather than giving up.
-        fetchAndExtractImages('http://aqwwiki.wikidot.com/' + name + override)
+        fetchAndExtractImages('http://aqwwiki.wikidot.com/' + wikiNameVariants.toWikiSlug(name + override))
             .then(function(images) {
                 if (images.length > 0) renderPreview(images);
                 else tryNameVariant(name, 0);
@@ -157,7 +203,7 @@ function showPreviewForName(name) {
 
 function tryNameVariant(name, index) {
     if (index >= wikiNameVariants.disambiguationSuffixes.length) return; // exhausted every variant
-    const link = 'http://aqwwiki.wikidot.com/' + name + wikiNameVariants.disambiguationSuffixes[index];
+    const link = 'http://aqwwiki.wikidot.com/' + wikiNameVariants.toWikiSlug(name + wikiNameVariants.disambiguationSuffixes[index]);
     fetchAndExtractImages(link)
         .then(function(images) {
             if (images.length > 0) renderPreview(images);
@@ -208,7 +254,7 @@ function extractItemImages(doc) {
     // icons (costs AC, seasonal item, etc.) sprinkled throughout the page text.
     let fallback = null;
     $content.find("img").each(function () {
-        if (!/wdfiles\.com\/local--files\/image-tags\//i.test(this.src)) {
+        if (!/wdfiles\.com\/local--files\/image-tags\/|wdfiles\.com\/local--files\/css:homepage\/|twitter\.png|facebook\.png/i.test(this.src)) {
             fallback = this;
             return false;
         }

@@ -1,0 +1,42 @@
+{
+    "potions": [
+        { "id": "tonic-body", "name": "Body Tonic", "kind": "tonic" },
+        { "id": "tonic-fate", "name": "Fate Tonic", "kind": "tonic" },
+        { "id": "tonic-mastery", "name": "Mastery Tonic", "kind": "tonic" },
+        { "id": "tonic-might", "name": "Might Tonic", "kind": "tonic" },
+        { "id": "tonic-sage", "name": "Sage Tonic", "kind": "tonic" },
+        { "id": "tonic-unstable-fate", "name": "Unstable Fate Tonic", "kind": "tonic" },
+        { "id": "tonic-unstable-sage", "name": "Unstable Sage Tonic", "kind": "tonic" },
+        { "id": "elixir-battle", "name": "Battle Elixir", "kind": "elixir" },
+        { "id": "elixir-destruction", "name": "Destruction Elixir", "kind": "elixir" },
+        { "id": "elixir-divine", "name": "Divine Elixir", "kind": "elixir" },
+        { "id": "elixir-potent-battle", "name": "Potent Battle Elixir", "kind": "elixir" },
+        { "id": "elixir-potent-destruction", "name": "Potent Destruction Elixir", "kind": "elixir" },
+        { "id": "elixir-potent-elusion", "name": "Potent Elusion Elixir", "kind": "elixir" },
+        { "id": "elixir-potent-malevolence", "name": "Potent Malevolence Elixir", "kind": "elixir" },
+        { "id": "elixir-potent-revitalize", "name": "Potent Revitalize Elixir", "kind": "elixir" },
+        { "id": "elixir-potent-trueshot", "name": "Potent Trueshot Elixir", "kind": "elixir" },
+        { "id": "elixir-revitalize", "name": "Revitalize Elixir", "kind": "elixir" },
+        { "id": "elixir-unstable-divine", "name": "Unstable Divine Elixir", "kind": "elixir" },
+        { "id": "elixir-unstable-keen", "name": "Unstable Keen Elixir", "kind": "elixir" },
+        { "id": "elixir-unstable-malevolence", "name": "Unstable Malevolence Elixir", "kind": "elixir" },
+        { "id": "elixir-unstable-velocity", "name": "Unstable Velocity Elixir", "kind": "elixir" },
+        { "id": "potion-dark", "name": "Dark Potion", "kind": "potion" },
+        { "id": "potion-potent-barrier", "name": "Potent Barrier Potion", "kind": "potion" },
+        { "id": "potion-potent-honor", "name": "Potent Honor Potion", "kind": "potion" },
+        { "id": "potion-potent-life", "name": "Potent Life Potion", "kind": "potion" },
+        { "id": "potion-potent-malice", "name": "Potent Malice Potion", "kind": "potion" },
+        { "id": "potion-potent-soul", "name": "Potent Soul Potion", "kind": "potion" },
+        { "id": "potion-potent-vigor", "name": "Potent Vigor Potion", "kind": "potion" },
+        { "id": "potion-felicitous-philtre", "name": "Felicitous Philtre", "kind": "potion" },
+        { "id": "potion-scroll-of-enrage", "name": "Scroll of Enrage", "kind": "potion" }
+    ],
+    "classes": [],
+    "bosses": [],
+    "timerTypes": [
+        { "id": "taunt", "name": "Taunt" },
+        { "id": "decay", "name": "Decay" },
+        { "id": "zone", "name": "Zone" }
+    ],
+    "timerShortcut": "Alt+Shift+U"
+}

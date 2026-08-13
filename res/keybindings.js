@@ -93,6 +93,8 @@ const processKeybings = function (){
     // Open Inventory screen - synced account.aq.com Inventory/BuyBack browser
     addKeybind(k.inventory, ()=>{inst.openInventoryWindow()});
 
+    addKeybind(k.strategy, ()=>{inst.openStrategyWindow()});
+
     // Toggle Fullscreen
     addKeybind(k.fullscreen,(focusedWin) => {
         focusedWin.setFullScreen(!focusedWin.isFullScreen());

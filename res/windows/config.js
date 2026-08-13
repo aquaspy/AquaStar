@@ -137,3 +137,11 @@ exports.inventoryConfig = {
     }
 };
 exports.inventoryUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'inventory', 'inventory.html'));
+
+exports.strategyConfig = {
+    width: 1040, height: 680, useContentSize: true, icon: iconPath, resizable: true,
+    webPreferences: { nodeIntegration: false, sandbox: true, webviewTag: false,
+        preload: path.join(appRoot, 'res', 'features', 'strategy', 'preload_strategy.js'),
+        plugins: false, contextIsolation: true }
+};
+exports.strategyUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'strategy', 'strategy.html'));
