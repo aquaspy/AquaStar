@@ -101,7 +101,8 @@ function _migrateLabels(raw) {
     const validColor = (value) => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : '#4da3ff';
     const tags = (Array.isArray(raw.tags) ? raw.tags : []).map((tag) => ({
         id: typeof tag.id === 'string' ? tag.id : 'label_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
-        name: typeof tag.name === 'string' ? tag.name.trim() : '', color: validColor(tag.color)
+        name: typeof tag.name === 'string' ? tag.name.trim() : '', color: validColor(tag.color),
+        scope: tag.scope === 'global' || tag.scope === 'character' ? tag.scope : null
     })).filter((tag) => tag.name);
     const maps = (source) => {
         const out = {};
@@ -111,7 +112,15 @@ function _migrateLabels(raw) {
     };
     const characterItemLabels = {};
     if (raw.characterItemLabels && typeof raw.characterItemLabels === 'object') Object.keys(raw.characterItemLabels).forEach((charId) => { characterItemLabels[charId] = maps(raw.characterItemLabels[charId]); });
-    return { tags: tags, globalItemLabels: maps(raw.globalItemLabels), characterItemLabels: characterItemLabels };
+    // Older label data allowed the same tag in both maps. Infer its scope from an existing
+    // global assignment so migration remains visible while future assignments are unambiguous.
+    const globalItemLabels = maps(raw.globalItemLabels);
+    Object.keys(globalItemLabels).forEach((key) => globalItemLabels[key].forEach((id) => {
+        const tag = tags.find((entry) => entry.id === id);
+        if (tag && !tag.scope) tag.scope = 'global';
+    }));
+    tags.forEach((tag) => { if (!tag.scope) tag.scope = 'character'; });
+    return { tags: tags, globalItemLabels: globalItemLabels, characterItemLabels: characterItemLabels };
 }
 
 function _saveInventory(state) {

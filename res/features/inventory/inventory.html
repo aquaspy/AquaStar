@@ -87,7 +87,7 @@
   .label-chip.active { color:#fff; border-color:var(--label-color); background:#303030; }
   .label-dot { width:8px; height:8px; border-radius:50%; background:var(--label-color); display:inline-block; }
   .item-labels { display:inline-flex; gap:3px; margin-left:12px; vertical-align:middle; }
-  .item-label { width:8px; height:8px; border-radius:50%; background:var(--label-color); display:inline-block; }
+  .item-label { width:11px; height:11px; border-radius:50%; background:var(--label-color); display:inline-block; }
   .assign-label-button { margin-left:8px; padding:1px 5px; color:#9cc9ff; border-color:#345875; background:#192534; }
   .assign-label-button:hover { background:#22384f; }
   .label-manage { margin-left:auto; }
@@ -100,7 +100,8 @@
   .modal-row { display:flex; gap:7px; align-items:center; padding:8px 0; border-bottom:1px solid #2a2a2a; }
   .modal-row input[type=text] { flex:1; }
   .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
-  .assignment-scope { display:flex; gap:12px; color:#aaa; font-size:12px; margin:10px 0; }
+  .label-scope-select { flex:0 0 170px; }
+  .label-scope-note { margin:10px 0; color:#9a9a9a; font-size:12px; line-height:1.4; }
 
   .form-checkbox { display:flex; align-items:center; gap:5px; font-size:12px; color:#9a9a9a; white-space:nowrap; }
   .form-checkbox input { cursor:pointer; }
@@ -161,8 +162,8 @@
   </div>
   <div id="rows"></div>
 </div>
-<div id="labelsModal" class="overlay"><div class="modal"><h2 id="labelsModalTitle"></h2><div class="modal-row"><input id="newLabelName" class="text-input" type="text"><input id="newLabelColor" type="color" value="#4da3ff"><button id="addLabelBtn" class="primary" type="button"></button></div><div id="labelsList"></div><div class="modal-actions"><button id="closeLabelsBtn" type="button"></button></div></div></div>
-<div id="assignLabelsModal" class="overlay"><div class="modal"><h2 id="assignLabelsTitle"></h2><div id="assignLabelsOptions" class="label-filter-options"></div><div class="assignment-scope"><label><input type="radio" name="labelScope" value="character" checked> <span id="labelScopeCharacter"></span></label><label><input type="radio" name="labelScope" value="global"> <span id="labelScopeGlobal"></span></label></div><div class="modal-actions"><button id="cancelAssignLabelsBtn" type="button"></button><button id="saveAssignLabelsBtn" class="primary" type="button"></button></div></div></div>
+<div id="labelsModal" class="overlay"><div class="modal"><h2 id="labelsModalTitle"></h2><div class="modal-row"><input id="newLabelName" class="text-input" type="text"><input id="newLabelColor" type="color" value="#4da3ff"><select id="newLabelScope" class="select-input label-scope-select"><option value="character"></option><option value="global"></option></select><button id="addLabelBtn" class="primary" type="button"></button></div><div id="labelsList"></div><div class="modal-actions"><button id="closeLabelsBtn" type="button"></button></div></div></div>
+<div id="assignLabelsModal" class="overlay"><div class="modal"><h2 id="assignLabelsTitle"></h2><p id="assignLabelsHint" class="label-scope-note"></p><div id="assignLabelsOptions" class="label-filter-options"></div><div class="modal-actions"><button id="cancelAssignLabelsBtn" type="button"></button><button id="saveAssignLabelsBtn" class="primary" type="button"></button></div></div></div>
 
 <script src="../wikiview/jquery.min.js"></script>
 <script src="../wikiview/nameVariants.js"></script>
@@ -219,7 +220,10 @@
   function itemLabelIds(item) {
     const key = itemLabelKey(item);
     const local = activeCharId && labels.characterItemLabels[activeCharId] ? labels.characterItemLabels[activeCharId][key] || [] : [];
-    return Array.from(new Set((labels.globalItemLabels[key] || []).concat(local)));
+    return Array.from(new Set((labels.globalItemLabels[key] || []).concat(local))).filter((id) => {
+      const tag = labels.tags.find((entry) => entry.id === id);
+      return tag && (tag.scope === 'global' ? (labels.globalItemLabels[key] || []).indexOf(id) !== -1 : local.indexOf(id) !== -1);
+    });
   }
 
   function saveLabels() { return api.saveLabels(labels).then((result) => { labels = result.labels; }); }
@@ -243,8 +247,9 @@
     const list = document.getElementById('labelsList'); list.innerHTML = '';
     labels.tags.forEach((tag) => {
       const row = document.createElement('div'); row.className = 'modal-row';
-      row.innerHTML = '<input type="color"><input class="text-input" type="text"><button type="button"></button><button type="button"></button>';
+      row.innerHTML = '<input type="color"><input class="text-input" type="text"><span style="color:#9a9a9a;font-size:11px;white-space:nowrap"></span><button type="button"></button><button type="button"></button>';
       const [color, name] = row.querySelectorAll('input'); const buttons = row.querySelectorAll('button');
+      row.querySelector('span').textContent = tag.scope === 'global' ? messages.labelScopeGlobal : messages.labelScopeCharacter;
       color.value = tag.color; name.value = tag.name; buttons[0].textContent = messages.saveLabel; buttons[1].textContent = messages.delete;
       buttons[0].onclick = () => { tag.name = name.value.trim() || tag.name; tag.color = color.value; saveLabels().then(() => { renderLabelsManager(); renderLabelFilter(); renderRows(); }); };
       buttons[1].onclick = () => { labels.tags = labels.tags.filter((entry) => entry.id !== tag.id); Object.keys(labels.globalItemLabels).forEach((key) => { labels.globalItemLabels[key] = labels.globalItemLabels[key].filter((id) => id !== tag.id); }); Object.keys(labels.characterItemLabels).forEach((charId) => Object.keys(labels.characterItemLabels[charId]).forEach((key) => { labels.characterItemLabels[charId][key] = labels.characterItemLabels[charId][key].filter((id) => id !== tag.id); })); selectedLabelIds.delete(tag.id); saveLabels().then(() => { renderLabelsManager(); renderLabelFilter(); renderRows(); }); };
@@ -255,8 +260,10 @@
   function openAssignLabels(item) {
     assigningItem = item;
     const options = document.getElementById('assignLabelsOptions'); options.innerHTML = '';
-    const current = new Set(itemLabelIds(item));
-    labels.tags.forEach((tag) => { const label = document.createElement('label'); label.className = 'label-chip'; label.style.setProperty('--label-color', tag.color); label.innerHTML = '<input type="checkbox"><span class="label-dot"></span><span></span>'; label.querySelector('input').checked = current.has(tag.id); label.querySelector('span:last-child').textContent = tag.name; options.appendChild(label); });
+    const key = itemLabelKey(item);
+    const local = activeCharId && labels.characterItemLabels[activeCharId] ? labels.characterItemLabels[activeCharId][key] || [] : [];
+    const global = labels.globalItemLabels[key] || [];
+    labels.tags.forEach((tag) => { const label = document.createElement('label'); label.className = 'label-chip'; label.style.setProperty('--label-color', tag.color); label.dataset.tagId = tag.id; label.innerHTML = '<input type="checkbox"><span class="label-dot"></span><span></span>'; label.querySelector('input').checked = tag.scope === 'global' ? global.indexOf(tag.id) !== -1 : local.indexOf(tag.id) !== -1; label.querySelector('span:last-child').textContent = tag.name + (tag.scope === 'global' ? ' · ' + messages.labelScopeGlobal : ' · ' + messages.labelScopeCharacter); options.appendChild(label); });
     document.getElementById('assignLabelsModal').classList.add('open');
   }
 
@@ -699,22 +706,26 @@
     document.getElementById('manageLabelsBtn').onclick = () => { renderLabelsManager(); document.getElementById('labelsModal').classList.add('open'); };
     document.getElementById('labelsModalTitle').textContent = messages.manageLabels;
     document.getElementById('newLabelName').placeholder = messages.labelName;
+    document.getElementById('newLabelScope').options[0].textContent = messages.labelScopeCharacter;
+    document.getElementById('newLabelScope').options[1].textContent = messages.labelScopeGlobal;
     document.getElementById('addLabelBtn').textContent = messages.addLabel;
-    document.getElementById('addLabelBtn').onclick = () => { const name = document.getElementById('newLabelName').value.trim(); if (!name) return; labels.tags.push({ id:'label_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7), name:name, color:document.getElementById('newLabelColor').value }); document.getElementById('newLabelName').value = ''; saveLabels().then(() => { renderLabelsManager(); renderLabelFilter(); }); };
+    document.getElementById('addLabelBtn').onclick = () => { const name = document.getElementById('newLabelName').value.trim(); if (!name) return; labels.tags.push({ id:'label_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7), name:name, color:document.getElementById('newLabelColor').value, scope:document.getElementById('newLabelScope').value }); document.getElementById('newLabelName').value = ''; saveLabels().then(() => { renderLabelsManager(); renderLabelFilter(); }); };
     document.getElementById('closeLabelsBtn').textContent = messages.close;
     document.getElementById('closeLabelsBtn').onclick = () => document.getElementById('labelsModal').classList.remove('open');
     document.getElementById('assignLabelsTitle').textContent = messages.assignLabels;
-    document.getElementById('labelScopeCharacter').textContent = messages.labelScopeCharacter;
-    document.getElementById('labelScopeGlobal').textContent = messages.labelScopeGlobal;
+    document.getElementById('assignLabelsHint').textContent = messages.assignLabelsHint;
     document.getElementById('cancelAssignLabelsBtn').textContent = messages.cancel;
     document.getElementById('cancelAssignLabelsBtn').onclick = () => document.getElementById('assignLabelsModal').classList.remove('open');
     document.getElementById('saveAssignLabelsBtn').textContent = messages.saveLabel;
     document.getElementById('saveAssignLabelsBtn').onclick = () => {
       if (!assigningItem) return;
-      const ids = Array.from(document.querySelectorAll('#assignLabelsOptions input:checked')).map((input) => labels.tags.find((tag) => tag.name === input.parentNode.querySelector('span:last-child').textContent)).filter(Boolean).map((tag) => tag.id);
-      const key = itemLabelKey(assigningItem); const scope = document.querySelector('input[name="labelScope"]:checked').value;
-      if (scope === 'global') labels.globalItemLabels[key] = ids;
-      else { labels.characterItemLabels[activeCharId] = labels.characterItemLabels[activeCharId] || {}; labels.characterItemLabels[activeCharId][key] = ids; }
+      const ids = Array.from(document.querySelectorAll('#assignLabelsOptions input:checked')).map((input) => input.parentNode.dataset.tagId);
+      const globalIds = ids.filter((id) => (labels.tags.find((tag) => tag.id === id) || {}).scope === 'global');
+      const characterIds = ids.filter((id) => (labels.tags.find((tag) => tag.id === id) || {}).scope !== 'global');
+      const key = itemLabelKey(assigningItem);
+      labels.globalItemLabels[key] = globalIds;
+      labels.characterItemLabels[activeCharId] = labels.characterItemLabels[activeCharId] || {};
+      labels.characterItemLabels[activeCharId][key] = characterIds;
       saveLabels().then(() => {
         workerDatasetKey = '';
         document.getElementById('assignLabelsModal').classList.remove('open');
