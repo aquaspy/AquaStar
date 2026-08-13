@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("aquastarInventory", {
   getInventory: () => ipcRenderer.invoke("getInventory"),
+  saveLabels: (labels) => ipcRenderer.invoke("saveInventoryLabels", labels),
   getMessages:  () => ipcRenderer.invoke("getInventoryMessages"),
   syncNow:      () => ipcRenderer.invoke("syncInventoryNow"),
   setActiveChar: (charId) => ipcRenderer.invoke("setInventoryActiveChar", charId),

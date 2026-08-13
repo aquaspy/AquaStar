@@ -394,7 +394,8 @@ exports.inventoryMessages = {
     bankBadge          : "",
     inventoryBadge     : "",
     acBadge            : "",
-    normalBadge        : ""
+    normalBadge        : "",
+    filterLabels:"", labelsSelected:"", labelFilterClear:"", manageLabels:"", labelName:"", addLabel:"", saveLabel:"", assignLabels:"", labelScopeCharacter:"", labelScopeGlobal:"", delete:"", close:"", cancel:"", itemCountLabel:""
 }
 
 exports.wikiMessages = {

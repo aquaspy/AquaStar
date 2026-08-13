@@ -70,7 +70,7 @@ function _migrateCharacter(charId, raw) {
 
 function _loadInventory() {
     if (!fs.existsSync(inventoryJsonPath)) {
-        return { characters: {}, lastActiveCharId: '' };
+        return { characters: {}, lastActiveCharId: '', labels: _migrateLabels({}) };
     }
     try {
         const parsed = JSON.parse(fs.readFileSync(inventoryJsonPath));
@@ -81,15 +81,35 @@ function _loadInventory() {
         });
         return {
             characters: characters,
-            lastActiveCharId: typeof parsed.lastActiveCharId === 'string' ? parsed.lastActiveCharId : ''
+            lastActiveCharId: typeof parsed.lastActiveCharId === 'string' ? parsed.lastActiveCharId : '',
+            labels: _migrateLabels(parsed.labels)
         };
     } catch (e) {
         console.log('[AquaStar] Failed to parse ' + inventoryJsonPath + ': ' + e.message);
-        return { characters: {}, lastActiveCharId: '' };
+        return { characters: {}, lastActiveCharId: '', labels: _migrateLabels({}) };
     }
 }
 
+function _migrateLabels(raw) {
+    raw = raw || {};
+    const validColor = (value) => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : '#4da3ff';
+    const tags = (Array.isArray(raw.tags) ? raw.tags : []).map((tag) => ({
+        id: typeof tag.id === 'string' ? tag.id : 'label_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
+        name: typeof tag.name === 'string' ? tag.name.trim() : '', color: validColor(tag.color)
+    })).filter((tag) => tag.name);
+    const maps = (source) => {
+        const out = {};
+        if (!source || typeof source !== 'object') return out;
+        Object.keys(source).forEach((key) => { if (Array.isArray(source[key])) out[key] = source[key].filter((id) => tags.some((tag) => tag.id === id)); });
+        return out;
+    };
+    const characterItemLabels = {};
+    if (raw.characterItemLabels && typeof raw.characterItemLabels === 'object') Object.keys(raw.characterItemLabels).forEach((charId) => { characterItemLabels[charId] = maps(raw.characterItemLabels[charId]); });
+    return { tags: tags, globalItemLabels: maps(raw.globalItemLabels), characterItemLabels: characterItemLabels };
+}
+
 function _saveInventory(state) {
+    state.labels = _migrateLabels(state.labels);
     fs.writeFileSync(inventoryJsonPath, JSON.stringify(state, null, 4));
 }
 
@@ -353,6 +373,13 @@ function matchWikiItem(wikiTitle, charId) {
 
 ipcMain.handle('getInventory', () => {
     return { data: _loadInventory(), savePath: inventoryJsonPath };
+});
+
+ipcMain.handle('saveInventoryLabels', (event, labels) => {
+    const state = _loadInventory();
+    state.labels = _migrateLabels(labels);
+    _saveInventory(state);
+    return { labels: state.labels };
 });
 
 ipcMain.handle('getInventoryMessages', () => {

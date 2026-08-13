@@ -36,7 +36,7 @@
   #filterBar .select-input { flex:0 0 140px; }
 
   #rows { flex: 1 1 auto; overflow-y: auto; padding: 4px 18px; }
-  .column-header { display:flex; align-items:center; gap:8px; padding:5px 0 4px; border-bottom:1px solid #353535; }
+  .column-header { position:sticky; top:-4px; z-index:2; display:flex; align-items:center; gap:8px; padding:5px 0 4px; border-bottom:1px solid #353535; background:#121212; }
   .column-header button {
     min-width:0; border:0; border-radius:0; padding:0; background:transparent; color:#9a9a9a;
     font:inherit; font-size:10px; font-weight:600; letter-spacing:.04em; text-align:left;
@@ -49,7 +49,9 @@
   .column-header .col-count { flex:0 0 50px; text-align:right; }
   .column-header .col-badge { flex:0 0 60px; text-align:center; }
   .column-header .col-date { flex:0 0 150px; text-align:right; }
-  .item-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #202020; }
+  .item-row { height:37px; display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #202020; box-sizing:border-box; }
+  .virtual-list { position:relative; min-height:1px; }
+  .virtual-row { position:absolute; left:0; right:0; }
   .item-row .iname { flex:1 1 160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#c9e2ff; cursor:pointer; }
   .item-row .iname.member { color:#ffd76a; }
   .item-row .iname:hover { color:#79b8ff; text-decoration:underline; }
@@ -73,6 +75,31 @@
   .text-input:focus { outline:none; border-color:#4da3ff; }
   .select-input { flex:0 0 130px; font-family:inherit; background:#1b1b1b; border:1px solid #333; border-radius:4px; padding:5px 8px; color:#dcdcdc; cursor:pointer; }
   .select-input:focus { outline:none; border-color:#4da3ff; }
+  .label-filter { position:relative; flex:0 0 auto; }
+  .label-filter-trigger { min-width:150px; text-align:left; display:flex; justify-content:space-between; gap:14px; background:#1b1b1b; border-color:#333; }
+  .label-filter-trigger:hover,.label-filter-trigger[aria-expanded=true] { background:#232323; border-color:#4da3ff; }
+  .label-filter-menu { position:absolute; z-index:8; top:calc(100% + 5px); left:0; width:280px; padding:9px; background:#1b1b1b; border:1px solid #383838; border-radius:4px; box-shadow:0 12px 28px rgba(0,0,0,.45); }
+  .label-filter-menu[hidden] { display:none; }
+  .label-filter-actions,.label-filter-options { display:flex; flex-wrap:wrap; gap:6px; }
+  .label-filter-actions { margin-bottom:8px; }
+  .label-filter-actions button { padding:4px 7px; font-size:11px; }
+  .label-chip { display:inline-flex; align-items:center; gap:5px; border-radius:12px; padding:4px 8px; background:#242424; border:1px solid #444; color:#ddd; font-size:11px; }
+  .label-chip.active { color:#fff; border-color:var(--label-color); background:#303030; }
+  .label-dot { width:8px; height:8px; border-radius:50%; background:var(--label-color); display:inline-block; }
+  .item-labels { display:inline-flex; gap:3px; margin-left:12px; vertical-align:middle; }
+  .item-label { width:8px; height:8px; border-radius:50%; background:var(--label-color); display:inline-block; }
+  .assign-label-button { margin-left:8px; padding:1px 5px; color:#9cc9ff; border-color:#345875; background:#192534; }
+  .assign-label-button:hover { background:#22384f; }
+  .label-manage { margin-left:auto; }
+  #itemCount { color:#8e9cab; font-size:11px; white-space:nowrap; }
+  .overlay { display:none; position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.62); align-items:center; justify-content:center; }
+  .overlay.open { display:flex; }
+  .modal { width:min(560px,calc(100vw - 36px)); max-height:calc(100vh - 36px); overflow:auto; padding:16px; border:1px solid #3e3e3e; border-radius:7px; background:#1b1b1b; box-shadow:0 18px 50px rgba(0,0,0,.45); }
+  .modal h2 { margin:0 0 12px; font-size:15px; }
+  .modal-row { display:flex; gap:7px; align-items:center; padding:8px 0; border-bottom:1px solid #2a2a2a; }
+  .modal-row input[type=text] { flex:1; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+  .assignment-scope { display:flex; gap:12px; color:#aaa; font-size:12px; margin:10px 0; }
 
   .form-checkbox { display:flex; align-items:center; gap:5px; font-size:12px; color:#9a9a9a; white-space:nowrap; }
   .form-checkbox input { cursor:pointer; }
@@ -126,10 +153,15 @@
         <option value="ac"></option>
         <option value="nonac"></option>
       </select>
+      <div class="label-filter"><button id="labelFilterBtn" class="label-filter-trigger small" aria-expanded="false"><span id="labelFilterText">Labels</span><span>⌄</span></button><div id="labelFilterMenu" class="label-filter-menu" hidden><div class="label-filter-actions"><button id="labelFilterAll" type="button"></button><button id="labelFilterClear" type="button"></button></div><div id="labelFilterOptions" class="label-filter-options"></div></div></div>
+      <span id="itemCount"></span>
+      <button id="manageLabelsBtn" class="small label-manage" type="button"></button>
     </div>
   </div>
   <div id="rows"></div>
 </div>
+<div id="labelsModal" class="overlay"><div class="modal"><h2 id="labelsModalTitle"></h2><div class="modal-row"><input id="newLabelName" class="text-input" type="text"><input id="newLabelColor" type="color" value="#4da3ff"><button id="addLabelBtn" class="primary" type="button"></button></div><div id="labelsList"></div><div class="modal-actions"><button id="closeLabelsBtn" type="button"></button></div></div></div>
+<div id="assignLabelsModal" class="overlay"><div class="modal"><h2 id="assignLabelsTitle"></h2><div id="assignLabelsOptions" class="label-filter-options"></div><div class="assignment-scope"><label><input type="radio" name="labelScope" value="character" checked> <span id="labelScopeCharacter"></span></label><label><input type="radio" name="labelScope" value="global"> <span id="labelScopeGlobal"></span></label></div><div class="modal-actions"><button id="cancelAssignLabelsBtn" type="button"></button><button id="saveAssignLabelsBtn" class="primary" type="button"></button></div></div></div>
 
 <script src="../wikiview/jquery.min.js"></script>
 <script src="../wikiview/nameVariants.js"></script>
@@ -138,7 +170,10 @@
 (function () {
   const api = window.aquastarInventory;
   let messages, state, activeCharId = null, activeView = 'inventory';
+  let labels = { tags: [], globalItemLabels: {}, characterItemLabels: {} }, selectedLabelIds = new Set(), assigningItem = null;
   let filterName = '', filterType = 'all', filterLocation = 'all', filterMember = 'all', filterCoins = 'all';
+  const VIRTUAL_ROW_HEIGHT = 37, VIRTUAL_OVERSCAN = 10;
+  let virtualItems = [], virtualListEl = null, virtualFrame = null;
   // Sort criteria are ordered from most to least important. Keeping earlier criteria
   // as tie-breakers gives the expected Type -> Name result after clicking Name, then Type.
   let sortCriteria = [{ key: 'name', direction: 'asc' }];
@@ -172,6 +207,54 @@
 
   function activeCharacter() {
     return activeCharId ? state.characters[activeCharId] : null;
+  }
+
+  function itemLabelKey(item) {
+    return item && item.id !== null && item.id !== undefined ? 'id:' + item.id : 'name:' + String(item && item.name || '').trim().toLowerCase();
+  }
+
+  function itemLabelIds(item) {
+    const key = itemLabelKey(item);
+    const local = activeCharId && labels.characterItemLabels[activeCharId] ? labels.characterItemLabels[activeCharId][key] || [] : [];
+    return Array.from(new Set((labels.globalItemLabels[key] || []).concat(local)));
+  }
+
+  function saveLabels() { return api.saveLabels(labels).then((result) => { labels = result.labels; }); }
+
+  function renderLabelFilter() {
+    const options = document.getElementById('labelFilterOptions');
+    const label = document.getElementById('labelFilterText');
+    options.innerHTML = '';
+    labels.tags.forEach((tag) => {
+      const chip = document.createElement('button');
+      chip.type = 'button'; chip.className = 'label-chip' + (selectedLabelIds.has(tag.id) ? ' active' : '');
+      chip.style.setProperty('--label-color', tag.color); chip.innerHTML = '<span class="label-dot"></span><span></span>';
+      chip.querySelector('span:last-child').textContent = tag.name;
+      chip.onclick = () => { if (selectedLabelIds.has(tag.id)) selectedLabelIds.delete(tag.id); else selectedLabelIds.add(tag.id); renderLabelFilter(); renderRows(); };
+      options.appendChild(chip);
+    });
+    label.textContent = selectedLabelIds.size ? selectedLabelIds.size + ' ' + messages.labelsSelected : messages.filterLabels;
+  }
+
+  function renderLabelsManager() {
+    const list = document.getElementById('labelsList'); list.innerHTML = '';
+    labels.tags.forEach((tag) => {
+      const row = document.createElement('div'); row.className = 'modal-row';
+      row.innerHTML = '<input type="color"><input class="text-input" type="text"><button type="button"></button><button type="button"></button>';
+      const [color, name] = row.querySelectorAll('input'); const buttons = row.querySelectorAll('button');
+      color.value = tag.color; name.value = tag.name; buttons[0].textContent = messages.saveLabel; buttons[1].textContent = messages.delete;
+      buttons[0].onclick = () => { tag.name = name.value.trim() || tag.name; tag.color = color.value; saveLabels().then(() => { renderLabelsManager(); renderLabelFilter(); renderRows(); }); };
+      buttons[1].onclick = () => { labels.tags = labels.tags.filter((entry) => entry.id !== tag.id); Object.keys(labels.globalItemLabels).forEach((key) => { labels.globalItemLabels[key] = labels.globalItemLabels[key].filter((id) => id !== tag.id); }); Object.keys(labels.characterItemLabels).forEach((charId) => Object.keys(labels.characterItemLabels[charId]).forEach((key) => { labels.characterItemLabels[charId][key] = labels.characterItemLabels[charId][key].filter((id) => id !== tag.id); })); selectedLabelIds.delete(tag.id); saveLabels().then(() => { renderLabelsManager(); renderLabelFilter(); renderRows(); }); };
+      list.appendChild(row);
+    });
+  }
+
+  function openAssignLabels(item) {
+    assigningItem = item;
+    const options = document.getElementById('assignLabelsOptions'); options.innerHTML = '';
+    const current = new Set(itemLabelIds(item));
+    labels.tags.forEach((tag) => { const label = document.createElement('label'); label.className = 'label-chip'; label.style.setProperty('--label-color', tag.color); label.innerHTML = '<input type="checkbox"><span class="label-dot"></span><span></span>'; label.querySelector('input').checked = current.has(tag.id); label.querySelector('span:last-child').textContent = tag.name; options.appendChild(label); });
+    document.getElementById('assignLabelsModal').classList.add('open');
   }
 
   function renderTabs() {
@@ -247,6 +330,15 @@
       acIcon.innerHTML = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="5.7"/><path d="M8 4.4v7.2M10 5.8C9.5 5.2 8.8 5 8 5c-1 0-1.8.5-1.8 1.3 0 2 3.6.9 3.6 2.8 0 .9-.8 1.4-1.8 1.4-.9 0-1.7-.3-2.2-1"/></svg>';
       nameEl.appendChild(acIcon);
     }
+    const itemTags = itemLabelIds(item).map((id) => labels.tags.find((tag) => tag.id === id)).filter(Boolean);
+    if (itemTags.length) {
+      const tagsEl = document.createElement('span'); tagsEl.className = 'item-labels';
+      itemTags.forEach((tag) => { const dot = document.createElement('span'); dot.className = 'item-label'; dot.style.setProperty('--label-color', tag.color); dot.title = tag.name; tagsEl.appendChild(dot); });
+      nameEl.appendChild(tagsEl);
+    }
+    const tagButton = document.createElement('button'); tagButton.type = 'button'; tagButton.className = 'small assign-label-button'; tagButton.textContent = '+'; tagButton.title = messages.assignLabels; tagButton.setAttribute('aria-label', messages.assignLabels);
+    tagButton.onclick = (event) => { event.stopPropagation(); openAssignLabels(item); };
+    nameEl.appendChild(tagButton);
     wireHoverPreview(nameEl, item.name);
     nameEl.addEventListener('click', () => { api.openItemWiki(item.name); });
 
@@ -387,6 +479,7 @@
   function matchesFilters(item) {
     if (filterName && item.name.toLowerCase().indexOf(filterName) === -1) return false;
     if (filterType !== 'all' && item.type !== filterType) return false;
+    if (selectedLabelIds.size && !itemLabelIds(item).some((id) => selectedLabelIds.has(id))) return false;
     if (activeView === 'inventory') {
       if (filterLocation === 'bank' && !item.bank) return false;
       if (filterLocation === 'inventory' && item.bank) return false;
@@ -406,13 +499,40 @@
     setStatus(messages.syncedLabel + formatRelativeTime(time));
   }
 
+  function renderVirtualRows() {
+    virtualFrame = null;
+    if (!virtualListEl) return;
+    const rowsEl = document.getElementById('rows');
+    const visibleRows = Math.ceil(rowsEl.clientHeight / VIRTUAL_ROW_HEIGHT);
+    const listScrollTop = Math.max(0, rowsEl.scrollTop - virtualListEl.offsetTop);
+    const first = Math.max(0, Math.floor(listScrollTop / VIRTUAL_ROW_HEIGHT) - VIRTUAL_OVERSCAN);
+    const last = Math.min(virtualItems.length, first + visibleRows + VIRTUAL_OVERSCAN * 2);
+    virtualListEl.innerHTML = '';
+    const buildRow = activeView === 'inventory' ? buildInventoryRow : buildBuyBackRow;
+    const fragment = document.createDocumentFragment();
+    for (let index = first; index < last; index++) {
+      const row = buildRow(virtualItems[index]);
+      row.classList.add('virtual-row');
+      row.style.transform = 'translateY(' + (index * VIRTUAL_ROW_HEIGHT) + 'px)';
+      fragment.appendChild(row);
+    }
+    virtualListEl.appendChild(fragment);
+  }
+
+  function scheduleVirtualRows() {
+    if (!virtualListEl || virtualFrame) return;
+    virtualFrame = requestAnimationFrame(renderVirtualRows);
+  }
+
   function renderRows() {
     const rowsEl = document.getElementById('rows');
     rowsEl.innerHTML = '';
+    virtualItems = []; virtualListEl = null;
     renderSyncStatus();
 
     const character = activeCharacter();
     if (!character) {
+      document.getElementById('itemCount').textContent = '';
       const hint = document.createElement('div');
       hint.id = 'noCharsHint';
       hint.textContent = messages.noCharactersLabel;
@@ -420,11 +540,13 @@
       return;
     }
 
-    const items = (activeView === 'inventory' ? character.inventory : character.buyback)
+    const sourceItems = activeView === 'inventory' ? character.inventory : character.buyback;
+    const items = sourceItems
       .filter(matchesFilters)
       .map((item, index) => ({ item: item, index: index }))
       .sort((a, b) => compareItems(a.item, b.item) || a.index - b.index)
       .map((entry) => entry.item);
+    document.getElementById('itemCount').textContent = messages.itemCountLabel.replace('{shown}', items.length).replace('{total}', sourceItems.length);
     if (items.length === 0) {
       const hint = document.createElement('div');
       hint.id = 'emptyHint';
@@ -432,9 +554,14 @@
       rowsEl.appendChild(hint);
       return;
     }
-    const buildRow = activeView === 'inventory' ? buildInventoryRow : buildBuyBackRow;
     renderColumnHeader(rowsEl);
-    items.forEach((item) => rowsEl.appendChild(buildRow(item)));
+    virtualItems = items;
+    virtualListEl = document.createElement('div');
+    virtualListEl.className = 'virtual-list';
+    virtualListEl.style.height = (items.length * VIRTUAL_ROW_HEIGHT) + 'px';
+    rowsEl.appendChild(virtualListEl);
+    rowsEl.scrollTop = 0;
+    renderVirtualRows();
   }
 
   function setView(view) {
@@ -459,6 +586,7 @@
     }
     const reloaded = await api.getInventory();
     state = reloaded.data;
+    labels = state.labels || labels;
     activeCharId = String(result.charId);
     renderTabs();
     renderFilterTypeOptions();
@@ -469,6 +597,7 @@
     const [msgs, invResult] = await Promise.all([api.getMessages(), api.getInventory()]);
     messages = msgs;
     state = invResult.data;
+    labels = state.labels || labels;
 
     document.title = messages.title;
     document.getElementById('heading').textContent = messages.heading;
@@ -479,6 +608,8 @@
     document.getElementById('viewBuyBackBtn').textContent = messages.buyBackTabLabel;
     document.getElementById('viewInventoryBtn').onclick = () => setView('inventory');
     document.getElementById('viewBuyBackBtn').onclick = () => setView('buyback');
+    document.getElementById('rows').addEventListener('scroll', scheduleVirtualRows, { passive: true });
+    window.addEventListener('resize', scheduleVirtualRows);
 
     document.getElementById('filterNameInput').placeholder = messages.filterNamePlaceholder;
     document.getElementById('filterNameInput').addEventListener('input', (e) => {
@@ -519,6 +650,33 @@
       filterCoins = e.target.value;
       renderRows();
     });
+    document.getElementById('labelFilterBtn').onclick = () => { const menu = document.getElementById('labelFilterMenu'); menu.hidden = !menu.hidden; document.getElementById('labelFilterBtn').setAttribute('aria-expanded', String(!menu.hidden)); };
+    document.getElementById('labelFilterAll').textContent = messages.filterAllLabel;
+    document.getElementById('labelFilterClear').textContent = messages.labelFilterClear;
+    document.getElementById('labelFilterAll').onclick = () => { labels.tags.forEach((tag) => selectedLabelIds.add(tag.id)); renderLabelFilter(); renderRows(); };
+    document.getElementById('labelFilterClear').onclick = () => { selectedLabelIds.clear(); renderLabelFilter(); renderRows(); };
+    document.getElementById('manageLabelsBtn').textContent = messages.manageLabels;
+    document.getElementById('manageLabelsBtn').onclick = () => { renderLabelsManager(); document.getElementById('labelsModal').classList.add('open'); };
+    document.getElementById('labelsModalTitle').textContent = messages.manageLabels;
+    document.getElementById('newLabelName').placeholder = messages.labelName;
+    document.getElementById('addLabelBtn').textContent = messages.addLabel;
+    document.getElementById('addLabelBtn').onclick = () => { const name = document.getElementById('newLabelName').value.trim(); if (!name) return; labels.tags.push({ id:'label_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7), name:name, color:document.getElementById('newLabelColor').value }); document.getElementById('newLabelName').value = ''; saveLabels().then(() => { renderLabelsManager(); renderLabelFilter(); }); };
+    document.getElementById('closeLabelsBtn').textContent = messages.close;
+    document.getElementById('closeLabelsBtn').onclick = () => document.getElementById('labelsModal').classList.remove('open');
+    document.getElementById('assignLabelsTitle').textContent = messages.assignLabels;
+    document.getElementById('labelScopeCharacter').textContent = messages.labelScopeCharacter;
+    document.getElementById('labelScopeGlobal').textContent = messages.labelScopeGlobal;
+    document.getElementById('cancelAssignLabelsBtn').textContent = messages.cancel;
+    document.getElementById('cancelAssignLabelsBtn').onclick = () => document.getElementById('assignLabelsModal').classList.remove('open');
+    document.getElementById('saveAssignLabelsBtn').textContent = messages.saveLabel;
+    document.getElementById('saveAssignLabelsBtn').onclick = () => {
+      if (!assigningItem) return;
+      const ids = Array.from(document.querySelectorAll('#assignLabelsOptions input:checked')).map((input) => labels.tags.find((tag) => tag.name === input.parentNode.querySelector('span:last-child').textContent)).filter(Boolean).map((tag) => tag.id);
+      const key = itemLabelKey(assigningItem); const scope = document.querySelector('input[name="labelScope"]:checked').value;
+      if (scope === 'global') labels.globalItemLabels[key] = ids;
+      else { labels.characterItemLabels[activeCharId] = labels.characterItemLabels[activeCharId] || {}; labels.characterItemLabels[activeCharId][key] = ids; }
+      saveLabels().then(() => { document.getElementById('assignLabelsModal').classList.remove('open'); renderRows(); });
+    };
 
     const charIds = Object.keys(state.characters);
     activeCharId = (state.lastActiveCharId && state.characters[state.lastActiveCharId])
@@ -527,6 +685,7 @@
 
     renderTabs();
     renderFilterTypeOptions();
+    renderLabelFilter();
     renderRows();
   }
 
