@@ -14,6 +14,13 @@
         'Legion DoomKnight': ' (Class) (Merge) (1)'
     };
 
+    // Some in-game names cannot be converted to their wiki slug mechanically. These are
+    // full wiki page slugs (not suffixes) and are shared by hover previews and Inventory's
+    // click-through links.
+    const pageOverrides = {
+        '???': '3-question-marks-misc-2'
+    };
+
     function normalizeName(name) {
         return typeof name === 'string' ? name.trim().toLowerCase() : '';
     }
@@ -24,6 +31,20 @@
             return normalizeName(candidate) === normalized;
         });
         return key ? nameOverrides[key] : null;
+    }
+
+    function findPageOverride(name) {
+        const normalized = normalizeName(name);
+        const key = Object.keys(pageOverrides).find(function (candidate) {
+            return normalizeName(candidate) === normalized;
+        });
+        return key ? pageOverrides[key] : null;
+    }
+
+    function toWikiSlug(name) {
+        const override = findPageOverride(name);
+        if (override) return override;
+        return normalizeName(name).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     }
 
     // Includes the exception suffixes for stripping a page title such as
@@ -43,6 +64,8 @@
         disambiguationSuffixes: disambiguationSuffixes,
         allKnownSuffixes: allKnownSuffixes,
         findNameOverride: findNameOverride,
+        findPageOverride: findPageOverride,
+        toWikiSlug: toWikiSlug,
         getSuffixesForName: getSuffixesForName
     };
 });

@@ -25,7 +25,7 @@ const BUYBACK_PAGE_SIZE = 100;
 
 function _migrateItem(raw) {
     raw = raw || {};
-    const name = typeof raw.name === 'string' ? raw.name : '';
+    const name = typeof raw.name === 'string' ? raw.name.trimStart() : '';
     const type = typeof raw.type === 'string' ? raw.type : '';
     const added = typeof raw.added === 'string' ? raw.added : null;
     return {
@@ -42,7 +42,7 @@ function _migrateItem(raw) {
 
 function _migrateBuyBackItem(raw) {
     raw = raw || {};
-    const name = typeof raw.name === 'string' ? raw.name : '';
+    const name = typeof raw.name === 'string' ? raw.name.trimStart() : '';
     const type = typeof raw.type === 'string' ? raw.type : '';
     const inserted = typeof raw.inserted === 'string' ? raw.inserted : null;
     return {
@@ -478,9 +478,7 @@ ipcMain.handle('getInventoryItemCounts', (event, itemNames) => {
 // deliberately built from a plain item name and restricted to AQW Wiki's own domain.
 ipcMain.handle('openInventoryItemWiki', (event, itemName) => {
     if (typeof itemName !== 'string' || !itemName.trim()) return { ok: false };
-    const slug = itemName.trim().toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
+    const slug = wikiNameVariants.toWikiSlug(itemName);
     if (!slug) return { ok: false };
     require('../../instances.js').newBrowserWindow('http://aqwwiki.wikidot.com/' + slug);
     return { ok: true };
