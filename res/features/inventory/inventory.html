@@ -175,6 +175,8 @@
   let filterName = '', filterType = 'all', filterLocation = 'all', filterMember = 'all', filterCoins = 'all';
   const VIRTUAL_ROW_HEIGHT = 37, VIRTUAL_OVERSCAN = 10;
   let virtualItems = [], virtualListEl = null, virtualFrame = null;
+  let inventoryWorker = null, workerDatasetKey = '', workerRequestId = 0, latestWorkerRequestId = 0, workerSourceItems = [];
+  let nameFilterTimer = null;
   // Sort criteria are ordered from most to least important. Keeping earlier criteria
   // as tie-breakers gives the expected Type -> Name result after clicking Name, then Type.
   let sortCriteria = [{ key: 'name', direction: 'asc' }];
@@ -514,6 +516,7 @@
     for (let index = first; index < last; index++) {
       const row = buildRow(virtualItems[index]);
       row.classList.add('virtual-row');
+      row.dataset.sourceIndex = String(workerSourceItems.indexOf(virtualItems[index]));
       row.style.transform = 'translateY(' + (index * VIRTUAL_ROW_HEIGHT) + 'px)';
       fragment.appendChild(row);
     }
@@ -523,6 +526,56 @@
   function scheduleVirtualRows() {
     if (!virtualListEl || virtualFrame) return;
     virtualFrame = requestAnimationFrame(renderVirtualRows);
+  }
+
+  function refreshVisibleItem(item) {
+    if (activeView !== 'inventory' || !virtualListEl) return;
+    const sourceIndex = workerSourceItems.indexOf(item);
+    const oldRow = virtualListEl.querySelector('[data-source-index="' + sourceIndex + '"]');
+    if (!oldRow) return;
+    const newRow = buildInventoryRow(item);
+    newRow.classList.add('virtual-row'); newRow.dataset.sourceIndex = String(sourceIndex); newRow.style.transform = oldRow.style.transform;
+    oldRow.replaceWith(newRow);
+  }
+
+  function workerItems(sourceItems) {
+    return sourceItems.map((item, sourceIndex) => ({
+      sourceIndex: sourceIndex, searchName: item.searchName || String(item.name || '').toLowerCase(), sortName: item.sortName || String(item.name || '').toLowerCase(),
+      name: item.name, type: item.type, count: item.count, cost: item.cost, bank: item.bank, member: item.member, coins: item.coins,
+      addedAt: item.addedAt || new Date(item.added).getTime() || 0, insertedAt: item.insertedAt || new Date(item.inserted).getTime() || 0,
+      rarityName: item.rarityName, labelIds: itemLabelIds(item)
+    }));
+  }
+
+  function ensureWorkerData(sourceItems) {
+    const key = [activeCharId, activeView, activeView === 'inventory' ? activeCharacter().lastInventorySync : activeCharacter().lastBuyBackSync, JSON.stringify(labels)].join('|');
+    if (key === workerDatasetKey) return;
+    workerDatasetKey = key;
+    inventoryWorker.postMessage({ type: 'setItems', items: workerItems(sourceItems) });
+  }
+
+  function requestFilteredItems(sourceItems) {
+    workerSourceItems = sourceItems;
+    ensureWorkerData(sourceItems);
+    const requestId = ++workerRequestId;
+    latestWorkerRequestId = requestId;
+    inventoryWorker.postMessage({ type: 'query', requestId: requestId, query: {
+      name: filterName, itemType: filterType, location: filterLocation, member: filterMember, coins: filterCoins,
+      inventory: activeView === 'inventory', labelIds: Array.from(selectedLabelIds), sortCriteria: sortCriteria
+    } });
+  }
+
+  function applyWorkerResult(sourceItems, indexes) {
+    const rowsEl = document.getElementById('rows');
+    const items = indexes.map((index) => sourceItems[index]);
+    document.getElementById('itemCount').textContent = messages.itemCountLabel.replace('{shown}', items.length).replace('{total}', sourceItems.length);
+    if (!items.length) {
+      const hint = document.createElement('div'); hint.id = 'emptyHint'; hint.textContent = messages.emptyStateLabel; rowsEl.appendChild(hint); return;
+    }
+    renderColumnHeader(rowsEl);
+    virtualItems = items;
+    virtualListEl = document.createElement('div'); virtualListEl.className = 'virtual-list'; virtualListEl.style.height = (items.length * VIRTUAL_ROW_HEIGHT) + 'px';
+    rowsEl.appendChild(virtualListEl); rowsEl.scrollTop = 0; renderVirtualRows();
   }
 
   function renderRows() {
@@ -542,27 +595,7 @@
     }
 
     const sourceItems = activeView === 'inventory' ? character.inventory : character.buyback;
-    const items = sourceItems
-      .filter(matchesFilters)
-      .map((item, index) => ({ item: item, index: index }))
-      .sort((a, b) => compareItems(a.item, b.item) || a.index - b.index)
-      .map((entry) => entry.item);
-    document.getElementById('itemCount').textContent = messages.itemCountLabel.replace('{shown}', items.length).replace('{total}', sourceItems.length);
-    if (items.length === 0) {
-      const hint = document.createElement('div');
-      hint.id = 'emptyHint';
-      hint.textContent = messages.emptyStateLabel;
-      rowsEl.appendChild(hint);
-      return;
-    }
-    renderColumnHeader(rowsEl);
-    virtualItems = items;
-    virtualListEl = document.createElement('div');
-    virtualListEl.className = 'virtual-list';
-    virtualListEl.style.height = (items.length * VIRTUAL_ROW_HEIGHT) + 'px';
-    rowsEl.appendChild(virtualListEl);
-    rowsEl.scrollTop = 0;
-    renderVirtualRows();
+    requestFilteredItems(sourceItems);
   }
 
   function setView(view) {
@@ -609,6 +642,11 @@
     document.getElementById('viewBuyBackBtn').textContent = messages.buyBackTabLabel;
     document.getElementById('viewInventoryBtn').onclick = () => setView('inventory');
     document.getElementById('viewBuyBackBtn').onclick = () => setView('buyback');
+    inventoryWorker = new Worker('inventory_worker.js');
+    inventoryWorker.onmessage = (event) => {
+      const result = event.data || {};
+      if (result.type === 'result' && result.requestId === latestWorkerRequestId) applyWorkerResult(workerSourceItems, result.indexes || []);
+    };
     document.getElementById('rows').addEventListener('scroll', scheduleVirtualRows, { passive: true });
     window.addEventListener('resize', scheduleVirtualRows);
 
@@ -621,7 +659,8 @@
       const nextFilterName = query.length >= 3 ? query : '';
       if (nextFilterName === filterName) return;
       filterName = nextFilterName;
-      renderRows();
+      clearTimeout(nameFilterTimer);
+      nameFilterTimer = setTimeout(renderRows, 150);
     });
     document.getElementById('filterTypeInput').addEventListener('change', (e) => {
       filterType = e.target.value;
@@ -676,7 +715,12 @@
       const key = itemLabelKey(assigningItem); const scope = document.querySelector('input[name="labelScope"]:checked').value;
       if (scope === 'global') labels.globalItemLabels[key] = ids;
       else { labels.characterItemLabels[activeCharId] = labels.characterItemLabels[activeCharId] || {}; labels.characterItemLabels[activeCharId][key] = ids; }
-      saveLabels().then(() => { document.getElementById('assignLabelsModal').classList.remove('open'); renderRows(); });
+      saveLabels().then(() => {
+        workerDatasetKey = '';
+        document.getElementById('assignLabelsModal').classList.remove('open');
+        if (selectedLabelIds.size) renderRows();
+        else refreshVisibleItem(assigningItem);
+      });
     };
 
     const charIds = Object.keys(state.characters);

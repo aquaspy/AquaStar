@@ -25,30 +25,36 @@ const BUYBACK_PAGE_SIZE = 100;
 
 function _migrateItem(raw) {
     raw = raw || {};
+    const name = typeof raw.name === 'string' ? raw.name : '';
+    const type = typeof raw.type === 'string' ? raw.type : '';
+    const added = typeof raw.added === 'string' ? raw.added : null;
     return {
         id:     Number.isFinite(raw.id) ? raw.id : null,
-        name:   typeof raw.name === 'string' ? raw.name : '',
-        type:   typeof raw.type === 'string' ? raw.type : '',
+        name:   name, type: type,
         count:  Number.isFinite(raw.count) ? raw.count : 0,
         bank:   raw.bank === true,
         coins:  raw.coins === true,
         member: raw.member === true,
-        added:  typeof raw.added === 'string' ? raw.added : null
+        added:  added,
+        searchName: name.toLowerCase(), sortName: name.toLowerCase(), addedAt: new Date(added).getTime() || 0
     };
 }
 
 function _migrateBuyBackItem(raw) {
     raw = raw || {};
+    const name = typeof raw.name === 'string' ? raw.name : '';
+    const type = typeof raw.type === 'string' ? raw.type : '';
+    const inserted = typeof raw.inserted === 'string' ? raw.inserted : null;
     return {
         itemId:     Number.isFinite(raw.itemId) ? raw.itemId : null,
-        name:       typeof raw.name === 'string' ? raw.name : '',
-        type:       typeof raw.type === 'string' ? raw.type : '',
+        name:       name, type: type,
         cost:       Number.isFinite(raw.cost) ? raw.cost : 0,
         amount:     Number.isFinite(raw.amount) ? raw.amount : 0,
-        inserted:   typeof raw.inserted === 'string' ? raw.inserted : null,
+        inserted:   inserted,
         typeId:     Number.isFinite(raw.typeId) ? raw.typeId : null,
         rarity:     Number.isFinite(raw.rarity) ? raw.rarity : null,
-        rarityName: typeof raw.rarityName === 'string' ? raw.rarityName : ''
+        rarityName: typeof raw.rarityName === 'string' ? raw.rarityName : '',
+        searchName: name.toLowerCase(), sortName: name.toLowerCase(), insertedAt: new Date(inserted).getTime() || 0
     };
 }
 
