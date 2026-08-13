@@ -395,7 +395,20 @@ exports.inventoryMessages = {
     inventoryBadge     : "",
     acBadge            : "",
     normalBadge        : "",
-    filterLabels:"", labelsSelected:"", labelFilterClear:"", manageLabels:"", labelName:"", addLabel:"", saveLabel:"", assignLabels:"", labelScopeCharacter:"", labelScopeGlobal:"", delete:"", close:"", cancel:"", itemCountLabel:""
+    filterLabels: "",
+    labelsSelected: "",
+    labelFilterClear: "",
+    manageLabels: "",
+    labelName: "",
+    addLabel: "",
+    saveLabel: "",
+    assignLabels: "",
+    labelScopeCharacter: "",
+    labelScopeGlobal: "",
+    delete: "",
+    close: "",
+    cancel: "",
+    itemCountLabel: ""    
 }
 
 exports.wikiMessages = {
