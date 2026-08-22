@@ -107,6 +107,7 @@
       </div>
       <footer class="studio-footer">
         <button id="load" class="primary" type="button">Carregar cenário</button>
+        <p class="hint">O PNG usa o maior tamanho que o monitor permite, preservando a proporção 715 × 455 da Char Page.</p>
         <button id="capture" type="button" disabled>Salvar print PNG</button>
         <button id="open-devtools" type="button">Abrir DevTools</button>
         <div id="status" role="status"></div>
@@ -446,16 +447,10 @@
     });
     captureButton.addEventListener('click', async function () {
       if (!activePlayer) { status.textContent = 'Carregue um cenário antes de salvar o print.'; return; }
-      var rect = activePlayer.getBoundingClientRect();
       captureButton.disabled = true;
-      status.textContent = 'Salvando print…';
+      status.textContent = 'Preparando print e aguardando os assets…';
       try {
-        var result = await studioApi.capturePreview({
-          x: rect.left,
-          y: rect.top,
-          width: rect.width,
-          height: rect.height
-        });
+        var result = await studioApi.capturePreview(document.getElementById('scene-mode').value, flashvars.value);
         status.textContent = 'Print salvo em: ' + result.savedPath;
       } catch (error) {
         status.textContent = 'Falha ao salvar print: ' + error.message;

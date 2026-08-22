@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, session, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const { spawn } = require('child_process');
 const flash = require('../res/flash.js');
 
 const root = path.join(__dirname, '..');
@@ -69,6 +70,12 @@ function rendererConfig(renderer, rawFlashVars) {
         height: 455
     };
 }
+function waitForCaptureProcess(child) {
+    return new Promise((resolve, reject) => {
+        child.once('error', reject);
+        child.once('exit', code => code === 0 ? resolve() : reject(new Error('O processo de captura terminou com código ' + code + '.')));
+    });
+}
 ipcMain.handle('charpage-studio-defaults', () => ({ playerCharacter: '' }));
 ipcMain.handle('charpage-studio-load-character', async (event, name) => {
     const playerName = String(name || '').replace(/[^a-zA-Z0-9]/g, '');
@@ -80,10 +87,39 @@ ipcMain.handle('charpage-studio-load-character', async (event, name) => {
 ipcMain.handle('charpage-studio-runtime-status', () => ({ protocolActive: true, stagedBytes: fs.statSync(studioSwf).size, emptySceneBytes: fs.existsSync(emptySceneSwf) ? fs.statSync(emptySceneSwf).size : 0, sourceRequestCount: sourceRequestCount }));
 ipcMain.handle('charpage-studio-renderer-config', (event, renderer, flashVars) => rendererConfig(renderer, flashVars));
 ipcMain.handle('charpage-studio-open-devtools', event => BrowserWindow.fromWebContents(event.sender).webContents.openDevTools({ mode: 'right' }));
-ipcMain.handle('charpage-studio-capture', async (event, bounds) => {
-    const win = BrowserWindow.fromWebContents(event.sender); const image = await win.webContents.capturePage(bounds);
-    const result = await dialog.showSaveDialog(win, { defaultPath: 'CharPage.png', filters: [{ name: 'PNG', extensions: ['png'] }] });
-    if (result.canceled || !result.filePath) throw new Error('Print cancelado.'); fs.writeFileSync(result.filePath, image.toPNG()); return { savedPath: result.filePath };
+ipcMain.handle('charpage-studio-capture-preview', async (event, renderer, flashVars) => {
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    const config = rendererConfig(renderer, flashVars);
+    const result = await dialog.showSaveDialog(owner, { defaultPath: 'CharPage.png', filters: [{ name: 'PNG', extensions: ['png'] }] });
+    if (result.canceled || !result.filePath) throw new Error('Print cancelado.');
+    const temporaryDirectory = fs.mkdtempSync(path.join(app.getPath('temp'), 'aquastar-charpage-'));
+    const requestPath = path.join(temporaryDirectory, 'request.json');
+    const statusPath = path.join(temporaryDirectory, 'status.json');
+    fs.writeFileSync(requestPath, JSON.stringify({
+        swfUrl: config.swfUrl,
+        flashVars: config.flashVars,
+        outputPath: result.filePath,
+        statusPath: statusPath
+    }));
+    const childArgs = process.defaultApp
+        ? [app.getAppPath(), '--charpage-studio-capture', '--capture-request=' + requestPath]
+        : ['--charpage-studio-capture', '--capture-request=' + requestPath];
+    try {
+        await waitForCaptureProcess(spawn(process.execPath, childArgs, { stdio: 'ignore', windowsHide: true }));
+        const status = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+        return { savedPath: result.filePath, width: status.width, height: status.height };
+    } catch (error) {
+        // The helper records the browser-side error before it exits. Surface it
+        // in the Studio instead of only exposing its generic exit code.
+        let helperStatus = null;
+        try {
+            helperStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+        } catch (statusError) { /* no helper diagnostic was written */ }
+        if (helperStatus && helperStatus.error) throw new Error(helperStatus.error);
+        throw error;
+    } finally {
+        try { fs.rmSync(temporaryDirectory, { recursive: true, force: true }); } catch (error) { /* temporary files are harmless */ }
+    }
 });
 app.allowRendererProcessReuse = false;
 flash.flashManager(app, root, root, 'AquaStar');

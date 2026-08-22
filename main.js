@@ -2,6 +2,10 @@ const {app, session, Menu, BrowserWindow}  = require('electron')
 
 // PPAPI Flash only preserves LoaderInfo.parameters when the Studio owns the
 // default session. Keep that session in a dedicated AquaStar process.
+if (process.argv.indexOf('--charpage-studio-capture') !== -1) {
+    require('./scripts/charpage-studio-capture-process.js');
+    return;
+}
 if (process.argv.indexOf('--charpage-studio') !== -1) {
     require('./scripts/charpage-studio-process.js');
     return;

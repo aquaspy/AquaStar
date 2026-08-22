@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Char Page Studio capture</title>
+  <style>
+    html, body, #flash-host { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+    embed { display: block; }
+  </style>
+</head>
+<body>
+  <div id="flash-host"></div>
+  <script>
+  (function () {
+    var query = new URLSearchParams(window.location.search);
+    var width = Number(query.get('width'));
+    var height = Number(query.get('height'));
+    var swfUrl = query.get('swfUrl');
+    var flashVars = query.get('flashVars') || '';
+    if (!width || !height || !swfUrl) throw new Error('Parâmetros de captura ausentes.');
+    var player = document.createElement('embed');
+    player.type = 'application/x-shockwave-flash';
+    player.width = String(width);
+    player.height = String(height);
+    player.setAttribute('flashvars', '&' + flashVars);
+    player.setAttribute('quality', 'high');
+    player.setAttribute('loop', 'true');
+    player.setAttribute('scale', 'showall');
+    player.setAttribute('wmode', 'opaque');
+    player.setAttribute('allowScriptAccess', 'always');
+    player.setAttribute('allowNetworking', 'all');
+    player.src = swfUrl + '?v=2&' + flashVars;
+    document.getElementById('flash-host').appendChild(player);
+    window.setFlashSize = function (rect) {
+      player.width = String(Math.round(rect.width));
+      player.height = String(Math.round(rect.height));
+      player.style.width = Math.round(rect.width) + 'px';
+      player.style.height = Math.round(rect.height) + 'px';
+      player.style.position = 'absolute';
+      player.style.left = Math.round(rect.x) + 'px';
+      player.style.top = Math.round(rect.y) + 'px';
+    };
+  })();
+  </script>
+</body>
+</html>
