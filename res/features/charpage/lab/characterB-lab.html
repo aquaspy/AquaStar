@@ -44,7 +44,7 @@
     #preview-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #161616; }
     .preview-header { flex: 0 0 auto; padding: 12px 18px; color: #9a9a9a; border-bottom: 1px solid #2c2c2c; font-size: 12px; }
     #stage { flex: 1 1 auto; overflow: auto; padding: 20px; background: #000; display: flex; align-items: flex-start; justify-content: center; }
-    #stage embed { flex: 0 0 auto; width: 715px; height: 455px; }
+    #stage embed { flex: 0 0 auto; display: block; }
     @media (max-width: 800px) { main { display: block; height: auto; overflow: visible; } aside { min-height: 100vh; } #preview-pane { min-height: 495px; } }
   </style>
 </head>
@@ -93,6 +93,9 @@
     var flashvars = document.getElementById('flashvars');
     flashvars.value = initialFlashVars;
     var currentSourceUrl = null;
+    var activePlayer = null;
+    var nativeMovieWidth = 715;
+    var nativeMovieHeight = 455;
     var colorDefinitions = [
       ['intColorHair', 'Cabelo'], ['intColorSkin', 'Pele'], ['intColorEye', 'Olhos'],
       ['intColorBase', 'Base'], ['intColorTrim', 'Detalhe'], ['intColorAccessory', 'Acessório']
@@ -175,6 +178,14 @@
       document.getElementById('show-weapon').checked = params.get('strWeaponFile') !== 'items/swords/unarmed.swf';
       renderAdvancedControls(params);
     }
+    function resizePreview() {
+      if (!activePlayer) return;
+      var availableWidth = Math.max(1, stage.clientWidth - 40);
+      var availableHeight = Math.max(1, stage.clientHeight - 40);
+      var scale = Math.min(availableWidth / nativeMovieWidth, availableHeight / nativeMovieHeight);
+      activePlayer.width = String(Math.max(1, Math.floor(nativeMovieWidth * scale)));
+      activePlayer.height = String(Math.max(1, Math.floor(nativeMovieHeight * scale)));
+    }
     colorDefinitions.forEach(function (definition) {
       var row = document.createElement('label');
       row.className = 'color-control';
@@ -214,6 +225,7 @@
     });
     flashvars.addEventListener('change', function () { syncControls(new URLSearchParams(flashvars.value)); });
     syncControls(new URLSearchParams(flashvars.value));
+    window.addEventListener('resize', resizePreview);
 
     document.getElementById('load-character').addEventListener('click', async function () {
       var button = document.getElementById('load-character');
@@ -238,8 +250,6 @@
       var parameters = new URLSearchParams(flashvars.value);
       var player = document.createElement('embed');
       player.type = 'application/x-shockwave-flash';
-      player.width = '715';
-      player.height = '455';
       player.setAttribute('flashvars', parameters.toString());
       player.setAttribute('quality', 'high');
       player.setAttribute('scale', 'showall');
@@ -248,6 +258,8 @@
       player.setAttribute('allowNetworking', 'all');
       player.src = currentSourceUrl;
       stage.textContent = '';
+      activePlayer = player;
+      resizePreview();
       status.textContent = 'Preparando Flash Player nativo…';
       try {
         stage.appendChild(player);
