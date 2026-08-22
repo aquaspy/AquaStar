@@ -1,12 +1,20 @@
 const path = require('path');
 const https = require('https');
 const { app, BrowserWindow, ipcMain, session } = require('electron');
+const flash = require('../res/flash.js');
 
-const LAB_PARTITION = 'persist:charpage-lab';
 const SOURCE_URL = 'https://game.aq.com/game/gamefiles/etc/chardetail/characterB.swf?v=2';
-const SOURCE_PATH = '/game/gamefiles/etc/chardetail/characterB.swf';
 const ALLOWED_HOSTS = new Set(['game.aq.com', 'www.aq.com', 'account.aq.com']);
 let stagedSwf = null;
+let stagedSourceUrl = null;
+let sourceRequestCount = 0;
+let lastSourceRequest = null;
+
+// This standalone Studio process must register PPAPI itself; main.js normally
+// does this for AquaStar's regular windows before Electron becomes ready.
+const appRoot = path.join(__dirname, '..');
+app.allowRendererProcessReuse = false;
+flash.flashManager(app, appRoot, appRoot, 'AquaStar');
 
 function fetchOfficialAsset(url, redirectsLeft) {
     return new Promise((resolve, reject) => {
@@ -31,17 +39,23 @@ function fetchOfficialAsset(url, redirectsLeft) {
     });
 }
 
-function isCharacterBSwf(url) {
+function isStagedSwf(url) {
     try {
         const parsed = new URL(url);
-        return parsed.hostname === 'game.aq.com' && parsed.pathname === SOURCE_PATH;
+        const staged = new URL(stagedSourceUrl || SOURCE_URL);
+        return parsed.hostname === staged.hostname && parsed.pathname === staged.pathname;
     } catch (error) { return false; }
 }
 
 function setupLabProtocol() {
-    const labSession = session.fromPartition(LAB_PARTITION);
+    // PPAPI Flash in Electron 11 is initialized through the default browser
+    // session. This process is dedicated to the Studio, so using it does not
+    // broaden the scope of the URL interception to AquaStar's main process.
+    const labSession = session.defaultSession;
     labSession.protocol.interceptBufferProtocol('https', (request, callback) => {
-        if (isCharacterBSwf(request.url) && stagedSwf) {
+        if (isStagedSwf(request.url) && stagedSwf) {
+            sourceRequestCount++;
+            lastSourceRequest = request.url;
             callback({ mimeType: 'application/x-shockwave-flash', data: stagedSwf });
             return;
         }
@@ -51,13 +65,54 @@ function setupLabProtocol() {
     });
 }
 
-ipcMain.handle('charpage-lab-stage-swf', (event, bytes) => {
-    stagedSwf = Buffer.from(bytes);
-    if (stagedSwf.slice(0, 3).toString('ascii') !== 'CWS' && stagedSwf.slice(0, 3).toString('ascii') !== 'FWS') {
-        throw new Error('The selected file is not a supported SWF.');
+function readConfiguredPlayerName() {
+    const candidates = [
+        path.join(app.getPath('appData'), 'AquaStar', 'aquastar.json'),
+        path.join(app.getPath('appData'), 'aquastar.json')
+    ];
+    for (const file of candidates) {
+        try {
+            const settings = JSON.parse(require('fs').readFileSync(file, 'utf8'));
+            if (typeof settings.playerCharacter === 'string') return settings.playerCharacter.replace(/[^a-zA-Z0-9]/g, '');
+        } catch (error) { /* Missing or malformed settings fall back to blank. */ }
     }
-    return { bytes: stagedSwf.length, sourceUrl: SOURCE_URL };
+    return '';
+}
+
+function extractCharPageData(html) {
+    const movie = html.match(/<param\s+name=["']movie["']\s+value=["']([^"']+)["']/i);
+    const flashVars = html.match(/<param\s+name=["']flashvars["']\s+value=["']([^"']*)["']/i);
+    if (!movie || !flashVars) throw new Error('The Char Page did not contain its SWF and FlashVars.');
+    const swfUrl = new URL(movie[1].replace(/&amp;/g, '&'), 'https://account.aq.com/');
+    if (swfUrl.hostname !== 'game.aq.com') throw new Error('The Char Page returned an unexpected SWF host.');
+    return { swfUrl: swfUrl.href, flashVars: flashVars[1].replace(/&amp;/g, '&') };
+}
+
+ipcMain.handle('charpage-studio-defaults', () => ({ playerCharacter: readConfiguredPlayerName() }));
+
+ipcMain.handle('charpage-studio-load-character', async (event, requestedName) => {
+    const playerName = String(requestedName || '').replace(/[^a-zA-Z0-9]/g, '');
+    if (!playerName) throw new Error('Enter a valid AQW character name.');
+    const page = await fetchOfficialAsset('https://account.aq.com/CharPage?id=' + encodeURIComponent(playerName), 5);
+    const data = extractCharPageData(page.data.toString('utf8'));
+    const swf = await fetchOfficialAsset(data.swfUrl, 5);
+    if (swf.data.slice(0, 3).toString('ascii') !== 'CWS' && swf.data.slice(0, 3).toString('ascii') !== 'FWS') {
+        throw new Error('The Char Page SWF download was invalid.');
+    }
+    stagedSwf = swf.data;
+    stagedSourceUrl = data.swfUrl;
+    sourceRequestCount = 0;
+    lastSourceRequest = null;
+    return { playerName: playerName, flashVars: data.flashVars, swfUrl: stagedSourceUrl, bytes: stagedSwf.length };
 });
+
+ipcMain.handle('charpage-lab-runtime-status', () => ({
+    nativeFlash: true,
+    stagedBytes: stagedSwf ? stagedSwf.length : 0,
+    stagedSourceUrl: stagedSourceUrl,
+    sourceRequestCount: sourceRequestCount,
+    lastSourceRequest: lastSourceRequest
+}));
 
 function createLabWindow() {
     const window = new BrowserWindow({
@@ -65,13 +120,13 @@ function createLabWindow() {
         height: 800,
         minWidth: 900,
         minHeight: 600,
-        title: 'AquaStar — CharacterB Lab',
+        title: 'AquaStar — Char Page Studio',
         backgroundColor: '#10141b',
         webPreferences: {
-            partition: LAB_PARTITION,
             nodeIntegration: false,
             contextIsolation: true,
-            sandbox: true,
+            sandbox: false,
+            plugins: true,
             // The SWF is local but it loads public AQW assets. This laboratory
             // window alone needs to allow those cross-origin fetches.
             webSecurity: false,
@@ -96,7 +151,7 @@ app.whenReady().then(() => {
     setupLabProtocol();
     createLabWindow();
 }).catch((error) => {
-    console.error('[AquaStar] Could not start CharacterB Lab:', error);
+    console.error('[AquaStar] Could not start Char Page Studio:', error);
     app.quit();
 });
 app.on('window-all-closed', () => app.quit());
