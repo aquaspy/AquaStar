@@ -8,6 +8,7 @@ const path     = require('path');
 const { app, ipcMain, clipboard } = require('electron');
 const constant = require('../../const.js');
 const locale   = require('../../locale.js');
+const jsonStore = require('../../repositories/json-store.js');
 
 const remindersJsonFileName = constant.appName.toLocaleLowerCase() + '_reminders.json'; // "aquastar_reminders.json"
 const legacyRemindersJsonPath = path.join(app.getPath('appData'), remindersJsonFileName);
@@ -69,11 +70,11 @@ function _buildSeedState() {
 function _loadReminders() {
     if (!fs.existsSync(remindersJsonPath)) {
         const seeded = _buildSeedState();
-        fs.writeFileSync(remindersJsonPath, JSON.stringify(seeded, null, 4));
+        jsonStore.write(remindersJsonPath, seeded);
         return seeded;
     }
     try {
-        const parsed = JSON.parse(fs.readFileSync(remindersJsonPath));
+        const parsed = jsonStore.read(remindersJsonPath);
         return {
             characters: Array.isArray(parsed.characters) ? parsed.characters : [],
             quests:     (Array.isArray(parsed.quests) ? parsed.quests : []).map(_migrateQuest),
@@ -103,7 +104,7 @@ ipcMain.handle('saveReminders', (event, fullState) => {
         showMemberDailies: (fullState && fullState.showMemberDailies) !== false,
         individualHiddenMode: (fullState && fullState.individualHiddenMode) === true
     };
-    fs.writeFileSync(remindersJsonPath, JSON.stringify(toSave, null, 4));
+    jsonStore.write(remindersJsonPath, toSave);
     return { savedTo: remindersJsonPath };
 });
 

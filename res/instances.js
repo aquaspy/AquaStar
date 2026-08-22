@@ -3,6 +3,7 @@ const windowConfig           = require('./windows/config.js');
 const windowsMenu            = require('./windows/menu.js');
 const keybinds               = require('./keybindings.js');
 const socketProxy            = require('./socketProxy.js');
+const createFeatureWindowController = require('./windows/feature-window-controller.js');
 const {BrowserWindow, Menu}  = require('electron');
 
 let usedAltPagesNumbers = [];
@@ -438,76 +439,16 @@ function _notifyWindow(targetWin, notif, resetAfter = true){
     }
 }
 
-// Settings screen - singleton window, just refocus if already open.
-let settingsWin = null;
-function openSettingsWindow(){
-    if (settingsWin && !settingsWin.isDestroyed()) {
-        settingsWin.focus();
-        return settingsWin;
-    }
-    settingsWin = new BrowserWindow(windowConfig.settingsConfig);
-    settingsWin.setMenuBarVisibility(false);
-    settingsWin.setTitle("AquaStar - Settings");
-    settingsWin.loadURL(windowConfig.settingsUrl);
-    settingsWin.on('closed', () => { settingsWin = null; });
-    return settingsWin;
+const featureWindows = createFeatureWindowController(windowConfig.featureWindows, BrowserWindow);
+function openFeatureWindow(featureId) {
+    return featureWindows.open(featureId);
 }
 
-// Reminders screen - singleton window, just refocus if already open.
-let remindersWin = null;
-function openRemindersWindow(){
-    if (remindersWin && !remindersWin.isDestroyed()) {
-        remindersWin.focus();
-        return remindersWin;
-    }
-    remindersWin = new BrowserWindow(windowConfig.remindersConfig);
-    remindersWin.setMenuBarVisibility(false);
-    remindersWin.setTitle("AquaStar - Reminders");
-    remindersWin.loadURL(windowConfig.remindersUrl);
-    remindersWin.on('closed', () => { remindersWin = null; });
-    return remindersWin;
-}
-
-// To-Do screen - singleton window, just refocus if already open.
-let todoWin = null;
-function openTodoWindow(){
-    if (todoWin && !todoWin.isDestroyed()) {
-        todoWin.focus();
-        return todoWin;
-    }
-    todoWin = new BrowserWindow(windowConfig.todoConfig);
-    todoWin.setMenuBarVisibility(false);
-    todoWin.setTitle("AquaStar - To-Do List");
-    todoWin.loadURL(windowConfig.todoUrl);
-    todoWin.on('closed', () => { todoWin = null; });
-    return todoWin;
-}
-
-// Inventory screen - singleton window, just refocus if already open.
-let inventoryWin = null;
-function openInventoryWindow(){
-    if (inventoryWin && !inventoryWin.isDestroyed()) {
-        inventoryWin.focus();
-        return inventoryWin;
-    }
-    inventoryWin = new BrowserWindow(windowConfig.inventoryConfig);
-    inventoryWin.setMenuBarVisibility(false);
-    inventoryWin.setTitle("AquaStar - Inventory");
-    inventoryWin.loadURL(windowConfig.inventoryUrl);
-    inventoryWin.on('closed', () => { inventoryWin = null; });
-    return inventoryWin;
-}
-
-let strategyWin = null;
-function openStrategyWindow(){
-    if (strategyWin && !strategyWin.isDestroyed()) { strategyWin.focus(); return strategyWin; }
-    strategyWin = new BrowserWindow(windowConfig.strategyConfig);
-    strategyWin.setMenuBarVisibility(false);
-    strategyWin.setTitle("AquaStar - Strategy");
-    strategyWin.loadURL(windowConfig.strategyUrl);
-    strategyWin.on('closed', () => { strategyWin = null; });
-    return strategyWin;
-}
+function openSettingsWindow(){ return openFeatureWindow('settings'); }
+function openRemindersWindow(){ return openFeatureWindow('reminders'); }
+function openTodoWindow(){ return openFeatureWindow('todo'); }
+function openInventoryWindow(){ return openFeatureWindow('inventory'); }
+function openStrategyWindow(){ return openFeatureWindow('strategy'); }
 
 function _mkdir (filepath){
     try {
@@ -526,6 +467,7 @@ exports.openRemindersWindow = openRemindersWindow;
 exports.openTodoWindow      = openTodoWindow;
 exports.openInventoryWindow = openInventoryWindow;
 exports.openStrategyWindow  = openStrategyWindow;
+exports.openFeatureWindow   = openFeatureWindow;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;

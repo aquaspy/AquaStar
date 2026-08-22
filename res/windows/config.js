@@ -145,3 +145,13 @@ exports.strategyConfig = {
         plugins: false, contextIsolation: true }
 };
 exports.strategyUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'strategy', 'strategy.html'));
+
+// Local feature windows all use the same singleton lifecycle.  Keeping their
+// declarative metadata here prevents every caller from reimplementing it.
+exports.featureWindows = {
+    settings:  { config: exports.settingsConfig,  url: exports.settingsUrl,  title: 'AquaStar - Settings' },
+    reminders: { config: exports.remindersConfig, url: exports.remindersUrl, title: 'AquaStar - Reminders' },
+    todo:      { config: exports.todoConfig,      url: exports.todoUrl,      title: 'AquaStar - To-Do List' },
+    inventory: { config: exports.inventoryConfig, url: exports.inventoryUrl, title: 'AquaStar - Inventory' },
+    strategy:  { config: exports.strategyConfig,  url: exports.strategyUrl,  title: 'AquaStar - Strategy' }
+};

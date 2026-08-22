@@ -5,6 +5,7 @@ const path = require('path');
 const { ipcMain, globalShortcut } = require('electron');
 const constant = require('../../const.js');
 const locale = require('../../locale.js');
+const jsonStore = require('../../repositories/json-store.js');
 
 const strategyJsonPath = path.join(constant.appDataDirectory, constant.appName.toLocaleLowerCase() + '_strategy.json');
 const defaultPath = path.join(__dirname, 'strategy_default.json');
@@ -74,8 +75,8 @@ function migrate(raw) {
     return { potions: potions, classes: classes, timerTypes: timerTypes, bosses: bosses, timerShortcut: text(raw.timerShortcut) || 'Alt+Shift+U' };
 }
 function load() {
-    if (!fs.existsSync(strategyJsonPath)) { const fresh = migrate(JSON.parse(fs.readFileSync(defaultPath, 'utf8'))); fs.writeFileSync(strategyJsonPath, JSON.stringify(fresh, null, 4)); return fresh; }
-    try { return migrate(JSON.parse(fs.readFileSync(strategyJsonPath, 'utf8'))); }
+    if (!fs.existsSync(strategyJsonPath)) { const fresh = migrate(jsonStore.read(defaultPath)); jsonStore.write(strategyJsonPath, fresh); return fresh; }
+    try { return migrate(jsonStore.read(strategyJsonPath)); }
     catch (error) { console.log('[AquaStar] Failed to parse ' + strategyJsonPath + ': ' + error.message); return migrate({}); }
 }
 function save(data) {
@@ -91,7 +92,7 @@ function save(data) {
         if (old && favorite && !item.clearFavorites && !favorite.tonicId && !favorite.elixirId && !favorite.potionId) item.favorites = Object.assign({}, favorite, old);
     });
     const clean = migrate(data);
-    fs.writeFileSync(strategyJsonPath, JSON.stringify(clean, null, 4));
+    jsonStore.write(strategyJsonPath, clean);
     return clean;
 }
 
