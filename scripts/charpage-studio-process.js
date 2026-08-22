@@ -115,6 +115,29 @@ ipcMain.handle('charpage-studio-capture-preview', async (event, renderer, flashV
         try { fs.rmSync(temporaryDirectory, { recursive: true, force: true }); } catch (error) { /* temporary files are harmless */ }
     }
 });
+ipcMain.handle('charpage-studio-capture-gif', async (event, renderer, flashVars) => {
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    const config = rendererConfig(renderer, flashVars);
+    const result = await dialog.showSaveDialog(owner, { defaultPath: 'CharPage.gif', filters: [{ name: 'GIF animado', extensions: ['gif'] }] });
+    if (result.canceled || !result.filePath) throw new Error('GIF cancelado.');
+    const temporaryDirectory = fs.mkdtempSync(path.join(app.getPath('temp'), 'aquastar-charpage-gif-'));
+    const requestPath = path.join(temporaryDirectory, 'request.json');
+    const statusPath = path.join(temporaryDirectory, 'status.json');
+    fs.writeFileSync(requestPath, JSON.stringify({ kind: 'gif', swfUrl: config.swfUrl, flashVars: config.flashVars, outputPath: result.filePath, statusPath: statusPath, duration: 8000, fps: 10 }));
+    const childArgs = process.defaultApp ? [app.getAppPath(), '--charpage-studio-capture', '--capture-request=' + requestPath] : ['--charpage-studio-capture', '--capture-request=' + requestPath];
+    try {
+        await waitForCaptureProcess(spawn(process.execPath, childArgs, { stdio: 'ignore', windowsHide: true }));
+        const status = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+        return { savedPath: result.filePath, frames: status.frames, width: status.width, height: status.height };
+    } catch (error) {
+        let helperStatus = null;
+        try { helperStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8')); } catch (statusError) { /* no helper diagnostic was written */ }
+        if (helperStatus && helperStatus.error) throw new Error(helperStatus.error);
+        throw error;
+    } finally {
+        try { fs.rmSync(temporaryDirectory, { recursive: true, force: true }); } catch (error) { /* temporary files are harmless */ }
+    }
+});
 app.allowRendererProcessReuse = false;
 flash.flashManager(app, root, root, 'AquaStar');
 app.whenReady().then(() => { locale.detectLang(app.getLocale(), {}); installProtocol(); Menu.setApplicationMenu(null); studioWindow = new BrowserWindow({ width: 1280, height: 800, icon: constant.iconPath, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false, plugins: true, webSecurity: false, preload: path.join(root, 'res', 'features', 'charpage', 'lab', 'preload_lab.js') } }); studioWindow.setMenu(null); studioWindow.setMenuBarVisibility(false); studioWindow.loadFile(path.join(root, 'res', 'features', 'charpage', 'lab', 'characterB-lab.html')); studioWindow.on('closed', () => app.quit()); });

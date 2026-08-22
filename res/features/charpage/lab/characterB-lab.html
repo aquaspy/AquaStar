@@ -116,6 +116,7 @@
         <button id="load" class="primary" type="button" data-i18n="loadSceneButton">Carregar cenário</button>
         <p class="hint">O PNG usa o maior tamanho que o monitor permite, preservando a proporção 715 × 455 da Char Page.</p>
         <button id="capture" type="button" disabled data-i18n="savePngButton">Salvar print PNG</button>
+        <button id="capture-gif" type="button" disabled data-i18n="saveGifButton">Gerar GIF (8 s)</button>
         <div id="status" role="status"></div>
       </footer>
     </aside>
@@ -149,6 +150,7 @@
     var activePlayer = null;
     var activeFrame = null;
     var captureButton = document.getElementById('capture');
+    var captureGifButton = document.getElementById('capture-gif');
     var nativeMovieWidth = 715;
     var nativeMovieHeight = 455;
     var colorDefinitions = [
@@ -370,6 +372,7 @@
         activePlayer = null;
         activeFrame = null;
         captureButton.disabled = true;
+        captureGifButton.disabled = true;
         syncControls(new URLSearchParams(flashvars.value));
         status.textContent = character.playerName + ' carregado. Ajuste as opções e renderize.';
       } catch (error) {
@@ -422,6 +425,7 @@
       status.textContent = 'Preparando ' + (renderer.renderer === 'empty-scene' ? 'Cenário vazio' : 'Char Page Studio') + '…';
       try {
         captureButton.disabled = false;
+        captureGifButton.disabled = false;
         status.textContent = 'Flash Player nativo carregando…';
       } catch (error) {
         status.textContent = 'Falha ao carregar: ' + error.message;
@@ -430,13 +434,26 @@
     captureButton.addEventListener('click', async function () {
       if (!activePlayer) { status.textContent = 'Carregue um cenário antes de salvar o print.'; return; }
       captureButton.disabled = true;
+      captureGifButton.disabled = true;
       status.textContent = 'Preparando print e aguardando os assets…';
       try {
         var result = await studioApi.capturePreview(document.getElementById('scene-mode').value, flashvars.value);
         status.textContent = 'Print salvo em: ' + result.savedPath;
       } catch (error) {
         status.textContent = 'Falha ao salvar print: ' + error.message;
-      } finally { captureButton.disabled = false; }
+      } finally { captureButton.disabled = false; captureGifButton.disabled = false; }
+    });
+    captureGifButton.addEventListener('click', async function () {
+      if (!activePlayer) { status.textContent = 'Carregue um cenário antes de gerar o GIF.'; return; }
+      captureGifButton.disabled = true;
+      captureButton.disabled = true;
+      status.textContent = 'Capturando 8 segundos de animação…';
+      try {
+        var result = await studioApi.captureGif(document.getElementById('scene-mode').value, flashvars.value);
+        status.textContent = 'GIF salvo em: ' + result.savedPath;
+      } catch (error) {
+        status.textContent = 'Falha ao gerar GIF: ' + error.message;
+      } finally { captureGifButton.disabled = false; captureButton.disabled = false; }
     });
   })();
   </script>

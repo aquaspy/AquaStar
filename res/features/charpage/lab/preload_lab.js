@@ -5,5 +5,6 @@ contextBridge.exposeInMainWorld('characterBLab', {
     getMessages: () => ipcRenderer.invoke('charpage-studio-messages'),
     loadCharacter: (name) => ipcRenderer.invoke('charpage-studio-load-character', name),
     getRendererConfig: (renderer, flashVars) => ipcRenderer.invoke('charpage-studio-renderer-config', renderer, flashVars),
-    capturePreview: (renderer, flashVars) => ipcRenderer.invoke('charpage-studio-capture-preview', renderer, flashVars)
+    capturePreview: (renderer, flashVars) => ipcRenderer.invoke('charpage-studio-capture-preview', renderer, flashVars),
+    captureGif: (renderer, flashVars) => ipcRenderer.invoke('charpage-studio-capture-gif', renderer, flashVars)
 });
