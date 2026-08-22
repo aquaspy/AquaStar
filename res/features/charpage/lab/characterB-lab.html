@@ -16,8 +16,8 @@
     .studio-header p { margin: 0; }
     .sidebar-controls { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 18px 14px; }
     label { display: block; margin: 14px 0 6px; font-weight: normal; }
-    input, textarea, button { font: inherit; }
-    input, textarea { width: 100%; border: 1px solid #333; border-radius: 4px; padding: 6px 8px; background: #1b1b1b; color: #dcdcdc; }
+    input, select, textarea, button { font: inherit; }
+    input, select, textarea { width: 100%; border: 1px solid #333; border-radius: 4px; padding: 6px 8px; background: #1b1b1b; color: #dcdcdc; }
     textarea { min-height: 150px; resize: vertical; font-family: "Consolas", "Courier New", monospace; font-size: 12px; }
     button { padding: 6px 12px; border: 1px solid #383838; border-radius: 4px; color: #e6e6e6; background: #232323; cursor: pointer; font-size: 12px; }
     button:hover { background: #2c2c2c; } button:active { background: #1a1a1a; }
@@ -48,8 +48,9 @@
     #diagnostics { max-height: 130px; overflow: auto; white-space: pre-wrap; margin: 0; color: #b0b0b0; font: 10px Consolas, monospace; }
     #preview-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #161616; }
     .preview-header { flex: 0 0 auto; padding: 12px 18px; color: #9a9a9a; border-bottom: 1px solid #2c2c2c; font-size: 12px; }
-    #stage { flex: 1 1 auto; overflow: auto; padding: 20px; background: #000; display: flex; align-items: flex-start; justify-content: center; }
-    #stage embed { flex: 0 0 auto; display: block; }
+    #stage { flex: 1 1 auto; overflow: hidden; padding: 20px; background: #fef1c5; display: flex; align-items: center; justify-content: center; }
+    .flash-frame { position: relative; flex: 0 0 auto; }
+    .flash-frame embed { display: block; }
     @media (max-width: 800px) { main { display: block; height: auto; overflow: visible; } aside { min-height: 100vh; } #preview-pane { min-height: 495px; } }
   </style>
 </head>
@@ -61,6 +62,12 @@
         <p>Personalize a Char Page com o Flash Player nativo.</p>
       </header>
       <div class="sidebar-controls">
+      <label for="scene-mode">Modo de cena</label>
+      <select id="scene-mode">
+        <option value="charpage">Char Page Studio</option>
+        <option value="empty-scene">Cenário vazio</option>
+      </select>
+      <p class="hint">Cenário vazio usa o novo compositor AQW: sem interface, moldura ou fundo da Char Page.</p>
       <label for="player-name">Personagem AQW</label>
       <input id="player-name" type="text" maxlength="20" autocomplete="off" spellcheck="false">
       <button id="load-character" class="primary" type="button">Carregar da Char Page</button>
@@ -70,6 +77,13 @@
       <label for="bgindex">Fundo (bgindex)</label>
       <input id="bgindex" type="number" min="0" max="31" step="1" value="0">
       <p class="hint">0 usa o fundo padrão. O SWF aceita índices de 0 a 31.</p>
+      <label for="scene-background-color">Fundo sólido (cenário vazio)</label>
+      <input id="scene-background-color" type="color" value="#fef1c5">
+      <label for="empty-scene-fps">FPS (cenário vazio)</label>
+      <select id="empty-scene-fps">
+        <option value="30">Atual (30 FPS)</option>
+        <option value="24">AQW nativo (24 FPS)</option>
+      </select>
       <label>Avatar</label>
       <div class="advanced-group">
         <label for="avatar-offset-x">Posição horizontal</label><input id="avatar-offset-x" type="range" min="-350" max="350" step="1" value="0">
@@ -124,6 +138,7 @@
     flashvars.value = initialFlashVars;
     var currentSourceUrl = null;
     var activePlayer = null;
+    var activeFrame = null;
     var captureButton = document.getElementById('capture');
     var nativeMovieWidth = 715;
     var nativeMovieHeight = 455;
@@ -228,6 +243,9 @@
         if (input) input.value = colorToHex(params.get(definition[0]));
       });
       document.getElementById('bgindex').value = Math.max(0, Math.min(31, Number(params.get('bgindex')) || 0));
+      document.getElementById('scene-background-color').value = colorToHex(params.get('studioBackgroundColor') || 16708037);
+      stage.style.backgroundColor = document.getElementById('scene-background-color').value;
+      document.getElementById('empty-scene-fps').value = String(Number(params.get('studioFrameRate')) || 30);
       document.getElementById('avatar-offset-x').value = Number(params.get('studioAvatarOffsetX')) || 0;
       document.getElementById('avatar-offset-y').value = Number(params.get('studioAvatarOffsetY')) || 0;
       document.getElementById('avatar-scale').value = Number(params.get('studioAvatarScale')) || 1;
@@ -242,12 +260,18 @@
       renderAdvancedControls(params);
     }
     function resizePreview() {
-      if (!activePlayer) return;
+      if (!activePlayer || !activeFrame) return;
       var availableWidth = Math.max(1, stage.clientWidth - 40);
       var availableHeight = Math.max(1, stage.clientHeight - 40);
       var scale = Math.min(availableWidth / nativeMovieWidth, availableHeight / nativeMovieHeight);
-      activePlayer.width = String(Math.max(1, Math.floor(nativeMovieWidth * scale)));
-      activePlayer.height = String(Math.max(1, Math.floor(nativeMovieHeight * scale)));
+      var width = Math.max(1, Math.floor(nativeMovieWidth * scale));
+      var height = Math.max(1, Math.floor(nativeMovieHeight * scale));
+      activeFrame.style.width = width + 'px';
+      activeFrame.style.height = height + 'px';
+      activePlayer.width = String(width);
+      activePlayer.height = String(height);
+      activePlayer.style.width = width + 'px';
+      activePlayer.style.height = height + 'px';
     }
     function diagnose(message) {
       diagnostics.textContent += '\n' + message;
@@ -290,6 +314,13 @@
       var params = new URLSearchParams(flashvars.value);
       params.set('bgindex', String(Math.max(0, Math.min(31, Number(this.value) || 0))));
       writeParams(params);
+    });
+    document.getElementById('scene-background-color').addEventListener('input', function () {
+      changeParam('studioBackgroundColor', String(parseInt(this.value.slice(1), 16)));
+      stage.style.backgroundColor = this.value;
+    });
+    document.getElementById('empty-scene-fps').addEventListener('change', function () {
+      changeParam('studioFrameRate', this.value);
     });
     [['avatar-offset-x', 'studioAvatarOffsetX'], ['avatar-offset-y', 'studioAvatarOffsetY'], ['avatar-scale', 'studioAvatarScale']].forEach(function (definition) {
       document.getElementById(definition[0]).addEventListener('input', function () { changeParam(definition[1], this.value); });
@@ -341,6 +372,7 @@
         flashvars.value = character.flashVars;
         savedWeapon = null;
         activePlayer = null;
+        activeFrame = null;
         captureButton.disabled = true;
         syncControls(new URLSearchParams(flashvars.value));
         status.textContent = character.playerName + ' carregado. Ajuste as opções e renderize.';
@@ -355,16 +387,26 @@
     });
     document.getElementById('load').addEventListener('click', async function () {
       if (!currentSourceUrl || !flashvars.value) { status.textContent = 'Carregue uma Char Page antes de renderizar.'; return; }
-      var parameters = new URLSearchParams(flashvars.value);
+      var renderer;
+      try {
+        renderer = await studioApi.getRendererConfig(document.getElementById('scene-mode').value, flashvars.value);
+      } catch (error) {
+        status.textContent = 'Falha ao preparar o renderizador: ' + error.message;
+        diagnose('[Flash] ' + (error.stack || error.message));
+        return;
+      }
+      var parameters = new URLSearchParams(renderer.flashVars);
       var flashVarString = '&' + parameters.toString();
       // Pepper Flash also exposes query-string values through
       // LoaderInfo.parameters. Supplying this second, equivalent route is
       // essential for a locally packaged movie on Chromium 87.
-      var movieUrl = currentSourceUrl + '?v=2&' + parameters.toString();
+      var movieUrl = renderer.swfUrl + '?v=2&' + parameters.toString();
       // Chromium 87's PPAPI reliably receives FlashVars from a direct embed.
       // This deliberately matches the previously working native Studio path.
       var player = document.createElement('embed');
       player.type = 'application/x-shockwave-flash';
+      nativeMovieWidth = Number(renderer.width) || 715;
+      nativeMovieHeight = Number(renderer.height) || 455;
       player.width = String(nativeMovieWidth);
       player.height = String(nativeMovieHeight);
       player.setAttribute('flashvars', flashVarString);
@@ -376,13 +418,17 @@
       player.setAttribute('allowNetworking', 'all');
       player.setAttribute('menu', 'true');
       player.src = movieUrl;
+      var frame = document.createElement('div');
+      frame.className = 'flash-frame';
+      frame.appendChild(player);
       stage.textContent = '';
+      stage.appendChild(frame);
       activePlayer = player;
+      activeFrame = frame;
       resizePreview();
-      status.textContent = 'Preparando Flash Player nativo…';
+      status.textContent = 'Preparando ' + (renderer.renderer === 'empty-scene' ? 'Cenário vazio' : 'Char Page Studio') + '…';
       diagnose('[Flash] origem: ' + movieUrl);
       try {
-        stage.appendChild(player);
         captureButton.disabled = false;
         status.textContent = 'Flash Player nativo carregando…';
         diagnose('[Flash] objeto compatível inserido; aguardando requisições do plugin.');

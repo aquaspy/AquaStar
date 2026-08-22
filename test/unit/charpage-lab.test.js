@@ -4,7 +4,7 @@ const path = require('path');
 
 test('Char Page Studio loads an explicitly requested Char Page into native Flash controls', () => {
     const lab = fs.readFileSync(path.join(__dirname, '../../res/features/charpage/lab/characterB-lab.html'), 'utf8');
-    ['player-name', 'load-character', 'initialFlashVars = \'\'', 'colorDefinitions', 'intColorHair', 'intColorSkin', 'intColorEye', 'intColorBase', 'intColorTrim', 'intColorAccessory', 'studioVisibilityDefinitions', 'studioShowIdentity', 'studioShowProfileButton', 'studioShowCosmeticsButton', 'studioShowBackground', 'studioShowBorder', 'show-weapon', 'items/swords/unarmed.swf', 'strCustWeaponFile', 'bgindex', 'max="31"', 'studioApi.loadCharacter', 'studioApi.getDefaults', 'studioApi.capturePreview', 'studioApi.getRuntimeStatus', 'Salvar print PNG', 'Abrir DevTools', 'diagnostics', 'application/x-shockwave-flash', 'FlashVars', "flashVarString = '&' + parameters.toString()", 'Opções avançadas', 'Classe e armadura', 'Cabelo e elmo', 'Armas', 'Pet e cenário', 'function changeParam', 'function removeParam', 'sidebar-controls', 'preview-pane', 'align-items: flex-start', 'function resizePreview', 'nativeMovieWidth = 715', 'nativeMovieHeight = 455', "window.addEventListener('resize', resizePreview)"].forEach((fragment) => {
+    ['player-name', 'load-character', 'initialFlashVars = \'\'', 'colorDefinitions', 'intColorHair', 'intColorSkin', 'intColorEye', 'intColorBase', 'intColorTrim', 'intColorAccessory', 'studioVisibilityDefinitions', 'studioShowIdentity', 'studioShowProfileButton', 'studioShowCosmeticsButton', 'studioShowBackground', 'studioShowBorder', 'show-weapon', 'items/swords/unarmed.swf', 'strCustWeaponFile', 'bgindex', 'max="31"', 'scene-mode', 'empty-scene', 'scene-background-color', 'studioBackgroundColor', 'empty-scene-fps', 'studioFrameRate', 'AQW nativo (24 FPS)', 'studioApi.loadCharacter', 'studioApi.getDefaults', 'studioApi.getRendererConfig', 'studioApi.capturePreview', 'studioApi.getRuntimeStatus', 'Salvar print PNG', 'Abrir DevTools', 'diagnostics', 'application/x-shockwave-flash', 'FlashVars', "flashVarString = '&' + parameters.toString()", 'Opções avançadas', 'Classe e armadura', 'Cabelo e elmo', 'Armas', 'Pet e cenário', 'function changeParam', 'function removeParam', 'sidebar-controls', 'preview-pane', 'flash-frame', 'activePlayer.width = String(width)', 'function resizePreview', 'nativeMovieWidth = 715', 'nativeMovieHeight = 455', "window.addEventListener('resize', resizePreview)"].forEach((fragment) => {
         assert.ok(lab.indexOf(fragment) !== -1, 'laboratory must contain ' + fragment);
     });
     assert.ok(lab.indexOf('if (!currentSourceUrl || !flashvars.value)') !== -1);
@@ -37,7 +37,19 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
     assert.ok(main.indexOf("require('./res/features/charpage/studio.js')") !== -1);
     const studioSwf = fs.readFileSync(path.join(__dirname, '../../res/features/charpage/characterB-studio.swf'));
     assert.ok(['CWS', 'FWS'].indexOf(studioSwf.slice(0, 3).toString('ascii')) !== -1, 'bundled Studio asset must be a valid SWF');
-    assert.ok(lab.indexOf("var movieUrl = currentSourceUrl + '?v=2&' + parameters.toString()") !== -1, 'pass FlashVars through the movie URL for Pepper Flash');
+    const emptySceneSwf = fs.readFileSync(path.join(__dirname, '../../res/features/charpage/characterB-empty-scene.swf'));
+    assert.ok(['CWS', 'FWS', 'ZWS'].indexOf(emptySceneSwf.slice(0, 3).toString('ascii')) !== -1, 'bundled Empty Scene asset must be a valid SWF');
+    assert.strictEqual(emptySceneSwf[3], 15, 'Empty Scene must target the bundled Flash 32 runtime');
+    const emptySceneReadme = fs.readFileSync(path.join(__dirname, '../../res/features/charpage/empty-scene/README.md'), 'utf8');
+    const emptySceneBuild = fs.readFileSync(path.join(__dirname, '../../res/features/charpage/empty-scene/build-empty-scene.ps1'), 'utf8');
+    assert.ok(emptySceneReadme.indexOf('SWF2PNG') !== -1 && emptySceneReadme.indexOf('version=15') !== -1, 'Empty Scene must document provenance and target');
+    assert.ok(emptySceneBuild.indexOf('-importScript') !== -1 && emptySceneBuild.indexOf('-set version 15') !== -1, 'Empty Scene must have a reproducible FFDec build');
+    const studioProcess = fs.readFileSync(path.join(__dirname, '../../scripts/charpage-studio-process.js'), 'utf8');
+    assert.ok(studioProcess.indexOf('characterB-empty-scene.swf') !== -1, 'dedicated Studio process must serve the Empty Scene SWF');
+    assert.ok(studioProcess.indexOf('charpage-studio-renderer-config') !== -1, 'dedicated Studio process must select the requested renderer');
+    const preloadLab = fs.readFileSync(path.join(__dirname, '../../res/features/charpage/lab/preload_lab.js'), 'utf8');
+    assert.ok(preloadLab.indexOf('getRendererConfig') !== -1, 'renderer selection must cross the isolated preload bridge');
+    assert.ok(lab.indexOf("var movieUrl = renderer.swfUrl + '?v=2&' + parameters.toString()") !== -1, 'pass FlashVars through the selected renderer URL for Pepper Flash');
     assert.ok(lab.indexOf("player.setAttribute('flashvars', flashVarString)") !== -1, 'pass FlashVars directly to the PPAPI embed');
     assert.ok(lab.indexOf('player.src = movieUrl') > lab.indexOf("player.setAttribute('flashvars', flashVarString)"), 'set FlashVars before the native plugin source');
     assert.ok(config.indexOf("on('new-window'") !== -1);
