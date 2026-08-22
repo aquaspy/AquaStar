@@ -70,6 +70,13 @@
       <label for="bgindex">Fundo (bgindex)</label>
       <input id="bgindex" type="number" min="0" max="31" step="1" value="0">
       <p class="hint">0 usa o fundo padrão. O SWF aceita índices de 0 a 31.</p>
+      <label>Avatar</label>
+      <div class="advanced-group">
+        <label for="avatar-offset-x">Posição horizontal</label><input id="avatar-offset-x" type="range" min="-350" max="350" step="1" value="0">
+        <label for="avatar-offset-y">Posição vertical</label><input id="avatar-offset-y" type="range" min="-250" max="250" step="1" value="0">
+        <label for="avatar-scale">Zoom</label><input id="avatar-scale" type="range" min="0.25" max="2.5" step="0.05" value="1">
+        <button id="reset-avatar-transform" type="button">Restaurar posição e zoom</button>
+      </div>
       <label class="toggle" for="show-weapon"><input id="show-weapon" type="checkbox" checked> Mostrar arma? (ou usar Unarmed)</label>
       <label>Elementos visuais</label>
       <div id="studio-visibility-controls"></div>
@@ -220,6 +227,9 @@
         if (input) input.value = colorToHex(params.get(definition[0]));
       });
       document.getElementById('bgindex').value = Math.max(0, Math.min(31, Number(params.get('bgindex')) || 0));
+      document.getElementById('avatar-offset-x').value = Number(params.get('studioAvatarOffsetX')) || 0;
+      document.getElementById('avatar-offset-y').value = Number(params.get('studioAvatarOffsetY')) || 0;
+      document.getElementById('avatar-scale').value = Number(params.get('studioAvatarScale')) || 1;
       document.getElementById('show-weapon').checked = params.get('strWeaponFile') !== 'items/swords/unarmed.swf';
       studioVisibilityDefinitions.forEach(function (definition) {
         var input = document.getElementById('visual-' + definition[0]);
@@ -278,6 +288,14 @@
     document.getElementById('bgindex').addEventListener('change', function () {
       var params = new URLSearchParams(flashvars.value);
       params.set('bgindex', String(Math.max(0, Math.min(31, Number(this.value) || 0))));
+      writeParams(params);
+    });
+    [['avatar-offset-x', 'studioAvatarOffsetX'], ['avatar-offset-y', 'studioAvatarOffsetY'], ['avatar-scale', 'studioAvatarScale']].forEach(function (definition) {
+      document.getElementById(definition[0]).addEventListener('input', function () { changeParam(definition[1], this.value); });
+    });
+    document.getElementById('reset-avatar-transform').addEventListener('click', function () {
+      var params = new URLSearchParams(flashvars.value);
+      ['studioAvatarOffsetX', 'studioAvatarOffsetY', 'studioAvatarScale'].forEach(function (key) { params.delete(key); });
       writeParams(params);
     });
     document.getElementById('show-weapon').addEventListener('change', function () {
