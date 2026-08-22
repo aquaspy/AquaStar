@@ -28,10 +28,11 @@ function _genId(prefix) {
 // needs. Quests saved before this feature existed only ever had the boolean, so their
 // shared-mode hidden status carries over unchanged; quests already on the new shape pass through.
 function _migrateQuest(q) {
-    if (q.hiddenBy && typeof q.hiddenBy === 'object') return q;
-    const hiddenBy = {};
+    q = (q && typeof q === 'object') ? q : {};
+    const hiddenBy = (q.hiddenBy && typeof q.hiddenBy === 'object' && !Array.isArray(q.hiddenBy)) ? q.hiddenBy : {};
     if (q.hidden === true) hiddenBy.__shared__ = true;
-    const migrated = Object.assign({}, q, { hiddenBy: hiddenBy });
+    const done = (q.done && typeof q.done === 'object' && !Array.isArray(q.done)) ? q.done : {};
+    const migrated = Object.assign({}, q, { done: done, hiddenBy: hiddenBy });
     delete migrated.hidden;
     return migrated;
 }

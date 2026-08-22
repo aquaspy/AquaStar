@@ -335,10 +335,20 @@ exports.rufflePlayerUrl = _getFileUrl(fs.existsSync(downloadedRufflePlayerPath)
     ? downloadedRufflePlayerPath : bundledRufflePlayerPath);
 exports.ruffleDirectory = appDataDirectory;
 
-// Custom aqlite stuff
-var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
-exports.mainPath = oldAqlite ? 
-            _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
+// Custom AQLite SWFs written by Settings belong in AppData: installed builds can
+// live under Program Files, where their working directory is not reliably writable.
+// Keep accepting the old working-directory file so existing portable installs work.
+const customSwfFileName = 'aqlite_old.swf';
+const managedCustomSwfPath = path.join(appDataDirectory, customSwfFileName);
+const legacyCustomSwfPath = path.join(appCurrentDirectory, customSwfFileName);
+const activeCustomSwfPath = fs.existsSync(managedCustomSwfPath) ? managedCustomSwfPath :
+    (fs.existsSync(legacyCustomSwfPath) ? legacyCustomSwfPath : null);
+var oldAqlite = activeCustomSwfPath !== null;
+exports.customSwfPath = managedCustomSwfPath;
+exports.legacyCustomSwfPath = legacyCustomSwfPath;
+exports.activeCustomSwfPath = activeCustomSwfPath;
+exports.mainPath = oldAqlite ?
+            _getFileUrl(activeCustomSwfPath) :
             "https://game.aq.com/game/gamefiles/Loader3.swf?ver=a"
 exports.isOldAqlite = oldAqlite;
 

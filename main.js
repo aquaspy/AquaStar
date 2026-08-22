@@ -32,8 +32,13 @@ const constant = require('./res/const.js');
 flash.flashManager(app, __dirname, constant.mainPath, constant.appName);
 
 function createWindow () {
-    session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-        callback(permission === 'media' || permission === 'display-capture');
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+        // Screen capture is needed only by AquaStar's own game windows.  Normal
+        // browser windows load remote account/wiki pages and must not inherit it.
+        const win = BrowserWindow.fromWebContents(webContents);
+        const swfUrl = win && win.aquaStarSwfUrl;
+        const isGameWindow = typeof swfUrl === 'string' && constant.isRuffleEligible(swfUrl);
+        callback(isGameWindow && (permission === 'media' || permission === 'display-capture'));
     });
 
     // Keybindings now in keybindings.js

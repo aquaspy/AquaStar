@@ -277,12 +277,18 @@ ipcMain.on('restartApp', () => {
 /// -------------------------------
 
 function _customSwfPath() {
-    return path.join(constant.appDirectoryPath, 'aqlite_old.swf');
+    return constant.customSwfPath;
+}
+
+function _activeCustomSwfPath() {
+    if (fs.existsSync(constant.customSwfPath)) return constant.customSwfPath;
+    if (fs.existsSync(constant.legacyCustomSwfPath)) return constant.legacyCustomSwfPath;
+    return null;
 }
 
 ipcMain.handle('getCustomSwfStatus', () => {
-    const target = _customSwfPath();
-    return { exists: fs.existsSync(target), path: target };
+    const activePath = _activeCustomSwfPath();
+    return { exists: activePath !== null, path: activePath || _customSwfPath() };
 });
 
 ipcMain.handle('chooseCustomSwf', async (event) => {
@@ -300,7 +306,8 @@ ipcMain.handle('chooseCustomSwf', async (event) => {
 });
 
 ipcMain.handle('removeCustomSwf', () => {
-    const target = _customSwfPath();
-    if (fs.existsSync(target)) fs.unlinkSync(target);
-    return { exists: fs.existsSync(target), path: target };
+    const target = _activeCustomSwfPath();
+    if (target) fs.unlinkSync(target);
+    const activePath = _activeCustomSwfPath();
+    return { exists: activePath !== null, path: activePath || _customSwfPath() };
 });

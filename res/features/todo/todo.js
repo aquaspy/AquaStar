@@ -25,6 +25,7 @@ const SEASONAL_EVENT_KEYS = [
 const CATEGORY_KEYS = ['drop', 'dailyDrop', 'shopMerge', 'questReward', 'hardFarm', 'reputationFarm'];
 
 function _migrateTask(t) {
+    t = (t && typeof t === 'object') ? t : {};
     return {
         id: typeof t.id === 'string' ? t.id : _genId('t'),
         name: typeof t.name === 'string' ? t.name : '',

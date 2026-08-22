@@ -78,8 +78,8 @@ function newBrowserWindow(new_path, isMainWin=false){
         newWin.webContents.openDevTools();
     }
 
-    if (originalPath == constant.mainPath || 
-        originalPath == constant.testingAQW) {
+    if (originalPath == constant.mainPath ||
+        _isTestingAqwUrl(originalPath)) {
 
         // Its alt window, Put the aqlite/Aqw title...
         var windowNumber = 1;
@@ -190,7 +190,7 @@ function _windowAddContext(newWin){
         testAndDelete("wikidot","wad-aqwwiki-below-content",false);
         _executeJavaScriptSafely(newWin.webContents,
             "var rem = document.getElementsByTagName('iframe');" +
-            "for (var i=0;i<rem.lenght;i++) rem[i].remove()", 'Frame cleanup');
+            "for (var i=0;i<rem.length;i++) rem[i].remove()", 'Frame cleanup');
         // ----------------------------------------------------------------------------------------------
         // Another bonus: Wiki link preview (WikiView), made by biglavis over at https://github.com/biglavis
         //  Available on the file res/features/wikiview/wikiviewsource.js.
@@ -264,19 +264,25 @@ function _isGameWindow(target, considerDF = true){
     }
     
     var aqliteValue = constant.mainPath;
-    var vanilla     = constant.testingAQW;
     if(process.platform == "win32") {
         // I so want to swear RN... just WHY???
         // Now when comparing to the file:///, its the same rules as URL.
         aqliteValue = constant.mainPath.replace(/\\/g,"/");
-        vanilla     = constant.testingAQW.replace(/\\/g,"/");
     }
     
-    if (url == aqliteValue || url == vanilla) return true;
+    if (url == aqliteValue || _isTestingAqwUrl(url)) return true;
     if (considerDF && url === constant.df_url) {
         return true;
     }
     return false;
+}
+
+// The Testing AQW URL gets a fresh cache-busting `ver` value every time it is
+// requested.  It must therefore be identified by its stable SWF path instead
+// of comparing it to another invocation of constant.testingAQW.
+function _isTestingAqwUrl(target) {
+    return typeof target === 'string' &&
+        target.indexOf('https://game.aq.com/game/gamefiles/Loader_Spider.swf') === 0;
 }
 
 // Weird char page config - For Alt + K
@@ -365,7 +371,7 @@ function takeSS(focusedWin, ret = null, destroyWindow = false){
         .then((sshot) => {
             console.log("Screenshotting it...");
             var ssfolder = constant.sshotPath;
-            _mkdir(ssfolder);
+            if (!_mkdir(ssfolder)) return;
 
             var today = new Date();
             var pre_name = "Screenshot-" +
@@ -504,14 +510,12 @@ function openStrategyWindow(){
 }
 
 function _mkdir (filepath){
-    try { fs.lstatSync(filepath).isDirectory() }
-    catch (ex) {
-        if (ex.code == 'ENOENT') {
-            fs.mkdir(filepath, (err) =>{
-                console.log(err);
-            })
-        }
-        else console.log(ex);
+    try {
+        fs.mkdirSync(filepath, { recursive: true });
+        return true;
+    } catch (error) {
+        console.log('[AquaStar] Could not create directory ' + filepath + ': ' + error.message);
+        return false;
     }
 }
 
