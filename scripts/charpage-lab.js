@@ -7,8 +7,6 @@ const SOURCE_URL = 'https://game.aq.com/game/gamefiles/etc/chardetail/characterB
 const ALLOWED_HOSTS = new Set(['game.aq.com', 'www.aq.com', 'account.aq.com']);
 let stagedSwf = null;
 let stagedSourceUrl = null;
-let sourceRequestCount = 0;
-let lastSourceRequest = null;
 
 // This standalone Studio process must register PPAPI itself; main.js normally
 // does this for AquaStar's regular windows before Electron becomes ready.
@@ -54,8 +52,6 @@ function setupLabProtocol() {
     const labSession = session.defaultSession;
     labSession.protocol.interceptBufferProtocol('https', (request, callback) => {
         if (isStagedSwf(request.url) && stagedSwf) {
-            sourceRequestCount++;
-            lastSourceRequest = request.url;
             callback({ mimeType: 'application/x-shockwave-flash', data: stagedSwf });
             return;
         }
@@ -101,18 +97,8 @@ ipcMain.handle('charpage-studio-load-character', async (event, requestedName) =>
     }
     stagedSwf = swf.data;
     stagedSourceUrl = data.swfUrl;
-    sourceRequestCount = 0;
-    lastSourceRequest = null;
     return { playerName: playerName, flashVars: data.flashVars, swfUrl: stagedSourceUrl, bytes: stagedSwf.length };
 });
-
-ipcMain.handle('charpage-lab-runtime-status', () => ({
-    nativeFlash: true,
-    stagedBytes: stagedSwf ? stagedSwf.length : 0,
-    stagedSourceUrl: stagedSourceUrl,
-    sourceRequestCount: sourceRequestCount,
-    lastSourceRequest: lastSourceRequest
-}));
 
 function createLabWindow() {
     const window = new BrowserWindow({
@@ -138,12 +124,6 @@ function createLabWindow() {
     // inside this isolated lab with the API available in Chromium 87.
     window.webContents.on('new-window', (event) => event.preventDefault());
     window.webContents.on('will-navigate', (event) => event.preventDefault());
-    window.webContents.on('console-message', (event, level, message, line, sourceId) => {
-        window.webContents.send('charpage-lab-diagnostic', '[renderer ' + level + '] ' + message + ' (' + sourceId + ':' + line + ')');
-    });
-    window.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-        window.webContents.send('charpage-lab-diagnostic', '[navigation] ' + errorDescription + ' (' + errorCode + '): ' + validatedURL);
-    });
     window.loadFile(path.join(__dirname, '..', 'res', 'features', 'charpage', 'lab', 'characterB-lab.html'));
 }
 

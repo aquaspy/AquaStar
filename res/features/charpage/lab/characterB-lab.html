@@ -6,36 +6,59 @@
   <title>AquaStar — Char Page Studio</title>
   <link rel="stylesheet" href="../../common/focus.css">
   <style>
+    :root { color-scheme: dark; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: #10141b; color: #edf4ff; font: 14px Arial, sans-serif; }
-    main { display: grid; grid-template-columns: minmax(310px, 430px) 1fr; min-height: 100vh; }
-    aside { padding: 18px; background: #19212d; border-right: 1px solid #344355; overflow: auto; }
-    h1 { margin: 0 0 8px; font-size: 21px; } p { color: #b9c6d7; line-height: 1.45; }
-    label { display: block; margin: 16px 0 6px; font-weight: bold; }
+    html, body { margin: 0; width: 100%; height: 100%; background: #121212; color: #e6e6e6; font: 13px -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    main { display: grid; grid-template-columns: minmax(330px, 430px) minmax(0, 1fr); height: 100vh; overflow: hidden; }
+    aside { display: flex; flex-direction: column; min-height: 0; background: #121212; border-right: 1px solid #2c2c2c; }
+    .studio-header { padding: 14px 18px 12px; border-bottom: 1px solid #2c2c2c; flex: 0 0 auto; }
+    h1 { margin: 0 0 4px; font-size: 16px; } p { color: #9a9a9a; line-height: 1.4; }
+    .studio-header p { margin: 0; }
+    .sidebar-controls { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 18px 14px; }
+    label { display: block; margin: 14px 0 6px; font-weight: normal; }
     input, textarea, button { font: inherit; }
-    input, textarea { width: 100%; border: 1px solid #52657c; border-radius: 4px; padding: 8px; background: #0f151e; color: inherit; }
-    textarea { min-height: 260px; resize: vertical; }
-    button { margin-top: 12px; padding: 8px 12px; border: 0; border-radius: 4px; color: white; background: #287ac4; cursor: pointer; }
-    button:hover { background: #3991e1; } .hint, #status { font-size: 12px; color: #b9c6d7; }
+    input, textarea { width: 100%; border: 1px solid #333; border-radius: 4px; padding: 6px 8px; background: #1b1b1b; color: #dcdcdc; }
+    textarea { min-height: 150px; resize: vertical; font-family: "Consolas", "Courier New", monospace; font-size: 12px; }
+    button { padding: 6px 12px; border: 1px solid #383838; border-radius: 4px; color: #e6e6e6; background: #232323; cursor: pointer; font-size: 12px; }
+    button:hover { background: #2c2c2c; } button:active { background: #1a1a1a; }
+    button.primary { background: #2b6fce; border-color: #2b6fce; color: #fff; } button.primary:hover { background: #3a7fe0; }
+    button:disabled { opacity: .45; cursor: default; }
+    .hint, #status { font-size: 11px; color: #6f6f6f; }
     #color-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .color-control { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px; border: 1px solid #52657c; border-radius: 4px; }
+    .color-control { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px; margin: 0; border: 1px solid #333; border-radius: 4px; background: #1b1b1b; }
     .color-control input { width: 42px; height: 28px; padding: 0; border: 0; }
     .toggle { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
     .toggle input { width: auto; }
-    #stage { min-height: 455px; background: #000; display: flex; align-items: center; justify-content: center; }
-    #stage embed { width: min(100%, 1000px); height: min(100vh, 700px); }
-    #diagnostics { max-height: 150px; overflow: auto; white-space: pre-wrap; margin: 12px 0 0; padding: 8px; border: 1px solid #52657c; border-radius: 4px; background: #0f151e; color: #e9b3b3; font: 11px Consolas, monospace; }
-    @media (max-width: 800px) { main { display: block; } aside { border: 0; } #stage { min-height: 60vh; } }
+    #advanced-controls { margin-top: 18px; }
+    details { margin: 8px 0; border: 1px solid #333; border-radius: 4px; background: #1b1b1b; }
+    summary { padding: 8px 9px; cursor: pointer; font-weight: normal; color: #e6e6e6; }
+    .advanced-group { display: grid; gap: 8px; padding: 4px 9px 10px; }
+    .advanced-field { display: grid; grid-template-columns: minmax(110px, 0.8fr) minmax(130px, 1.5fr) auto; gap: 6px; align-items: center; margin: 0; font-size: 11px; }
+    .advanced-field label { margin: 0; color: #9a9a9a; font-weight: normal; overflow-wrap: anywhere; }
+    .advanced-field input { min-width: 0; padding: 6px; }
+    .remove-param { margin: 0; padding: 5px 8px; background: #8d3030; border-color: #a64646; font-size: 11px; }
+    .remove-param:hover { background: #a63a3a; }
+    .studio-footer { flex: 0 0 auto; padding: 10px 18px 12px; border-top: 1px solid #2c2c2c; }
+    .studio-footer .primary { width: 100%; }
+    #status { min-height: 15px; margin-top: 8px; color: #7fd08a; }
+    #preview-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #161616; }
+    .preview-header { flex: 0 0 auto; padding: 12px 18px; color: #9a9a9a; border-bottom: 1px solid #2c2c2c; font-size: 12px; }
+    #stage { flex: 1 1 auto; overflow: auto; padding: 20px; background: #000; display: flex; align-items: flex-start; justify-content: center; }
+    #stage embed { flex: 0 0 auto; width: 715px; height: 455px; }
+    @media (max-width: 800px) { main { display: block; height: auto; overflow: visible; } aside { min-height: 100vh; } #preview-pane { min-height: 495px; } }
   </style>
 </head>
 <body>
   <main>
     <aside>
-      <h1>Char Page Studio</h1>
-      <p>Ambiente isolado com Flash Player nativo. O Studio baixa o SWF oficial da Char Page para memória; ele nunca é empacotado com o AquaStar.</p>
+      <header class="studio-header">
+        <h1>Char Page Studio</h1>
+        <p>Personalize a Char Page com o Flash Player nativo.</p>
+      </header>
+      <div class="sidebar-controls">
       <label for="player-name">Personagem AQW</label>
       <input id="player-name" type="text" maxlength="20" autocomplete="off" spellcheck="false">
-      <button id="load-character" type="button">Carregar da Char Page</button>
+      <button id="load-character" class="primary" type="button">Carregar da Char Page</button>
       <p class="hint">Usa por padrão o Personagem configurado nas Configurações, mas não baixa nada até este botão ser usado.</p>
       <label>Cores</label>
       <div id="color-controls"></div>
@@ -43,20 +66,30 @@
       <input id="bgindex" type="number" min="0" max="31" step="1" value="0">
       <p class="hint">0 usa o fundo padrão. O SWF aceita índices de 0 a 31.</p>
       <label class="toggle" for="show-weapon"><input id="show-weapon" type="checkbox" checked> Mostrar arma? (ou usar Unarmed)</label>
-      <label for="flashvars">FlashVars</label>
-      <textarea id="flashvars" spellcheck="false"></textarea>
-      <button id="load" type="button">Carregar cenário</button>
-      <div id="status" role="status"></div>
-      <pre id="diagnostics" aria-label="Diagnóstico do laboratório">Diagnóstico: aguardando carregamento.</pre>
+      <div id="advanced-controls" aria-label="Opções avançadas de FlashVars"></div>
+      <details id="raw-flashvars">
+        <summary>FlashVars brutos (avançado)</summary>
+        <div class="advanced-group">
+          <p class="hint">Edição direta para importar, colar ou ajustar chaves fora dos campos. Alterações são aplicadas quando o campo perde o foco.</p>
+          <textarea id="flashvars" spellcheck="false"></textarea>
+        </div>
+      </details>
+      </div>
+      <footer class="studio-footer">
+        <button id="load" class="primary" type="button">Carregar cenário</button>
+        <div id="status" role="status"></div>
+      </footer>
     </aside>
-    <div id="stage" aria-label="Prévia da Char Page"></div>
+    <section id="preview-pane" aria-label="Prévia da Char Page">
+      <div class="preview-header">Prévia — Flash Player nativo</div>
+      <div id="stage"></div>
+    </section>
   </main>
   <script>
   (function () {
     var initialFlashVars = '';
     var stage = document.getElementById('stage');
     var status = document.getElementById('status');
-    var diagnostics = document.getElementById('diagnostics');
     var flashvars = document.getElementById('flashvars');
     flashvars.value = initialFlashVars;
     var currentSourceUrl = null;
@@ -65,8 +98,74 @@
       ['intColorBase', 'Base'], ['intColorTrim', 'Detalhe'], ['intColorAccessory', 'Acessório']
     ];
     var savedWeapon = null;
+    var advancedGroups = [
+      ['Identidade', ['strName', 'level', 'intLevel', 'guild', 'strFaction', 'strGender', 'ia1']],
+      ['Classe e armadura', ['strClassName', 'strClassFile', 'strClassLink', 'strArmorName', 'ArmorID', 'CustArmorID', 'strCustArmorFile', 'strCustArmorLink', 'strCustArmorName']],
+      ['Cabelo e elmo', ['HairID', 'strHairFile', 'strHairName', 'HelmID', 'strHelmFile', 'strHelmLink', 'strHelmName', 'CustHelmID', 'strCustHelmFile', 'strCustHelmLink', 'strCustHelmName']],
+      ['Armas', ['WeaponID', 'strWeaponFile', 'strWeaponLink', 'strWeaponType', 'strWeaponName', 'CustWeaponID', 'strCustWeaponFile', 'strCustWeaponLink', 'strCustWeaponType', 'strCustWeaponName']],
+      ['Capa', ['CapeID', 'strCapeFile', 'strCapeLink', 'strCapeName', 'CustCapeID', 'strCustCapeFile', 'strCustCapeLink', 'strCustCapeName']],
+      ['Pet e cenário', ['strPetFile', 'strPetLink', 'strPetName', 'strMiscFile', 'strMiscLink', 'strMiscName']]
+    ];
     function colorToHex(value) { return '#' + ('000000' + (Number(value) >>> 0).toString(16)).slice(-6); }
     function writeParams(params) { flashvars.value = params.toString(); syncControls(params); }
+    function changeParam(key, value) {
+      var params = new URLSearchParams(flashvars.value);
+      params.set(key, value);
+      writeParams(params);
+    }
+    function removeParam(key) {
+      var params = new URLSearchParams(flashvars.value);
+      params.delete(key);
+      writeParams(params);
+    }
+    function addAdvancedField(container, params, key) {
+      if (!params.has(key)) return;
+      var row = document.createElement('div');
+      row.className = 'advanced-field';
+      var label = document.createElement('label');
+      label.textContent = key;
+      label.htmlFor = 'param-' + key;
+      var input = document.createElement('input');
+      input.id = 'param-' + key;
+      input.type = 'text';
+      input.value = params.get(key);
+      input.spellcheck = false;
+      input.addEventListener('change', function () { changeParam(key, input.value); });
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'remove-param';
+      remove.textContent = 'Remover';
+      remove.addEventListener('click', function () { removeParam(key); });
+      row.appendChild(label);
+      row.appendChild(input);
+      row.appendChild(remove);
+      container.appendChild(row);
+    }
+    function makeAdvancedGroup(title, keys, params) {
+      var details = document.createElement('details');
+      var summary = document.createElement('summary');
+      summary.textContent = title;
+      details.appendChild(summary);
+      var group = document.createElement('div');
+      group.className = 'advanced-group';
+      keys.forEach(function (key) { addAdvancedField(group, params, key); });
+      if (!group.childNodes.length) {
+        var empty = document.createElement('p');
+        empty.className = 'hint';
+        empty.textContent = 'Esta Char Page não enviou parâmetros para este grupo.';
+        group.appendChild(empty);
+      }
+      details.appendChild(group);
+      return details;
+    }
+    function renderAdvancedControls(params) {
+      var root = document.getElementById('advanced-controls');
+      root.textContent = '';
+      var heading = document.createElement('label');
+      heading.textContent = 'Opções avançadas';
+      root.appendChild(heading);
+      advancedGroups.forEach(function (group) { root.appendChild(makeAdvancedGroup(group[0], group[1], params)); });
+    }
     function syncControls(params) {
       colorDefinitions.forEach(function (definition) {
         var input = document.getElementById('color-' + definition[0]);
@@ -74,6 +173,7 @@
       });
       document.getElementById('bgindex').value = Math.max(0, Math.min(31, Number(params.get('bgindex')) || 0));
       document.getElementById('show-weapon').checked = params.get('strWeaponFile') !== 'items/swords/unarmed.swf';
+      renderAdvancedControls(params);
     }
     colorDefinitions.forEach(function (definition) {
       var row = document.createElement('label');
@@ -126,23 +226,13 @@
         savedWeapon = null;
         syncControls(new URLSearchParams(flashvars.value));
         status.textContent = character.playerName + ' carregado. Ajuste as opções e renderize.';
-        diagnose('[character] ' + character.playerName + ': ' + Array.from(new URLSearchParams(character.flashVars).keys()).length + ' FlashVars; SWF em memória: ' + character.bytes + ' bytes.');
       } catch (error) {
         status.textContent = 'Falha ao carregar Char Page: ' + error.message;
-        diagnose('[character] ' + (error.stack || error.message));
       } finally { button.disabled = false; }
     });
     window.characterBLab.getDefaults().then(function (defaults) {
       document.getElementById('player-name').value = defaults.playerCharacter || '';
     });
-    function diagnose(message) {
-      diagnostics.textContent += '\n' + message;
-      diagnostics.scrollTop = diagnostics.scrollHeight;
-    }
-    if (window.characterBLab) window.characterBLab.onDiagnostic(diagnose);
-    window.addEventListener('error', function (event) { diagnose('[page] ' + event.message); });
-    window.addEventListener('unhandledrejection', function (event) { diagnose('[promise] ' + event.reason); });
-
     document.getElementById('load').addEventListener('click', async function () {
       if (!currentSourceUrl || !flashvars.value) { status.textContent = 'Carregue uma Char Page antes de renderizar.'; return; }
       var parameters = new URLSearchParams(flashvars.value);
@@ -162,15 +252,8 @@
       try {
         stage.appendChild(player);
         status.textContent = 'Flash Player nativo carregando…';
-        diagnose('[setup] FlashVars preparados: ' + Array.from(parameters.keys()).length + ' chaves; SWF servido na URL oficial: ' + currentSourceUrl + '\n[setup] FlashVars enviados: ' + parameters.toString());
-        window.setTimeout(async function () {
-          var runtime = await window.characterBLab.getRuntimeStatus();
-          if (runtime.sourceRequestCount > 0) diagnose('[native] PPAPI requisitou o SWF interceptado: ' + runtime.lastSourceRequest);
-          else diagnose('[native] PPAPI ainda não requisitou o SWF. Verifique se o plugin Flash carregou.');
-        }, 1000);
       } catch (error) {
         status.textContent = 'Falha ao carregar: ' + error.message;
-        diagnose('[Flash] ' + (error.stack || error.message));
         console.error(error);
       }
     });
