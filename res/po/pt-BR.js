@@ -73,6 +73,7 @@ exports.menuMessages = {
     menuReddit       : "AQW Subreddit",
     menuTwitter      : "Twitter da Alina",
     menuTakeShot     : "Printa a Charpage (somente CP!)",
+    menuCharPageStudio: "Char Page Studio",
     menuCopyURL      : "Copiar o link da página",
     menuReloadPage   : "Recaregar a página",
     menuSettings     : "Configurações",

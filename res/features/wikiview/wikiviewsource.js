@@ -11,34 +11,31 @@
 // wiki/account.aq.com pages should trigger a hover in the first place. Whatever injects
 // this script must load hoverPreview.js (and jQuery) first - see res/instances.js.
 
-$("#page-content a, .card.m-2.m-lg-3 a").on({
-    mouseover: function() { hovered(this.href); },
-    mouseout: function() { unhovered(); }
+// Delegate from document so AQW/account pages that hydrate their content after
+// did-finish-load receive the same hover behavior. Namespacing makes a reinjection
+// idempotent instead of stacking handlers.
+$(document).off('.aquastarWikiView');
+$(document).on('mouseover.aquastarWikiView', '#page-content a, .card.m-2.m-lg-3 a, #inventoryRendered a', function() {
+    hovered(this.href);
 });
-
-$("#inventoryRendered").on("mouseover", function() {
-    $(this).find("a").on({
-        mouseover: function() { hovered(this.href); },
-        mouseout: function() { unhovered(); }
-    });
+$(document).on('mouseout.aquastarWikiView', '#page-content a, .card.m-2.m-lg-3 a, #inventoryRendered a', function() {
+    unhovered();
 });
 
 // These build a link from the item's plain name rather than a real <a href>, so they go
 // through hoveredName() - it retries the wiki's disambiguation suffixes ((AC), (Merge)...)
 // when the bare name has no page of its own. See hoverPreview.js.
-$("#listinvFull, #wheel, table.table.table-sm.table-bordered").on("mouseover", function() {
-    console.log("hovered");
-    $(this).find("tbody td:first-child").on({
-        mouseover: function() { hoveredName(this.textContent.split(/\sx\d+/)[0].trim()); },
-        mouseout: function() { unhovered(); }
-    });
+$(document).on('mouseover.aquastarWikiView', '#listinvFull tbody td:first-child, #wheel tbody td:first-child, table.table.table-sm.table-bordered tbody td:first-child', function() {
+    hoveredName(this.textContent.split(/\sx\d+/)[0].trim());
 });
-
-$("#listinvBuyBk").on("mouseover", function() {
-    $(this).find("tbody td:nth-child(2)").on({
-        mouseover: function() { hoveredName(this.textContent.trim()); },
-        mouseout: function() { unhovered(); }
-    });
+$(document).on('mouseout.aquastarWikiView', '#listinvFull tbody td:first-child, #wheel tbody td:first-child, table.table.table-sm.table-bordered tbody td:first-child', function() {
+    unhovered();
+});
+$(document).on('mouseover.aquastarWikiView', '#listinvBuyBk tbody td:nth-child(2)', function() {
+    hoveredName(this.textContent.trim());
+});
+$(document).on('mouseout.aquastarWikiView', '#listinvBuyBk tbody td:nth-child(2)', function() {
+    unhovered();
 });
 
 // --- Inventory ownership badge + character switcher, aqwwiki.wikidot.com item pages only.

@@ -19,15 +19,16 @@ ipcMain.handle('fetchWikiPage', async (event, targetUrl) => {
         let body = '';
         let bodyBytes = 0;
         let settled = false;
+        const timeout = setTimeout(() => {
+            request.abort();
+            finish({ ok: false, error: 'timeout' });
+        }, WIKI_REQUEST_TIMEOUT_MS);
         const finish = (result) => {
             if (settled) return;
             settled = true;
+            clearTimeout(timeout);
             resolve(result);
         };
-        request.setTimeout(WIKI_REQUEST_TIMEOUT_MS, () => {
-            request.abort();
-            finish({ ok: false, error: 'timeout' });
-        });
         request.on('response', (response) => {
             if (response.statusCode < 200 || response.statusCode >= 300) {
                 request.abort();

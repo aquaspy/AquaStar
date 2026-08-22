@@ -4,7 +4,8 @@ const windowsMenu            = require('./windows/menu.js');
 const keybinds               = require('./keybindings.js');
 const socketProxy            = require('./socketProxy.js');
 const createFeatureWindowController = require('./windows/feature-window-controller.js');
-const {BrowserWindow, Menu}  = require('electron');
+const {app, BrowserWindow, Menu}  = require('electron');
+const {spawn} = require('child_process');
 
 let usedAltPagesNumbers = [];
 
@@ -216,17 +217,23 @@ function _windowAddContext(newWin){
             // engine, which is also used by the standalone Inventory window.
             const nameVariants = fs.readFileSync(path.join(wikiviewDir, 'nameVariants.js'), 'utf8');
             const hoverPreview = fs.readFileSync(path.join(wikiviewDir, 'hoverPreview.js'), 'utf8');
-            var wikiview = nameVariants + hoverPreview + fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
+            const wikiviewSource = fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
+            var wikiview = nameVariants + '\n;\n' + hoverPreview + '\n;\n' + wikiviewSource;
             if (bWiki){
                 const jquery = fs.readFileSync(path.join(wikiviewDir, 'jquery.min.js'), 'utf8');
-                wikiview = jquery + wikiview
+                wikiview = jquery + '\n;\n' + wikiview;
             }
-            // did-finish-load can fire again for a restored page.  The enhancement source
-            // contains top-level declarations, so evaluating it twice in the same renderer
-            // would throw a redeclaration error even though the first injection succeeded.
-            wikiview = 'if (!window.__aquastarWikiViewInjected) { window.__aquastarWikiViewInjected = true;\n' +
-                wikiview + '\n}';
-            _executeJavaScriptSafely(newWin.webContents, wikiview, 'Wiki enhancement');
+            // Mark success only after every source has run. A transient renderer error must
+            // not permanently suppress the next did-finish-load injection attempt.
+            wikiview = '(function () {\n' +
+                'if (window.__aquastarWikiViewInjected) return false;\n' +
+                'try {\n' + wikiview + '\n' +
+                'window.__aquastarWikiViewInjected = true; return true;\n' +
+                '} catch (error) { delete window.__aquastarWikiViewInjected; console.error("[AquaStar] WikiView injection failed", error); throw error; }\n' +
+                '})();';
+            _executeJavaScriptSafely(newWin.webContents, wikiview, 'Wiki enhancement').then((injected) => {
+                if (injected) console.log('[AquaStar] Wiki enhancement injected into ' + url);
+            });
         }
 
         // Give every account.aq.com page a manual sync entry point.  The injected installer
@@ -368,11 +375,11 @@ function takeSS(focusedWin, ret = null, destroyWindow = false){
         }
     }
     else { rect = ret;}
-    focusedWin.webContents.capturePage(rect)
+    return focusedWin.webContents.capturePage(rect)
         .then((sshot) => {
             console.log("Screenshotting it...");
             var ssfolder = constant.sshotPath;
-            if (!_mkdir(ssfolder)) return;
+            if (!_mkdir(ssfolder)) return null;
 
             var today = new Date();
             var pre_name = "Screenshot-" +
@@ -400,9 +407,11 @@ function takeSS(focusedWin, ret = null, destroyWindow = false){
             else {
                 focusedWin.close();
             }
+            return savePath;
         })
         .catch((err) => {
             console.log("[AquaStar] Screenshot error:", err);
+            return null;
         });
 }
 
@@ -449,6 +458,12 @@ function openRemindersWindow(){ return openFeatureWindow('reminders'); }
 function openTodoWindow(){ return openFeatureWindow('todo'); }
 function openInventoryWindow(){ return openFeatureWindow('inventory'); }
 function openStrategyWindow(){ return openFeatureWindow('strategy'); }
+function openCharPageStudioWindow(){
+    const args = process.defaultApp ? [app.getAppPath(), '--charpage-studio'] : ['--charpage-studio'];
+    const studio = spawn(process.execPath, args, { detached: true, stdio: 'ignore' });
+    studio.unref();
+    return studio;
+}
 
 function _mkdir (filepath){
     try {
@@ -467,6 +482,7 @@ exports.openRemindersWindow = openRemindersWindow;
 exports.openTodoWindow      = openTodoWindow;
 exports.openInventoryWindow = openInventoryWindow;
 exports.openStrategyWindow  = openStrategyWindow;
+exports.openCharPageStudioWindow = openCharPageStudioWindow;
 exports.openFeatureWindow   = openFeatureWindow;
 
 exports.executeOnFocused    = executeOnFocused;

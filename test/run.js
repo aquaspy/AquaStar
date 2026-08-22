@@ -9,6 +9,7 @@ global.test = function (name, fn) { tests.push({ name: name, fn: fn }); };
     './unit/feature-window-controller.test.js',
     './unit/focus-style.test.js',
     './unit/ruffle-update-ui.test.js',
+    './unit/wikiview-injection.test.js',
     './unit/charpage-lab.test.js',
     './integration/json-store.test.js'
 ].forEach((file) => require(path.join(__dirname, file)));

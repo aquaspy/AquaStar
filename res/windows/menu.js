@@ -84,6 +84,12 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             }
         },
         {
+            label: menuMessages.menuCharPageStudio,
+            click() {
+                require('../instances.js').openCharPageStudioWindow();
+            }
+        },
+        {
             label: menuMessages.menuSettings,
             accelerator: keybinds.settings,
             click() {

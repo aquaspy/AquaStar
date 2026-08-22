@@ -6,7 +6,6 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "charpage-lab": "electron scripts/charpage-lab.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --publish never",
     "dist-w": "electron-builder -w --publish never",

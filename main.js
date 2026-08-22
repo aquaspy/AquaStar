@@ -1,5 +1,12 @@
 const {app, session, Menu, BrowserWindow}  = require('electron')
 
+// PPAPI Flash only preserves LoaderInfo.parameters when the Studio owns the
+// default session. Keep that session in a dedicated AquaStar process.
+if (process.argv.indexOf('--charpage-studio') !== -1) {
+    require('./scripts/charpage-studio-process.js');
+    return;
+}
+
 // I am honestly surprised we forgot this line.
 if (!app.requestSingleInstanceLock()) {
     app.quit();
@@ -17,6 +24,7 @@ const reminders     = require('./res/features/reminders/reminders.js');
 const todo          = require('./res/features/todo/todo.js');
 const inventory     = require('./res/features/inventory/inventory.js');
 const strategy      = require('./res/features/strategy/strategy.js');
+const charPageStudio = require('./res/features/charpage/studio.js');
 // IPC-only modules (register their ipcMain handlers as a side effect of being required -
 // nothing else calls into them directly, so main.js must require them explicitly).
 const ipcRecording  = require('./res/ipc/recording.js');
