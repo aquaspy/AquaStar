@@ -76,6 +76,7 @@
         <label for="avatar-offset-y">Posição vertical</label><input id="avatar-offset-y" type="range" min="-250" max="250" step="1" value="0">
         <label for="avatar-scale">Zoom</label><input id="avatar-scale" type="range" min="0.25" max="2.5" step="0.05" value="1">
         <button id="reset-avatar-transform" type="button">Restaurar posição e zoom</button>
+        <button id="center-avatar-horizontal" type="button">Centralizar horizontalmente</button>
       </div>
       <label class="toggle" for="show-weapon"><input id="show-weapon" type="checkbox" checked> Mostrar arma? (ou usar Unarmed)</label>
       <label>Elementos visuais</label>
@@ -296,6 +297,11 @@
     document.getElementById('reset-avatar-transform').addEventListener('click', function () {
       var params = new URLSearchParams(flashvars.value);
       ['studioAvatarOffsetX', 'studioAvatarOffsetY', 'studioAvatarScale'].forEach(function (key) { params.delete(key); });
+      writeParams(params);
+    });
+    document.getElementById('center-avatar-horizontal').addEventListener('click', function () {
+      var params = new URLSearchParams(flashvars.value);
+      params.set('studioAvatarOffsetX', '-55');
       writeParams(params);
     });
     document.getElementById('show-weapon').addEventListener('change', function () {
