@@ -6,7 +6,15 @@ textarea:focus-visible,
 a:focus-visible,
 summary:focus-visible,
 [role="button"]:focus-visible,
-[tabindex]:focus-visible {
+[tabindex]:focus-visible,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+a:focus,
+summary:focus,
+[role="button"]:focus,
+[tabindex]:focus {
   outline: 2px solid #4da3ff;
   outline-offset: 2px;
 }

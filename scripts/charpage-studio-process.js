@@ -1,15 +1,16 @@
-const { app, BrowserWindow, ipcMain, session, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, session, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const { spawn } = require('child_process');
 const flash = require('../res/flash.js');
+const constant = require('../res/const.js');
+const locale = require('../res/locale.js');
 
 const root = path.join(__dirname, '..');
 const studioSwf = path.join(root, 'res', 'features', 'charpage', 'characterB-studio.swf');
 const emptySceneSwf = path.join(root, 'res', 'features', 'charpage', 'characterB-empty-scene.swf');
 let studioWindow = null;
-let sourceRequestCount = 0;
 
 function fetchUrl(url) {
     return new Promise((resolve, reject) => https.get(url, { headers: { 'User-Agent': 'AquaStar Char Page Studio' } }, (response) => {
@@ -43,12 +44,6 @@ function installProtocol() {
         if (/^https:\/\/game\.aq\.com\/game\/gamefiles\/etc\/chardetail\/characterB\.swf(?:\?|$)/i.test(request.url)) {
             callback({ mimeType: 'application/x-shockwave-flash', data: fs.readFileSync(studioSwf) }); return;
         }
-        if (/^https:\/\/game\.aq\.com\/game\/gamefiles\//i.test(request.url)) {
-            sourceRequestCount++;
-            if (sourceRequestCount <= 20 && studioWindow && !studioWindow.isDestroyed()) {
-                studioWindow.webContents.send('charpage-studio-diagnostic', '[asset] ' + request.url);
-            }
-        }
         fetchUrl(request.url).then(callback).catch(error => callback({ mimeType: 'text/plain', data: Buffer.from(error.message) }));
     });
 }
@@ -77,6 +72,7 @@ function waitForCaptureProcess(child) {
     });
 }
 ipcMain.handle('charpage-studio-defaults', () => ({ playerCharacter: '' }));
+ipcMain.handle('charpage-studio-messages', () => locale.strings.charPageStudioMessages);
 ipcMain.handle('charpage-studio-load-character', async (event, name) => {
     const playerName = String(name || '').replace(/[^a-zA-Z0-9]/g, '');
     if (!playerName) throw new Error('Informe um personagem válido.');
@@ -84,9 +80,7 @@ ipcMain.handle('charpage-studio-load-character', async (event, name) => {
     const data = charData(page.data.toString('utf8'));
     return { playerName, flashVars: data.flashVars, swfUrl: data.swfUrl };
 });
-ipcMain.handle('charpage-studio-runtime-status', () => ({ protocolActive: true, stagedBytes: fs.statSync(studioSwf).size, emptySceneBytes: fs.existsSync(emptySceneSwf) ? fs.statSync(emptySceneSwf).size : 0, sourceRequestCount: sourceRequestCount }));
 ipcMain.handle('charpage-studio-renderer-config', (event, renderer, flashVars) => rendererConfig(renderer, flashVars));
-ipcMain.handle('charpage-studio-open-devtools', event => BrowserWindow.fromWebContents(event.sender).webContents.openDevTools({ mode: 'right' }));
 ipcMain.handle('charpage-studio-capture-preview', async (event, renderer, flashVars) => {
     const owner = BrowserWindow.fromWebContents(event.sender);
     const config = rendererConfig(renderer, flashVars);
@@ -123,4 +117,4 @@ ipcMain.handle('charpage-studio-capture-preview', async (event, renderer, flashV
 });
 app.allowRendererProcessReuse = false;
 flash.flashManager(app, root, root, 'AquaStar');
-app.whenReady().then(() => { installProtocol(); studioWindow = new BrowserWindow({ width: 1280, height: 800, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false, plugins: true, webSecurity: false, preload: path.join(root, 'res', 'features', 'charpage', 'lab', 'preload_lab.js') } }); studioWindow.webContents.on('console-message', (event, level, message, line, source) => studioWindow.webContents.send('charpage-studio-diagnostic', '[renderer ' + level + '] ' + message + ' (' + source + ':' + line + ')')); studioWindow.loadFile(path.join(root, 'res', 'features', 'charpage', 'lab', 'characterB-lab.html')); studioWindow.on('closed', () => app.quit()); });
+app.whenReady().then(() => { locale.detectLang(app.getLocale(), {}); installProtocol(); Menu.setApplicationMenu(null); studioWindow = new BrowserWindow({ width: 1280, height: 800, icon: constant.iconPath, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false, plugins: true, webSecurity: false, preload: path.join(root, 'res', 'features', 'charpage', 'lab', 'preload_lab.js') } }); studioWindow.setMenu(null); studioWindow.setMenuBarVisibility(false); studioWindow.loadFile(path.join(root, 'res', 'features', 'charpage', 'lab', 'characterB-lab.html')); studioWindow.on('closed', () => app.quit()); });

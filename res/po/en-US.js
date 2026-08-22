@@ -10,6 +10,17 @@ exports.titleMessages = {
     alreadyRecording : "You are already recording another window!"
 }
 
+exports.charPageStudioMessages = {
+    locale: 'en-US', title: 'AquaStar — Char Page Studio', heading: 'Char Page Studio',
+    description: 'Customize a Char Page with the native Flash Player.', sceneModeLabel: 'Scene mode',
+    charPageMode: 'Char Page Studio', emptySceneMode: 'Empty scene',
+    emptySceneHint: 'Empty scene uses the new AQW compositor: without the Char Page interface, border, or background.',
+    characterLabel: 'AQW character', loadCharacterButton: 'Load from Char Page',
+    characterHint: 'Uses the character configured in Settings by default, but does not download anything until this button is used.',
+    colorsLabel: 'Colors', backgroundIndexLabel: 'Background (bgindex)', emptySceneSettingsLabel: 'Solid background and FPS (empty scene)',
+    solidBackgroundLabel: 'Solid background', nativeFps: '24 FPS (AQW)', loadSceneButton: 'Load scene', savePngButton: 'Save PNG screenshot'
+}
+
 exports.dialogMessages = {
     helpTitle   :'Help:',
     helpMessage :"These are the keybindings added to the game.",

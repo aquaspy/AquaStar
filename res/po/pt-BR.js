@@ -10,6 +10,17 @@ exports.titleMessages = {
     alreadyRecording : "Você já está gravando em alguma outra janela!"
 }
 
+exports.charPageStudioMessages = {
+    locale: 'pt-BR', title: 'AquaStar — Char Page Studio', heading: 'Char Page Studio',
+    description: 'Personalize uma Char Page com o Flash Player nativo.', sceneModeLabel: 'Modo de cena',
+    charPageMode: 'Char Page Studio', emptySceneMode: 'Cenário vazio',
+    emptySceneHint: 'Cenário vazio usa o novo compositor AQW: sem interface, moldura ou fundo da Char Page.',
+    characterLabel: 'Personagem AQW', loadCharacterButton: 'Carregar da Char Page',
+    characterHint: 'Usa por padrão o Personagem configurado nas Configurações, mas não baixa nada até este botão ser usado.',
+    colorsLabel: 'Cores', backgroundIndexLabel: 'Fundo (bgindex)', emptySceneSettingsLabel: 'Fundo sólido e FPS (cenário vazio)',
+    solidBackgroundLabel: 'Fundo sólido', nativeFps: '24 FPS (AQW)', loadSceneButton: 'Carregar cenário', savePngButton: 'Salvar print PNG'
+}
+
 exports.dialogMessages = {
     helpTitle   :'Ajuda:',
     helpMessage : "Estas são as keybindings adicionadas ao jogo.",

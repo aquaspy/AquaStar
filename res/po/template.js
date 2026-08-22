@@ -10,6 +10,12 @@ exports.titleMessages = {
     alreadyRecording : ""
 }
 
+exports.charPageStudioMessages = {
+    locale: '', title: '', heading: '', description: '', sceneModeLabel: '', charPageMode: '', emptySceneMode: '', emptySceneHint: '',
+    characterLabel: '', loadCharacterButton: '', characterHint: '', colorsLabel: '', backgroundIndexLabel: '', emptySceneSettingsLabel: '',
+    solidBackgroundLabel: '', nativeFps: '', loadSceneButton: '', savePngButton: ''
+}
+
 exports.dialogMessages = {
     helpTitle   :'Help:',
     helpMessage : "",

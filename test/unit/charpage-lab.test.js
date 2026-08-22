@@ -4,7 +4,7 @@ const path = require('path');
 
 test('Char Page Studio loads an explicitly requested Char Page into native Flash controls', () => {
     const lab = fs.readFileSync(path.join(__dirname, '../../res/features/charpage/lab/characterB-lab.html'), 'utf8');
-    ['player-name', 'load-character', 'initialFlashVars = \'\'', 'colorDefinitions', 'intColorHair', 'intColorSkin', 'intColorEye', 'intColorBase', 'intColorTrim', 'intColorAccessory', 'studioVisibilityDefinitions', 'studioShowIdentity', 'studioShowProfileButton', 'studioShowCosmeticsButton', 'studioShowBackground', 'studioShowBorder', 'show-weapon', 'items/swords/unarmed.swf', 'strCustWeaponFile', 'bgindex', 'max="31"', 'scene-mode', 'empty-scene', 'scene-background-color', 'studioBackgroundColor', 'empty-scene-fps', 'studioFrameRate', 'AQW nativo (24 FPS)', 'studioApi.loadCharacter', 'studioApi.getDefaults', 'studioApi.getRendererConfig', 'studioApi.capturePreview', 'studioApi.getRuntimeStatus', 'maior tamanho que o monitor permite', 'Salvar print PNG', 'Abrir DevTools', 'diagnostics', 'application/x-shockwave-flash', 'FlashVars', "flashVarString = '&' + parameters.toString()", 'Opções avançadas', 'Classe e armadura', 'Cabelo e elmo', 'Armas', 'Pet e cenário', 'function changeParam', 'function removeParam', 'sidebar-controls', 'preview-pane', 'flash-frame', 'activePlayer.width = String(width)', 'function resizePreview', 'nativeMovieWidth = 715', 'nativeMovieHeight = 455', "window.addEventListener('resize', resizePreview)"].forEach((fragment) => {
+    ['player-name', 'load-character', 'character-load-row', 'initialFlashVars = \'\'', 'colorDefinitions', 'intColorHair', 'intColorSkin', 'intColorEye', 'intColorBase', 'intColorTrim', 'intColorAccessory', 'studioVisibilityDefinitions', 'studioShowIdentity', 'studioShowProfileButton', 'studioShowCosmeticsButton', 'studioShowBackground', 'show-weapon', 'items/swords/unarmed.swf', 'strCustWeaponFile', 'bgindex', 'max="31"', 'scene-mode', 'empty-scene', 'scene-background-color', 'studioBackgroundColor', 'scene-options', 'empty-scene-fps', 'studioFrameRate', '24 FPS (AQW)', 'studioApi.loadCharacter', 'studioApi.getDefaults', 'studioApi.getRendererConfig', 'studioApi.capturePreview', 'maior tamanho que o monitor permite', 'Salvar print PNG', 'application/x-shockwave-flash', 'FlashVars', "flashVarString = '&' + parameters.toString()", 'Opções avançadas', 'Classe e armadura', 'Cabelo e elmo', 'Armas', 'Pet e cenário', 'function changeParam', 'function removeParam', 'sidebar-controls', 'preview-pane', 'flash-frame', 'activePlayer.width = String(width)', 'function resizePreview', 'nativeMovieWidth = 715', 'nativeMovieHeight = 455', "window.addEventListener('resize', resizePreview)"].forEach((fragment) => {
         assert.ok(lab.indexOf(fragment) !== -1, 'laboratory must contain ' + fragment);
     });
     assert.ok(lab.indexOf('if (!currentSourceUrl || !flashvars.value)') !== -1);
@@ -14,6 +14,9 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
     const writeParamsBody = lab.slice(lab.indexOf('function writeParams'), lab.indexOf('function changeParam'));
     assert.ok(writeParamsBody.indexOf('syncControls(params)') === -1, 'ordinary field edits must not rebuild every advanced group');
     assert.ok(lab.indexOf("writeParams(params, 'Armas')") !== -1, 'weapon toggle refreshes only its own advanced group');
+    assert.strictEqual(lab.indexOf('studioShowBorder'), -1, 'Studio must not expose the unfinished border control');
+    assert.strictEqual(lab.indexOf('Abrir DevTools'), -1, 'Studio must not expose debugging controls');
+    assert.strictEqual(lab.indexOf('Diagnóstico'), -1, 'Studio must not expose diagnostics');
     const bridge = fs.readFileSync(path.join(__dirname, '../../res/features/charpage/studio.js'), 'utf8');
     const config = fs.readFileSync(path.join(__dirname, '../../res/windows/config.js'), 'utf8');
     const instances = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
@@ -47,8 +50,12 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
     const studioProcess = fs.readFileSync(path.join(__dirname, '../../scripts/charpage-studio-process.js'), 'utf8');
     assert.ok(studioProcess.indexOf('characterB-empty-scene.swf') !== -1, 'dedicated Studio process must serve the Empty Scene SWF');
     assert.ok(studioProcess.indexOf('charpage-studio-renderer-config') !== -1, 'dedicated Studio process must select the requested renderer');
+    assert.ok(studioProcess.indexOf('Menu.setApplicationMenu(null)') !== -1 && studioProcess.indexOf('studioWindow.setMenu(null)') !== -1, 'dedicated Studio window must not create its own menu');
+    assert.ok(studioProcess.indexOf('icon: constant.iconPath') !== -1, 'dedicated Studio window must use the AquaStar icon');
+    assert.ok(studioProcess.indexOf('charpage-studio-messages') !== -1, 'dedicated Studio process must provide localized UI strings');
     const preloadLab = fs.readFileSync(path.join(__dirname, '../../res/features/charpage/lab/preload_lab.js'), 'utf8');
     assert.ok(preloadLab.indexOf('getRendererConfig') !== -1, 'renderer selection must cross the isolated preload bridge');
+    assert.ok(preloadLab.indexOf('getMessages') !== -1, 'localized Studio strings must cross the isolated preload bridge');
     assert.ok(preloadLab.indexOf('capturePreview') !== -1, 'capture must cross the isolated preload bridge');
     assert.ok(studioProcess.indexOf('charpage-studio-capture-preview') !== -1, 'dedicated Studio process must create the preview capture');
     assert.ok(studioProcess.indexOf("'--charpage-studio-capture'") !== -1, 'capture must use its dedicated renderer process');
@@ -62,4 +69,8 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
     assert.ok(lab.indexOf('player.src = movieUrl') > lab.indexOf("player.setAttribute('flashvars', flashVarString)"), 'set FlashVars before the native plugin source');
     assert.ok(config.indexOf("on('new-window'") !== -1);
     assert.ok(config.indexOf('webContents.setWindowOpenHandler(') === -1);
+    ['en-US.js', 'pt-BR.js', 'template.js'].forEach((localeName) => {
+        const messages = fs.readFileSync(path.join(__dirname, '../../res/po', localeName), 'utf8');
+        assert.ok(messages.indexOf('charPageStudioMessages') !== -1, localeName + ' must define Char Page Studio strings');
+    });
 });
