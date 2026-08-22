@@ -327,8 +327,8 @@ exports.appdataJsonPath = appdataJsonPath;
 exports.inPathJsonPath  = inPathJsonPath;
 exports.legacyAppdataJsonPath = legacyAppdataJsonPath;
 
-// The bundled web/WASM player is always the safe fallback. A downloaded nightly
-// is selected only after it was fully validated and promoted at application start.
+// The bundled web/WASM player is always the safe fallback. A downloaded stable
+// or nightly build is selected only after validation and promotion at startup.
 const bundledRufflePlayerPath = path.join(appRoot, 'res', 'ruffle', 'ruffle.js');
 const downloadedRufflePlayerPath = path.join(currentRuffleDirectory, 'ruffle.js');
 exports.rufflePlayerUrl = _getFileUrl(fs.existsSync(downloadedRufflePlayerPath)

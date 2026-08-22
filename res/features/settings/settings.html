@@ -562,16 +562,16 @@
     label.appendChild(hint);
     const update = document.createElement('button');
     update.className = 'small';
-    update.textContent = messages.ruffleUpdateButton || 'Download nightly update';
+    update.textContent = messages.ruffleUpdateButton || 'Download Update';
     update.onclick = async () => {
       update.disabled = true;
-      setStatus(messages.ruffleDownloadingMessage || 'Downloading Ruffle...', true);
+      setStatus(messages.ruffleDownloadingMessage || 'Downloading Ruffle update...', true);
       const selectedChannel = rowState.ruffleUpdateChannel ? rowState.ruffleUpdateChannel.value : 'latest';
       const result = await api.updateRuffle(selectedChannel);
       update.disabled = false;
       if (result.ok) {
         if (result.restartRequired) {
-          setStatus(messages.ruffleUpdatedMessage || 'Ruffle downloaded. Restart AquaStar to apply it.', true);
+          setStatus(messages.ruffleUpdatedMessage || 'Ruffle update downloaded. Restart AquaStar to apply it.', true);
           document.getElementById('restartBtn').disabled = false;
         } else if (result.bundledAlreadyCurrent) setStatus(messages.ruffleBundledAlreadyCurrentMessage || 'The bundled Ruffle is already the latest stable version.');
         else setStatus(messages.ruffleAlreadyCurrentMessage || 'Ruffle is already up to date.');
@@ -614,7 +614,10 @@
     };
     restoreRow.appendChild(restoreLabel);
     restoreRow.appendChild(restore);
-    return [heading, statusRow, updateRow, buildSelectOptionRow('ruffleUpdateChannel', updateChannelChoices), buildBooleanOptionRow('ruffleAutoUpdate'), restoreRow];
+    // The selected channel controls this button. Keeping it beside the action
+    // makes the stable release the normal path and nightly an explicit opt-in.
+    const updateChannelRow = buildSelectOptionRow('ruffleUpdateChannel', updateChannelChoices);
+    return [heading, statusRow, updateChannelRow, updateRow, buildBooleanOptionRow('ruffleAutoUpdate'), restoreRow];
   }
 
   async function refreshCustomSwfStatus() {
