@@ -58,7 +58,7 @@ async function writeGif(captureWindow, pixelRect) {
         const captured = await captureWindow.webContents.capturePage();
         const resized = captured.crop(pixelRect).resize({ width: width, height: height, quality: 'good' });
         const bitmap = rgbaBitmap(resized);
-        const palette = quantize(bitmap.data, 128);
+        const palette = quantize(bitmap.data, request.colors || 128);
         encoder.writeFrame(applyPalette(bitmap.data, palette), width, height, { palette: palette, delay: frameDelay });
     }
     encoder.finish();

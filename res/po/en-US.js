@@ -18,7 +18,7 @@ exports.charPageStudioMessages = {
     characterLabel: 'AQW character', loadCharacterButton: 'Load from Char Page',
     characterHint: 'Uses the character configured in Settings by default, but does not download anything until this button is used.',
     colorsLabel: 'Colors', backgroundIndexLabel: 'Background (bgindex)', emptySceneSettingsLabel: 'Solid background and FPS (empty scene)',
-    solidBackgroundLabel: 'Solid background', nativeFps: '24 FPS (AQW)', loadSceneButton: 'Load scene', savePngButton: 'Save PNG screenshot', saveGifButton: 'Generate GIF (8 s)'
+    solidBackgroundLabel: 'Solid background', nativeFps: '24 FPS (AQW)', loadSceneButton: 'Load scene', savePngButton: 'Save PNG screenshot', saveGifButton: 'Generate GIF (8 s)', gifFpsLabel: 'GIF FPS', gifColorsLabel: 'GIF colors'
 }
 
 exports.dialogMessages = {

@@ -18,7 +18,7 @@ exports.charPageStudioMessages = {
     characterLabel: 'Personagem AQW', loadCharacterButton: 'Carregar da Char Page',
     characterHint: 'Usa por padrão o Personagem configurado nas Configurações, mas não baixa nada até este botão ser usado.',
     colorsLabel: 'Cores', backgroundIndexLabel: 'Fundo (bgindex)', emptySceneSettingsLabel: 'Fundo sólido e FPS (cenário vazio)',
-    solidBackgroundLabel: 'Fundo sólido', nativeFps: '24 FPS (AQW)', loadSceneButton: 'Carregar cenário', savePngButton: 'Salvar print PNG', saveGifButton: 'Gerar GIF (8 s)'
+    solidBackgroundLabel: 'Fundo sólido', nativeFps: '24 FPS (AQW)', loadSceneButton: 'Carregar cenário', savePngButton: 'Salvar print PNG', saveGifButton: 'Gerar GIF (8 s)', gifFpsLabel: 'FPS do GIF', gifColorsLabel: 'Cores do GIF'
 }
 
 exports.dialogMessages = {

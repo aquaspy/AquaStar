@@ -48,7 +48,12 @@
     .remove-param:hover { background: #a63a3a; }
     .studio-footer { flex: 0 0 auto; padding: 10px 18px 12px; border-top: 1px solid #2c2c2c; }
     .studio-footer .primary { width: 100%; }
-    .studio-footer button + button { margin-top: 8px; width: 100%; }
+    .gif-settings { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
+    .gif-options { display: flex; align-items: center; gap: 6px; margin: 0; min-width: 0; }
+    .gif-options label { margin: 0; white-space: nowrap; color: #9a9a9a; font-size: 11px; }
+    .gif-options select, .gif-options input { width: auto; flex: 1 1 0; }
+    .export-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
+    .export-actions button { width: 100%; margin: 0; }
     #status { min-height: 15px; margin-top: 8px; color: #7fd08a; }
     #preview-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #161616; }
     .preview-header { flex: 0 0 auto; padding: 12px 18px; color: #9a9a9a; border-bottom: 1px solid #2c2c2c; font-size: 12px; }
@@ -115,8 +120,30 @@
       <footer class="studio-footer">
         <button id="load" class="primary" type="button" data-i18n="loadSceneButton">Carregar cenário</button>
         <p class="hint">O PNG usa o maior tamanho que o monitor permite, preservando a proporção 715 × 455 da Char Page.</p>
-        <button id="capture" type="button" disabled data-i18n="savePngButton">Salvar print PNG</button>
-        <button id="capture-gif" type="button" disabled data-i18n="saveGifButton">Gerar GIF (8 s)</button>
+        <div class="gif-settings">
+          <div class="gif-options">
+            <label for="gif-fps" data-i18n="gifFpsLabel">FPS do GIF</label>
+            <select id="gif-fps">
+              <option value="10">10 FPS</option>
+              <option value="15">15 FPS</option>
+              <option value="24">24 FPS (AQW)</option>
+              <option value="30">30 FPS</option>
+              <option value="60">60 FPS</option>
+            </select>
+          </div>
+          <div class="gif-options">
+            <label for="gif-colors" data-i18n="gifColorsLabel">Cores do GIF</label>
+            <select id="gif-colors">
+              <option value="64">64 cores</option>
+              <option value="128" selected>128 cores</option>
+              <option value="256">256 cores</option>
+            </select>
+          </div>
+        </div>
+        <div class="export-actions">
+          <button id="capture" type="button" disabled data-i18n="savePngButton">Salvar print PNG</button>
+          <button id="capture-gif" type="button" disabled data-i18n="saveGifButton">Gerar GIF (8 s)</button>
+        </div>
         <div id="status" role="status"></div>
       </footer>
     </aside>
@@ -151,6 +178,8 @@
     var activeFrame = null;
     var captureButton = document.getElementById('capture');
     var captureGifButton = document.getElementById('capture-gif');
+    var gifFps = document.getElementById('gif-fps');
+    var gifColors = document.getElementById('gif-colors');
     var nativeMovieWidth = 715;
     var nativeMovieHeight = 455;
     var colorDefinitions = [
@@ -449,7 +478,7 @@
       captureButton.disabled = true;
       status.textContent = 'Capturando 8 segundos de animação…';
       try {
-        var result = await studioApi.captureGif(document.getElementById('scene-mode').value, flashvars.value);
+        var result = await studioApi.captureGif(document.getElementById('scene-mode').value, flashvars.value, Number(gifFps.value), Number(gifColors.value));
         status.textContent = 'GIF salvo em: ' + result.savedPath;
       } catch (error) {
         status.textContent = 'Falha ao gerar GIF: ' + error.message;

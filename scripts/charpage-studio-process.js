@@ -115,15 +115,17 @@ ipcMain.handle('charpage-studio-capture-preview', async (event, renderer, flashV
         try { fs.rmSync(temporaryDirectory, { recursive: true, force: true }); } catch (error) { /* temporary files are harmless */ }
     }
 });
-ipcMain.handle('charpage-studio-capture-gif', async (event, renderer, flashVars) => {
+ipcMain.handle('charpage-studio-capture-gif', async (event, renderer, flashVars, requestedFps, requestedColors) => {
     const owner = BrowserWindow.fromWebContents(event.sender);
     const config = rendererConfig(renderer, flashVars);
     const result = await dialog.showSaveDialog(owner, { defaultPath: 'CharPage.gif', filters: [{ name: 'GIF animado', extensions: ['gif'] }] });
     if (result.canceled || !result.filePath) throw new Error('GIF cancelado.');
+    const colors = [64, 128, 256].indexOf(Number(requestedColors)) !== -1 ? Number(requestedColors) : 128;
     const temporaryDirectory = fs.mkdtempSync(path.join(app.getPath('temp'), 'aquastar-charpage-gif-'));
     const requestPath = path.join(temporaryDirectory, 'request.json');
     const statusPath = path.join(temporaryDirectory, 'status.json');
-    fs.writeFileSync(requestPath, JSON.stringify({ kind: 'gif', swfUrl: config.swfUrl, flashVars: config.flashVars, outputPath: result.filePath, statusPath: statusPath, duration: 8000, fps: 10 }));
+    const fps = Math.max(1, Math.min(60, Math.round(Number(requestedFps) || 10)));
+    fs.writeFileSync(requestPath, JSON.stringify({ kind: 'gif', swfUrl: config.swfUrl, flashVars: config.flashVars, outputPath: result.filePath, statusPath: statusPath, duration: 8000, fps: fps, colors: colors }));
     const childArgs = process.defaultApp ? [app.getAppPath(), '--charpage-studio-capture', '--capture-request=' + requestPath] : ['--charpage-studio-capture', '--capture-request=' + requestPath];
     try {
         await waitForCaptureProcess(spawn(process.execPath, childArgs, { stdio: 'ignore', windowsHide: true }));

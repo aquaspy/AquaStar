@@ -13,7 +13,7 @@ exports.titleMessages = {
 exports.charPageStudioMessages = {
     locale: '', title: '', heading: '', description: '', sceneModeLabel: '', charPageMode: '', emptySceneMode: '', emptySceneHint: '',
     characterLabel: '', loadCharacterButton: '', characterHint: '', colorsLabel: '', backgroundIndexLabel: '', emptySceneSettingsLabel: '',
-    solidBackgroundLabel: '', nativeFps: '', loadSceneButton: '', savePngButton: '', saveGifButton: ''
+    solidBackgroundLabel: '', nativeFps: '', loadSceneButton: '', savePngButton: '', saveGifButton: '', gifFpsLabel: '', gifColorsLabel: ''
 }
 
 exports.dialogMessages = {
