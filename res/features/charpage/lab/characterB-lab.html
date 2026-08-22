@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AquaStar — CharacterB Lab</title>
+  <link rel="stylesheet" href="../../common/focus.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #10141b; color: #edf4ff; font: 14px Arial, sans-serif; }
+    main { display: grid; grid-template-columns: minmax(310px, 430px) 1fr; min-height: 100vh; }
+    aside { padding: 18px; background: #19212d; border-right: 1px solid #344355; overflow: auto; }
+    h1 { margin: 0 0 8px; font-size: 21px; } p { color: #b9c6d7; line-height: 1.45; }
+    label { display: block; margin: 16px 0 6px; font-weight: bold; }
+    input, textarea, button { font: inherit; }
+    input, textarea { width: 100%; border: 1px solid #52657c; border-radius: 4px; padding: 8px; background: #0f151e; color: inherit; }
+    textarea { min-height: 260px; resize: vertical; }
+    button { margin-top: 12px; padding: 8px 12px; border: 0; border-radius: 4px; color: white; background: #287ac4; cursor: pointer; }
+    button:hover { background: #3991e1; } .hint, #status { font-size: 12px; color: #b9c6d7; }
+    #stage { min-height: 455px; background: #000; display: flex; align-items: center; justify-content: center; }
+    #stage ruffle-player { width: min(100%, 1000px); height: min(100vh, 700px); }
+    #diagnostics { max-height: 150px; overflow: auto; white-space: pre-wrap; margin: 12px 0 0; padding: 8px; border: 1px solid #52657c; border-radius: 4px; background: #0f151e; color: #e9b3b3; font: 11px Consolas, monospace; }
+    @media (max-width: 800px) { main { display: block; } aside { border: 0; } #stage { min-height: 60vh; } }
+  </style>
+</head>
+<body>
+  <main>
+    <aside>
+      <h1>CharacterB Lab</h1>
+      <p>Ambiente isolado para testar a Char Page sem alterar o AquaStar nem o SWF baixado. Use a cópia em <code>work/charpage-lab/characterB.swf</code>.</p>
+      <label for="swf">SWF local</label>
+      <input id="swf" type="file" accept=".swf,application/x-shockwave-flash">
+      <p class="hint">O arquivo continua local; os recursos auxiliares podem ser solicitados ao servidor da AQW.</p>
+      <label for="base">Raiz dos recursos externos</label>
+      <input id="base" type="url" value="https://game.aq.com/">
+      <p class="hint">O SWF concatena esta raiz com <code>game/gamefiles/...</code>. O laboratório a fornece como a opção <code>base</code> do Ruffle e como FlashVar <code>root</code>.</p>
+      <label for="flashvars">FlashVars</label>
+      <textarea id="flashvars" spellcheck="false"></textarea>
+      <button id="remove-accessories" type="button">Remover acessórios carregados</button>
+      <button id="load" type="button">Carregar cenário</button>
+      <div id="status" role="status"></div>
+      <pre id="diagnostics" aria-label="Diagnóstico do laboratório">Diagnóstico: aguardando carregamento.</pre>
+    </aside>
+    <div id="stage" aria-label="Prévia da Char Page"></div>
+  </main>
+  <script src="../../../ruffle/ruffle.js"></script>
+  <script>
+  (function () {
+    // Capturado da CharPage pública de DStar em 22/08/2026. É apenas um cenário
+    // inicial: edite livremente para descobrir quais chaves o SWF consome.
+    var initialFlashVars = 'intColorHair=6710988&intColorSkin=16765338&intColorEye=6710988&intColorTrim=6697932&intColorBase=26316&intColorAccessory=0&level=100&guild=Emotional%20Awakening&ia1=2492464&strGender=F&strHairFile=hair/F/Summer19Locks8.swf&strHairName=Summer19Locks8&strName=DStar&intLevel=100%20---%20Emotional%20Awakening%20Guild&strFaction=Good&strClassName=King%27s%20Echo&strClassFile=GoddessOfWar.swf&strClassLink=GoddessOfWar&strArmorName=Radiant%20Goddess%20of%20War&strWeaponFile=items/swords/BladeofMoltenDoom.swf&strWeaponLink=BladeofMoltenDoom&strWeaponType=Sword&strWeaponName=Burning%20Sword%20of%20Doom&strCapeFile=items/capes/YokaiNavalRaijinRunesCCr1.swf&strCapeLink=YokaiNavalRaijinRunesCC&strCapeName=Enchanted%20Kitsune%20Rune%20Circle&strHelmFile=items/helms/CelestialMorphFr1.swf&strHelmLink=CelestialMorphF&strHelmName=Celestial%20Celebrant%27s%20Morph%20%2B%20Locks&strPetFile=none&strPetLink=none&strPetName=&strMiscFile=items/grounds/HBBattlemageGround.swf&strMiscLink=HBBattlemageGround&strMiscName=Hollowborn%20Battlemage%20Sigil&WeaponID=78095&CapeID=50207&HelmID=66663&ArmorID=73883&HairID=522&CustWeaponID=60644&strCustWeaponFile=items/staves/HSElectinaLightingRodCC.swf&strCustWeaponLink=HSElectinaLightingRodCC&strCustWeaponType=Staff&strCustWeaponName=Electina%27s%20Prismatic%20Lightning%20Rod&CustCapeID=83447&strCustCapeFile=items/capes/LaeMagusCloak.swf&strCustCapeLink=LaeMagusCloak&strCustCapeName=Fiendish%20Magus%27%20Cloak&CustArmorID=86834&strCustArmorFile=ThunderingDarkElf.swf&strCustArmorLink=ThunderingDarkElf&strCustArmorName=Dark%20Thunder%20Master&CustHelmID=100550&strCustHelmFile=items/helms/GothFHairUpUpCC.swf&strCustHelmLink=GothFHairUpUpCC&strCustHelmName=Gravecore%20Muse%20Visage&bgindex=0';
+    var stage = document.getElementById('stage');
+    var status = document.getElementById('status');
+    var diagnostics = document.getElementById('diagnostics');
+    var flashvars = document.getElementById('flashvars');
+    flashvars.value = initialFlashVars;
+    function diagnose(message) {
+      diagnostics.textContent += '\n' + message;
+      diagnostics.scrollTop = diagnostics.scrollHeight;
+    }
+    if (window.characterBLab) window.characterBLab.onDiagnostic(diagnose);
+    window.addEventListener('error', function (event) { diagnose('[page] ' + event.message); });
+    window.addEventListener('unhandledrejection', function (event) { diagnose('[promise] ' + event.reason); });
+
+    // These entries are independently loaded by AvatarMC. "none" is already
+    // the sentinel used by the public Char Page for an absent pet, so it is the
+    // least invasive first experiment before patching ActionScript.
+    document.getElementById('remove-accessories').addEventListener('click', function () {
+      var params = new URLSearchParams(flashvars.value);
+      [
+        'strWeaponFile', 'strWeaponLink', 'strWeaponName', 'strWeaponType',
+        'strCapeFile', 'strCapeLink', 'strCapeName',
+        'strHelmFile', 'strHelmLink', 'strHelmName',
+        'strPetFile', 'strPetLink', 'strPetName',
+        'strMiscFile', 'strMiscLink', 'strMiscName',
+        'strCustWeaponFile', 'strCustWeaponLink', 'strCustWeaponName', 'strCustWeaponType',
+        'strCustCapeFile', 'strCustCapeLink', 'strCustCapeName',
+        'strCustArmorFile', 'strCustArmorLink', 'strCustArmorName',
+        'strCustHelmFile', 'strCustHelmLink', 'strCustHelmName'
+      ].forEach(function (key) { params.set(key, 'none'); });
+      flashvars.value = params.toString();
+      status.textContent = 'Acessórios marcados como "none". Carregue o cenário para testar.';
+    });
+
+    var originalSwfUrl = 'https://game.aq.com/game/gamefiles/etc/chardetail/characterB.swf?v=2';
+    document.getElementById('load').addEventListener('click', async function () {
+      var file = document.getElementById('swf').files[0];
+      if (!file) { status.textContent = 'Escolha a cópia local de characterB.swf primeiro.'; return; }
+      if (!window.RufflePlayer) { status.textContent = 'Não foi possível carregar o Ruffle empacotado.'; diagnose('[setup] window.RufflePlayer não foi criado.'); return; }
+      var resourceBase = document.getElementById('base').value;
+      var parameters = new URLSearchParams(flashvars.value);
+      var player = window.RufflePlayer.newest().createPlayer();
+      stage.textContent = '';
+      stage.appendChild(player);
+      status.textContent = 'Carregando ' + file.name + '…';
+      player.addEventListener('loadedmetadata', function () { status.textContent = 'Cenário carregado.'; });
+      try {
+        await window.characterBLab.stageSwf(new Uint8Array(await file.arrayBuffer()));
+        // Ruffle receives the canonical remote URL. The lab's isolated Electron
+        // session intercepts only this request and returns the selected bytes,
+        // so loaderInfo.url remains the value the original AS3 expects.
+        await player.load({
+          url: originalSwfUrl,
+          base: resourceBase,
+          parameters: Object.fromEntries(parameters),
+          allowScriptAccess: true,
+          allowNetworking: 'all',
+          letterbox: 'on',
+          autoplay: 'off',
+          unmuteOverlay: 'hidden',
+          backgroundColor: '#000000'
+        });
+        diagnose('[setup] SWF local servido na URL oficial: ' + originalSwfUrl + '\n[setup] FlashVars enviados: ' + parameters.toString());
+      } catch (error) {
+        status.textContent = 'Falha ao carregar: ' + error.message;
+        diagnose('[Ruffle] ' + (error.stack || error.message));
+        console.error(error);
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
