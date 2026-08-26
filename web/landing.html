@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101112" />
+    <title>AquaStar</title>
+    <link rel="stylesheet" href="assets/landing.css" />
+  </head>
+  <body>
+    <header>
+      <nav class="nav" aria-label="Principal">
+        <a class="brand" href="#top"><img src="assets/aquastar-icon.png" alt="" /><span>AquaStar</span></a>
+        <div class="links">
+          <a href="#features" data-i="navFeatures"></a><a href="#tools" data-i="navTools"></a
+          ><a href="#how" data-i="navHow"></a>
+        </div>
+        <button class="language" id="language" type="button">EN</button>
+      </nav>
+    </header>
+    <main id="top">
+      <section class="hero">
+        <div class="wrap">
+          <div class="eyebrow" data-i="eyebrow"></div>
+          <h1 data-i="hero"></h1>
+          <p data-i="lead"></p>
+          <div class="actions">
+            <a class="button primary" href="#tools" data-i="explore"></a
+            ><a class="button" href="https://github.com/aquaspy/AquaStar" data-i="github"></a>
+          </div>
+        </div>
+      </section>
+      <section id="features">
+        <div class="wrap">
+          <h2 data-i="featuresTitle"></h2>
+          <p class="intro" data-i="featuresLead"></p>
+          <div class="grid" id="featureGrid"></div>
+        </div>
+      </section>
+      <section id="tools">
+        <div class="wrap">
+          <h2 data-i="toolsTitle"></h2>
+          <p class="intro" data-i="toolsLead"></p>
+          <div class="split">
+            <article class="panel">
+              <h3 data-i="desktop"></h3>
+              <p data-i="desktopLead"></p>
+              <div class="tools"><a href="https://github.com/aquaspy/AquaStar" data-i="github"></a></div>
+            </article>
+            <article class="panel">
+              <h3 data-i="web"></h3>
+              <p data-i="webLead"></p>
+              <div class="tools">
+                <a href="tools/reminders/" data-i="reminders"></a><a href="tools/todo/" data-i="todo"></a
+                ><a href="tools/strategy/" data-i="strategy"></a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section id="how">
+        <div class="wrap">
+          <h2 data-i="howTitle"></h2>
+          <p class="intro" data-i="howLead"></p>
+          <div class="steps" id="steps"></div>
+        </div>
+      </section>
+      <section>
+        <div class="wrap">
+          <h2 data-i="faqTitle"></h2>
+          <div class="faq" id="faq"></div>
+        </div>
+      </section>
+    </main>
+    <footer><div class="wrap" data-i="footer"></div></footer>
+    <script src="assets/landing.js"></script>
+  </body>
+</html>

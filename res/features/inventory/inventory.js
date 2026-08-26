@@ -22,6 +22,35 @@ const inventoryJsonPath = path.join(constant.appDataDirectory, inventoryJsonFile
 
 const INVENTORY_PAGE_SIZE = 100;
 const BUYBACK_PAGE_SIZE = 100;
+let activeSyncPromise = null;
+const inventoryUrl = constant.toFileUrl(path.join(__dirname, 'inventory.html'));
+const strategyUrl = constant.toFileUrl(path.join(__dirname, '..', 'strategy', 'strategy.html'));
+
+function _senderUrl(event) {
+    try { return event && event.sender ? event.sender.getURL() : ''; }
+    catch (e) { return ''; }
+}
+
+function _isTrustedRemoteSender(event) {
+    try {
+        const parsed = new URL(_senderUrl(event));
+        return (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+            (parsed.hostname === 'aqwwiki.wikidot.com' || parsed.hostname === 'account.aq.com');
+    } catch (e) {
+        return false;
+    }
+}
+
+function _isInventorySender(event) {
+    const senderUrl = _senderUrl(event);
+    return senderUrl === inventoryUrl || _isTrustedRemoteSender(event);
+}
+
+function _isInventoryOrAccountSender(event) {
+    if (_senderUrl(event) === inventoryUrl) return true;
+    try { return new URL(_senderUrl(event)).hostname === 'account.aq.com'; }
+    catch (e) { return false; }
+}
 
 function _migrateItem(raw) {
     raw = raw || {};
@@ -243,7 +272,7 @@ function _convertBuyBackRow(row) {
 // way to target a different character without the user actually switching characters on
 // the AQW site itself first - Electron only ever holds one active session/cookie, and the
 // API differentiates characters via that session, not a request parameter.
-async function syncActiveCharacter() {
+async function _syncActiveCharacter() {
     const userResult = await _fetchUsername();
     if (!userResult.ok) return { ok: false, error: userResult.error };
 
@@ -279,6 +308,15 @@ async function syncActiveCharacter() {
     _saveInventory(state);
 
     return { ok: true, charId: charIdResult.charId, charName: userResult.name, syncedAt: nowIso };
+}
+
+// Manual and scheduled syncs share AQW's one authenticated browser session.
+// Coalesce overlapping requests so a stale response cannot overwrite a newer one
+// and the account site's ASP.NET session lock is not needlessly contended.
+function syncActiveCharacter() {
+    if (activeSyncPromise) return activeSyncPromise;
+    activeSyncPromise = _syncActiveCharacter().finally(() => { activeSyncPromise = null; });
+    return activeSyncPromise;
 }
 
 function _normalizeItemName(name) {
@@ -386,11 +424,13 @@ function matchWikiItem(wikiTitle, charId) {
     return _matchWikiItemInState(_loadInventory(), wikiTitle, charId);
 }
 
-ipcMain.handle('getInventory', () => {
+ipcMain.handle('getInventory', (event) => {
+    if (!_isInventorySender(event)) return { data: null, error: 'blocked' };
     return { data: _loadInventory(), savePath: inventoryJsonPath };
 });
 
 ipcMain.handle('saveInventoryLabels', (event, labels) => {
+    if (_senderUrl(event) !== inventoryUrl) return { ok: false, error: 'blocked' };
     const state = _loadInventory();
     state.labels = _migrateLabels(labels);
     _saveInventory(state);
@@ -405,7 +445,8 @@ ipcMain.handle('getWikiMessages', () => {
     return locale.strings.wikiMessages;
 });
 
-ipcMain.handle('syncInventoryNow', async () => {
+ipcMain.handle('syncInventoryNow', async (event) => {
+    if (!_isInventoryOrAccountSender(event)) return { ok: false, error: 'blocked' };
     try {
         return await syncActiveCharacter();
     } catch (e) {
@@ -415,6 +456,7 @@ ipcMain.handle('syncInventoryNow', async () => {
 });
 
 ipcMain.handle('setInventoryActiveChar', (event, charId) => {
+    if (!_isInventorySender(event)) return { ok: false, error: 'blocked' };
     const state = _loadInventory();
     state.lastActiveCharId = typeof charId === 'string' ? charId : '';
     _saveInventory(state);
@@ -425,6 +467,7 @@ ipcMain.handle('setInventoryActiveChar', (event, charId) => {
 // against whichever character is currently active (state.lastActiveCharId), which the same
 // script's character-switcher chip keeps up to date via setInventoryActiveChar above.
 ipcMain.handle('matchWikiItem', (event, wikiTitle) => {
+    if (!_isInventorySender(event)) return { owned: false, bank: 0, inventory: 0, buyback: 0, matchedName: null };
     return matchWikiItem(wikiTitle);
 });
 
@@ -432,6 +475,7 @@ ipcMain.handle('matchWikiItem', (event, wikiTitle) => {
 // rewards, etc.).  Resolve them from one in-memory read instead of making the renderer
 // send one IPC call per link, each of which would otherwise reopen the JSON file.
 ipcMain.handle('matchWikiItems', (event, wikiTitles) => {
+    if (!_isInventorySender(event)) return {};
     if (!Array.isArray(wikiTitles)) return {};
     const titles = wikiTitles.filter((title) => typeof title === 'string').slice(0, 500);
     const state = _loadInventory();
@@ -447,6 +491,7 @@ ipcMain.handle('matchWikiItems', (event, wikiTitles) => {
 // is deliberately exact-name matching: its curated potion list contains in-game names and
 // must not merge AC/member/tagged variants into a normal consumable total.
 ipcMain.handle('getInventoryItemCounts', (event, itemNames) => {
+    if (_senderUrl(event) !== strategyUrl) return {};
     if (!Array.isArray(itemNames)) return {};
     const names = itemNames.filter((name) => typeof name === 'string').slice(0, 200);
     const wanted = {};

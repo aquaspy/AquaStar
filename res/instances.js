@@ -3,7 +3,9 @@ const windowConfig           = require('./windows/config.js');
 const windowsMenu            = require('./windows/menu.js');
 const keybinds               = require('./keybindings.js');
 const socketProxy            = require('./socketProxy.js');
-const {BrowserWindow, Menu}  = require('electron');
+const createFeatureWindowController = require('./windows/feature-window-controller.js');
+const {app, BrowserWindow, Menu}  = require('electron');
+const {spawn} = require('child_process');
 
 let usedAltPagesNumbers = [];
 
@@ -78,8 +80,8 @@ function newBrowserWindow(new_path, isMainWin=false){
         newWin.webContents.openDevTools();
     }
 
-    if (originalPath == constant.mainPath || 
-        originalPath == constant.testingAQW) {
+    if (originalPath == constant.mainPath ||
+        _isTestingAqwUrl(originalPath)) {
 
         // Its alt window, Put the aqlite/Aqw title...
         var windowNumber = 1;
@@ -118,6 +120,13 @@ function newBrowserWindow(new_path, isMainWin=false){
         /// Its a usual HTML page window then! features incomming
         /// ... but only if its win or lunix. Mac doesnt have the feature -_-
         /// Mac still get keybinds tho, just not the menu.
+        newWin.setMenuBarVisibility(true);
+    }
+
+    // Game windows get a small discoverable command bar when enabled. Browser
+    // windows keep the application menu created in main.js.
+    if (_isGameWindow(originalPath, false) && keybinds.keybinds.showGameMenu !== false && process.platform !== 'darwin') {
+        newWin.setMenu(Menu.buildFromTemplate(windowsMenu.getGameMenu(keybinds.keybinds)));
         newWin.setMenuBarVisibility(true);
     }
     
@@ -190,7 +199,7 @@ function _windowAddContext(newWin){
         testAndDelete("wikidot","wad-aqwwiki-below-content",false);
         _executeJavaScriptSafely(newWin.webContents,
             "var rem = document.getElementsByTagName('iframe');" +
-            "for (var i=0;i<rem.lenght;i++) rem[i].remove()", 'Frame cleanup');
+            "for (var i=0;i<rem.length;i++) rem[i].remove()", 'Frame cleanup');
         // ----------------------------------------------------------------------------------------------
         // Another bonus: Wiki link preview (WikiView), made by biglavis over at https://github.com/biglavis
         //  Available on the file res/features/wikiview/wikiviewsource.js.
@@ -215,17 +224,23 @@ function _windowAddContext(newWin){
             // engine, which is also used by the standalone Inventory window.
             const nameVariants = fs.readFileSync(path.join(wikiviewDir, 'nameVariants.js'), 'utf8');
             const hoverPreview = fs.readFileSync(path.join(wikiviewDir, 'hoverPreview.js'), 'utf8');
-            var wikiview = nameVariants + hoverPreview + fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
+            const wikiviewSource = fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
+            var wikiview = nameVariants + '\n;\n' + hoverPreview + '\n;\n' + wikiviewSource;
             if (bWiki){
                 const jquery = fs.readFileSync(path.join(wikiviewDir, 'jquery.min.js'), 'utf8');
-                wikiview = jquery + wikiview
+                wikiview = jquery + '\n;\n' + wikiview;
             }
-            // did-finish-load can fire again for a restored page.  The enhancement source
-            // contains top-level declarations, so evaluating it twice in the same renderer
-            // would throw a redeclaration error even though the first injection succeeded.
-            wikiview = 'if (!window.__aquastarWikiViewInjected) { window.__aquastarWikiViewInjected = true;\n' +
-                wikiview + '\n}';
-            _executeJavaScriptSafely(newWin.webContents, wikiview, 'Wiki enhancement');
+            // Mark success only after every source has run. A transient renderer error must
+            // not permanently suppress the next did-finish-load injection attempt.
+            wikiview = '(function () {\n' +
+                'if (window.__aquastarWikiViewInjected) return false;\n' +
+                'try {\n' + wikiview + '\n' +
+                'window.__aquastarWikiViewInjected = true; return true;\n' +
+                '} catch (error) { delete window.__aquastarWikiViewInjected; console.error("[AquaStar] WikiView injection failed", error); throw error; }\n' +
+                '})();';
+            _executeJavaScriptSafely(newWin.webContents, wikiview, 'Wiki enhancement').then((injected) => {
+                if (injected) console.log('[AquaStar] Wiki enhancement injected into ' + url);
+            });
         }
 
         // Give every account.aq.com page a manual sync entry point.  The injected installer
@@ -264,19 +279,25 @@ function _isGameWindow(target, considerDF = true){
     }
     
     var aqliteValue = constant.mainPath;
-    var vanilla     = constant.testingAQW;
     if(process.platform == "win32") {
         // I so want to swear RN... just WHY???
         // Now when comparing to the file:///, its the same rules as URL.
         aqliteValue = constant.mainPath.replace(/\\/g,"/");
-        vanilla     = constant.testingAQW.replace(/\\/g,"/");
     }
     
-    if (url == aqliteValue || url == vanilla) return true;
+    if (url == aqliteValue || _isTestingAqwUrl(url)) return true;
     if (considerDF && url === constant.df_url) {
         return true;
     }
     return false;
+}
+
+// The Testing AQW URL gets a fresh cache-busting `ver` value every time it is
+// requested.  It must therefore be identified by its stable SWF path instead
+// of comparing it to another invocation of constant.testingAQW.
+function _isTestingAqwUrl(target) {
+    return typeof target === 'string' &&
+        target.indexOf('https://game.aq.com/game/gamefiles/Loader_Spider.swf') === 0;
 }
 
 // Weird char page config - For Alt + K
@@ -361,11 +382,11 @@ function takeSS(focusedWin, ret = null, destroyWindow = false){
         }
     }
     else { rect = ret;}
-    focusedWin.webContents.capturePage(rect)
+    return focusedWin.webContents.capturePage(rect)
         .then((sshot) => {
             console.log("Screenshotting it...");
             var ssfolder = constant.sshotPath;
-            _mkdir(ssfolder);
+            if (!_mkdir(ssfolder)) return null;
 
             var today = new Date();
             var pre_name = "Screenshot-" +
@@ -393,9 +414,11 @@ function takeSS(focusedWin, ret = null, destroyWindow = false){
             else {
                 focusedWin.close();
             }
+            return savePath;
         })
         .catch((err) => {
             console.log("[AquaStar] Screenshot error:", err);
+            return null;
         });
 }
 
@@ -432,86 +455,30 @@ function _notifyWindow(targetWin, notif, resetAfter = true){
     }
 }
 
-// Settings screen - singleton window, just refocus if already open.
-let settingsWin = null;
-function openSettingsWindow(){
-    if (settingsWin && !settingsWin.isDestroyed()) {
-        settingsWin.focus();
-        return settingsWin;
-    }
-    settingsWin = new BrowserWindow(windowConfig.settingsConfig);
-    settingsWin.setMenuBarVisibility(false);
-    settingsWin.setTitle("AquaStar - Settings");
-    settingsWin.loadURL(windowConfig.settingsUrl);
-    settingsWin.on('closed', () => { settingsWin = null; });
-    return settingsWin;
+const featureWindows = createFeatureWindowController(windowConfig.featureWindows, BrowserWindow);
+function openFeatureWindow(featureId) {
+    return featureWindows.open(featureId);
 }
 
-// Reminders screen - singleton window, just refocus if already open.
-let remindersWin = null;
-function openRemindersWindow(){
-    if (remindersWin && !remindersWin.isDestroyed()) {
-        remindersWin.focus();
-        return remindersWin;
-    }
-    remindersWin = new BrowserWindow(windowConfig.remindersConfig);
-    remindersWin.setMenuBarVisibility(false);
-    remindersWin.setTitle("AquaStar - Reminders");
-    remindersWin.loadURL(windowConfig.remindersUrl);
-    remindersWin.on('closed', () => { remindersWin = null; });
-    return remindersWin;
-}
-
-// To-Do screen - singleton window, just refocus if already open.
-let todoWin = null;
-function openTodoWindow(){
-    if (todoWin && !todoWin.isDestroyed()) {
-        todoWin.focus();
-        return todoWin;
-    }
-    todoWin = new BrowserWindow(windowConfig.todoConfig);
-    todoWin.setMenuBarVisibility(false);
-    todoWin.setTitle("AquaStar - To-Do List");
-    todoWin.loadURL(windowConfig.todoUrl);
-    todoWin.on('closed', () => { todoWin = null; });
-    return todoWin;
-}
-
-// Inventory screen - singleton window, just refocus if already open.
-let inventoryWin = null;
-function openInventoryWindow(){
-    if (inventoryWin && !inventoryWin.isDestroyed()) {
-        inventoryWin.focus();
-        return inventoryWin;
-    }
-    inventoryWin = new BrowserWindow(windowConfig.inventoryConfig);
-    inventoryWin.setMenuBarVisibility(false);
-    inventoryWin.setTitle("AquaStar - Inventory");
-    inventoryWin.loadURL(windowConfig.inventoryUrl);
-    inventoryWin.on('closed', () => { inventoryWin = null; });
-    return inventoryWin;
-}
-
-let strategyWin = null;
-function openStrategyWindow(){
-    if (strategyWin && !strategyWin.isDestroyed()) { strategyWin.focus(); return strategyWin; }
-    strategyWin = new BrowserWindow(windowConfig.strategyConfig);
-    strategyWin.setMenuBarVisibility(false);
-    strategyWin.setTitle("AquaStar - Strategy");
-    strategyWin.loadURL(windowConfig.strategyUrl);
-    strategyWin.on('closed', () => { strategyWin = null; });
-    return strategyWin;
+function openSettingsWindow(){ return openFeatureWindow('settings'); }
+function openRemindersWindow(){ return openFeatureWindow('reminders'); }
+function openTodoWindow(){ return openFeatureWindow('todo'); }
+function openInventoryWindow(){ return openFeatureWindow('inventory'); }
+function openStrategyWindow(){ return openFeatureWindow('strategy'); }
+function openCharPageStudioWindow(){
+    const args = process.defaultApp ? [app.getAppPath(), '--charpage-studio'] : ['--charpage-studio'];
+    const studio = spawn(process.execPath, args, { detached: true, stdio: 'ignore' });
+    studio.unref();
+    return studio;
 }
 
 function _mkdir (filepath){
-    try { fs.lstatSync(filepath).isDirectory() }
-    catch (ex) {
-        if (ex.code == 'ENOENT') {
-            fs.mkdir(filepath, (err) =>{
-                console.log(err);
-            })
-        }
-        else console.log(ex);
+    try {
+        fs.mkdirSync(filepath, { recursive: true });
+        return true;
+    } catch (error) {
+        console.log('[AquaStar] Could not create directory ' + filepath + ': ' + error.message);
+        return false;
     }
 }
 
@@ -522,6 +489,8 @@ exports.openRemindersWindow = openRemindersWindow;
 exports.openTodoWindow      = openTodoWindow;
 exports.openInventoryWindow = openInventoryWindow;
 exports.openStrategyWindow  = openStrategyWindow;
+exports.openCharPageStudioWindow = openCharPageStudioWindow;
+exports.openFeatureWindow   = openFeatureWindow;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;

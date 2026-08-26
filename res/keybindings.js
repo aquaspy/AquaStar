@@ -48,6 +48,52 @@ function customKeybinds() {
     return finalKeybinds;
 }
 
+function toggleRecording(focusedWin) {
+    if (!focusedWin) return;
+    if(!ipcRecording.wasRecording()){
+        inst.notifyWin(focusedWin,
+            constant.titleMessages.recording + "! " + focusedWin.getTitle(),
+            false);
+        recordingWinId = focusedWin.id;
+
+        ipcRecording.triggerRecording(focusedWin);
+        focusedWin.setIcon(constant.nativeImageRedIcon)
+    }
+    else {
+        if (recordingWinId != focusedWin.id) {
+            inst.notifyWin(focusedWin,
+                constant.titleMessages.alreadyRecording);
+            return;
+        }
+        const recordWin = BrowserWindow.fromId(recordingWinId) || focusedWin;
+        inst.notifyWin(recordWin, inst.getSavedTitle(recordWin));
+        ipcRecording.triggerRecording(recordWin);
+        recordWin.setIcon(constant.nativeImageIcon)
+    }
+}
+
+async function reloadIgnoringCache(focusedWin) {
+    if (!focusedWin) return;
+    const ses = focusedWin.webContents.session;
+    try {
+        await Promise.all([
+            ses.clearCache(),
+            ses.clearStorageData({ storages: CACHE_STORAGES })
+        ]);
+    } catch (err) {
+        console.error('[AquaStar] Cache purge error:', err);
+    }
+    focusedWin.webContents.reloadIgnoringCache();
+}
+
+function toggleFullscreen(focusedWin) {
+    if (!focusedWin) return;
+    focusedWin.setFullScreen(!focusedWin.isFullScreen());
+    if (process.platform != 'darwin') {
+        focusedWin.setMenuBarVisibility(finalKeybinds.showGameMenu !== false && !focusedWin.isFullScreen());
+    }
+}
+
 const processKeybings = function (){
 
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
@@ -96,56 +142,17 @@ const processKeybings = function (){
     addKeybind(k.strategy, ()=>{inst.openStrategyWindow()});
 
     // Toggle Fullscreen
-    addKeybind(k.fullscreen,(focusedWin) => {
-        focusedWin.setFullScreen(!focusedWin.isFullScreen());
-        
-        if (process.platform != 'darwin') focusedWin.setMenuBarVisibility(false);
-        // As only wiki and so should have menubars, do not show them on game windows (that can be Fullscreen)
-    });
+    addKeybind(k.fullscreen, toggleFullscreen);
 
     // F2 / Ctrl+J must use globalShortcut — Flash PPAPI eats before-input-event keys
     addGlobalKeybind(k.sshot, (focusedWin) => { inst.takeSS(focusedWin); }, false, true);
-    addGlobalKeybind(k.record, (focusedWin) => {
-        if(!ipcRecording.wasRecording()){
-            inst.notifyWin(focusedWin,
-                constant.titleMessages.recording + "! " + focusedWin.getTitle(),
-                false);
-            recordingWinId = focusedWin.id;
-
-            ipcRecording.triggerRecording(focusedWin);
-            focusedWin.setIcon(constant.nativeImageRedIcon)
-        }
-        else {
-            if (recordingWinId != focusedWin.id) {
-                inst.notifyWin(focusedWin,
-                    constant.titleMessages.alreadyRecording);
-                return;
-            }
-            else {
-                const recordWin = BrowserWindow.fromId(recordingWinId) || focusedWin;
-                inst.notifyWin(recordWin, inst.getSavedTitle(recordWin));
-                ipcRecording.triggerRecording(recordWin);
-                recordWin.setIcon(constant.nativeImageIcon)
-            }
-        }
-    });
+    addGlobalKeybind(k.record, toggleRecording);
 
 
     // Reload
     addKeybind(k.reload,   (focusedWin) => {focusedWin.reload()});
     // Reload and clear cache — globalShortcut so Flash game windows receive Ctrl+Shift+F5
-    addGlobalKeybind(k.reloadCache, async (focusedWin) => {
-        const ses = focusedWin.webContents.session;
-        try {
-            await Promise.all([
-                ses.clearCache(),
-                ses.clearStorageData({ storages: CACHE_STORAGES })
-            ]);
-        } catch (err) {
-            console.error('[AquaStar] Cache purge error:', err);
-        }
-        focusedWin.webContents.reloadIgnoringCache();
-    }, false, true);
+    addGlobalKeybind(k.reloadCache, reloadIgnoringCache, false, true);
     
     // Yay, AquaSP can have his DF too!
     addKeybind(k.dragon, () => inst.newBrowserWindow(constant.df_url));
@@ -198,6 +205,35 @@ const addGlobalKeybind = function(keybind, func, onlyHTML = false, considerDF = 
 
 exports.unregisterGlobalShortcuts = () => globalShortcut.unregisterAll();
 exports.addKeybinding = processKeybings;
+
+// Menu entries call this dispatcher instead of duplicating shortcut behavior.
+// Keeping one implementation is particularly important for recording state and
+// cache clearing, both of which have process-wide side effects.
+exports.runGameMenuAction = function(action, focusedWin) {
+    switch (action) {
+    case 'wiki': return inst.newBrowserWindow(constant.wikiReleases);
+    case 'design': return inst.newBrowserWindow(constant.designNotes);
+    case 'account': return inst.newBrowserWindow(constant.accountAq);
+    case 'charpage': return inst.newBrowserWindow(constant.buildCharLookupUrl(finalKeybinds.playerCharacter));
+    case 'newAqw': return inst.newBrowserWindow(constant.mainPath);
+    case 'newTest': return inst.newBrowserWindow(constant.testingAQW);
+    case 'dragon': return inst.newBrowserWindow(constant.df_url);
+    case 'help': return windowsMenu.showHelpMessage(focusedWin);
+    case 'about': return windowsMenu.showAboutMessage(focusedWin);
+    case 'settings': return inst.openSettingsWindow();
+    case 'reminders': return inst.openRemindersWindow();
+    case 'todo': return inst.openTodoWindow();
+    case 'inventory': return inst.openInventoryWindow();
+    case 'strategy': return inst.openStrategyWindow();
+    case 'studio': return inst.openCharPageStudioWindow();
+    case 'fullscreen':
+        return toggleFullscreen(focusedWin);
+    case 'sshot': return inst.takeSS(focusedWin);
+    case 'record': return toggleRecording(focusedWin);
+    case 'reload': return focusedWin && focusedWin.reload();
+    case 'reloadCache': return reloadIgnoringCache(focusedWin);
+    }
+};
 
 /// -------------------------------
 /// Settings screen IPC - reading/writing custom keybindings from aquastar.json
@@ -277,12 +313,18 @@ ipcMain.on('restartApp', () => {
 /// -------------------------------
 
 function _customSwfPath() {
-    return path.join(constant.appDirectoryPath, 'aqlite_old.swf');
+    return constant.customSwfPath;
+}
+
+function _activeCustomSwfPath() {
+    if (fs.existsSync(constant.customSwfPath)) return constant.customSwfPath;
+    if (fs.existsSync(constant.legacyCustomSwfPath)) return constant.legacyCustomSwfPath;
+    return null;
 }
 
 ipcMain.handle('getCustomSwfStatus', () => {
-    const target = _customSwfPath();
-    return { exists: fs.existsSync(target), path: target };
+    const activePath = _activeCustomSwfPath();
+    return { exists: activePath !== null, path: activePath || _customSwfPath() };
 });
 
 ipcMain.handle('chooseCustomSwf', async (event) => {
@@ -300,7 +342,8 @@ ipcMain.handle('chooseCustomSwf', async (event) => {
 });
 
 ipcMain.handle('removeCustomSwf', () => {
-    const target = _customSwfPath();
-    if (fs.existsSync(target)) fs.unlinkSync(target);
-    return { exists: fs.existsSync(target), path: target };
+    const target = _activeCustomSwfPath();
+    if (target) fs.unlinkSync(target);
+    const activePath = _activeCustomSwfPath();
+    return { exists: activePath !== null, path: activePath || _customSwfPath() };
 });

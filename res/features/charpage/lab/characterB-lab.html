@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AquaStar — Char Page Studio</title>
+  <link rel="stylesheet" href="../../common/focus.css">
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; background: #121212; color: #e6e6e6; font: 13px -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    main { display: grid; grid-template-columns: minmax(330px, 430px) minmax(0, 1fr); height: 100vh; overflow: hidden; }
+    aside { display: flex; flex-direction: column; min-height: 0; background: #121212; border-right: 1px solid #2c2c2c; }
+    .studio-header { padding: 14px 18px 12px; border-bottom: 1px solid #2c2c2c; flex: 0 0 auto; }
+    h1 { margin: 0 0 4px; font-size: 16px; } p { color: #9a9a9a; line-height: 1.4; }
+    .studio-header p { margin: 0; }
+    .sidebar-controls { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 18px 14px; }
+    label { display: block; margin: 14px 0 6px; font-weight: normal; }
+    input, select, textarea, button { font: inherit; }
+    input, select, textarea { width: 100%; border: 1px solid #333; border-radius: 4px; padding: 6px 8px; background: #1b1b1b; color: #dcdcdc; }
+    textarea { min-height: 150px; resize: vertical; font-family: "Consolas", "Courier New", monospace; font-size: 12px; }
+    button { padding: 6px 12px; border: 1px solid #383838; border-radius: 4px; color: #e6e6e6; background: #232323; cursor: pointer; font-size: 12px; }
+    button:hover { background: #2c2c2c; } button:active { background: #1a1a1a; }
+    button.primary { background: #2b6fce; border-color: #2b6fce; color: #fff; } button.primary:hover { background: #3a7fe0; }
+    button:disabled { opacity: .45; cursor: default; }
+    .hint, #status { font-size: 11px; color: #6f6f6f; }
+    #color-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .color-control { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px; margin: 0; border: 1px solid #333; border-radius: 4px; background: #1b1b1b; }
+    .color-control input { width: 42px; height: 28px; padding: 0; border: 0; }
+    .scene-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, .8fr); gap: 8px; align-items: stretch; }
+    .scene-options select { margin: 0; }
+    .character-load-row { display: flex; align-items: center; }
+    .character-load-row input { flex: 1 1 auto; min-width: 0; }
+    .character-load-row button { flex: 0 0 auto; width: auto; margin-left: 8px; white-space: nowrap; }
+    .toggle { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+    .toggle input { width: auto; }
+    #studio-visibility-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .studio-toggle { display: flex; align-items: center; gap: 7px; margin: 0; padding: 7px; border: 1px solid #333; border-radius: 4px; background: #1b1b1b; font-size: 12px; }
+    .studio-toggle input { width: auto; margin: 0; }
+    #advanced-controls { margin-top: 18px; }
+    details { margin: 8px 0; border: 1px solid #333; border-radius: 4px; background: #1b1b1b; }
+    summary { padding: 8px 9px; cursor: pointer; font-weight: normal; color: #e6e6e6; }
+    .advanced-group { display: grid; gap: 8px; padding: 4px 9px 10px; }
+    .advanced-field { display: grid; grid-template-columns: minmax(110px, 0.8fr) minmax(130px, 1.5fr) auto; gap: 6px; align-items: center; margin: 0; font-size: 11px; }
+    .advanced-field label { margin: 0; color: #9a9a9a; font-weight: normal; overflow-wrap: anywhere; }
+    .advanced-field input { min-width: 0; padding: 6px; }
+    .remove-param { margin: 0; padding: 5px 8px; background: #8d3030; border-color: #a64646; font-size: 11px; }
+    .remove-param:hover { background: #a63a3a; }
+    .studio-footer { flex: 0 0 auto; padding: 10px 18px 12px; border-top: 1px solid #2c2c2c; }
+    .studio-footer .primary { width: 100%; }
+    .gif-settings { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
+    .gif-options { display: flex; align-items: center; gap: 6px; margin: 0; min-width: 0; }
+    .gif-options label { margin: 0; white-space: nowrap; color: #9a9a9a; font-size: 11px; }
+    .gif-options select, .gif-options input { width: auto; flex: 1 1 0; }
+    .export-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
+    .export-actions button { width: 100%; margin: 0; }
+    #status { min-height: 15px; margin-top: 8px; color: #7fd08a; }
+    #preview-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #161616; }
+    .preview-header { flex: 0 0 auto; padding: 12px 18px; color: #9a9a9a; border-bottom: 1px solid #2c2c2c; font-size: 12px; }
+    #stage { flex: 1 1 auto; overflow: hidden; padding: 20px; background: #fef1c5; display: flex; align-items: center; justify-content: center; }
+    .flash-frame { position: relative; flex: 0 0 auto; }
+    .flash-frame embed { display: block; }
+    @media (max-width: 800px) { main { display: block; height: auto; overflow: visible; } aside { min-height: 100vh; } #preview-pane { min-height: 495px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <aside>
+      <header class="studio-header">
+        <h1 data-i18n="heading">Char Page Studio</h1>
+        <p data-i18n="description">Personalize a Char Page com o Flash Player nativo.</p>
+      </header>
+      <div class="sidebar-controls">
+      <label for="scene-mode" data-i18n="sceneModeLabel">Modo de cena</label>
+      <select id="scene-mode">
+        <option value="charpage" data-i18n="charPageMode">Char Page Studio</option>
+        <option value="empty-scene" data-i18n="emptySceneMode">Cenário vazio</option>
+      </select>
+      <p class="hint" data-i18n="emptySceneHint">Cenário vazio usa o novo compositor AQW: sem interface, moldura ou fundo da Char Page.</p>
+      <label for="player-name" data-i18n="characterLabel">Personagem AQW</label>
+      <div class="character-load-row">
+        <input id="player-name" type="text" maxlength="20" autocomplete="off" spellcheck="false">
+        <button id="load-character" class="primary" type="button" data-i18n="loadCharacterButton">Carregar da Char Page</button>
+      </div>
+      <p class="hint" data-i18n="characterHint">Usa por padrão o Personagem configurado nas Configurações, mas não baixa nada até este botão ser usado.</p>
+      <label data-i18n="colorsLabel">Cores</label>
+      <div id="color-controls"></div>
+      <label for="bgindex" data-i18n="backgroundIndexLabel">Fundo (bgindex)</label>
+      <input id="bgindex" type="number" min="0" max="31" step="1" value="0">
+      <p class="hint">0 usa o fundo padrão. O SWF aceita índices de 0 a 31.</p>
+      <label data-i18n="emptySceneSettingsLabel">Fundo sólido e FPS (cenário vazio)</label>
+      <div class="scene-options">
+        <label class="color-control" for="scene-background-color"><span data-i18n="solidBackgroundLabel">Fundo sólido</span><input id="scene-background-color" type="color" value="#fef1c5"></label>
+        <select id="empty-scene-fps" aria-label="FPS do cenário vazio">
+          <option value="30">30 FPS</option>
+          <option value="24" data-i18n="nativeFps">24 FPS (AQW)</option>
+        </select>
+      </div>
+      <label>Avatar</label>
+      <div class="advanced-group">
+        <label for="avatar-offset-x">Posição horizontal</label><input id="avatar-offset-x" type="range" min="-350" max="350" step="1" value="0">
+        <label for="avatar-offset-y">Posição vertical</label><input id="avatar-offset-y" type="range" min="-250" max="250" step="1" value="0">
+        <label for="avatar-scale">Zoom</label><input id="avatar-scale" type="range" min="0.25" max="2.5" step="0.05" value="1">
+        <button id="reset-avatar-transform" type="button">Restaurar posição e zoom</button>
+        <button id="center-avatar-horizontal" type="button">Centralizar horizontalmente</button>
+      </div>
+      <label class="toggle" for="show-weapon"><input id="show-weapon" type="checkbox" checked> Mostrar arma? (ou usar Unarmed)</label>
+      <label>Elementos visuais</label>
+      <div id="studio-visibility-controls"></div>
+      <p class="hint">Estes controles são aplicados pela versão modificada do SWF. A Char Page pública ignora as chaves extras.</p>
+      <div id="advanced-controls" aria-label="Opções avançadas de FlashVars"></div>
+      <details id="raw-flashvars">
+        <summary>FlashVars brutos (avançado)</summary>
+        <div class="advanced-group">
+          <p class="hint">Edição direta para importar, colar ou ajustar chaves fora dos campos. Alterações são aplicadas quando o campo perde o foco.</p>
+          <textarea id="flashvars" spellcheck="false"></textarea>
+        </div>
+      </details>
+      </div>
+      <footer class="studio-footer">
+        <button id="load" class="primary" type="button" data-i18n="loadSceneButton">Carregar cenário</button>
+        <p class="hint">O PNG usa o maior tamanho que o monitor permite, preservando a proporção 715 × 455 da Char Page.</p>
+        <div class="gif-settings">
+          <div class="gif-options">
+            <label for="gif-fps" data-i18n="gifFpsLabel">FPS do GIF</label>
+            <select id="gif-fps">
+              <option value="10">10 FPS</option>
+              <option value="15">15 FPS</option>
+              <option value="24">24 FPS (AQW)</option>
+              <option value="30">30 FPS</option>
+              <option value="60">60 FPS</option>
+            </select>
+          </div>
+          <div class="gif-options">
+            <label for="gif-colors" data-i18n="gifColorsLabel">Cores do GIF</label>
+            <select id="gif-colors">
+              <option value="64">64 cores</option>
+              <option value="128" selected>128 cores</option>
+              <option value="256">256 cores</option>
+            </select>
+          </div>
+        </div>
+        <div class="export-actions">
+          <button id="capture" type="button" disabled data-i18n="savePngButton">Salvar print PNG</button>
+          <button id="capture-gif" type="button" disabled data-i18n="saveGifButton">Gerar GIF (8 s)</button>
+        </div>
+        <div id="status" role="status"></div>
+      </footer>
+    </aside>
+    <section id="preview-pane" aria-label="Prévia da Char Page">
+      <div class="preview-header">Prévia — Flash Player nativo</div>
+      <div id="stage"></div>
+    </section>
+  </main>
+  <script>
+  (function () {
+    var initialFlashVars = '';
+    var stage = document.getElementById('stage');
+    var status = document.getElementById('status');
+    var studioApi = window.characterBLab;
+    var messages = {};
+    function t(key, fallback) { return messages[key] || fallback; }
+    function applyTranslations() {
+      document.documentElement.lang = messages.locale || document.documentElement.lang;
+      document.title = t('title', document.title);
+      Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (element) {
+        element.textContent = t(element.getAttribute('data-i18n'), element.textContent);
+      });
+    }
+    if (!studioApi) {
+      status.textContent = 'A ponte do Char Page Studio não foi carregada.';
+      return;
+    }
+    var flashvars = document.getElementById('flashvars');
+    flashvars.value = initialFlashVars;
+    var currentSourceUrl = null;
+    var activePlayer = null;
+    var activeFrame = null;
+    var captureButton = document.getElementById('capture');
+    var captureGifButton = document.getElementById('capture-gif');
+    var gifFps = document.getElementById('gif-fps');
+    var gifColors = document.getElementById('gif-colors');
+    var nativeMovieWidth = 715;
+    var nativeMovieHeight = 455;
+    var colorDefinitions = [
+      ['intColorHair', 'Cabelo'], ['intColorSkin', 'Pele'], ['intColorEye', 'Olhos'],
+      ['intColorBase', 'Base'], ['intColorTrim', 'Detalhe'], ['intColorAccessory', 'Acessório']
+    ];
+    studioApi.getMessages().then(function (value) { messages = value || {}; applyTranslations(); }).catch(function () {});
+    var studioVisibilityDefinitions = [
+      ['studioShowIdentity', 'Identidade'],
+      ['studioShowProfileButton', 'Botão Profile Pic'],
+      ['studioShowCosmeticsButton', 'Botão Cosmetics'],
+      ['studioShowBackground', 'Fundo'],
+      ['studioShowEquipables', 'Equipáveis']
+    ];
+    var savedWeapon = null;
+    var advancedGroups = [
+      ['Identidade', ['strName', 'level', 'intLevel', 'guild', 'strFaction', 'strGender', 'ia1']],
+      ['Classe e armadura', ['strClassName', 'strClassFile', 'strClassLink', 'strArmorName', 'ArmorID', 'CustArmorID', 'strCustArmorFile', 'strCustArmorLink', 'strCustArmorName']],
+      ['Cabelo e elmo', ['HairID', 'strHairFile', 'strHairName', 'HelmID', 'strHelmFile', 'strHelmLink', 'strHelmName', 'CustHelmID', 'strCustHelmFile', 'strCustHelmLink', 'strCustHelmName']],
+      ['Armas', ['WeaponID', 'strWeaponFile', 'strWeaponLink', 'strWeaponType', 'strWeaponName', 'CustWeaponID', 'strCustWeaponFile', 'strCustWeaponLink', 'strCustWeaponType', 'strCustWeaponName']],
+      ['Capa', ['CapeID', 'strCapeFile', 'strCapeLink', 'strCapeName', 'CustCapeID', 'strCustCapeFile', 'strCustCapeLink', 'strCustCapeName']],
+      ['Pet e cenário', ['strPetFile', 'strPetLink', 'strPetName', 'strMiscFile', 'strMiscLink', 'strMiscName']]
+    ];
+    function colorToHex(value) { return '#' + ('000000' + (Number(value) >>> 0).toString(16)).slice(-6); }
+    function writeParams(params, advancedGroup) {
+      flashvars.value = params.toString();
+      syncDirectControls(params);
+      if (advancedGroup) renderAdvancedGroup(advancedGroup, params);
+    }
+    function changeParam(key, value) {
+      var params = new URLSearchParams(flashvars.value);
+      params.set(key, value);
+      writeParams(params);
+    }
+    function removeParam(key, row) {
+      var params = new URLSearchParams(flashvars.value);
+      params.delete(key);
+      writeParams(params);
+      row.parentNode.removeChild(row);
+    }
+    function addAdvancedField(container, params, key) {
+      if (!params.has(key)) return;
+      var row = document.createElement('div');
+      row.className = 'advanced-field';
+      var label = document.createElement('label');
+      label.textContent = key;
+      label.htmlFor = 'param-' + key;
+      var input = document.createElement('input');
+      input.id = 'param-' + key;
+      input.type = 'text';
+      input.value = params.get(key);
+      input.spellcheck = false;
+      input.addEventListener('change', function () { changeParam(key, input.value); });
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'remove-param';
+      remove.textContent = 'Remover';
+      remove.addEventListener('click', function () { removeParam(key, row); });
+      row.appendChild(label);
+      row.appendChild(input);
+      row.appendChild(remove);
+      container.appendChild(row);
+    }
+    function makeAdvancedGroup(title, keys, params) {
+      var details = document.createElement('details');
+      details.setAttribute('data-advanced-group', title);
+      var summary = document.createElement('summary');
+      summary.textContent = title;
+      details.appendChild(summary);
+      var group = document.createElement('div');
+      group.className = 'advanced-group';
+      keys.forEach(function (key) { addAdvancedField(group, params, key); });
+      if (!group.childNodes.length) {
+        var empty = document.createElement('p');
+        empty.className = 'hint';
+        empty.textContent = 'Esta Char Page não enviou parâmetros para este grupo.';
+        group.appendChild(empty);
+      }
+      details.appendChild(group);
+      return details;
+    }
+    function renderAdvancedControls(params) {
+      var root = document.getElementById('advanced-controls');
+      root.textContent = '';
+      var heading = document.createElement('label');
+      heading.textContent = 'Opções avançadas';
+      root.appendChild(heading);
+      advancedGroups.forEach(function (group) { root.appendChild(makeAdvancedGroup(group[0], group[1], params)); });
+    }
+    function renderAdvancedGroup(title, params) {
+      var definition = advancedGroups.filter(function (group) { return group[0] === title; })[0];
+      var current = document.querySelector('[data-advanced-group="' + title + '"]');
+      if (!definition || !current) return;
+      var replacement = makeAdvancedGroup(definition[0], definition[1], params);
+      replacement.open = current.open;
+      current.parentNode.replaceChild(replacement, current);
+    }
+    function syncDirectControls(params) {
+      colorDefinitions.forEach(function (definition) {
+        var input = document.getElementById('color-' + definition[0]);
+        if (input) input.value = colorToHex(params.get(definition[0]));
+      });
+      document.getElementById('bgindex').value = Math.max(0, Math.min(31, Number(params.get('bgindex')) || 0));
+      document.getElementById('scene-background-color').value = colorToHex(params.get('studioBackgroundColor') || 16708037);
+      stage.style.backgroundColor = document.getElementById('scene-background-color').value;
+      document.getElementById('empty-scene-fps').value = String(Number(params.get('studioFrameRate')) || 30);
+      document.getElementById('avatar-offset-x').value = Number(params.get('studioAvatarOffsetX')) || 0;
+      document.getElementById('avatar-offset-y').value = Number(params.get('studioAvatarOffsetY')) || 0;
+      document.getElementById('avatar-scale').value = Number(params.get('studioAvatarScale')) || 1;
+      document.getElementById('show-weapon').checked = params.get('strWeaponFile') !== 'items/swords/unarmed.swf';
+      studioVisibilityDefinitions.forEach(function (definition) {
+        var input = document.getElementById('visual-' + definition[0]);
+        if (input) input.checked = !/^(?:0|false|no|off)$/i.test(params.get(definition[0]) || 'true');
+      });
+    }
+    function syncControls(params) {
+      syncDirectControls(params);
+      renderAdvancedControls(params);
+    }
+    function resizePreview() {
+      if (!activePlayer || !activeFrame) return;
+      var availableWidth = Math.max(1, stage.clientWidth - 40);
+      var availableHeight = Math.max(1, stage.clientHeight - 40);
+      var scale = Math.min(availableWidth / nativeMovieWidth, availableHeight / nativeMovieHeight);
+      var width = Math.max(1, Math.floor(nativeMovieWidth * scale));
+      var height = Math.max(1, Math.floor(nativeMovieHeight * scale));
+      activeFrame.style.width = width + 'px';
+      activeFrame.style.height = height + 'px';
+      activePlayer.width = String(width);
+      activePlayer.height = String(height);
+      activePlayer.style.width = width + 'px';
+      activePlayer.style.height = height + 'px';
+    }
+    colorDefinitions.forEach(function (definition) {
+      var row = document.createElement('label');
+      row.className = 'color-control';
+      row.textContent = definition[1];
+      var input = document.createElement('input');
+      input.id = 'color-' + definition[0];
+      input.type = 'color';
+      input.addEventListener('input', function () {
+        var params = new URLSearchParams(flashvars.value);
+        params.set(definition[0], String(parseInt(input.value.slice(1), 16)));
+        writeParams(params);
+      });
+      row.appendChild(input);
+      document.getElementById('color-controls').appendChild(row);
+    });
+    studioVisibilityDefinitions.forEach(function (definition) {
+      var row = document.createElement('label');
+      row.className = 'studio-toggle';
+      var input = document.createElement('input');
+      input.id = 'visual-' + definition[0];
+      input.type = 'checkbox';
+      input.checked = true;
+      input.addEventListener('change', function () {
+        var params = new URLSearchParams(flashvars.value);
+        params.set(definition[0], input.checked ? 'true' : 'false');
+        writeParams(params);
+      });
+      row.appendChild(input);
+      row.appendChild(document.createTextNode(definition[1]));
+      document.getElementById('studio-visibility-controls').appendChild(row);
+    });
+    document.getElementById('bgindex').addEventListener('change', function () {
+      var params = new URLSearchParams(flashvars.value);
+      params.set('bgindex', String(Math.max(0, Math.min(31, Number(this.value) || 0))));
+      writeParams(params);
+    });
+    document.getElementById('scene-background-color').addEventListener('input', function () {
+      changeParam('studioBackgroundColor', String(parseInt(this.value.slice(1), 16)));
+      stage.style.backgroundColor = this.value;
+    });
+    document.getElementById('empty-scene-fps').addEventListener('change', function () {
+      changeParam('studioFrameRate', this.value);
+    });
+    [['avatar-offset-x', 'studioAvatarOffsetX'], ['avatar-offset-y', 'studioAvatarOffsetY'], ['avatar-scale', 'studioAvatarScale']].forEach(function (definition) {
+      document.getElementById(definition[0]).addEventListener('input', function () { changeParam(definition[1], this.value); });
+    });
+    document.getElementById('reset-avatar-transform').addEventListener('click', function () {
+      var params = new URLSearchParams(flashvars.value);
+      ['studioAvatarOffsetX', 'studioAvatarOffsetY', 'studioAvatarScale'].forEach(function (key) { params.delete(key); });
+      writeParams(params);
+    });
+    document.getElementById('center-avatar-horizontal').addEventListener('click', function () {
+      var params = new URLSearchParams(flashvars.value);
+      params.set('studioAvatarOffsetX', '-55');
+      writeParams(params);
+    });
+    document.getElementById('show-weapon').addEventListener('change', function () {
+      var params = new URLSearchParams(flashvars.value);
+      if (this.checked) {
+        if (savedWeapon) Object.keys(savedWeapon).forEach(function (key) {
+          if (savedWeapon[key] === null) params.delete(key);
+          else params.set(key, savedWeapon[key]);
+        });
+      } else {
+        savedWeapon = {};
+        ['strWeaponFile', 'strWeaponLink', 'strWeaponType', 'strWeaponName', 'strCustWeaponFile', 'strCustWeaponLink', 'strCustWeaponType', 'strCustWeaponName'].forEach(function (key) { savedWeapon[key] = params.get(key); });
+        params.set('strWeaponFile', 'items/swords/unarmed.swf');
+        params.set('strWeaponName', 'Unarmed');
+        params.set('strCustWeaponFile', 'items/swords/unarmed.swf');
+        params.set('strCustWeaponName', 'Unarmed');
+      }
+      writeParams(params, 'Armas');
+    });
+    flashvars.addEventListener('change', function () { syncControls(new URLSearchParams(flashvars.value)); });
+    syncControls(new URLSearchParams(flashvars.value));
+    window.addEventListener('resize', resizePreview);
+    document.getElementById('load-character').addEventListener('click', async function () {
+      var button = document.getElementById('load-character');
+      button.disabled = true;
+      status.textContent = 'Carregando dados da Char Page…';
+      try {
+        var character = await studioApi.loadCharacter(document.getElementById('player-name').value);
+        currentSourceUrl = character.swfUrl;
+        flashvars.value = character.flashVars;
+        savedWeapon = null;
+        activePlayer = null;
+        activeFrame = null;
+        captureButton.disabled = true;
+        captureGifButton.disabled = true;
+        syncControls(new URLSearchParams(flashvars.value));
+        status.textContent = character.playerName + ' carregado. Ajuste as opções e renderize.';
+      } catch (error) {
+        status.textContent = 'Falha ao carregar Char Page: ' + error.message;
+      } finally { button.disabled = false; }
+    });
+    studioApi.getDefaults().then(function (defaults) {
+      document.getElementById('player-name').value = defaults.playerCharacter || '';
+    });
+    document.getElementById('load').addEventListener('click', async function () {
+      if (!currentSourceUrl || !flashvars.value) { status.textContent = 'Carregue uma Char Page antes de renderizar.'; return; }
+      var renderer;
+      try {
+        renderer = await studioApi.getRendererConfig(document.getElementById('scene-mode').value, flashvars.value);
+      } catch (error) {
+        status.textContent = 'Falha ao preparar o renderizador: ' + error.message;
+        return;
+      }
+      var parameters = new URLSearchParams(renderer.flashVars);
+      var flashVarString = '&' + parameters.toString();
+      // Pepper Flash also exposes query-string values through
+      // LoaderInfo.parameters. Supplying this second, equivalent route is
+      // essential for a locally packaged movie on Chromium 87.
+      var movieUrl = renderer.swfUrl + '?v=2&' + parameters.toString();
+      // Chromium 87's PPAPI reliably receives FlashVars from a direct embed.
+      // This deliberately matches the previously working native Studio path.
+      var player = document.createElement('embed');
+      player.type = 'application/x-shockwave-flash';
+      nativeMovieWidth = Number(renderer.width) || 715;
+      nativeMovieHeight = Number(renderer.height) || 455;
+      player.width = String(nativeMovieWidth);
+      player.height = String(nativeMovieHeight);
+      player.setAttribute('flashvars', flashVarString);
+      player.setAttribute('quality', 'high');
+      player.setAttribute('loop', 'true');
+      player.setAttribute('scale', 'showall');
+      player.setAttribute('wmode', 'opaque');
+      player.setAttribute('allowScriptAccess', 'always');
+      player.setAttribute('allowNetworking', 'all');
+      player.setAttribute('menu', 'true');
+      player.src = movieUrl;
+      var frame = document.createElement('div');
+      frame.className = 'flash-frame';
+      frame.appendChild(player);
+      stage.textContent = '';
+      stage.appendChild(frame);
+      activePlayer = player;
+      activeFrame = frame;
+      resizePreview();
+      status.textContent = 'Preparando ' + (renderer.renderer === 'empty-scene' ? 'Cenário vazio' : 'Char Page Studio') + '…';
+      try {
+        captureButton.disabled = false;
+        captureGifButton.disabled = false;
+        status.textContent = 'Flash Player nativo carregando…';
+      } catch (error) {
+        status.textContent = 'Falha ao carregar: ' + error.message;
+      }
+    });
+    captureButton.addEventListener('click', async function () {
+      if (!activePlayer) { status.textContent = 'Carregue um cenário antes de salvar o print.'; return; }
+      captureButton.disabled = true;
+      captureGifButton.disabled = true;
+      status.textContent = 'Preparando print e aguardando os assets…';
+      try {
+        var result = await studioApi.capturePreview(document.getElementById('scene-mode').value, flashvars.value);
+        status.textContent = 'Print salvo em: ' + result.savedPath;
+      } catch (error) {
+        status.textContent = 'Falha ao salvar print: ' + error.message;
+      } finally { captureButton.disabled = false; captureGifButton.disabled = false; }
+    });
+    captureGifButton.addEventListener('click', async function () {
+      if (!activePlayer) { status.textContent = 'Carregue um cenário antes de gerar o GIF.'; return; }
+      captureGifButton.disabled = true;
+      captureButton.disabled = true;
+      status.textContent = 'Capturando 8 segundos de animação…';
+      try {
+        var result = await studioApi.captureGif(document.getElementById('scene-mode').value, flashvars.value, Number(gifFps.value), Number(gifColors.value));
+        status.textContent = 'GIF salvo em: ' + result.savedPath;
+      } catch (error) {
+        status.textContent = 'Falha ao gerar GIF: ' + error.message;
+      } finally { captureGifButton.disabled = false; captureButton.disabled = false; }
+    });
+  })();
+  </script>
+</body>
+</html>

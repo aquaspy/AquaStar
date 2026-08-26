@@ -1,6 +1,6 @@
 {
   "name": "AquaStar",
-  "version": "1.11.0",
+  "version": "1.12.1",
   "description": "A custom aqlite launcher",
   "homepage": "https://github.com/aquaspy/AquaStar",
   "main": "main.js",
@@ -12,7 +12,14 @@
     "dist-l": "electron-builder -l --publish never",
     "dist-wl": "electron-builder -wl --publish never",
     "dist-m": "electron-builder -m --publish never",
-    "loc": "node scripts/count-loc.js"
+    "loc": "node scripts/count-loc.js",
+    "web:build": "node scripts/build-web.js",
+    "web:preview": "npm run web:build && node scripts/serve-web.js",
+    "lint": "eslint main.js res scripts test web --ext .js",
+    "format": "prettier --write package.json .github .eslintrc.cjs .prettierrc.json web scripts/build-web.js scripts/serve-web.js test",
+    "format:check": "prettier --check package.json .github .eslintrc.cjs .prettierrc.json web scripts/build-web.js scripts/serve-web.js test",
+    "test": "node test/run.js",
+    "test:ci": "npm run test && npm run pack"
   },
   "keywords": [
     "aqw;",
@@ -23,7 +30,10 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "11.5.0",
-    "electron-builder": "22.14.13"
+    "electron-builder": "22.14.13",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.1",
+    "prettier": "^3.5.3"
   },
   "build": {
     "publish": null,
@@ -87,6 +97,7 @@
   },
   "dependencies": {
     "electron-localshortcut": "3.2.1",
+    "gifenc": "^1.0.3",
     "nw-flash-trust": "^0.3.0",
     "ws": "^8.21.1",
     "yauzl": "^2.10.0"

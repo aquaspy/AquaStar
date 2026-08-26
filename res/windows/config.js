@@ -145,3 +145,58 @@ exports.strategyConfig = {
         plugins: false, contextIsolation: true }
 };
 exports.strategyUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'strategy', 'strategy.html'));
+
+// Char Page Studio is deliberately not sandboxed: Chromium 87 only exposes the
+// required PPAPI Flash plugin to this kind of window. Its local renderer has no
+// Node integration and navigation/popups are blocked in featureWindows below.
+exports.charPageStudioConfig = {
+    width: 1280,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
+    useContentSize: true,
+    icon: iconPath,
+    resizable: true,
+    webPreferences: {
+        nodeIntegration: false,
+        sandbox: false,
+        webviewTag: false,
+        preload: path.join(appRoot, 'res', 'features', 'charpage', 'lab', 'preload_lab.js'),
+        plugins: true,
+        contextIsolation: true,
+        webSecurity: false,
+        backgroundThrottling: false
+    }
+};
+exports.charPageStudioUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'charpage', 'lab', 'characterB-lab.html'));
+
+// Local feature windows all use the same singleton lifecycle.  Keeping their
+// declarative metadata here prevents every caller from reimplementing it.
+exports.featureWindows = {
+    settings:  { config: exports.settingsConfig,  url: exports.settingsUrl,  title: 'AquaStar - Settings' },
+    reminders: { config: exports.remindersConfig, url: exports.remindersUrl, title: 'AquaStar - Reminders' },
+    todo:      { config: exports.todoConfig,      url: exports.todoUrl,      title: 'AquaStar - To-Do List' },
+    inventory: { config: exports.inventoryConfig, url: exports.inventoryUrl, title: 'AquaStar - Inventory' },
+    strategy:  { config: exports.strategyConfig,  url: exports.strategyUrl,  title: 'AquaStar - Strategy' },
+    charPageStudio: {
+        config: exports.charPageStudioConfig,
+        url: exports.charPageStudioUrl,
+        title: 'AquaStar - Char Page Studio',
+        configure: (win) => {
+            const studio = require('../features/charpage/studio.js');
+            studio.activateProtocol();
+            win.webContents.on('new-window', (event) => event.preventDefault());
+            win.webContents.on('will-navigate', (event) => event.preventDefault());
+            win.webContents.on('console-message', (event, level, message, line, sourceId) => {
+                win.webContents.send('charpage-studio-diagnostic', '[renderer ' + level + '] ' + message + ' (' + sourceId + ':' + line + ')');
+            });
+            win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+                win.webContents.send('charpage-studio-diagnostic', '[navigation] ' + errorDescription + ' (' + errorCode + '): ' + validatedURL);
+            });
+            win.webContents.on('render-process-gone', (event, details) => {
+                console.error('[AquaStar] Char Page Studio renderer exited:', details.reason);
+            });
+            win.on('closed', () => studio.deactivateProtocol());
+        }
+    }
+};

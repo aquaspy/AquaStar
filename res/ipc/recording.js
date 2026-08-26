@@ -3,13 +3,18 @@
 // Ctrl+J keybind in keybindings.js. Split out of const.js since it's IPC wiring, not
 // an app-wide constant.
 const fs = require('fs');
+const path = require('path');
 const { ipcMain, desktopCapturer, dialog, BrowserWindow } = require('electron');
 
 ipcMain.on('saveDialog', async function (event, arg) {
+    const extension = path.extname(typeof arg === 'string' ? arg : '').slice(1).toLowerCase();
+    const isMkv = extension === 'mkv';
     const { canceled, filePath } = await dialog.showSaveDialog({
         buttonLabel: 'Save video',
         defaultPath: arg,
-        filters: [{ name: 'WebM Video', extensions: ['webm'] }]
+        // The renderer has already selected a supported MediaRecorder format and
+        // supplied its matching extension in `arg`; keep the native dialog aligned.
+        filters: [{ name: isMkv ? 'MKV Video' : 'WebM Video', extensions: [isMkv ? 'mkv' : 'webm'] }]
     });
     event.sender.send('saveDialogReply', canceled ? undefined : filePath);
 });

@@ -8,6 +8,7 @@ const path     = require('path');
 const { app, ipcMain, clipboard } = require('electron');
 const constant = require('../../const.js');
 const locale   = require('../../locale.js');
+const jsonStore = require('../../repositories/json-store.js');
 
 const todoJsonFileName = constant.appName.toLocaleLowerCase() + '_todo.json'; // "aquastar_todo.json"
 const todoJsonPath = path.join(constant.appDataDirectory, todoJsonFileName);
@@ -25,6 +26,7 @@ const SEASONAL_EVENT_KEYS = [
 const CATEGORY_KEYS = ['drop', 'dailyDrop', 'shopMerge', 'questReward', 'hardFarm', 'reputationFarm'];
 
 function _migrateTask(t) {
+    t = (t && typeof t === 'object') ? t : {};
     return {
         id: typeof t.id === 'string' ? t.id : _genId('t'),
         name: typeof t.name === 'string' ? t.name : '',
@@ -41,11 +43,11 @@ function _migrateTask(t) {
 function _loadTodo() {
     if (!fs.existsSync(todoJsonPath)) {
         const fresh = { characters: [], tasks: [], individualHiddenMode: false };
-        fs.writeFileSync(todoJsonPath, JSON.stringify(fresh, null, 4));
+        jsonStore.write(todoJsonPath, fresh);
         return fresh;
     }
     try {
-        const parsed = JSON.parse(fs.readFileSync(todoJsonPath));
+        const parsed = jsonStore.read(todoJsonPath);
         return {
             characters: Array.isArray(parsed.characters) ? parsed.characters : [],
             tasks:      (Array.isArray(parsed.tasks) ? parsed.tasks : []).map(_migrateTask),
@@ -71,7 +73,7 @@ ipcMain.handle('saveTodo', (event, fullState) => {
         tasks:      Array.isArray(fullState && fullState.tasks) ? fullState.tasks : [],
         individualHiddenMode: (fullState && fullState.individualHiddenMode) === true
     };
-    fs.writeFileSync(todoJsonPath, JSON.stringify(toSave, null, 4));
+    jsonStore.write(todoJsonPath, toSave);
     return { savedTo: todoJsonPath };
 });
 

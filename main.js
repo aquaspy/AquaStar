@@ -1,5 +1,16 @@
 const {app, session, Menu, BrowserWindow}  = require('electron')
 
+// PPAPI Flash only preserves LoaderInfo.parameters when the Studio owns the
+// default session. Keep that session in a dedicated AquaStar process.
+if (process.argv.indexOf('--charpage-studio-capture') !== -1) {
+    require('./scripts/charpage-studio-capture-process.js');
+    return;
+}
+if (process.argv.indexOf('--charpage-studio') !== -1) {
+    require('./scripts/charpage-studio-process.js');
+    return;
+}
+
 // I am honestly surprised we forgot this line.
 if (!app.requestSingleInstanceLock()) {
     app.quit();
@@ -17,6 +28,7 @@ const reminders     = require('./res/features/reminders/reminders.js');
 const todo          = require('./res/features/todo/todo.js');
 const inventory     = require('./res/features/inventory/inventory.js');
 const strategy      = require('./res/features/strategy/strategy.js');
+const charPageStudio = require('./res/features/charpage/studio.js');
 // IPC-only modules (register their ipcMain handlers as a side effect of being required -
 // nothing else calls into them directly, so main.js must require them explicitly).
 const ipcRecording  = require('./res/ipc/recording.js');
@@ -32,8 +44,13 @@ const constant = require('./res/const.js');
 flash.flashManager(app, __dirname, constant.mainPath, constant.appName);
 
 function createWindow () {
-    session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-        callback(permission === 'media' || permission === 'display-capture');
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+        // Screen capture is needed only by AquaStar's own game windows.  Normal
+        // browser windows load remote account/wiki pages and must not inherit it.
+        const win = BrowserWindow.fromWebContents(webContents);
+        const swfUrl = win && win.aquaStarSwfUrl;
+        const isGameWindow = typeof swfUrl === 'string' && constant.isRuffleEligible(swfUrl);
+        callback(isGameWindow && (permission === 'media' || permission === 'display-capture'));
     });
 
     // Keybindings now in keybindings.js
@@ -65,7 +82,10 @@ function createWindow () {
     else {
         Menu.setApplicationMenu(
             Menu.buildFromTemplate(windowsMenu.getMenu(finalkeyb, inst.charPagePrint)));
-        win.setMenuBarVisibility(false); //Remove menu so only wiki shows it
+        if (finalkeyb.showGameMenu !== false) {
+            win.setMenu(Menu.buildFromTemplate(windowsMenu.getGameMenu(finalkeyb)));
+            win.setMenuBarVisibility(true);
+        }
     }
     
     win.once('ready-to-show', () => {win.show()});  //show launcher only when ready

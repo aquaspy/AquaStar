@@ -8,6 +8,7 @@ const path     = require('path');
 const { app, ipcMain, clipboard } = require('electron');
 const constant = require('../../const.js');
 const locale   = require('../../locale.js');
+const jsonStore = require('../../repositories/json-store.js');
 
 const remindersJsonFileName = constant.appName.toLocaleLowerCase() + '_reminders.json'; // "aquastar_reminders.json"
 const legacyRemindersJsonPath = path.join(app.getPath('appData'), remindersJsonFileName);
@@ -28,10 +29,11 @@ function _genId(prefix) {
 // needs. Quests saved before this feature existed only ever had the boolean, so their
 // shared-mode hidden status carries over unchanged; quests already on the new shape pass through.
 function _migrateQuest(q) {
-    if (q.hiddenBy && typeof q.hiddenBy === 'object') return q;
-    const hiddenBy = {};
+    q = (q && typeof q === 'object') ? q : {};
+    const hiddenBy = (q.hiddenBy && typeof q.hiddenBy === 'object' && !Array.isArray(q.hiddenBy)) ? q.hiddenBy : {};
     if (q.hidden === true) hiddenBy.__shared__ = true;
-    const migrated = Object.assign({}, q, { hiddenBy: hiddenBy });
+    const done = (q.done && typeof q.done === 'object' && !Array.isArray(q.done)) ? q.done : {};
+    const migrated = Object.assign({}, q, { done: done, hiddenBy: hiddenBy });
     delete migrated.hidden;
     return migrated;
 }
@@ -68,11 +70,11 @@ function _buildSeedState() {
 function _loadReminders() {
     if (!fs.existsSync(remindersJsonPath)) {
         const seeded = _buildSeedState();
-        fs.writeFileSync(remindersJsonPath, JSON.stringify(seeded, null, 4));
+        jsonStore.write(remindersJsonPath, seeded);
         return seeded;
     }
     try {
-        const parsed = JSON.parse(fs.readFileSync(remindersJsonPath));
+        const parsed = jsonStore.read(remindersJsonPath);
         return {
             characters: Array.isArray(parsed.characters) ? parsed.characters : [],
             quests:     (Array.isArray(parsed.quests) ? parsed.quests : []).map(_migrateQuest),
@@ -102,7 +104,7 @@ ipcMain.handle('saveReminders', (event, fullState) => {
         showMemberDailies: (fullState && fullState.showMemberDailies) !== false,
         individualHiddenMode: (fullState && fullState.individualHiddenMode) === true
     };
-    fs.writeFileSync(remindersJsonPath, JSON.stringify(toSave, null, 4));
+    jsonStore.write(remindersJsonPath, toSave);
     return { savedTo: remindersJsonPath };
 });
 

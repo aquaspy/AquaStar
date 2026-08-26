@@ -274,6 +274,9 @@ const originalOptions = {
     renderMode:        exports.defaultRenderMode,
     ruffleUpdateChannel: 'latest',
     ruffleAutoUpdate:  false,
+    // Native menu bar shown above AQW/DragonFable game windows.  It mirrors the
+    // launcher shortcuts for players who prefer discoverable mouse controls.
+    showGameMenu:      true,
     // Periodic background Inventory/BuyBack sync (res/features/inventory/inventory.js).
     // Off by default - manual "Sync Now" (in-window or the account.aq.com/Home button)
     // always works regardless of this setting.
@@ -327,18 +330,28 @@ exports.appdataJsonPath = appdataJsonPath;
 exports.inPathJsonPath  = inPathJsonPath;
 exports.legacyAppdataJsonPath = legacyAppdataJsonPath;
 
-// The bundled web/WASM player is always the safe fallback. A downloaded nightly
-// is selected only after it was fully validated and promoted at application start.
+// The bundled web/WASM player is always the safe fallback. A downloaded stable
+// or nightly build is selected only after validation and promotion at startup.
 const bundledRufflePlayerPath = path.join(appRoot, 'res', 'ruffle', 'ruffle.js');
 const downloadedRufflePlayerPath = path.join(currentRuffleDirectory, 'ruffle.js');
 exports.rufflePlayerUrl = _getFileUrl(fs.existsSync(downloadedRufflePlayerPath)
     ? downloadedRufflePlayerPath : bundledRufflePlayerPath);
 exports.ruffleDirectory = appDataDirectory;
 
-// Custom aqlite stuff
-var oldAqlite = fs.existsSync( path.join(appCurrentDirectory,'aqlite_old.swf'));
-exports.mainPath = oldAqlite ? 
-            _getFileUrl(path.join(appCurrentDirectory, 'aqlite_old.swf')) :
+// Custom AQLite SWFs written by Settings belong in AppData: installed builds can
+// live under Program Files, where their working directory is not reliably writable.
+// Keep accepting the old working-directory file so existing portable installs work.
+const customSwfFileName = 'aqlite_old.swf';
+const managedCustomSwfPath = path.join(appDataDirectory, customSwfFileName);
+const legacyCustomSwfPath = path.join(appCurrentDirectory, customSwfFileName);
+const activeCustomSwfPath = fs.existsSync(managedCustomSwfPath) ? managedCustomSwfPath :
+    (fs.existsSync(legacyCustomSwfPath) ? legacyCustomSwfPath : null);
+var oldAqlite = activeCustomSwfPath !== null;
+exports.customSwfPath = managedCustomSwfPath;
+exports.legacyCustomSwfPath = legacyCustomSwfPath;
+exports.activeCustomSwfPath = activeCustomSwfPath;
+exports.mainPath = oldAqlite ?
+            _getFileUrl(activeCustomSwfPath) :
             "https://game.aq.com/game/gamefiles/Loader3.swf?ver=a"
 exports.isOldAqlite = oldAqlite;
 

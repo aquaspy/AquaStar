@@ -10,30 +10,46 @@ exports.titleMessages = {
     alreadyRecording : "Você já está gravando em alguma outra janela!"
 }
 
+exports.charPageStudioMessages = {
+    locale: 'pt-BR', title: 'AquaStar — Char Page Studio', heading: 'Char Page Studio',
+    description: 'Personalize uma Char Page com o Flash Player nativo.', sceneModeLabel: 'Modo de cena',
+    charPageMode: 'Char Page Studio', emptySceneMode: 'Cenário vazio',
+    emptySceneHint: 'Cenário vazio usa o novo compositor AQW: sem interface, moldura ou fundo da Char Page.',
+    characterLabel: 'Personagem AQW', loadCharacterButton: 'Carregar da Char Page',
+    characterHint: 'Usa por padrão o Personagem configurado nas Configurações, mas não baixa nada até este botão ser usado.',
+    colorsLabel: 'Cores', backgroundIndexLabel: 'Fundo (bgindex)', emptySceneSettingsLabel: 'Fundo sólido e FPS (cenário vazio)',
+    solidBackgroundLabel: 'Fundo sólido', nativeFps: '24 FPS (AQW)', loadSceneButton: 'Carregar cenário', savePngButton: 'Salvar print PNG', saveGifButton: 'Gerar GIF (8 s)', gifFpsLabel: 'FPS do GIF', gifColorsLabel: 'Cores do GIF'
+}
+
 exports.dialogMessages = {
     helpTitle   :'Ajuda:',
-    helpMessage : "Estas são as keybindings adicionadas ao jogo.",
+    helpMessage : "Atalhos e recursos do AquaStar.",
     helpDetail(k) {return expand(k.wiki) + ' - AQW Wiki\n' +
-        expand(k.design)    + ' - AQW Design notes\n' +
-        expand(k.account)   + ' - Account page\n' +
-        expand(k.charpage)  + ' - Character (Player) lookup. Você também pode utilizar o interno do jogo.\n' +
-        expand(k.cpSshot)   + ' - (Apenas char pages!) Printa a tela do char page atual.\n' +
+        expand(k.design)    + ' - AQW Design Notes\n' +
+        expand(k.account)   + ' - Página da conta AQW\n' +
+        expand(k.charpage)  + ' - Consulta a Char Page do personagem configurado nas Configurações\n' +
+        expand(k.cpSshot)   + ' - (Somente Char Pages) salva uma imagem da Char Page aberta\n' +
         expand(k.newAqw)    + ' - Abre uma nova instância do AQW.\n' +
         expand(k.newTest)   + ' - Abre uma instância de testes do AQW.\n' +
+        expand(k.dragon)    + ' - Abre o DragonFable.\n' +
         expand(k.about)     + ' - Sobre AquaStar.\n' +
-        expand(k.fullscreen)+ ' - Ativa/Desativa Fullscreen\n' +
-        expand(k.sshot)     + ' - Printa a tela do jogo (apenas AQW e AQLITE). Eles são salvos em uma pasta separada dita abaixo.\n' +
+        expand(k.fullscreen)+ ' - Ativa/desativa tela cheia.\n' +
+        expand(k.sshot)     + ' - Salva um print da janela do jogo.\n' +
         expand(k.record)    + ' - Grava a tela do jogo. Use de novo para parar.\n' +
-        expand(k.reload)    + " - Recarregam as páginas, como em um navegador\n" +
-        expand(k.reloadCache)+' - Limpa todo o cachê do jogo, alguns cookies, e recarrega a página (pode consertar bugs dentro do jogo)\n' +
+        expand(k.reload)    + " - Recarrega a página atual.\n" +
+        expand(k.reloadCache)+' - Limpa o cache e dados do jogo, então recarrega a página.\n' +
         expand(k.settings)  + ' - Abre a tela de Configurações, para customizar as keybindings.\n' +
-        expand(k.reminders) + ' - Abre a tela de Lembretes, para acompanhar quests diárias/semanais por personagem.\n\n' +
-        'Para um aqlite antigo/customizado, por favor nomeie ele para "aqlite_old.swf" e o coloque na mesma pasta da executável, dita abaixo!\n\n' +
-        'Nota: ' + expand(k.help) + ' Mostra esta mensagem.';
+        expand(k.reminders) + ' - Abre Lembretes de quests por personagem.\n' +
+        expand(k.todo)      + ' - Abre a Lista de Tarefas.\n' +
+        expand(k.inventory) + ' - Abre Inventário/BuyBack.\n' +
+        expand(k.strategy)  + ' - Abre as ferramentas de Estratégia.\n\n' +
+        'A barra de menu acima do jogo oferece estes mesmos comandos e pode ser desligada nas Configurações.\n' +
+        'Use Char Page Studio pelo menu AquaStar para criar imagens e GIFs.\n\n' +
+        'Nota: ' + expand(k.help) + ' mostra esta mensagem.';
     },
     helpScreenshot     : "Pasta dos prints: ",
     helpAqliteOld      : "Pasta do app para o aqlite_old/aquastar.json (Pode mudar se o usuário mover o aplicativo): ",
-    helpCustomKeyPath  : "Outro local para o aquastar.json com keybinds customizadas. Veja o Readme.md para mais ajuda: ",
+    helpCustomKeyPath  : "",
     
     aboutTitle     : "Sobre o AquaStar, versão: ",
     aboutMessage   : "Aquastar não seria possível sem a ajuda de:",
@@ -73,13 +89,25 @@ exports.menuMessages = {
     menuReddit       : "AQW Subreddit",
     menuTwitter      : "Twitter da Alina",
     menuTakeShot     : "Printa a Charpage (somente CP!)",
+    menuCharPageStudio: "Char Page Studio",
     menuCopyURL      : "Copiar o link da página",
     menuReloadPage   : "Recaregar a página",
     menuSettings     : "Configurações",
     menuReminders    : "Lembretes",
     menuTodo         : "Lista de Tarefas",
     menuInventory    : "Inventário",
-    menuStrategy     : "Estratégia"
+    menuStrategy     : "Estratégia",
+    menuNewAqw       : "Nova Instância AQW",
+    menuNewTest      : "Instância de Testes AQW",
+    menuDragon       : "DragonFable",
+    menuTools        : "Ferramentas",
+    menuFeatures     : "Recursos",
+    menuTakeGameShot : "Salvar Print do Jogo",
+    menuRecord       : "Gravar Tela do Jogo",
+    menuReloadCache  : "Recarregar e Limpar Cache",
+    menuFullscreen   : "Tela Cheia",
+    menuHelp         : "Ajuda",
+    menuAbout        : "Sobre AquaStar"
 }
 
 exports.settingsMessages = {
@@ -130,6 +158,7 @@ exports.settingsMessages = {
         renderMode:        "Renderizador de Flash",
         ruffleUpdateChannel: "Canal de Atualização do Ruffle",
         ruffleAutoUpdate:  "Baixar atualizações automaticamente",
+        showGameMenu:      "Mostrar Menu Acima do Jogo",
         autoSync:          "Auto Sincronizar Inventário",
         enableDevTools:    "Ativar DevTools"
     },
@@ -141,6 +170,7 @@ exports.settingsMessages = {
         renderMode:        "Qual runtime Flash carrega o AQW (principal, nova instância, Testing) e o DragonFable (Alt+1). A Char Page não é afetada (a Artix já usa Ruffle lá).",
         ruffleUpdateChannel: "Latest usa a versão estável mais recente do Ruffle. Nightly inclui mudanças experimentais mais novas. Para aplicar uma troca de canal, feche o AquaStar completamente e abra-o novamente; não use somente o botão Reiniciar.",
         ruffleAutoUpdate:  "Verifica o canal selecionado em segundo plano sempre que o AquaStar abre. O download é aplicado depois de reiniciar.",
+        showGameMenu:      "Mostra uma barra de menu acima das janelas de AQW e DragonFable, com os mesmos comandos dos atalhos. Desative se preferir usar somente o teclado.",
         autoSync:          "Sincroniza periodicamente seus dados de Inventário/BuyBack do account.aq.com em segundo plano (a cada ~2 horas), depois de você logar lá pelo menos uma vez via Alt+A. Quando desligado, a sincronização só acontece quando você usa um botão Sincronizar Agora (na janela de Inventário ou no account.aq.com/Home).",
         enableDevTools:    "Abre o console de DevTools automaticamente ao iniciar."
     },
@@ -162,13 +192,13 @@ exports.settingsMessages = {
     ruffleNightlyLabel     : "Nightly (Experimental)",
     ruffleFallbackLabel    : "Fallback empacotado: ",
     ruffleInactiveLabel    : "O Ruffle não está ativo; Flash Player está selecionado.\n",
-    ruffleDownloadedLabel  : "Nightly baixada",
+    ruffleDownloadedLabel  : "Versão baixada",
     ruffleBundledLabel     : "Fallback empacotado",
-    ruffleUpdateLabel      : "Ruffle Nightly",
-    ruffleUpdateHint       : "Baixa a versão web self-hosted da nightly oficial do GitHub do Ruffle. Reinicie para aplicar.",
+    ruffleUpdateLabel      : "Atualizar Ruffle",
+    ruffleUpdateHint       : "Baixa a versão web self-hosted do canal selecionado na release oficial do GitHub do Ruffle. Estável é recomendada; Nightly é experimental. Reinicie para aplicar.",
     ruffleUpdateButton     : "Baixar Atualização",
-    ruffleDownloadingMessage: "Baixando nightly do Ruffle...",
-    ruffleUpdatedMessage   : "Nightly do Ruffle baixada. Reinicie o AquaStar para aplicar.",
+    ruffleDownloadingMessage: "Baixando atualização do Ruffle...",
+    ruffleUpdatedMessage   : "Atualização do Ruffle baixada. Reinicie o AquaStar para aplicar.",
     ruffleAlreadyCurrentMessage: "O Ruffle já está atualizado.",
     ruffleBundledAlreadyCurrentMessage: "O Ruffle empacotado já é a versão estável mais recente.",
     ruffleUpdateFailedMessage: "Não foi possível atualizar o Ruffle: ",

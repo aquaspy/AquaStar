@@ -8,8 +8,10 @@ releases/
 work/
 dist/
 squashfs-root/
+web-dist/
 *.webm
 
 # dont ask... just personal stuff
 launch.sh
 TEMP-*.txt
+swf2png-master

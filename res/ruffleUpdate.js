@@ -1,5 +1,5 @@
-// Downloads Ruffle's *web self-hosted* nightly. AquaStar embeds Ruffle in an
-// Electron page, so the desktop executable releases are deliberately not used.
+// Downloads Ruffle's *web self-hosted* stable or nightly builds. AquaStar embeds
+// Ruffle in an Electron page, so the desktop executable releases are not used.
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
@@ -34,7 +34,7 @@ async function getRelease(channel) {
         : response;
     if (!release) throw new Error(channel === 'nightly' ? 'No Ruffle nightly release was found' : 'No stable Ruffle release was found');
     const asset = (release.assets || []).find((item) => /-web-selfhosted\.zip$/i.test(item.name || ''));
-    if (!asset) throw new Error('The Ruffle nightly has no web self-hosted archive');
+    if (!asset) throw new Error('The selected Ruffle release has no web self-hosted archive');
     return { tag: release.tag_name, url: asset.browser_download_url };
 }
 

@@ -1,0 +1,68 @@
+name: Deploy AquaStar Tools
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'res/features/reminders/**'
+      - 'res/features/todo/**'
+      - 'res/features/strategy/**'
+      - 'res/features/common/**'
+      - 'res/core/**'
+      - 'res/ui/**'
+      - 'res/po/**'
+      - 'Icon/**'
+      - 'scripts/build-web.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Check formatting
+        run: npm run format:check
+      - name: Lint source
+        run: npm run lint
+      - name: Run regression tests
+        run: npm test
+      - name: Build AquaStar Tools
+        run: npm run web:build
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: web-dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

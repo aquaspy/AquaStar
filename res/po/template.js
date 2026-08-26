@@ -10,6 +10,12 @@ exports.titleMessages = {
     alreadyRecording : ""
 }
 
+exports.charPageStudioMessages = {
+    locale: '', title: '', heading: '', description: '', sceneModeLabel: '', charPageMode: '', emptySceneMode: '', emptySceneHint: '',
+    characterLabel: '', loadCharacterButton: '', characterHint: '', colorsLabel: '', backgroundIndexLabel: '', emptySceneSettingsLabel: '',
+    solidBackgroundLabel: '', nativeFps: '', loadSceneButton: '', savePngButton: '', saveGifButton: '', gifFpsLabel: '', gifColorsLabel: ''
+}
+
 exports.dialogMessages = {
     helpTitle   :'Help:',
     helpMessage : "",
@@ -69,7 +75,18 @@ exports.menuMessages = {
     menuReminders    : "",
     menuTodo         : "",
     menuInventory    : "",
-    menuStrategy     : ""
+    menuStrategy     : "",
+    menuNewAqw       : "",
+    menuNewTest      : "",
+    menuDragon       : "",
+    menuTools        : "",
+    menuFeatures     : "",
+    menuTakeGameShot : "",
+    menuRecord       : "",
+    menuReloadCache  : "",
+    menuFullscreen   : "",
+    menuHelp         : "",
+    menuAbout        : ""
 }
 
 exports.settingsMessages = {
@@ -118,6 +135,7 @@ exports.settingsMessages = {
         customUrl:         "",
         recordingFormat:   "",
         renderMode:        "",
+        showGameMenu:      "",
         autoSync:          "",
         enableDevTools:    ""
     },
@@ -127,6 +145,7 @@ exports.settingsMessages = {
         customUrl:         "",
         recordingFormat:   "",
         renderMode:        "",
+        showGameMenu:      "",
         autoSync:          "",
         enableDevTools:    ""
     },
@@ -140,6 +159,29 @@ exports.settingsMessages = {
     customSwfRemoveConfirm: "",
     customSwfChosenMessage: "",
     customSwfRemovedMessage: "",
+    ruffleHeading          : "",
+    ruffleStatusLabel      : "",
+    ruffleLoadedLabel      : "",
+    ruffleConfiguredChannelLabel: "",
+    ruffleLatestLabel      : "",
+    ruffleNightlyLabel     : "",
+    ruffleFallbackLabel    : "",
+    ruffleInactiveLabel    : "",
+    ruffleDownloadedLabel  : "",
+    ruffleBundledLabel     : "",
+    ruffleUpdateLabel      : "",
+    ruffleUpdateHint       : "",
+    ruffleUpdateButton     : "",
+    ruffleDownloadingMessage: "",
+    ruffleUpdatedMessage   : "",
+    ruffleAlreadyCurrentMessage: "",
+    ruffleBundledAlreadyCurrentMessage: "",
+    ruffleUpdateFailedMessage: "",
+    ruffleRestoreLabel     : "",
+    ruffleRestoreHint      : "",
+    ruffleRestoreButton    : "",
+    ruffleRestoreConfirm   : "",
+    ruffleRestoreMessage   : "",
     optionWarnings: {
         renderMode:     "",
         enableDevTools: ""

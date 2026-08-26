@@ -20,6 +20,18 @@ $(document).mousemove(function(event) {
 
 let mouseOn = false; // flag to prevent spam
 let hoverTimeout = null;
+const AQW_WIKI_HOST = "aqwwiki.wikidot.com";
+
+function isAqwWikiUrl(link) {
+    try {
+        const parsed = new URL(link);
+        return /^https?:$/i.test(parsed.protocol) && parsed.hostname.toLowerCase() === AQW_WIKI_HOST;
+    } catch (error) { return false; }
+}
+
+function aqwWikiUrl(pathname) {
+    return 'https://' + AQW_WIKI_HOST + '/' + String(pathname).replace(/^\/+/, '');
+}
 
 function hovered(link) {
     if (!mouseOn) {
@@ -74,7 +86,7 @@ function fetchWikiHtml(link) {
 }
 
 function showPreview(link) {
-    if (link.startsWith("http://aqwwiki.wikidot.com/")) {
+    if (isAqwWikiUrl(link)) {
         fetchAndExtractImages(link)
             .then(function(images) {
                 if (images.length > 0) renderPreview(images);
@@ -96,7 +108,8 @@ function fetchAndExtractImages(link, depth) {
             // to the wiki even when this script is actually running on account.aq.com -
             // DOMParser otherwise resolves relative URLs against the current window's
             // location, not the page the HTML came from.
-            return new DOMParser().parseFromString('<base href="http://aqwwiki.wikidot.com/">' + html, "text/html");
+            const base = new URL(link).origin + '/';
+            return new DOMParser().parseFromString('<base href="' + base + '">' + html, "text/html");
         })
         .then(function(doc) {
             if (depth < 2 && isDisambiguationPage(doc, link)) {
@@ -128,8 +141,8 @@ function tryDisambiguationLinks(doc, depth) {
         const href = $(this).attr('href') || '';
         if (!href || /^(#|javascript:|mailto:)/i.test(href) || /(^|\/)category:/i.test(href)) return;
         let url;
-        try { url = new URL(href, 'http://aqwwiki.wikidot.com/').href; } catch (e) { return; }
-        if (!/^http:\/\/aqwwiki\.wikidot\.com\//i.test(url) || links.indexOf(url) !== -1) return;
+        try { url = new URL(href, aqwWikiUrl('')).href; } catch (e) { return; }
+        if (!isAqwWikiUrl(url) || links.indexOf(url) !== -1) return;
         links.push(url);
     });
     function next(index) {
@@ -179,7 +192,7 @@ const wikiNameVariants = window.AquaStarWikiNameVariants;
 function showPreviewForName(name) {
     const pageOverride = wikiNameVariants.findPageOverride(name);
     if (pageOverride) {
-        fetchAndExtractImages('http://aqwwiki.wikidot.com/' + pageOverride)
+        fetchAndExtractImages(aqwWikiUrl(pageOverride))
             .then(function(images) { if (images.length > 0) renderPreview(images); })
             .catch(function() {});
         return;
@@ -188,7 +201,7 @@ function showPreviewForName(name) {
     if (override) {
         // Try the known-correct combo first; if even that doesn't resolve (e.g. the wiki
         // page moved), fall back to the generic single-suffix chain rather than giving up.
-        fetchAndExtractImages('http://aqwwiki.wikidot.com/' + wikiNameVariants.toWikiSlug(name + override))
+        fetchAndExtractImages(aqwWikiUrl(wikiNameVariants.toWikiSlug(name + override)))
             .then(function(images) {
                 if (images.length > 0) renderPreview(images);
                 else tryNameVariant(name, 0);
@@ -203,7 +216,7 @@ function showPreviewForName(name) {
 
 function tryNameVariant(name, index) {
     if (index >= wikiNameVariants.disambiguationSuffixes.length) return; // exhausted every variant
-    const link = 'http://aqwwiki.wikidot.com/' + wikiNameVariants.toWikiSlug(name + wikiNameVariants.disambiguationSuffixes[index]);
+    const link = aqwWikiUrl(wikiNameVariants.toWikiSlug(name + wikiNameVariants.disambiguationSuffixes[index]));
     fetchAndExtractImages(link)
         .then(function(images) {
             if (images.length > 0) renderPreview(images);
