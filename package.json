@@ -13,6 +13,7 @@
     "dist-wl": "electron-builder -wl --publish never",
     "dist-m": "electron-builder -m --publish never",
     "loc": "node scripts/count-loc.js",
+    "web:build": "node scripts/build-web.js",
     "test": "node test/run.js",
     "test:ci": "npm run test && npm run pack"
   },

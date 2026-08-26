@@ -1,0 +1,11 @@
+const fs = require('fs'); const path = require('path'); const root = path.join(__dirname, '..'); const out = path.join(root, 'web-dist');
+function copy(from, to) { fs.mkdirSync(path.dirname(to), { recursive: true }); fs.copyFileSync(path.join(root, from), to); }
+function page(from, to, bridge) { let html = fs.readFileSync(path.join(root, from), 'utf8'); const bridgeTag = '<script src="../../bridges/common.js"></script><script src="../../bridges/' + bridge + '.js"></script>'; html = html.replace(/<script>\s*\(function \(\)/, bridgeTag + '<script>\n(function ()'); if (html.indexOf(bridgeTag) === -1) throw new Error('Could not inject web bridge into ' + from); fs.mkdirSync(path.dirname(to), { recursive: true }); fs.writeFileSync(to, html); }
+fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out, { recursive: true });
+copy('web/landing.html', path.join(out, 'index.html'));
+copy('res/core/list-state.js', path.join(out, 'core/list-state.js')); copy('res/core/reset-time.js', path.join(out, 'core/reset-time.js')); copy('res/ui/workspace/modals.js', path.join(out, 'ui/workspace/modals.js')); copy('res/ui/workspace/character-tabs.js', path.join(out, 'ui/workspace/character-tabs.js')); copy('res/features/common/list_window_common.js', path.join(out, 'tools/common/list_window_common.js'));
+page('res/features/reminders/reminders.html', path.join(out, 'tools/reminders/index.html'), 'reminders'); page('res/features/todo/todo.html', path.join(out, 'tools/todo/index.html'), 'todo'); page('res/features/strategy/strategy.html', path.join(out, 'tools/strategy/index.html'), 'strategy');
+['common.js','reminders.js','todo.js','strategy.js'].forEach((f) => copy('web/bridges/' + f, path.join(out, 'bridges', f)));
+copy('res/features/reminders/reminders_default.json', path.join(out, 'defaults/reminders.json')); copy('res/features/strategy/strategy_default.json', path.join(out, 'defaults/strategy.json'));
+const locale = require(path.join(root, 'res/po/pt-BR.js')); fs.mkdirSync(path.join(out, 'locale'), { recursive: true }); fs.writeFileSync(path.join(out, 'locale/pt-BR.json'), JSON.stringify({ remindersMessages: locale.remindersMessages, todoMessages: locale.todoMessages, strategyMessages: locale.strategyMessages }));
+console.log('Built GitHub Pages artifact: web-dist');

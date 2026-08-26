@@ -1,8 +1,8 @@
 # AquaStar Tools (Web)
 
-Base estática para hospedar ferramentas do AquaStar sem o jogo, Electron, Flash ou
-Inventário. O diretório `web/` pode ser servido diretamente por qualquer host de
-arquivos estáticos; `index.html` é a raiz pública.
+Fonte da build estática do AquaStar Tools. Ela mantém as telas do desktop como
+fonte única: a build copia os HTMLs atuais e injeta bridges web que simulam os
+mesmos contratos dos preloads Electron.
 
 ## Escopo
 
@@ -27,23 +27,24 @@ entre computadores. A importação substitui os dados web atuais após validaç�
 
 ```
 web/
-  index.html             # raiz hospedável e navegação
-  app.js                 # shell, backup e rotas
-  assets/app.css         # tema compartilhado
-  shared/storage.js      # estado versionado no localStorage
-  reminders/             # migração incremental da tela de Lembretes
-  todo/                  # migração incremental da Lista de Tarefas
-  ultra-bosses/          # Estratégias sem integração de Inventário
+  landing.html           # landing page do AquaStar Tools
+  bridges/               # mocks web dos preloads Electron
 ```
 
 ## Hospedagem local para desenvolvimento
 
-Use qualquer servidor estático na pasta do repositório e abra `/web/`. Não é
-necessário instalar dependências JavaScript novas para esta base.
+Execute `npm run web:build`. O resultado é `web-dist/`, pronto para ser usado
+como artefato do GitHub Pages. Não há dependências JavaScript novas.
 
 ## Compatibilidade com o desktop
 
-O formato de backup web é deliberadamente separado dos JSONs internos do
-Electron. Quando as três telas estiverem migradas, um importador de dados do
-desktop poderá ser incluído de forma explícita, sem depender dos caminhos locais
-ou do IPC do aplicativo.
+As bridges preservam os mesmos formatos de dados do desktop, mas guardam cada
+ferramenta em `localStorage`. A exportação/importação de backup será adicionada à
+landing page em seguida, sem alterar as telas reaproveitadas.
+
+## Estado atual da migração
+
+A build atual reaproveita integralmente Lembretes, To-Do e Estratégia. Lembretes
+recebe os mesmos defaults curados; To-Do começa vazio; Estratégia recebe os
+defaults de potes e timers. Inventário sincronizado continua fora da web. O
+atalho de timer usa `Alt+Shift+U` enquanto a página estiver em foco.

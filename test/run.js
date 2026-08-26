@@ -13,7 +13,7 @@ global.test = function (name, fn) { tests.push({ name: name, fn: fn }); };
     './unit/charpage-lab.test.js',
     './unit/game-menu.test.js',
     './unit/release-staging.test.js',
-    './unit/web-storage.test.js',
+    './unit/web-build.test.js',
     './integration/json-store.test.js'
 ].forEach((file) => require(path.join(__dirname, file)));
 
