@@ -59,6 +59,7 @@ cp -r \
     "${ROOT}/Icon" \
     "${ROOT}/LICENSE.md" \
     "${ROOT}/res" \
+    "${ROOT}/scripts" \
     "${ROOT}/main.js" \
     "${ROOT}/package.json" \
     "${ROOT}/package-lock.json" \

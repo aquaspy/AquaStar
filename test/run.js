@@ -11,6 +11,8 @@ global.test = function (name, fn) { tests.push({ name: name, fn: fn }); };
     './unit/ruffle-update-ui.test.js',
     './unit/wikiview-injection.test.js',
     './unit/charpage-lab.test.js',
+    './unit/game-menu.test.js',
+    './unit/release-staging.test.js',
     './integration/json-store.test.js'
 ].forEach((file) => require(path.join(__dirname, file)));
 

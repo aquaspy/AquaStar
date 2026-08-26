@@ -124,6 +124,24 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             click() { require('../instances.js').openStrategyWindow(); }
         }
     ];
+    // Wiki and other browser pages need navigation, but their menu should not
+    // become a long row of feature buttons. Keep page links visible and group
+    // the launcher commands exactly like the compact game menu.
+    if (!isContext) {
+        return [
+            links[0],
+            links[1],
+            links[2],
+            {
+                label: menuMessages.menuTools,
+                submenu: links.slice(3, 6)
+            },
+            {
+                label: menuMessages.menuFeatures,
+                submenu: links.slice(6)
+            }
+        ];
+    }
     if (isContext){
         var ret = [
             {
@@ -145,6 +163,68 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
     }
     return links;
 }
+
+// Compact menu for AQW/DragonFable windows. It intentionally omits browser
+// navigation and context-menu-only commands; every entry maps to the same action
+// used by the corresponding launcher shortcut.
+exports.getGameMenu = (keybinds) => {
+    const menuMessages = locale.strings.menuMessages;
+    function command(label, action, accelerator) {
+        return {
+            label: label,
+            accelerator: accelerator,
+            registerAccelerator: false,
+            click(_item, focusedWin) {
+                require('../keybindings.js').runGameMenuAction(action, focusedWin);
+            }
+        };
+    }
+    return [
+        {
+            label: 'AquaStar',
+            submenu: [
+                command(menuMessages.menuNewAqw, 'newAqw', keybinds.newAqw),
+                command(menuMessages.menuNewTest, 'newTest', keybinds.newTest),
+                command(menuMessages.menuDragon, 'dragon', keybinds.dragon),
+                { type: 'separator' },
+                command(menuMessages.menuSettings, 'settings', keybinds.settings),
+                command(menuMessages.menuCharPageStudio, 'studio'),
+                { type: 'separator' },
+                command(menuMessages.menuHelp, 'help', keybinds.help),
+                command(menuMessages.menuAbout, 'about', keybinds.about)
+            ]
+        },
+        {
+            label: menuMessages.menuOtherPages,
+            submenu: [
+                command(menuMessages.menuWiki, 'wiki', keybinds.wiki),
+                command(menuMessages.menuDesign, 'design', keybinds.design),
+                command(menuMessages.menuAccount, 'account', keybinds.account),
+                command(menuMessages.menuCharpage, 'charpage', keybinds.charpage)
+            ]
+        },
+        {
+            label: menuMessages.menuTools,
+            submenu: [
+                command(menuMessages.menuTakeGameShot, 'sshot', keybinds.sshot),
+                command(menuMessages.menuRecord, 'record', keybinds.record),
+                { type: 'separator' },
+                command(menuMessages.menuReloadPage, 'reload', keybinds.reload),
+                command(menuMessages.menuReloadCache, 'reloadCache', keybinds.reloadCache),
+                command(menuMessages.menuFullscreen, 'fullscreen', keybinds.fullscreen)
+            ]
+        },
+        {
+            label: menuMessages.menuFeatures,
+            submenu: [
+                command(menuMessages.menuReminders, 'reminders', keybinds.reminders),
+                command(menuMessages.menuTodo, 'todo', keybinds.todo),
+                command(menuMessages.menuInventory, 'inventory', keybinds.inventory),
+                command(menuMessages.menuStrategy, 'strategy', keybinds.strategy)
+            ]
+        }
+    ];
+};
 
 function showHelpMessage(win){
     const dialogMessages = locale.strings.dialogMessages;

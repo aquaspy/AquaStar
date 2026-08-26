@@ -274,6 +274,9 @@ const originalOptions = {
     renderMode:        exports.defaultRenderMode,
     ruffleUpdateChannel: 'latest',
     ruffleAutoUpdate:  false,
+    // Native menu bar shown above AQW/DragonFable game windows.  It mirrors the
+    // launcher shortcuts for players who prefer discoverable mouse controls.
+    showGameMenu:      true,
     // Periodic background Inventory/BuyBack sync (res/features/inventory/inventory.js).
     // Off by default - manual "Sync Now" (in-window or the account.aq.com/Home button)
     // always works regardless of this setting.

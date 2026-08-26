@@ -23,24 +23,29 @@ exports.charPageStudioMessages = {
 
 exports.dialogMessages = {
     helpTitle   :'Help:',
-    helpMessage :"These are the keybindings added to the game.",
+    helpMessage :"AquaStar shortcuts and features.",
     helpDetail(k) {return expand(k.wiki) + ' - AQW Wiki\n' +
-        expand(k.design)    + ' - AQW Design notes\n' +
-        expand(k.account)   + ' - Account page\n' +
-        expand(k.charpage)  + ' - Character (Player) lookup. You can also just use the in-game lookup.\n' +
-        expand(k.cpSshot)   + ' - (Char pages only!) Take a screenshot of the current char page.\n' +
+        expand(k.design)    + ' - AQW Design Notes\n' +
+        expand(k.account)   + ' - AQW account page\n' +
+        expand(k.charpage)  + " - Opens the configured player character's Char Page\n" +
+        expand(k.cpSshot)   + ' - (Char Pages only) saves the open Char Page\n' +
         expand(k.newAqw)    + ' - Opens a new instance.\n' +
         expand(k.newTest)   + ' - Opens a Testing AQW instance.\n' +
+        expand(k.dragon)    + ' - Opens DragonFable.\n' +
         expand(k.about)     + ' - About AquaStar.\n' +
-        expand(k.fullscreen)+ ' - Toggles Fullscreen\n' +
-        expand(k.sshot)     + ' - Screenshot the game window (AQW and AQLITE only). They are saved in another folder as detailed below.\n' +
+        expand(k.fullscreen)+ ' - Toggles fullscreen.\n' +
+        expand(k.sshot)     + ' - Saves a screenshot of the game window.\n' +
         expand(k.record)    + ' - Record the Game Screen. Use it again to stop.\n' +
-        expand(k.reload)    + " - Reload the pages, like in a browser\n" +
-        expand(k.reloadCache)+' - Clears all game cache, some cookies and refresh the window (can fix some bugs in game)\n' +
+        expand(k.reload)    + " - Reloads the current page.\n" +
+        expand(k.reloadCache)+' - Clears game cache and data, then reloads the page.\n' +
         expand(k.settings)  + ' - Opens the Settings screen, to customize keybindings.\n' +
-        expand(k.reminders) + ' - Opens the Reminders screen, to track daily/weekly quests per character.\n\n' +
-        'For an older/custom aqlite file, please name it "aqlite_old.swf" and put it in the same folder as the executable, as said below!\n\n' +
-        'Note:' + expand(k.help) + ' Shows this message.';
+        expand(k.reminders) + ' - Opens quest reminders per character.\n' +
+        expand(k.todo)      + ' - Opens the To-Do List.\n' +
+        expand(k.inventory) + ' - Opens Inventory/BuyBack.\n' +
+        expand(k.strategy)  + ' - Opens Strategy tools.\n\n' +
+        'The menu bar above the game offers these same commands and can be disabled in Settings.\n' +
+        'Open Char Page Studio from the AquaStar menu to create images and GIFs.\n\n' +
+        'Note: ' + expand(k.help) + ' shows this message.';
     },
     helpScreenshot     : "Screenshot folder: ",
     helpAqliteOld      : "App folder for aqlite_old and aquastar.json (can change if user move the application): ",
@@ -90,7 +95,18 @@ exports.menuMessages = {
     menuReminders    : "Reminders",
     menuTodo         : "To-Do List",
     menuInventory    : "Inventory",
-    menuStrategy     : "Strategy"
+    menuStrategy     : "Strategy",
+    menuNewAqw       : "New AQW Instance",
+    menuNewTest      : "AQW Testing Instance",
+    menuDragon       : "DragonFable",
+    menuTools        : "Tools",
+    menuFeatures     : "Features",
+    menuTakeGameShot : "Save Game Screenshot",
+    menuRecord       : "Record Game Screen",
+    menuReloadCache  : "Reload and Clear Cache",
+    menuFullscreen   : "Fullscreen",
+    menuHelp         : "Help",
+    menuAbout        : "About AquaStar"
 }
 
 exports.settingsMessages = {
@@ -141,6 +157,7 @@ exports.settingsMessages = {
         renderMode:        "Flash Renderer",
         ruffleUpdateChannel: "Ruffle Update Channel",
         ruffleAutoUpdate:  "Automatically download updates",
+        showGameMenu:      "Show Menu Above Game",
         autoSync:          "Auto Sync Inventory",
         enableDevTools:    "Enable DevTools"
     },
@@ -152,6 +169,7 @@ exports.settingsMessages = {
         renderMode:        "Which Flash runtime loads AQW (main, new instance, Testing) and DragonFable (Alt+1). The Char Page is unaffected (Artix already uses Ruffle there).",
         ruffleUpdateChannel: "Latest uses Ruffle's most recent stable release. Nightly includes newer experimental changes. To apply a channel change, fully close AquaStar and open it again; do not use only the Restart button.",
         ruffleAutoUpdate:  "Checks the selected channel in the background every time AquaStar opens. A download is applied after restart.",
+        showGameMenu:      "Shows a menu bar above AQW and DragonFable windows with the same commands as the shortcuts. Turn it off if you prefer keyboard-only controls.",
         autoSync:          "Periodically syncs your Inventory/BuyBack data from account.aq.com in the background (about every 2 hours) once you've logged in there at least once via Alt+A. When off, sync only happens when you use a Sync Now button (in the Inventory window or on account.aq.com/Home).",
         enableDevTools:    "Opens the DevTools console automatically on startup."
     },

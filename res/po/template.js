@@ -75,7 +75,18 @@ exports.menuMessages = {
     menuReminders    : "",
     menuTodo         : "",
     menuInventory    : "",
-    menuStrategy     : ""
+    menuStrategy     : "",
+    menuNewAqw       : "",
+    menuNewTest      : "",
+    menuDragon       : "",
+    menuTools        : "",
+    menuFeatures     : "",
+    menuTakeGameShot : "",
+    menuRecord       : "",
+    menuReloadCache  : "",
+    menuFullscreen   : "",
+    menuHelp         : "",
+    menuAbout        : ""
 }
 
 exports.settingsMessages = {
@@ -124,6 +135,7 @@ exports.settingsMessages = {
         customUrl:         "",
         recordingFormat:   "",
         renderMode:        "",
+        showGameMenu:      "",
         autoSync:          "",
         enableDevTools:    ""
     },
@@ -133,6 +145,7 @@ exports.settingsMessages = {
         customUrl:         "",
         recordingFormat:   "",
         renderMode:        "",
+        showGameMenu:      "",
         autoSync:          "",
         enableDevTools:    ""
     },

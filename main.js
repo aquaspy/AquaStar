@@ -82,7 +82,10 @@ function createWindow () {
     else {
         Menu.setApplicationMenu(
             Menu.buildFromTemplate(windowsMenu.getMenu(finalkeyb, inst.charPagePrint)));
-        win.setMenuBarVisibility(false); //Remove menu so only wiki shows it
+        if (finalkeyb.showGameMenu !== false) {
+            win.setMenu(Menu.buildFromTemplate(windowsMenu.getGameMenu(finalkeyb)));
+            win.setMenuBarVisibility(true);
+        }
     }
     
     win.once('ready-to-show', () => {win.show()});  //show launcher only when ready

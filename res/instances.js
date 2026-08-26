@@ -122,6 +122,13 @@ function newBrowserWindow(new_path, isMainWin=false){
         /// Mac still get keybinds tho, just not the menu.
         newWin.setMenuBarVisibility(true);
     }
+
+    // Game windows get a small discoverable command bar when enabled. Browser
+    // windows keep the application menu created in main.js.
+    if (_isGameWindow(originalPath, false) && keybinds.keybinds.showGameMenu !== false && process.platform !== 'darwin') {
+        newWin.setMenu(Menu.buildFromTemplate(windowsMenu.getGameMenu(keybinds.keybinds)));
+        newWin.setMenuBarVisibility(true);
+    }
     
     _windowAddContext(newWin);
     
