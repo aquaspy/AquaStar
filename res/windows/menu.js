@@ -232,10 +232,8 @@ function showHelpMessage(win){
         buttons: ['Ok'],
         title:   dialogMessages.helpTitle,
         message: dialogMessages.helpMessage,
-        detail:  dialogMessages.helpDetail + "\n" +
-            dialogMessages.helpCustomKeyPath + constant.appdataJsonPath + "\n" +
-            dialogMessages.helpScreenshot + constant.sshotPath + "\n" +
-            dialogMessages.helpAqliteOld + constant.appDirectoryPath
+        detail:  dialogMessages.helpDetail + "\n\n" +
+            dialogMessages.helpScreenshot + constant.sshotPath
     };
     require('electron').dialog.showMessageBox(win,dialog_options);
 }

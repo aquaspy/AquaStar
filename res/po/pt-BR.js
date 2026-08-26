@@ -49,7 +49,7 @@ exports.dialogMessages = {
     },
     helpScreenshot     : "Pasta dos prints: ",
     helpAqliteOld      : "Pasta do app para o aqlite_old/aquastar.json (Pode mudar se o usuário mover o aplicativo): ",
-    helpCustomKeyPath  : "Outro local para o aquastar.json com keybinds customizadas. Veja o Readme.md para mais ajuda: ",
+    helpCustomKeyPath  : "",
     
     aboutTitle     : "Sobre o AquaStar, versão: ",
     aboutMessage   : "Aquastar não seria possível sem a ajuda de:",
