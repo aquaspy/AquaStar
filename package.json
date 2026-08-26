@@ -15,6 +15,9 @@
     "loc": "node scripts/count-loc.js",
     "web:build": "node scripts/build-web.js",
     "web:preview": "npm run web:build && node scripts/serve-web.js",
+    "lint": "eslint main.js res scripts test web --ext .js",
+    "format": "prettier --write package.json .github .eslintrc.cjs .prettierrc.json web scripts/build-web.js scripts/serve-web.js test",
+    "format:check": "prettier --check package.json .github .eslintrc.cjs .prettierrc.json web scripts/build-web.js scripts/serve-web.js test",
     "test": "node test/run.js",
     "test:ci": "npm run test && npm run pack"
   },
@@ -27,7 +30,10 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "11.5.0",
-    "electron-builder": "22.14.13"
+    "electron-builder": "22.14.13",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.1",
+    "prettier": "^3.5.3"
   },
   "build": {
     "publish": null,

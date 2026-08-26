@@ -2,6 +2,7 @@ const path = require("path");
 
 // Default is english.
 let   lang       = "en-US";
+let   pathToFile;
 const langFolder = "po";
 
 // Accelerators are kept as Electron's "CmdOrCtrl" internally (needed for key

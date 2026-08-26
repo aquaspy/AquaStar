@@ -1,0 +1,262 @@
+:root {
+  --bg: #101112;
+  --surface: #1b1b1b;
+  --line: #2c2c2c;
+  --text: #e6e6e6;
+  --muted: #9a9a9a;
+  --blue: #4da3ff;
+  --max: 1080px;
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    15px Inter,
+    system-ui,
+    'Segoe UI',
+    sans-serif;
+  line-height: 1.55;
+}
+header {
+  height: 62px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--line);
+  background: #101112e8;
+  backdrop-filter: blur(14px);
+}
+.nav,
+.wrap {
+  width: min(var(--max), calc(100% - 40px));
+  margin: auto;
+}
+.nav {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 21px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 800;
+  text-decoration: none;
+}
+.brand img {
+  width: 27px;
+  height: 27px;
+  object-fit: contain;
+}
+.links {
+  display: flex;
+  gap: 18px;
+  margin-left: auto;
+}
+.links a {
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+.language {
+  padding: 6px 10px;
+  border: 1px solid #383838;
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+}
+.hero {
+  padding: 108px 0 82px;
+  background:
+    radial-gradient(ellipse 64% 70% at 7% 0%, #1675bd43, transparent 74%),
+    radial-gradient(ellipse 45% 50% at 90% 16%, #244f8442, transparent 72%);
+}
+.eyebrow {
+  color: #9cc9ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.hero h1 {
+  max-width: 770px;
+  margin: 13px 0 22px;
+  font-size: clamp(44px, 7vw, 76px);
+  line-height: 0.98;
+  letter-spacing: -0.065em;
+}
+.hero h1 em {
+  background: linear-gradient(100deg, #9cc9ff, #4da3ff);
+  background-clip: text;
+  color: transparent;
+  font-style: normal;
+}
+.hero p,
+.intro {
+  max-width: 650px;
+  color: var(--muted);
+  font-size: 16px;
+}
+.actions,
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 29px;
+}
+.button,
+.tools a {
+  padding: 10px 15px;
+  border: 1px solid #383838;
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.primary {
+  border-color: #2b6fce;
+  background: #2b6fce;
+}
+.primary:hover {
+  background: #3a7fe0;
+}
+section {
+  padding: 60px 0;
+  border-top: 1px solid var(--line);
+}
+h2 {
+  margin: 0 0 8px;
+  font-size: 30px;
+  line-height: 1.12;
+  letter-spacing: -0.045em;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 25px;
+}
+.card,
+.panel,
+.faq details {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.card {
+  min-height: 174px;
+  padding: 20px;
+  transition: 0.18s;
+}
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--blue);
+}
+.card h3 {
+  margin: 9px 0 6px;
+  font-size: 16px;
+}
+.card p,
+.panel p,
+.step p,
+.faq p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.icon {
+  display: block;
+  width: 31px;
+  height: 31px;
+  border: 1px solid #4da3ff80;
+  border-radius: 8px;
+  background: #2b6fce2b;
+  color: #c9e2ff;
+  font-weight: 800;
+  line-height: 29px;
+  text-align: center;
+}
+.split,
+.steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.panel {
+  padding: 24px;
+}
+.panel h3 {
+  margin: 0 0 8px;
+}
+.tools {
+  gap: 8px;
+  margin-top: 17px;
+}
+.tools a {
+  padding: 8px 10px;
+  border-color: #31537d;
+  border-radius: 6px;
+  background: #18283b;
+  font-weight: 400;
+}
+.steps {
+  grid-template-columns: repeat(3, 1fr);
+  counter-reset: step;
+}
+.step {
+  padding: 8px 0 8px 16px;
+  border-left: 2px solid #2b6fce;
+}
+.step strong::before {
+  counter-increment: step;
+  content: '0' counter(step) '  ';
+  color: #9cc9ff;
+  font-size: 12px;
+}
+.faq details {
+  margin: 8px 0;
+  padding: 13px 15px;
+}
+.faq summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.faq p {
+  margin-top: 8px;
+}
+footer {
+  padding: 26px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 720px) {
+  .links {
+    display: none;
+  }
+  .grid,
+  .split,
+  .steps {
+    grid-template-columns: 1fr;
+  }
+  .hero {
+    padding: 76px 0 58px;
+  }
+  .nav,
+  .wrap {
+    width: min(100% - 28px, var(--max));
+  }
+}

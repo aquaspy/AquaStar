@@ -31,8 +31,8 @@
             var embed = document.getElementsByTagName("embed")[0];
             
             // Calculating the inner sizes the flash should receive...
-            var w = window.innerWidth;
-            var h = window.innerHeight;
+            w = window.innerWidth;
+            h = window.innerHeight;
             const wOri = 715;
             const hOri = 455;
             const ratio = (wOri/hOri);
@@ -40,7 +40,7 @@
             if( w/h > ratio) {
                 // Window has bigger Width ratio than the original
                 // Scale using Height! reduction is to account for window bar.
-                newW = wOri*((h-red)/hOri)
+                const newW = wOri*((h-red)/hOri)
                 embed.setAttribute("height",h-red);
                 embed.setAttribute("width" ,newW); // Dont ask how i got this... maths...
                 
@@ -49,7 +49,7 @@
             else {
                 // Window has bigger Height ratio than the original (or equal, doesnt matter)
                 // Scale using Width!
-                newH = hOri*(w/wOri);
+                const newH = hOri*(w/wOri);
                 embed.setAttribute("width" ,w);
                 embed.setAttribute("height",newH); // Dont ask how i got this... maths...
 

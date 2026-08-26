@@ -1,32 +1,58 @@
-const fs = require('fs'); const path = require('path'); const root = path.join(__dirname, '..'); const out = path.join(root, 'web-dist');
-function copy(from, to) { fs.mkdirSync(path.dirname(to), { recursive: true }); fs.copyFileSync(path.join(root, from), to); }
-function page(from, to, bridge) { let html = fs.readFileSync(path.join(root, from), 'utf8'); const bridgeTag = '<script src="../../bridges/common.js"></script><script src="../../bridges/' + bridge + '.js"></script>'; html = html.replace(/<script>\s*\(function \(\)/, bridgeTag + '<script>\n(function ()'); if (html.indexOf(bridgeTag) === -1) throw new Error('Could not inject web bridge into ' + from); fs.mkdirSync(path.dirname(to), { recursive: true }); fs.writeFileSync(to, html); }
-fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out, { recursive: true });
-copy('web/landing.html', path.join(out, 'index.html'));
-copy('Icon/Icon.png', path.join(out, 'assets/aquastar-icon.png'));
-const landingPath = path.join(out, 'index.html');
-fs.writeFileSync(landingPath, fs.readFileSync(landingPath, 'utf8')
-    .replace('id="features"></div>', 'id="featureGrid"></div>')
-    .replace('features.innerHTML=t.features.map', "document.getElementById('featureGrid').innerHTML=t.features.map")
-    .replace('<a class="brand" href="#top">Aqua<i>Star</i></a>', '<a class="brand" href="#top"><img src="assets/aquastar-icon.png" alt=""><span>AquaStar</span></a>')
-    .replaceAll('#17141f', '#1b1b1b').replaceAll('#1b1825', '#1b1b1b').replaceAll('#211a2e', '#18283b').replaceAll('#2a2637', '#2c2c2c').replaceAll('#315cb445', '#244f8442').replaceAll('#4b3b60', '#31537d').replaceAll('#aaa4b8', '#9a9a9a').replaceAll('#f5f1ff', '#e6e6e6')
-    .replace('No localStorage do navegador.', 'No AquaStar Desktop, os dados ficam na pasta AppData/AquaStar. Nas ferramentas web, ficam no localStorage do navegador.')
-    .replace('In browser localStorage.', 'In AquaStar Desktop, data is stored in the AppData/AquaStar folder. In web tools, it is stored in browser localStorage.')
-    .replace("['◈','Flash nativo','Mantém a compatibilidade de Flash Player necessária para o AQW.'],['⌕','WikiView','Consulte conteúdo da wiki sem sair do fluxo do jogo.']", "['◈','Flash nativo e Ruffle','Escolha Flash Player nativo ou Ruffle; o Ruffle também pode ser atualizado para testar versões novas.'],['⌕','Inventário sincronizado','Consulte inventário e BuyBack com sincronização da conta.']")
-    .replace("['◌','Estratégia','Planeje grupos, papéis e timers para Ultra Bosses.']]", "['◌','Estratégia','Planeje grupos, papéis e timers para Ultra Bosses.'],['⌘','Atalhos personalizados','Defina keybinds para as ações que fazem sentido no seu fluxo.'],['↗','Janelas importantes','Abra rapidamente as principais telas do AquaStar por atalhos.'],['⌕','Prévia da wiki','Passe o cursor sobre links da wiki para visualizar a página antes de abri-la.']]")
-    .replace("['◈','Native Flash','Keeps the Flash Player compatibility AQW requires.'],['⌕','WikiView','Consult wiki content without leaving the game flow.']", "['◈','Native Flash and Ruffle','Choose native Flash Player or Ruffle; Ruffle can also be updated to test newer versions.'],['⌕','Synced inventory','Check inventory and BuyBack with account synchronization.']")
-    .replace("['◌','Strategy','Plan groups, roles and timers for Ultra Bosses.']]", "['◌','Strategy','Plan groups, roles and timers for Ultra Bosses.'],['⌘','Custom keybindings','Set keybinds for the actions that fit your workflow.'],['↗','Important windows','Open AquaStar’s main screens quickly with shortcuts.'],['⌕','Wiki previews','Hover wiki links to preview a page before opening it.']]")
-    .replaceAll('#6334aa70', '#1675bd43').replaceAll('#b16cff', '#4da3ff').replaceAll('#c68aff', '#9cc9ff').replaceAll('#cb9cff', '#9cc9ff').replaceAll('#7bb6ff', '#4da3ff')
-    .replaceAll('#9b5bea', '#2b6fce').replaceAll('#7e69ef', '#3a7fe0').replaceAll('#c387ff', '#2b6fce').replaceAll('#5e4878', '#4da3ff').replaceAll('#a968ef2b', '#2b6fce2b').replaceAll('#c492ff57', '#4da3ff80').replaceAll('#dbc3ff', '#c9e2ff').replaceAll('#8c57cb', '#2b6fce').replaceAll('#c88cff', '#9cc9ff')
-    .replace('</style>', `<style>
-      :root{--bg:#101112;--s:#1b1b1b;--line:#2c2c2c;--t:#e6e6e6;--m:#9a9a9a;--p:#4da3ff}
-      header{background:#101112e8}.brand{display:flex;align-items:center;gap:8px;letter-spacing:-.025em}.brand img{width:27px;height:27px;object-fit:contain}.brand i{color:var(--p)}
-      .hero{background:radial-gradient(ellipse 64% 70% at 7% 0%,#1675bd43,transparent 74%),radial-gradient(ellipse 45% 50% at 90% 16%,#244f8442,transparent 72%)}
-      .eyebrow{color:#9cc9ff}.hero h1 em{background:linear-gradient(100deg,#9cc9ff,#4da3ff);background-clip:text;color:transparent}.primary{border-color:#2b6fce;background:#2b6fce}.primary:hover{background:#3a7fe0}.card,.panel,.faq details{background:#1b1b1b}.card:hover{border-color:#4da3ff}.icon{background:#2b6fce2b;border-color:#4da3ff80;color:#c9e2ff}.tools a{border-color:#31537d;background:#18283b}.step{border-left-color:#2b6fce}.step strong:before{color:#9cc9ff}.language,.button:not(.primary){background:#1b1b1b;border-color:#383838}
-    </style>`));
-copy('res/core/list-state.js', path.join(out, 'core/list-state.js')); copy('res/core/reset-time.js', path.join(out, 'core/reset-time.js')); copy('res/ui/workspace/modals.js', path.join(out, 'ui/workspace/modals.js')); copy('res/ui/workspace/character-tabs.js', path.join(out, 'ui/workspace/character-tabs.js')); copy('res/features/common/list_window_common.js', path.join(out, 'tools/common/list_window_common.js'));
-page('res/features/reminders/reminders.html', path.join(out, 'tools/reminders/index.html'), 'reminders'); page('res/features/todo/todo.html', path.join(out, 'tools/todo/index.html'), 'todo'); page('res/features/strategy/strategy.html', path.join(out, 'tools/strategy/index.html'), 'strategy');
-['common.js','reminders.js','todo.js','strategy.js'].forEach((f) => copy('web/bridges/' + f, path.join(out, 'bridges', f)));
-copy('res/features/reminders/reminders_default.json', path.join(out, 'defaults/reminders.json')); copy('res/features/strategy/strategy_default.json', path.join(out, 'defaults/strategy.json'));
-['pt-BR', 'en-US'].forEach((code) => { const locale = require(path.join(root, 'res/po/' + code + '.js')); fs.mkdirSync(path.join(out, 'locale'), { recursive: true }); fs.writeFileSync(path.join(out, 'locale/' + code + '.json'), JSON.stringify({ remindersMessages: locale.remindersMessages, todoMessages: locale.todoMessages, strategyMessages: locale.strategyMessages })); });
+const fs = require('fs');
+const path = require('path');
+
+const root = path.join(__dirname, '..');
+const output = path.join(root, 'web-dist');
+
+function copy(source, destination) {
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.copyFileSync(path.join(root, source), destination);
+}
+
+function buildToolPage(source, destination, bridge) {
+  let html = fs.readFileSync(path.join(root, source), 'utf8');
+  const bridgeTag = `<script src="../../bridges/common.js"></script><script src="../../bridges/${bridge}.js"></script>`;
+  html = html.replace(/<script>\s*\(function \(\)/, `${bridgeTag}<script>\n(function ()`);
+  if (!html.includes(bridgeTag)) throw new Error(`Could not inject web bridge into ${source}`);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.writeFileSync(destination, html);
+}
+
+fs.rmSync(output, { recursive: true, force: true });
+fs.mkdirSync(output, { recursive: true });
+
+copy('web/landing.html', path.join(output, 'index.html'));
+copy('web/assets/landing.css', path.join(output, 'assets/landing.css'));
+copy('web/assets/landing.js', path.join(output, 'assets/landing.js'));
+copy('Icon/Icon.png', path.join(output, 'assets/aquastar-icon.png'));
+
+copy('res/core/list-state.js', path.join(output, 'core/list-state.js'));
+copy('res/core/reset-time.js', path.join(output, 'core/reset-time.js'));
+copy('res/ui/workspace/modals.js', path.join(output, 'ui/workspace/modals.js'));
+copy('res/ui/workspace/character-tabs.js', path.join(output, 'ui/workspace/character-tabs.js'));
+copy('res/features/common/list_window_common.js', path.join(output, 'tools/common/list_window_common.js'));
+
+buildToolPage('res/features/reminders/reminders.html', path.join(output, 'tools/reminders/index.html'), 'reminders');
+buildToolPage('res/features/todo/todo.html', path.join(output, 'tools/todo/index.html'), 'todo');
+buildToolPage('res/features/strategy/strategy.html', path.join(output, 'tools/strategy/index.html'), 'strategy');
+
+['common.js', 'reminders.js', 'todo.js', 'strategy.js'].forEach((file) =>
+  copy(`web/bridges/${file}`, path.join(output, 'bridges', file))
+);
+copy('res/features/reminders/reminders_default.json', path.join(output, 'defaults/reminders.json'));
+copy('res/features/strategy/strategy_default.json', path.join(output, 'defaults/strategy.json'));
+
+['pt-BR', 'en-US'].forEach((code) => {
+  const locale = require(path.join(root, 'res/po', `${code}.js`));
+  fs.mkdirSync(path.join(output, 'locale'), { recursive: true });
+  fs.writeFileSync(
+    path.join(output, 'locale', `${code}.json`),
+    JSON.stringify({
+      remindersMessages: locale.remindersMessages,
+      todoMessages: locale.todoMessages,
+      strategyMessages: locale.strategyMessages
+    })
+  );
+});
+
 console.log('Built GitHub Pages artifact: web-dist');

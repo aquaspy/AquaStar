@@ -1,0 +1,9 @@
+node_modules/
+dist/
+work/
+web-dist/
+swf2png-master/
+res/features/wikiview/jquery.min.js
+res/ruffle/
+FlashPlayer/
+Icon/
