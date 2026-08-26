@@ -14,6 +14,8 @@ global.test = function (name, fn) { tests.push({ name: name, fn: fn }); };
     './unit/game-menu.test.js',
     './unit/release-staging.test.js',
     './unit/web-build.test.js',
+    './unit/web-preview.test.js',
+    './unit/pages-workflow.test.js',
     './integration/json-store.test.js'
 ].forEach((file) => require(path.join(__dirname, file)));
 

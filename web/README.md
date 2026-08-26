@@ -36,6 +36,10 @@ web/
 Execute `npm run web:build`. O resultado é `web-dist/`, pronto para ser usado
 como artefato do GitHub Pages. Não há dependências JavaScript novas.
 
+Para testar localmente, execute `npm run web:preview` e abra
+`http://127.0.0.1:4173/`. Não abra a landing ou as ferramentas por `file://`:
+o navegador bloqueia os `fetch()` usados para carregar traduções e defaults.
+
 ## Compatibilidade com o desktop
 
 As bridges preservam os mesmos formatos de dados do desktop, mas guardam cada
