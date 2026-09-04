@@ -12,6 +12,7 @@
 // endpoint here instead of a public one.
 const fs       = require('fs');
 const path     = require('path');
+const { fileURLToPath } = require('url');
 const { app, ipcMain, net, session } = require('electron');
 const constant = require('../../const.js');
 const locale   = require('../../locale.js');
@@ -25,6 +26,8 @@ const BUYBACK_PAGE_SIZE = 100;
 let activeSyncPromise = null;
 const inventoryUrl = constant.toFileUrl(path.join(__dirname, 'inventory.html'));
 const strategyUrl = constant.toFileUrl(path.join(__dirname, '..', 'strategy', 'strategy.html'));
+const inventoryPath = path.resolve(path.join(__dirname, 'inventory.html'));
+const strategyPath = path.resolve(path.join(__dirname, '..', 'strategy', 'strategy.html'));
 
 function _senderUrl(event) {
     try { return event && event.sender ? event.sender.getURL() : ''; }
@@ -41,13 +44,26 @@ function _isTrustedRemoteSender(event) {
     }
 }
 
-function _isInventorySender(event) {
+// Electron normalizes file:// URLs differently in packaged and development builds
+// (notably their escaping and drive-letter form). Compare the resolved local file path,
+// not URL text, so the Inventory preload is not blocked by its own IPC handler.
+function _isLocalPageSender(event, expectedPath, expectedUrl) {
     const senderUrl = _senderUrl(event);
-    return senderUrl === inventoryUrl || _isTrustedRemoteSender(event);
+    if (senderUrl === expectedUrl) return true;
+    try {
+        const parsed = new URL(senderUrl);
+        return parsed.protocol === 'file:' && path.resolve(fileURLToPath(parsed)) === expectedPath;
+    } catch (e) {
+        return false;
+    }
+}
+
+function _isInventorySender(event) {
+    return _isLocalPageSender(event, inventoryPath, inventoryUrl) || _isTrustedRemoteSender(event);
 }
 
 function _isInventoryOrAccountSender(event) {
-    if (_senderUrl(event) === inventoryUrl) return true;
+    if (_isLocalPageSender(event, inventoryPath, inventoryUrl)) return true;
     try { return new URL(_senderUrl(event)).hostname === 'account.aq.com'; }
     catch (e) { return false; }
 }
@@ -430,7 +446,7 @@ ipcMain.handle('getInventory', (event) => {
 });
 
 ipcMain.handle('saveInventoryLabels', (event, labels) => {
-    if (_senderUrl(event) !== inventoryUrl) return { ok: false, error: 'blocked' };
+    if (!_isLocalPageSender(event, inventoryPath, inventoryUrl)) return { ok: false, error: 'blocked' };
     const state = _loadInventory();
     state.labels = _migrateLabels(labels);
     _saveInventory(state);
@@ -491,7 +507,7 @@ ipcMain.handle('matchWikiItems', (event, wikiTitles) => {
 // is deliberately exact-name matching: its curated potion list contains in-game names and
 // must not merge AC/member/tagged variants into a normal consumable total.
 ipcMain.handle('getInventoryItemCounts', (event, itemNames) => {
-    if (_senderUrl(event) !== strategyUrl) return {};
+    if (!_isLocalPageSender(event, strategyPath, strategyUrl)) return {};
     if (!Array.isArray(itemNames)) return {};
     const names = itemNames.filter((name) => typeof name === 'string').slice(0, 200);
     const wanted = {};

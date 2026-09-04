@@ -25,4 +25,13 @@ test('WikiView injection is retryable and supports hydrated Wiki content', () =>
   assert.ok(wikiFetch.indexOf('request.setTimeout') === -1, 'Electron 11 net.request has no setTimeout method');
   assert.ok(wikiFetch.indexOf('const timeout = setTimeout') !== -1, 'Wiki fetch enforces a compatible timeout');
   assert.ok(wikiFetch.indexOf('clearTimeout(timeout)') !== -1, 'completed Wiki fetch clears its timeout');
+  assert.ok(
+    instances.indexOf('const isWikiPage = /^https?:\\/\\/aqwwiki\\.wikidot\\.com') !== -1,
+    'only Wiki pages are eligible for iframe cleanup'
+  );
+  assert.ok(instances.indexOf("'Wiki frame cleanup'") !== -1, 'frame cleanup is explicitly scoped to the Wiki');
+  assert.ok(
+    instances.indexOf('Cloudflare') !== -1,
+    'account-page challenge frames are documented as protected from cleanup'
+  );
 });
