@@ -171,6 +171,10 @@ function _windowAddContext(newWin){
     // Bonus: Hug popup (yeah, Hug them hard.)
     newWin.webContents.on("did-finish-load", () => {
         var url = newWin.getURL();
+        // Keep third-party frames intact outside the Wiki. In particular, Cloudflare
+        // challenges on account.aq.com render inside challenges.cloudflare.com iframes.
+        const isWikiPage = /^https?:\/\/aqwwiki\.wikidot\.com(?:\/|$)/i.test(url);
+        const isMainAqPage = /^https?:\/\/(?:www\.)?aq\.com(?:\/|$)/i.test(url);
         // Game windows only contain Flash — skip popup/ad injection
         if (_isGameWindow(newWin)) return;
         function testAndDelete (testURL,objName,isClass = false) {
@@ -191,15 +195,20 @@ function _windowAddContext(newWin){
                 });
             }
         }
-        testAndDelete("wikidot","ncmp__tool",false);
-        testAndDelete("aq.com","fb-page",true);
+        if (isWikiPage) {
+            testAndDelete("wikidot","ncmp__tool",false);
 
-        // Ads. Bc wiki is being too trashy to get ad revenue from me.
-        testAndDelete("wikidot","wad-aqwwiki-above-content",false);
-        testAndDelete("wikidot","wad-aqwwiki-below-content",false);
-        _executeJavaScriptSafely(newWin.webContents,
-            "var rem = document.getElementsByTagName('iframe');" +
-            "for (var i=0;i<rem.length;i++) rem[i].remove()", 'Frame cleanup');
+            // Ads. Bc wiki is being too trashy to get ad revenue from me.
+            testAndDelete("wikidot","wad-aqwwiki-above-content",false);
+            testAndDelete("wikidot","wad-aqwwiki-below-content",false);
+            _executeJavaScriptSafely(newWin.webContents,
+                "var rem = document.getElementsByTagName('iframe');" +
+                "for (var i=0;i<rem.length;i++) rem[i].remove()", 'Wiki frame cleanup');
+        }
+
+        // The Facebook widget is only an ad cleanup on the main AQ site. Never
+        // manipulate account.aq.com: it needs its embedded authentication frames.
+        if (isMainAqPage) testAndDelete("aq.com","fb-page",true);
         // ----------------------------------------------------------------------------------------------
         // Another bonus: Wiki link preview (WikiView), made by biglavis over at https://github.com/biglavis
         //  Available on the file res/features/wikiview/wikiviewsource.js.

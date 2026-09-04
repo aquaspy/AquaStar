@@ -636,7 +636,13 @@
   }
 
   async function init() {
+    if (!api) throw new Error('The Inventory preload bridge was not loaded.');
     const [msgs, invResult] = await Promise.all([api.getMessages(), api.getInventory()]);
+    if (!invResult || invResult.error || !invResult.data) {
+      throw new Error(invResult && invResult.error === 'blocked'
+        ? 'A solicitação foi bloqueada pela verificação de origem do Inventário.'
+        : 'Não foi possível ler os dados do Inventário.');
+    }
     messages = msgs;
     state = invResult.data;
     labels = state.labels || labels;
@@ -746,7 +752,15 @@
     renderRows();
   }
 
-  init();
+  init().catch((error) => {
+    console.error('[AquaStar] Inventory initialization failed:', error);
+    const rows = document.getElementById('rows');
+    rows.innerHTML = '';
+    const message = document.createElement('div');
+    message.id = 'noCharsHint';
+    message.textContent = 'Falha ao iniciar o Inventário: ' + (error && error.message ? error.message : String(error));
+    rows.appendChild(message);
+  });
 })();
 </script>
 </body>

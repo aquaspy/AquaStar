@@ -465,6 +465,7 @@ exports.inventoryMessages = {
   columnInserted: "Sold",
   bankBadge: "Bank",
   inventoryBadge: "Inventory",
+  memberBadge: "Member",
   acBadge: "AC",
   normalBadge: "Normal",
   filterLabels: "Labels",
