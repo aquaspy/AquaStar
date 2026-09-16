@@ -13,6 +13,8 @@ let usedAltPagesNumbers = [];
 const fs       = require('fs');
 const path     = require('path');
 let   isAltKPageUp = false;
+// Plugin navigation hooks (PR 5). When set, did-finish-load delegates to the plugin.
+let navigationHooks = null;
 
 // For notify Window's original names.
 let winTimeRef = {};
@@ -168,9 +170,29 @@ function _windowAddContext(newWin){
         event.newGuest = openChildWindow(url);
     });
     
-    // Bonus: Hug popup (yeah, Hug them hard.)
+    // Bonus: Hug popup (yeah, Hug them hard.) / WikiView / account sync.
+    // When a plugin registered navigation hooks (PR 5), delegate entirely to them.
     newWin.webContents.on("did-finish-load", () => {
         var url = newWin.getURL();
+        if (navigationHooks && typeof navigationHooks.onDidFinishLoad === 'function') {
+            Promise.resolve(navigationHooks.onDidFinishLoad({
+                win: newWin,
+                url: url,
+                isGameWindow: _isGameWindow(newWin),
+                executeJavaScriptSafely: function (source, label) {
+                    return _executeJavaScriptSafely(newWin.webContents, source, label);
+                }
+            })).catch(function (error) {
+                console.log('[AquaStar] Navigation hook failed: ' +
+                    (error && error.message ? error.message : error));
+            });
+            return;
+        }
+        _legacyDidFinishLoad(newWin, url);
+    });
+}
+
+function _legacyDidFinishLoad(newWin, url) {
         // Keep third-party frames intact outside the Wiki. In particular, Cloudflare
         // challenges on account.aq.com render inside challenges.cloudflare.com iframes.
         const isWikiPage = /^https?:\/\/aqwwiki\.wikidot\.com(?:\/|$)/i.test(url);
@@ -259,7 +281,6 @@ function _windowAddContext(newWin){
             const syncBtnSrc = fs.readFileSync(path.join(__dirname, 'features', 'inventory', 'accountSyncButton.js'), 'utf8');
             _executeJavaScriptSafely(newWin.webContents, syncBtnSrc, 'Account sync button');
         }
-    });
 }
 
 function _resolveTargetWindow(onlyHtml = false, considerDF = false) {
@@ -506,3 +527,5 @@ exports.takeSS              = takeSS;
 exports.notifyWin           = _notifyWindow;
 exports.getSavedTitle       = getSavedTitle;
 exports.mkdir               = _mkdir;
+exports.setNavigationHooks  = function (hooks) { navigationHooks = hooks || null; };
+exports.getNavigationHooks  = function () { return navigationHooks; };
