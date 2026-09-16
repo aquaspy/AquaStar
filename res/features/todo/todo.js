@@ -9,6 +9,7 @@ const { app, ipcMain, clipboard } = require('electron');
 const constant = require('../../const.js');
 const locale   = require('../../locale.js');
 const jsonStore = require('../../repositories/json-store.js');
+const listState = require('../../core/list-state.js');
 
 const todoJsonFileName = constant.appName.toLocaleLowerCase() + '_todo.json'; // "aquastar_todo.json"
 const todoJsonPath = path.join(constant.appDataDirectory, todoJsonFileName);
@@ -17,12 +18,7 @@ function _genId(prefix) {
     return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 }
 
-// Kept in sync with list_window_common.js's SEASONAL_EVENT_KEYS by hand (same reasoning as
-// reminders.js's own copy: this one only needs to validate persisted data, not render it).
-const SEASONAL_EVENT_KEYS = [
-    'nulgathBirthday', 'carnival', 'dageBirthday', 'aprilFools', 'mayThe4th', 'starFestival',
-    'kalaSeason', 'friday13', 'pirateDay', 'anniversary', 'blackFriday', 'frostval'
-];
+const SEASONAL_EVENT_KEYS = listState.SEASONAL_EVENT_KEYS;
 const CATEGORY_KEYS = ['drop', 'dailyDrop', 'shopMerge', 'questReward', 'hardFarm', 'reputationFarm'];
 
 function _migrateTask(t) {

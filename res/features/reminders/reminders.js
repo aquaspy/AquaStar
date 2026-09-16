@@ -9,6 +9,7 @@ const { app, ipcMain, clipboard } = require('electron');
 const constant = require('../../const.js');
 const locale   = require('../../locale.js');
 const jsonStore = require('../../repositories/json-store.js');
+const listState = require('../../core/list-state.js');
 
 const remindersJsonFileName = constant.appName.toLocaleLowerCase() + '_reminders.json'; // "aquastar_reminders.json"
 const legacyRemindersJsonPath = path.join(app.getPath('appData'), remindersJsonFileName);
@@ -48,10 +49,7 @@ function _buildSeedState() {
     } catch (e) {
         console.log('[AquaStar] Failed to read ' + remindersDefaultPath + ': ' + e.message);
     }
-    const SEASONAL_EVENT_KEYS = [
-        'nulgathBirthday', 'carnival', 'dageBirthday', 'aprilFools', 'mayThe4th', 'starFestival',
-        'kalaSeason', 'friday13', 'pirateDay', 'anniversary', 'blackFriday', 'frostval'
-    ];
+    const SEASONAL_EVENT_KEYS = listState.SEASONAL_EVENT_KEYS;
     const quests = (Array.isArray(raw.quests) ? raw.quests : []).map((q) => ({
         id: _genId('q'),
         name: typeof q.name === 'string' ? q.name : '',
