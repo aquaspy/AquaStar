@@ -1,0 +1,10 @@
+{
+  "id": "sample-swf",
+  "name": "Sample SWF",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "main": "main.js",
+  "minAppVersion": "1.12.2",
+  "permissions": ["flash-trust", "persistent-store"],
+  "capabilities": ["game-launch", "keybinds", "menus"]
+}

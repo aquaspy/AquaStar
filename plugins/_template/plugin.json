@@ -1,0 +1,12 @@
+{
+  "id": "my-flash-game",
+  "name": "My Flash Game",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "main": "main.js",
+  "description": "Template AquaStar plugin — copy this folder and rename the id.",
+  "author": "Your Name",
+  "minAppVersion": "1.12.2",
+  "permissions": ["flash-trust", "persistent-store"],
+  "capabilities": ["game-launch", "keybinds", "menus"]
+}
