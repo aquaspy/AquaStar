@@ -10,5 +10,8 @@ module.exports = {
     resolvePluginFlags: require('./plugin-loader.js').resolvePluginFlags,
     legacyChannels: require('./legacy-channels.js'),
     readSettingsObject: require('./settings-flags.js').readSettingsObject,
-    readPluginFlagsFromDisk: require('./settings-flags.js').readPluginFlagsFromDisk
+    readPluginFlagsFromDisk: require('./settings-flags.js').readPluginFlagsFromDisk,
+    applySessionRules: require('./session-rules.js').applySessionRules,
+    createNamespacedStore: require('./storage/namespaced-store.js').createNamespacedStore,
+    resolveOption: require('./settings-resolve.js').resolveOption
 };
