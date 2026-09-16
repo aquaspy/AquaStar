@@ -7,6 +7,7 @@ const { BrowserWindow } = require('electron');
 const constant     = require('../const.js');
 const windowConfig = require('./config.js');
 const locale       = require('../locale.js');
+const menuRegistry = require('../platform/menu-registry.js');
 
 exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
     // needs to be like that as the function is located on instances...
@@ -24,11 +25,67 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
             // races that handler and can replace the current window's URL instead
             // (most visible once DevTools shifts window focus timing).
             registerAccelerator: false,
+            openMode: 'in-place',
             click(menuItem,focusedWin) {
                 focusedWin.webContents.loadURL(link);
             }
         }
     }
+
+    function usefulPagesFromDescriptor(items) {
+        return (items || []).map(function (item) {
+            if (!item) return null;
+            if (item.type === 'separator') return { type: 'separator' };
+            if (item.submenu) {
+                return {
+                    label: item.label,
+                    submenu: usefulPagesFromDescriptor(item.submenu)
+                };
+            }
+            // Plugin-declared Useful Pages must stay in-place (loadURL), matching
+            // legacy generateLink — never newBrowserWindow from the app menu.
+            return generateLink(item.label, item.url, item.accelerator || null);
+        }).filter(Boolean);
+    }
+
+    function buildUsefulPagesSubmenu() {
+        if (menuRegistry.hasAppUsefulPages()) {
+            const described = menuRegistry.getAppUsefulPages({
+                labels: menuMessages,
+                keybinds: keybinds
+            });
+            if (described && described.length) {
+                return usefulPagesFromDescriptor(described);
+            }
+        }
+        return [
+            generateLink(menuMessages.menuWiki,constant.wikiReleases,keybinds.wiki),
+            generateLink(menuMessages.menuDesign,constant.designNotes,keybinds.design),
+            generateLink(menuMessages.menuBalancePatchNotes,constant.balancePatchNotes),
+            generateLink(menuMessages.menuAccount,constant.accountAq,keybinds.account),
+            generateLink(menuMessages.menuCharpage,constant.charLookup,keybinds.charpage),
+            // No keybind now...
+            {type: 'separator'},
+            {
+                label: menuMessages.menuOtherPages2,
+                submenu: [
+                    generateLink(menuMessages.menuDailyGifts,constant.dailyGifts),
+                    generateLink(menuMessages.menuCalendar,constant.calendar),
+                    generateLink(menuMessages.menuForge,constant.forgeEnchants),
+                    generateLink(menuMessages.menuHeromart,constant.heromart),
+                    generateLink(menuMessages.menuPortal,constant.battleon)
+                ]
+            },
+            {
+                label: menuMessages.menuSocialMedia,
+                submenu: [
+                    generateLink(menuMessages.menuTwitter,constant.twtAlina),
+                    generateLink(menuMessages.menuReddit,constant.redditAqw)
+                ]
+            }
+        ];
+    }
+
     var links =
     [
         {
@@ -49,32 +106,7 @@ exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
         }, // Sorry Mac, you cant have those next ones as its not worth it... There is still right click tho
         {
             label: menuMessages.menuOtherPages,
-            submenu: [
-                generateLink(menuMessages.menuWiki,constant.wikiReleases,keybinds.wiki),
-                generateLink(menuMessages.menuDesign,constant.designNotes,keybinds.design),
-                generateLink(menuMessages.menuBalancePatchNotes,constant.balancePatchNotes),
-                generateLink(menuMessages.menuAccount,constant.accountAq,keybinds.account),
-                generateLink(menuMessages.menuCharpage,constant.charLookup,keybinds.charpage),
-                // No keybind now...
-                {type: 'separator'},
-                {
-                    label: menuMessages.menuOtherPages2,
-                    submenu: [
-                        generateLink(menuMessages.menuDailyGifts,constant.dailyGifts),
-                        generateLink(menuMessages.menuCalendar,constant.calendar),
-                        generateLink(menuMessages.menuForge,constant.forgeEnchants),
-                        generateLink(menuMessages.menuHeromart,constant.heromart),
-                        generateLink(menuMessages.menuPortal,constant.battleon)
-                    ]
-                },
-                {
-                    label: menuMessages.menuSocialMedia,
-                    submenu: [
-                        generateLink(menuMessages.menuTwitter,constant.twtAlina),
-                        generateLink(menuMessages.menuReddit,constant.redditAqw)
-                    ]
-                }
-            ]
+            submenu: buildUsefulPagesSubmenu()
         },
         {
             label: menuMessages.menuTakeShot,

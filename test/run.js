@@ -24,6 +24,7 @@ global.test = function (name, fn) {
   './unit/aqw-adapter-boot.test.js',
   './unit/aqw-session-urls.test.js',
   './unit/aqw-navigation.test.js',
+  './unit/aqw-menus.test.js',
   './unit/namespaced-store.test.js',
   './unit/settings-resolve.test.js',
   './integration/json-store.test.js'

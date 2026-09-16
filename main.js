@@ -72,13 +72,24 @@ function activateBundledPluginsOrLegacy() {
     }).then(function (runtime) {
         activePluginRuntime = runtime;
         if (runtime && runtime.host) {
-            const hooks = runtime.host._getState().navigationHooks;
+            const state = runtime.host._getState();
+            const hooks = state.navigationHooks;
             if (hooks) inst.setNavigationHooks(hooks);
+
+            const menuProviders = {};
+            if (runtime.plugin && runtime.plugin.manifest &&
+                runtime.plugin.manifest.id === 'adventure-quest-worlds') {
+                const aqwMenus = require('./plugins/adventure-quest-worlds/menus.js');
+                menuProviders.appUsefulPages = aqwMenus.describeAppUsefulPages;
+                menuProviders.gameMenuPages = aqwMenus.describeGameMenuPages;
+            }
+            platform.menuRegistry.adoptHostState(state, menuProviders);
         }
         return runtime;
     }).catch(function (err) {
         console.log('[AquaStar:plugins] Activation failed, falling back to legacy requires: ' +
             (err && err.message ? err.message : err));
+        platform.menuRegistry.clear();
         loadLegacyFeatureModules();
         return null;
     });

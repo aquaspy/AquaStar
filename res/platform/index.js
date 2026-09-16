@@ -13,5 +13,6 @@ module.exports = {
     readPluginFlagsFromDisk: require('./settings-flags.js').readPluginFlagsFromDisk,
     applySessionRules: require('./session-rules.js').applySessionRules,
     createNamespacedStore: require('./storage/namespaced-store.js').createNamespacedStore,
-    resolveOption: require('./settings-resolve.js').resolveOption
+    resolveOption: require('./settings-resolve.js').resolveOption,
+    menuRegistry: require('./menu-registry.js')
 };

@@ -18,3 +18,11 @@ test('game menu is optional by default and dispatches through shortcut actions',
     assert.ok(keybindings.indexOf("case '" + action + "'") !== -1, action + ' must be available through the game menu');
   });
 });
+
+test('game menu useful pages stay new-window while app-menu generateLink stays in-place', () => {
+  const aqwMenus = require('../../plugins/adventure-quest-worlds/menus.js');
+  const appLinks = aqwMenus.flattenLinkItems(aqwMenus.describeAppUsefulPages({}));
+  const gameLinks = aqwMenus.describeGameMenuPages({});
+  assert.ok(appLinks.every((l) => l.openMode === 'in-place'));
+  assert.ok(gameLinks.every((l) => l.openMode === 'new-window'));
+});

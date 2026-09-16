@@ -72,6 +72,11 @@ function activate(host) {
     const navigation = require('./injections/navigation.js');
     host.registerNavigationHooks(navigation.createNavigationHooks());
 
+    const menus = require('./menus.js');
+    const keybinds = require('./keybinds.js');
+    menus.register(host);
+    keybinds.register(host);
+
     host.log('Adventure Quest Worlds plugin activated (adapter mode)');
 }
 
