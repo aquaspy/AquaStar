@@ -71,6 +71,10 @@ function activateBundledPluginsOrLegacy() {
         legacyIpc: true
     }).then(function (runtime) {
         activePluginRuntime = runtime;
+        if (runtime && runtime.host) {
+            const hooks = runtime.host._getState().navigationHooks;
+            if (hooks) inst.setNavigationHooks(hooks);
+        }
         return runtime;
     }).catch(function (err) {
         console.log('[AquaStar:plugins] Activation failed, falling back to legacy requires: ' +
@@ -145,43 +149,55 @@ function createWindow () {
             callback({ cancel: true });
         });
 
-    // Enable Flash swf in official char pages. Thanks for /u/gulag1337 for finding this info and posting in reddit. I almost found it myself by accident... oof.
-    // Match patterns must include a path (e.g. /*)
-    const agentTagetFilter = {
-        urls: [
-            '*://*.aq.com/*',
-            '*://aq.com/*',
-            '*://game.aq.com/*',
-            '*://play.dragonfable.com/*'
-        ]
-    }
-    // Match Artix Game Launcher: strip Artix branding from native UA, identify via header
+    // Match Artix Game Launcher UA / SWF logging — plugin session rules when active.
     const spoofedUA = win.webContents.getUserAgent().replace(/Artix.*\s/, '');
-    session.defaultSession.webRequest.onBeforeSendHeaders(agentTagetFilter, (details, callback) => {
-        details.requestHeaders['User-Agent'] = spoofedUA;
-        details.requestHeaders['artixmode'] = 'launcher';
-        callback({ requestHeaders: details.requestHeaders })
-    })
-    
-    
-    
-    if (constant.isSwfLogEnabled){
+    let swfLogStream = null;
+    if (constant.isSwfLogEnabled) {
         var t = new Date();
         var logName = "SWF log " +
-            t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate() + "_" + 
+            t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate() + "_" +
             t.getHours() + "-" + t.getMinutes() + ".txt";
-            
         inst.mkdir(constant.swflogPath);
-        var stream = fs.createWriteStream(
-            path.join(constant.swflogPath,logName), 
-            {autoClose:true});
-        
-        const aqwgamefilters = {urls: ['*://game.aq.com/game/*']};
-        session.defaultSession.webRequest.onBeforeRequest( aqwgamefilters, (details,callback) => {
-            //console.log(details.url);
-            stream.write(details.url + "\n");
-            callback({ cancel: false })
-        })
+        swfLogStream = fs.createWriteStream(
+            path.join(constant.swflogPath, logName),
+            { autoClose: true });
+    }
+
+    const sessionRuleState = activePluginRuntime && activePluginRuntime.host
+        ? activePluginRuntime.host._getState().sessionRules
+        : null;
+
+    if (sessionRuleState && sessionRuleState.length) {
+        platform.applySessionRules(session.defaultSession, sessionRuleState, {
+            spoofedUA: spoofedUA,
+            settings: { swfLog: constant.isSwfLogEnabled },
+            logLine: function (line) {
+                if (swfLogStream) swfLogStream.write(line + '\n');
+            }
+        });
+    } else {
+        // Legacy fallback when pluginSystem is off.
+        const agentTagetFilter = {
+            urls: [
+                '*://*.aq.com/*',
+                '*://aq.com/*',
+                '*://game.aq.com/*',
+                '*://play.dragonfable.com/*'
+            ]
+        };
+        session.defaultSession.webRequest.onBeforeSendHeaders(agentTagetFilter, (details, callback) => {
+            details.requestHeaders['User-Agent'] = spoofedUA;
+            details.requestHeaders['artixmode'] = 'launcher';
+            callback({ requestHeaders: details.requestHeaders });
+        });
+        if (constant.isSwfLogEnabled && swfLogStream) {
+            session.defaultSession.webRequest.onBeforeRequest(
+                { urls: ['*://game.aq.com/game/*'] },
+                (details, callback) => {
+                    swfLogStream.write(details.url + '\n');
+                    callback({ cancel: false });
+                });
+        }
     }
 
 }

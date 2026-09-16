@@ -27,6 +27,8 @@ function activate(host) {
     requireLegacyFeatures();
 
     const constant = require(path.join(resRoot, 'const.js'));
+    const urls = require('./urls.js');
+    const session = require('./session.js');
 
     host.setPrimaryGame({
         id: 'aqw-main',
@@ -39,7 +41,7 @@ function activate(host) {
         isGameUrl: function (url) {
             if (typeof url !== 'string') return false;
             if (url === constant.mainPath) return true;
-            return url.indexOf('https://game.aq.com/game/gamefiles/Loader_Spider.swf') === 0;
+            return urls.isTestingAqwUrl(url);
         },
         wrap: { preferDirectWmode: true, ruffleEligible: true },
         flashTrust: true
@@ -63,6 +65,12 @@ function activate(host) {
             flashTrust: true
         }
     ]);
+
+    host.registerSessionRules(session.createSessionRules());
+    host.trustFlashUrls(session.flashTrustUrlList(constant.mainPath));
+
+    const navigation = require('./injections/navigation.js');
+    host.registerNavigationHooks(navigation.createNavigationHooks());
 
     host.log('Adventure Quest Worlds plugin activated (adapter mode)');
 }

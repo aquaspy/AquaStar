@@ -49,34 +49,34 @@ const iconRedPath = path.join(appRoot, 'Icon', 'Iconred_1024.png');
 
 const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
 
-// Links with keybinds
-const charLookup   = 'https://account.aq.com/CharPage';
-const designNotes  = 'https://www.aq.com/gamedesignnotes/';
-const balancePatchNotes = 'https://www.aq.com/gamedesignnotes/AQW-Balance-PatchNotes-9515';
-const accountAq    = 'https://account.aq.com/';
-const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
+// Links with keybinds — sourced from the AQW plugin catalog (PR 3).
+const aqwUrls = require('../plugins/adventure-quest-worlds/urls.js');
+const charLookup   = aqwUrls.URLS.charLookup;
+const designNotes  = aqwUrls.URLS.designNotes;
+const balancePatchNotes = aqwUrls.URLS.balancePatchNotes;
+const accountAq    = aqwUrls.URLS.accountAq;
+const wikiReleases = aqwUrls.URLS.wikiReleases;
 
 // Extra usefull links
-const heromart     = 'https://www.heromart.com/';
-const battleon     = 'https://portal.battleon.com/';
-const calendar     = 'https://www.aq.com/lore/calendar';
-const dailyGifts   = 'https://www.aq.com/lore/dailygifts';
-const forgeEnchants= 'https://www.aq.com/lore/guides/enhancementtraits';
+const heromart     = aqwUrls.URLS.heromart;
+const battleon     = aqwUrls.URLS.battleon;
+const calendar     = aqwUrls.URLS.calendar;
+const dailyGifts   = aqwUrls.URLS.dailyGifts;
+const forgeEnchants= aqwUrls.URLS.forgeEnchants;
 
 // Social Media stuff
-const twtAlina     = "https://twitter.com/Alina_AE";
-const redditAqw    = "https://www.reddit.com/r/AQW/";
+const twtAlina     = aqwUrls.URLS.twtAlina;
+const redditAqw    = aqwUrls.URLS.redditAqw;
 
 //exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
 Object.defineProperty(exports, 'testingAQW', {
     get() {
         // Random ending between 100 and 999. Prevents browser cache per load.
-        return 'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=' +
-               (Math.floor(Math.random() * 900) + 100);
+        return aqwUrls.testingAQW();
     }
 });
 // Same SWF the official web.asp embeds (ver= is only a cache-buster; bytes are identical).
-exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=668201'
+exports.df_url     = aqwUrls.URLS.dfLoader
 
 // Export farm
 
@@ -167,7 +167,7 @@ exports.isRuffleEligible = function(swfUrl) {
     if (swfUrl === exports.mainPath) return true;
     if (swfUrl === exports.df_url) return true;
     // testingAQW carries a random cache-busting "?ver=" suffix per call, so match by prefix.
-    if (swfUrl.indexOf('https://game.aq.com/game/gamefiles/Loader_Spider.swf') === 0) return true;
+    if (aqwUrls.isTestingAqwUrl(swfUrl)) return true;
     return false;
 }
 exports.wrapRuffleUrl = function(swfUrl) {
@@ -352,7 +352,7 @@ exports.legacyCustomSwfPath = legacyCustomSwfPath;
 exports.activeCustomSwfPath = activeCustomSwfPath;
 exports.mainPath = oldAqlite ?
             _getFileUrl(activeCustomSwfPath) :
-            "https://game.aq.com/game/gamefiles/Loader3.swf?ver=a"
+            aqwUrls.URLS.loader3
 exports.isOldAqlite = oldAqlite;
 
 exports.changeMainUrl = function(newAqUrl){
