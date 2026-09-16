@@ -21,6 +21,7 @@ global.test = function (name, fn) {
   './unit/pages-workflow.test.js',
   './unit/plugin-loader.test.js',
   './unit/plugin-host-permissions.test.js',
+  './unit/aqw-adapter-boot.test.js',
   './integration/json-store.test.js'
 ].forEach((file) => require(path.join(__dirname, file)));
 

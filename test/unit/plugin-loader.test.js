@@ -171,15 +171,15 @@ test('local plugin id collision with bundled fails unless override is allowed', 
   assert.strictEqual(allowed.plugins[0].source, 'local');
 });
 
-test('resolvePluginFlags keeps pluginSystem off by default (PR 1)', () => {
+test('resolvePluginFlags defaults pluginSystem on (PR 2+) unless disabled', () => {
   const flags = platform.resolvePluginFlags({}, {});
-  assert.strictEqual(flags.pluginSystem, false);
+  assert.strictEqual(flags.pluginSystem, true);
   assert.strictEqual(flags.enableLocalPlugins, false);
   assert.strictEqual(flags.allowLocalPluginOverride, false);
   assert.strictEqual(flags.activePluginId, 'adventure-quest-worlds');
 
-  const enabled = platform.resolvePluginFlags({ pluginSystem: true }, {});
-  assert.strictEqual(enabled.pluginSystem, true);
+  const explicitOff = platform.resolvePluginFlags({ pluginSystem: false }, {});
+  assert.strictEqual(explicitOff.pluginSystem, false);
 
   const disabled = platform.resolvePluginFlags({ pluginSystem: true }, {
     AQUASTAR_DISABLE_PLUGINS: '1'

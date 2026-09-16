@@ -269,8 +269,10 @@ function resolvePluginFlags(settings, env) {
     settings = settings || {};
     env = env || process.env;
     const disabled = env.AQUASTAR_DISABLE_PLUGINS === '1';
+    // PR 2+: plugin system is on unless explicitly disabled in settings or via env.
+    const pluginSystem = disabled ? false : settings.pluginSystem !== false;
     return {
-        pluginSystem: disabled ? false : settings.pluginSystem === true,
+        pluginSystem: pluginSystem,
         enableLocalPlugins: settings.enableLocalPlugins === true,
         allowLocalPluginOverride: settings.allowLocalPluginOverride === true,
         activePluginId: settings.activePluginId || 'adventure-quest-worlds'

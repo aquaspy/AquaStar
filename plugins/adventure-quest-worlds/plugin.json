@@ -1,0 +1,44 @@
+{
+  "id": "adventure-quest-worlds",
+  "name": "Adventure Quest Worlds",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "main": "main.js",
+  "description": "Official AQW companion plugin for AquaStar",
+  "author": "AquaStar",
+  "minAppVersion": "1.12.2",
+  "capabilities": [
+    "game-launch",
+    "session-rules",
+    "navigation-hooks",
+    "feature-windows",
+    "menus",
+    "keybinds",
+    "locales",
+    "web"
+  ],
+  "permissions": [
+    "net-fetch",
+    "web-request",
+    "flash-trust",
+    "inject-scripts",
+    "persistent-store",
+    "spawn-helper-process",
+    "unsafe-renderer"
+  ],
+  "fetchAllowlist": [
+    "https://aqwwiki.wikidot.com/*",
+    "https://account.aq.com/*",
+    "https://game.aq.com/*",
+    "https://www.aq.com/*"
+  ],
+  "injectHostPatterns": [
+    "aqwwiki.wikidot.com",
+    "account.aq.com",
+    "www.aq.com",
+    "aq.com"
+  ],
+  "web": {
+    "contribute": "web/contribute.js"
+  }
+}

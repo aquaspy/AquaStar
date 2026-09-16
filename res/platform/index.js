@@ -1,4 +1,4 @@
-// Public surface for the plugin platform (PR 1). Boot wiring lands in PR 2.
+// Public surface for the plugin platform.
 
 module.exports = {
     manifestSchema: require('./manifest-schema.js'),
@@ -7,5 +7,8 @@ module.exports = {
     discoverPlugins: require('./plugin-loader.js').discoverPlugins,
     activatePlugin: require('./plugin-loader.js').activatePlugin,
     activateSelected: require('./plugin-loader.js').activateSelected,
-    resolvePluginFlags: require('./plugin-loader.js').resolvePluginFlags
+    resolvePluginFlags: require('./plugin-loader.js').resolvePluginFlags,
+    legacyChannels: require('./legacy-channels.js'),
+    readSettingsObject: require('./settings-flags.js').readSettingsObject,
+    readPluginFlagsFromDisk: require('./settings-flags.js').readPluginFlagsFromDisk
 };

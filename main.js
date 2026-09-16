@@ -24,21 +24,61 @@ const fs       = require('fs');
 
 const flash         = require('./res/flash.js');
 const keyb          = require('./res/keybindings.js');
-const reminders     = require('./res/features/reminders/reminders.js');
-const todo          = require('./res/features/todo/todo.js');
-const inventory     = require('./res/features/inventory/inventory.js');
-const strategy      = require('./res/features/strategy/strategy.js');
-const charPageStudio = require('./res/features/charpage/studio.js');
-// IPC-only modules (register their ipcMain handlers as a side effect of being required -
-// nothing else calls into them directly, so main.js must require them explicitly).
+// Platform IPC (always registered from main — never by plugins).
 const ipcRecording  = require('./res/ipc/recording.js');
-const ipcWikiFetch  = require('./res/ipc/wikiFetch.js');
 const inst          = require('./res/instances.js');
 const windowsMenu   = require('./res/windows/menu.js');
 const socketProxy   = require('./res/socketProxy.js');
 const ruffleUpdate  = require('./res/ruffleUpdate.js');
-// Important Variables - in const.js
 const constant = require('./res/const.js');
+const platform = require('./res/platform');
+
+const bootFlags = platform.readPluginFlagsFromDisk(
+    constant.appDataDirectory,
+    process.env
+).flags;
+
+let activePluginRuntime = null;
+
+function loadLegacyFeatureModules() {
+    require('./res/features/reminders/reminders.js');
+    require('./res/features/todo/todo.js');
+    require('./res/features/inventory/inventory.js');
+    require('./res/features/strategy/strategy.js');
+    require('./res/features/charpage/studio.js');
+    require('./res/ipc/wikiFetch.js');
+}
+
+function activateBundledPluginsOrLegacy() {
+    if (!bootFlags.pluginSystem) {
+        loadLegacyFeatureModules();
+        console.log('[AquaStar:plugins] pluginSystem disabled — using legacy main.js requires');
+        return Promise.resolve(null);
+    }
+
+    return platform.activateSelected({
+        bundledDir: path.join(__dirname, 'plugins'),
+        localDir: path.join(constant.appDataDirectory, 'plugins'),
+        enableLocalPlugins: bootFlags.enableLocalPlugins,
+        allowLocalPluginOverride: bootFlags.allowLocalPluginOverride,
+        appVersion: constant.appVersion || app.getVersion(),
+        appRootPath: constant.appRootPath,
+        appDataDirectory: constant.appDataDirectory,
+        platformSettings: Object.assign({}, bootFlags, {
+            activePluginId: bootFlags.activePluginId
+        }),
+        defaultPluginId: 'adventure-quest-worlds',
+        legacyIpc: true
+    }).then(function (runtime) {
+        activePluginRuntime = runtime;
+        return runtime;
+    }).catch(function (err) {
+        console.log('[AquaStar:plugins] Activation failed, falling back to legacy requires: ' +
+            (err && err.message ? err.message : err));
+        loadLegacyFeatureModules();
+        return null;
+    });
+}
 
 // Flash stuff is isolated in flash.js
 flash.flashManager(app, __dirname, constant.mainPath, constant.appName);
@@ -160,11 +200,20 @@ app.on('second-instance', () => {
     win.focus();
   }
 })
-app.on('ready', createWindow)
+app.on('ready', () => {
+  activateBundledPluginsOrLegacy().then(() => {
+    createWindow();
+  });
+})
 app.on('will-quit', () => {
   keyb.unregisterGlobalShortcuts();
   // No-op if a Ruffle-mode window never started it.
   socketProxy.stop();
+  if (activePluginRuntime && activePluginRuntime.module &&
+      typeof activePluginRuntime.module.deactivate === 'function') {
+    try { activePluginRuntime.module.deactivate(activePluginRuntime.host); }
+    catch (e) { console.log('[AquaStar:plugins] deactivate error: ' + e.message); }
+  }
 })
 app.on('window-all-closed', () => {
   // On macOS it is common for applications and their menu bar
