@@ -129,5 +129,13 @@ exports.settingsMessages = {
     optionWarnings: {
         renderMode: "Ruffle é um emulador de Flash experimental e de código aberto. Pode ser mais lento, menos estável, ou se comportar diferente do Flash Player real, principalmente em salas cheias. Trocar mesmo assim?",
         enableDevTools: "Esta opção é para desenvolvedores. Players normalmente não precisam dela. Ativar mesmo assim?"
-    }
+    },
+    pluginsHeading: "Plugins",
+    pluginsActiveLabel: "Plugin ativo",
+    pluginsActiveHint: "Somente um plugin pode estar ativo. Alterá-lo exige reiniciar o AquaStar.",
+    pluginsRestartHint: "Reinicie o AquaStar para aplicar a troca de plugin ativo.",
+    pluginsRestartPrompt: "O plugin ativo foi alterado. Reiniciar o AquaStar agora para aplicar?",
+    pluginsEmptyLabel: "Nenhum plugin encontrado.",
+    pluginsSourceBundled: "empacotado",
+    pluginsSourceLocal: "local"
 }

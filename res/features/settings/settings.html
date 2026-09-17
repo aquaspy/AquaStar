@@ -631,8 +631,87 @@
     return status;
   }
 
+  function buildPluginsSection(pluginList, pluginSettings) {
+    const heading = document.createElement('div');
+    heading.className = 'section-heading';
+    heading.textContent = messages.pluginsHeading || 'Plugins';
+
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'label';
+    labelEl.textContent = messages.pluginsActiveLabel || 'Active plugin';
+    const hint = document.createElement('span');
+    hint.className = 'hint';
+    hint.textContent = messages.pluginsActiveHint ||
+      'Only one plugin can be active. Changing it requires restarting AquaStar.';
+    labelEl.appendChild(hint);
+
+    const selectEl = document.createElement('select');
+    selectEl.className = 'select-input';
+    const plugins = (pluginList && pluginList.plugins) || [];
+    if (!plugins.length) {
+      const empty = document.createElement('option');
+      empty.value = pluginSettings.activePluginId || '';
+      empty.textContent = messages.pluginsEmptyLabel || 'No plugins discovered.';
+      selectEl.appendChild(empty);
+      selectEl.disabled = true;
+    } else {
+      plugins.forEach((plugin) => {
+        const optionEl = document.createElement('option');
+        optionEl.value = plugin.id;
+        const sourceLabel = plugin.source === 'local'
+          ? (messages.pluginsSourceLocal || 'local')
+          : (messages.pluginsSourceBundled || 'bundled');
+        optionEl.textContent = plugin.name + ' (' + sourceLabel + ')' +
+          (plugin.version ? ' · ' + plugin.version : '');
+        selectEl.appendChild(optionEl);
+      });
+      selectEl.value = pluginSettings.activePluginId || plugins[0].id;
+    }
+
+    const initialValue = selectEl.value;
+    selectEl.addEventListener('change', () => {
+      const st = rowState.activePluginId;
+      st.value = selectEl.value;
+      st.comboEl.classList.toggle('changed', st.value !== st.initial);
+      refreshSaveState();
+    });
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'small';
+    resetBtn.textContent = messages.resetButton;
+    resetBtn.onclick = () => {
+      const st = rowState.activePluginId;
+      st.value = st.initial;
+      selectEl.value = st.initial;
+      selectEl.classList.remove('changed');
+      refreshSaveState();
+    };
+
+    row.appendChild(labelEl);
+    row.appendChild(selectEl);
+    row.appendChild(resetBtn);
+
+    rowState.activePluginId = {
+      comboEl: selectEl,
+      initial: initialValue,
+      value: initialValue,
+      recording: false,
+      type: 'select-option'
+    };
+
+    return [heading, row];
+  }
+
   async function init() {
-    const [kb, msgs] = await Promise.all([api.getKeybindings(), api.getMessages()]);
+    const [kb, msgs, pluginList, pluginSettings] = await Promise.all([
+      api.getKeybindings(),
+      api.getMessages(),
+      api.getPluginList(),
+      api.getPluginSettings()
+    ]);
     current = kb.current;
     defaults = kb.defaults;
     options = kb.options || {};
@@ -645,7 +724,11 @@
       messages.saveLocationLabel + '<code>' + kb.savePath.replace(/</g, '&lt;') + '</code>';
 
     const rowsEl = document.getElementById('rows');
-    Object.keys(defaults).forEach((key) => rowsEl.appendChild(buildRow(key)));
+    const visibleIds = Array.isArray(kb.visibleKeybindIds) ? new Set(kb.visibleKeybindIds) : null;
+    Object.keys(defaults).forEach((key) => {
+      if (visibleIds && !visibleIds.has(key)) return;
+      rowsEl.appendChild(buildRow(key));
+    });
 
     // Choices for 'select' type options, keyed by option name.
     const optionChoices = {
@@ -670,6 +753,7 @@
 
     buildCustomSwfSection().forEach((el) => rowsEl.appendChild(el));
     buildRuffleSection().forEach((el) => rowsEl.appendChild(el));
+    buildPluginsSection(pluginList, pluginSettings || {}).forEach((el) => rowsEl.appendChild(el));
     await refreshCustomSwfStatus();
 
     document.getElementById('saveBtn').textContent = messages.saveButton;
@@ -689,14 +773,25 @@
       });
       if (Object.keys(changed).length === 0) return;
 
+      const pluginChanged = Object.prototype.hasOwnProperty.call(changed, 'activePluginId');
       document.getElementById('saveBtn').disabled = true;
       try {
         const result = await api.saveKeybindings(changed);
         Object.keys(changed).forEach((key) => { rowState[key].initial = rowState[key].value; });
-        setStatus(messages.savedMessage, true);
+        setStatus(
+          pluginChanged
+            ? (messages.pluginsRestartHint || messages.savedMessage)
+            : messages.savedMessage,
+          true
+        );
         document.getElementById('saveLocation').innerHTML =
           messages.saveLocationLabel + '<code>' + result.savedTo.replace(/</g, '&lt;') + '</code>';
         document.getElementById('restartBtn').disabled = false;
+        if (pluginChanged) {
+          const prompt = messages.pluginsRestartPrompt ||
+            'Active plugin changed. Restart AquaStar now to apply it?';
+          if (window.confirm(prompt)) api.restartApp();
+        }
       } finally {
         refreshSaveState();
       }

@@ -8,6 +8,7 @@ module.exports = {
     activatePlugin: require('./plugin-loader.js').activatePlugin,
     activateSelected: require('./plugin-loader.js').activateSelected,
     resolvePluginFlags: require('./plugin-loader.js').resolvePluginFlags,
+    isLocalTrusted: require('./plugin-loader.js').isLocalTrusted,
     legacyChannels: require('./legacy-channels.js'),
     readSettingsObject: require('./settings-flags.js').readSettingsObject,
     readPluginFlagsFromDisk: require('./settings-flags.js').readPluginFlagsFromDisk,

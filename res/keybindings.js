@@ -3,6 +3,7 @@ const constant      = require('./const.js');
 const windowsMenu   = require('./windows/menu.js');
 const ipcRecording  = require('./ipc/recording.js');
 const locale        = require('./locale.js');
+const platform      = require('./platform');
 const fs            = require('fs');
 const path          = require('path');
 const { globalShortcut, BrowserWindow, ipcMain, app, dialog } = require('electron');
@@ -11,6 +12,18 @@ const ruffleUpdate    = require('./ruffleUpdate.js');
 
 var finalKeybinds = {};
 var recordingWinId = 0;
+// null = show every originalKeybinds row (legacy / filter unknown).
+var visibleKeybindIds = null;
+
+function setVisibleKeybindIds(ids) {
+    if (!ids || !ids.length) {
+        visibleKeybindIds = null;
+        return;
+    }
+    const map = {};
+    ids.forEach(function (id) { map[id] = true; });
+    visibleKeybindIds = map;
+}
 
 const CACHE_STORAGES = [
     'appcache', 'shadercache', 'cachestorage', 'localstorage',
@@ -205,6 +218,7 @@ const addGlobalKeybind = function(keybind, func, onlyHTML = false, considerDF = 
 
 exports.unregisterGlobalShortcuts = () => globalShortcut.unregisterAll();
 exports.addKeybinding = processKeybings;
+exports.setVisibleKeybindIds = setVisibleKeybindIds;
 
 // Menu entries call this dispatcher instead of duplicating shortcut behavior.
 // Keeping one implementation is particularly important for recording state and
@@ -246,14 +260,62 @@ function _keybindSaveTarget(){
 }
 
 ipcMain.handle('getKeybindings', () => {
+    const defaults = Object.assign({}, constant.originalKeybinds);
+    let visibleIds = null;
+    if (visibleKeybindIds) {
+        visibleIds = Object.keys(defaults).filter(function (id) {
+            return !!visibleKeybindIds[id];
+        });
+    }
     return {
         current:  Object.assign({}, finalKeybinds),
-        defaults: Object.assign({}, constant.originalKeybinds),
+        defaults: defaults,
         options:  Object.assign({}, constant.originalOptions),
         recordingFormatChoices: constant.recordingFormatChoices,
         renderModeChoices: constant.renderModeChoices,
         ruffleUpdateChannelChoices: constant.ruffleUpdateChannelChoices,
+        visibleKeybindIds: visibleIds,
         savePath: _keybindSaveTarget()
+    };
+});
+
+function _readPluginSettingsFromDisk() {
+    const settings = platform.readSettingsObject([_keybindSaveTarget()]);
+    const flags = platform.resolvePluginFlags(settings);
+    return {
+        activePluginId: flags.activePluginId,
+        pluginSystem: flags.pluginSystem,
+        enableLocalPlugins: flags.enableLocalPlugins,
+        allowLocalPluginOverride: flags.allowLocalPluginOverride,
+        trustedLocalPlugins: (settings && settings.trustedLocalPlugins) || {}
+    };
+}
+
+ipcMain.handle('getPluginSettings', () => _readPluginSettingsFromDisk());
+
+ipcMain.handle('getPluginList', () => {
+    const pluginSettings = _readPluginSettingsFromDisk();
+    const discovered = platform.discoverPlugins({
+        bundledDir: path.join(constant.appRootPath, 'plugins'),
+        localDir: path.join(constant.appDataDirectory, 'plugins'),
+        enableLocalPlugins: pluginSettings.enableLocalPlugins,
+        allowLocalPluginOverride: pluginSettings.allowLocalPluginOverride,
+        appVersion: constant.appVersion,
+        log: function () {}
+    });
+    return {
+        plugins: discovered.plugins.map(function (p) {
+            return {
+                id: p.manifest.id,
+                name: p.manifest.name || p.manifest.id,
+                version: p.manifest.version || '',
+                source: p.source,
+                trusted: platform.isLocalTrusted(p, {
+                    trustedLocalPlugins: pluginSettings.trustedLocalPlugins
+                })
+            };
+        }),
+        errors: discovered.errors || []
     };
 });
 

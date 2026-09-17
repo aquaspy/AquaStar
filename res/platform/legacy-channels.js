@@ -15,7 +15,9 @@ const PLATFORM_CHANNELS = [
     'restartApp',
     'getCustomSwfStatus',
     'chooseCustomSwf',
-    'removeCustomSwf'
+    'removeCustomSwf',
+    'getPluginList',
+    'getPluginSettings'
 ];
 
 const AQW_FEATURE_CHANNELS = [

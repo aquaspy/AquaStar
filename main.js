@@ -96,6 +96,14 @@ function activateBundledPluginsOrLegacy() {
             if (state.locales) {
                 locale.mergePluginLocales(state.locales);
             }
+            const reserved = Object.keys(platform.PLATFORM_RESERVED_KEYBIND_IDS);
+            const pluginBindIds = Object.keys(state.keybindDefaults || {});
+            (state.keybinds || []).forEach(function (binding) {
+                if (binding && binding.id && pluginBindIds.indexOf(binding.id) === -1) {
+                    pluginBindIds.push(binding.id);
+                }
+            });
+            keyb.setVisibleKeybindIds(reserved.concat(pluginBindIds));
         }
         return runtime;
     }).catch(function (err) {
