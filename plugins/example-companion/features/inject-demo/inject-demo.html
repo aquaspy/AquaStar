@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Example injection demo</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 24px; background: #121212; color: #e6e6e6;
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-size: 14px;
+  }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  p { color: #9a9a9a; line-height: 1.45; max-width: 40rem; }
+  #inject-status {
+    margin-top: 16px; padding: 12px 14px; border-radius: 8px;
+    border: 1px solid #333; background: #1b1b1b; color: #e6c07b;
+  }
+  #inject-status.ok { color: #7fd08a; border-color: #2f5d3a; }
+  code { color: #cfcfcf; }
+</style>
+</head>
+<body>
+  <h1>Injection demo page</h1>
+  <p>
+    This local page is the safe target for <code>registerNavigationHooks</code>.
+    GitHub itself is not injected — rewriting UA/DOM on github.com breaks their CSS/JS.
+  </p>
+  <div id="inject-status">Waiting for navigation hook…</div>
+</body>
+</html>

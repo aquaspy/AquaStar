@@ -8,6 +8,20 @@ const appRoot   = constant.appRootPath;
 const iconPath  = constant.iconPath;
 const toFileUrl = constant.toFileUrl;
 
+function _browserPreloadPath() {
+    // WikiView preload is AQW-specific. Other plugins must not inherit it on
+    // github.com / generic browser windows (it can interfere with page JS).
+    try {
+        const info = require('../platform').pluginRuntime.getPluginInfo();
+        if (info && info.id === 'adventure-quest-worlds') {
+            return path.join(
+                appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'wikiview', 'preload_wikiview.js'
+            );
+        }
+    } catch (e) { /* runtime not ready */ }
+    return path.join(appRoot, 'res', 'platform', 'preload_browser.js');
+}
+
 // For customizing windows themselfs
 function _getWinConfig(type){
     if (type != "cprint") {
@@ -23,7 +37,7 @@ function _getWinConfig(type){
                 webviewTag: false,
                 preload: isGame ?
                     path.join(appRoot, 'res', 'features', 'capture', 'preload_capture.js') :
-                    path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'wikiview', 'preload_wikiview.js'),
+                    _browserPreloadPath(),
                 // Plugins (Flash) enabled everywhere - Blame Char page breaking in a update or two.
                 // AquaStar shouldnt navigate to random websites anyway. Not endorsed to.
                 plugins: true,
@@ -54,10 +68,21 @@ function _getWinConfig(type){
     };
 }
 
-exports.winConfig    = _getWinConfig("win");
-exports.mainConfig   = _getWinConfig("main");
+// Lazy getters so browser preload follows the active plugin at window-open time.
+Object.defineProperty(exports, 'winConfig', {
+    enumerable: true,
+    get: function () { return _getWinConfig('win'); }
+});
+Object.defineProperty(exports, 'mainConfig', {
+    enumerable: true,
+    get: function () { return _getWinConfig('main'); }
+});
 exports.charConfig   = _getWinConfig("cprint");
-exports.gameConfig   = _getWinConfig("game");
+Object.defineProperty(exports, 'gameConfig', {
+    enumerable: true,
+    get: function () { return _getWinConfig('game'); }
+});
+exports.getWinConfig = _getWinConfig;
 
 // Settings screen - own preload, needed for IPC (read/write aquastar.json) under contextIsolation.
 exports.settingsConfig = {

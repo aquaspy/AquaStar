@@ -10,8 +10,8 @@ Reference AquaStar plugin. The **primary game is `assets/boxmover.swf`** — a c
 | Extra launch | Static `assets/rectangle.swf` (no AS — contrast) |
 | Keybinds | Alt+N new BoxMover, Alt+G GitHub, Alt+R Releases, Alt+D plugin docs, Alt+E dashboard |
 | Menus | Pages + Example submenu from the plugin; AquaStar chrome stays Settings/Help/About |
-| Session rules | Custom header on `github.com` |
-| Navigation hooks | Banner on AquaStar GitHub pages |
+| Session rules | Custom header on `api.github.com` only (never rewrite GitHub page UA) |
+| Navigation hooks | Local inject-demo page (Alt+I) — GitHub DOM is not touched |
 | Settings section | Demo name + tip toggle |
 | Feature window | Dashboard (store, IPC, `net-fetch`) |
 | Locales | `locales/en-US.js`, `pt-BR.js` |

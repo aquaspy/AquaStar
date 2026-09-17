@@ -78,6 +78,15 @@ function register(host) {
                     accelerator: keybinds.openDashboard,
                     registerAccelerator: false,
                     click: function () { host.windows.openFeatureWindow('example-dashboard'); }
+                },
+                {
+                    label: 'Injection demo page',
+                    accelerator: keybinds.openInjectDemo,
+                    registerAccelerator: false,
+                    click: function () {
+                        const navigation = require('./injections/navigation.js');
+                        host.windows.openUrl(navigation.demoPageUrl(), 'new-window');
+                    }
                 }
             ]
         }];

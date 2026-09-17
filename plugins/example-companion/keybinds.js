@@ -1,11 +1,13 @@
 const urls = require('./urls.js');
+const navigation = require('./injections/navigation.js');
 
 const DEFAULTS = {
     newStage: 'Alt+N',
     openGithub: 'Alt+G',
     openReleases: 'Alt+R',
     openPluginsDocs: 'Alt+D',
-    openDashboard: 'Alt+E'
+    openDashboard: 'Alt+E',
+    openInjectDemo: 'Alt+I'
 };
 
 function register(host) {
@@ -34,6 +36,13 @@ function register(host) {
         {
             id: 'openDashboard',
             action: function () { host.windows.openFeatureWindow('example-dashboard'); }
+        },
+        {
+            id: 'openInjectDemo',
+            openMode: 'new-window',
+            action: function () {
+                host.windows.openUrl(navigation.demoPageUrl(), 'new-window');
+            }
         }
     ]);
 }
