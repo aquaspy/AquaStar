@@ -1,34 +1,32 @@
 # Example Companion
 
-Reference AquaStar plugin that exercises the Host API end-to-end.
+Reference AquaStar plugin. The **primary game is `assets/boxmover.swf`** — a compiled Flash movie where arrow keys move a blue square.
 
 ## What it demonstrates
 
 | Capability | Where |
 |------------|--------|
-| Primary “game” stage | `stage/index.html` — canvas box mover (arrows) + embedded SWF |
-| Valid Flash binary | `assets/rectangle.swf` (static shape — proves PPAPI). Optional interactive `assets/boxmover.swf` via Flex + `flash/BoxMover.as` |
-| Keyboard demo | Left canvas in `stage/index.html` (always works; click then use arrows) |
-| Keybinds | Alt+N stage, Alt+G GitHub, Alt+R Releases, Alt+D plugin docs, Alt+E dashboard |
-| Menus | App Useful Pages (in-place) + game menu (new-window) + Example submenu |
-| Session rules | Custom header on `github.com` requests |
-| Navigation hooks | Banner injection on AquaStar GitHub pages |
+| Primary Flash game | `assets/boxmover.swf` (shipped, built from `flash/BoxMover.as`) |
+| Extra launch | Static `assets/rectangle.swf` (no AS — contrast) |
+| Keybinds | Alt+N new BoxMover, Alt+G GitHub, Alt+R Releases, Alt+D plugin docs, Alt+E dashboard |
+| Menus | Pages + Example submenu from the plugin; AquaStar chrome stays Settings/Help/About |
+| Session rules | Custom header on `github.com` |
+| Navigation hooks | Banner on AquaStar GitHub pages |
 | Settings section | Demo name + tip toggle |
-| Feature window + IPC + store | Dashboard (`persistent-store`, namespaced IPC, `net-fetch`) |
+| Feature window | Dashboard (store, IPC, `net-fetch`) |
 | Locales | `locales/en-US.js`, `pt-BR.js` |
 
 ## Try it
 
 1. `npm start`
-2. **Alt+9 → General** → Active plugin → **Example Companion** → Save → restart
-3. Main window: move the box with arrow keys; confirm Flash embed loads
-4. **Alt+G / Alt+R / Alt+D** open GitHub / Releases / `docs/PLUGINS.md`
-5. **Alt+E** opens the dashboard (visit counter + GitHub API fetch)
+2. Alt+9 → **Example Companion** → Save → **restart**
+3. Main window loads **BoxMover.swf** — click the window, use arrow keys
+4. Alt+G / Alt+R / Alt+D / Alt+E for GitHub / docs / dashboard
 
-## Flash source
+## Rebuild the SWF
 
-See `flash/README.md` to compile `BoxMover.as` into `assets/boxmover.swf`. Without Flex SDK, the HTML canvas still demonstrates input and `rectangle.swf` still proves PPAPI Flash.
+```bat
+plugins\example-companion\flash\build.bat
+```
 
-## Not a template
-
-`plugins/_template/` stays minimal. This folder is the **worked example** — copy ideas from here, not the empty stub alone.
+See `flash/README.md`. The compiled `assets/boxmover.swf` is committed so users do not need Flex.

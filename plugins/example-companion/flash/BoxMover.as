@@ -56,7 +56,7 @@ package {
             label.height = 40;
             label.x = PAD;
             label.y = 8;
-            label.text = "AquaStar Example — arrows move the box (Flash)";
+            label.text = "AquaStar Example - arrows move the box (Flash)";
             addChild(label);
 
             stage.addEventListener(KeyboardEvent.KEY_DOWN, onKey);

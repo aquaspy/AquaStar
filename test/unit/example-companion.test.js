@@ -11,18 +11,20 @@ test('example-companion manifest validates', () => {
   assert.strictEqual(result.ok, true, (result.errors || []).join('; '));
 });
 
-test('example-companion ships stage, SWF asset, and AS3 source', () => {
-  assert.ok(fs.existsSync(path.join(root, 'stage', 'index.html')));
+test('example-companion ships compiled boxmover.swf and AS3 source', () => {
+  assert.ok(fs.existsSync(path.join(root, 'assets', 'boxmover.swf')));
   assert.ok(fs.existsSync(path.join(root, 'assets', 'rectangle.swf')));
   assert.ok(fs.existsSync(path.join(root, 'flash', 'BoxMover.as')));
-  const swf = fs.readFileSync(path.join(root, 'assets', 'rectangle.swf'));
-  assert.strictEqual(String.fromCharCode(swf[0], swf[1], swf[2]), 'FWS');
+  assert.ok(fs.existsSync(path.join(root, 'flash', 'build.bat')));
+  const swf = fs.readFileSync(path.join(root, 'assets', 'boxmover.swf'));
+  assert.ok(['CWS', 'FWS', 'ZWS'].indexOf(swf.slice(0, 3).toString('ascii')) !== -1);
+  assert.ok(swf.length > 500, 'boxmover.swf must be a real compiled movie, not a stub');
 });
 
 test('instances only wraps real .swf URLs with swf_wrapper', () => {
   const src = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
   assert.ok(src.indexOf('_looksLikeSwfUrl') !== -1);
-  assert.ok(src.indexOf('Never wrap HTML') !== -1 || src.indexOf('_looksLikeSwfUrl(originalPath)') !== -1);
+  assert.ok(src.indexOf('_looksLikeSwfUrl(originalPath)') !== -1);
 });
 
 test('example-companion activate registers core Host capabilities', async () => {
@@ -56,15 +58,10 @@ test('example-companion activate registers core Host capabilities', async () => 
 
   const state = activated.host._getState();
   assert.ok(state.primaryGame);
-  const stageUrl = state.primaryGame.getUrl();
-  assert.ok(stageUrl.indexOf('stage') !== -1);
-  assert.ok(stageUrl.indexOf('.html') !== -1);
-  // HTML stage must NOT be classified as a SWF game URL (would hit swf_wrapper → black screen).
-  assert.strictEqual(state.primaryGame.isGameUrl(stageUrl), false);
-  assert.strictEqual(
-    state.primaryGame.isGameUrl(stageUrl.replace(/stage.*/, 'assets/rectangle.swf')),
-    true
-  );
+  const primaryUrl = state.primaryGame.getUrl();
+  assert.ok(primaryUrl.indexOf('boxmover.swf') !== -1);
+  assert.strictEqual(state.primaryGame.isGameUrl(primaryUrl), true);
+  assert.strictEqual(state.primaryGame.isGameUrl(primaryUrl.replace('boxmover', 'nope')), false);
   assert.ok(state.sessionRules.length >= 1);
   assert.ok(state.navigationHooks && state.navigationHooks.onDidFinishLoad);
   assert.ok(state.menuProviders && state.menuProviders.appUsefulPages);

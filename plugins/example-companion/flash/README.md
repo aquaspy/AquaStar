@@ -1,17 +1,15 @@
-# BoxMover.swf (interactive Flash)
+# BoxMover.swf
 
-`assets/rectangle.swf` is a **static** SWF from the Flash file-format examples (purple/lavender field + shape). It only proves PPAPI Flash loads — it has **no ActionScript**.
+Interactive Flash movie shipped at `assets/boxmover.swf` (arrow keys move the blue square).
 
-The playable demo (arrow keys) lives in `stage/index.html` (HTML canvas) so the example plugin works without a Flex/Animate toolchain.
+Source: `BoxMover.as` (AS3). Rebuild with Apache Flex `mxmlc` (requires `playerglobal.swc`):
 
-## Build an interactive SWF (optional)
-
-Requires [Apache Flex SDK](https://flex.apache.org/) `mxmlc` on PATH:
-
-```bash
-mxmlc -static-link-runtime-shared-libraries=true -output ../assets/boxmover.swf BoxMover.as
+```bat
+REM From repo root, with Flex SDK available:
+set FLEX_HOME=work\flex-sdk
+%FLEX_HOME%\bin\mxmlc.bat -target-player=32.0 -swf-version=32 -default-size 550 400 -default-background-color=0x121212 -default-frame-rate=24 -static-link-runtime-shared-libraries=true -output=plugins\example-companion\assets\boxmover.swf plugins\example-companion\flash\BoxMover.as
 ```
 
-When `assets/boxmover.swf` exists and is a real movie (>200 bytes), the stage embed prefers it over `rectangle.swf`.
+`assets/rectangle.swf` remains a static shape-only SWF for comparison (no ActionScript).
 
-> `build-boxmover.js` is an experimental AVM1 bytecoder — do not ship its output unless FFDec decompiles it cleanly to readable AS2.
+`build-boxmover.js` is obsolete experimental AVM1 output — do not use it to replace the Flex-built SWF.

@@ -12,38 +12,34 @@ function toFileUrl(filePath) {
 }
 
 function activate(host) {
-    const stageUrl = toFileUrl(path.join(__dirname, 'stage', 'index.html'));
+    const boxmoverSwf = toFileUrl(path.join(__dirname, 'assets', 'boxmover.swf'));
     const rectangleSwf = toFileUrl(path.join(__dirname, 'assets', 'rectangle.swf'));
 
     host.setPrimaryGame({
-        id: 'example-stage',
-        getUrl: function () { return stageUrl; },
+        id: 'example-boxmover',
+        getUrl: function () { return boxmoverSwf; },
         title: function () { return 'AquaStar - Example Companion'; },
-        // Only real SWFs are "game" URLs. Matching the whole plugin path made
-        // stage/index.html go through swf_wrapper.html → black screen.
         isGameUrl: function (candidate) {
             return typeof candidate === 'string' &&
                 /\.swf(\?|#|$)/i.test(candidate) &&
-                (candidate.indexOf('rectangle.swf') !== -1 ||
-                    candidate.indexOf('boxmover.swf') !== -1 ||
-                    candidate.indexOf('example-companion') !== -1);
+                (candidate.indexOf('boxmover.swf') !== -1 ||
+                    candidate.indexOf('rectangle.swf') !== -1);
         },
-        wrap: { preferDirectWmode: false, ruffleEligible: false },
+        wrap: { preferDirectWmode: true, ruffleEligible: true },
         flashTrust: true
     });
 
     host.registerLaunches([
         {
-            id: 'example-swf-only',
-            keybindId: null,
+            id: 'example-static-rect',
             getUrl: function () { return rectangleSwf; },
-            title: function () { return 'AquaStar - Example SWF'; },
+            title: function () { return 'AquaStar - Static rectangle.swf'; },
             wrap: { preferDirectWmode: true, ruffleEligible: true },
             flashTrust: true
         }
     ]);
 
-    host.trustFlashUrls([rectangleSwf, stageUrl]);
+    host.trustFlashUrls([boxmoverSwf, rectangleSwf]);
     host.registerSessionRules(session.createSessionRules());
     host.registerNavigationHooks(navigation.createNavigationHooks());
 
@@ -93,7 +89,7 @@ function activate(host) {
 
     dashboardIpc.attach(host);
 
-    host.log('Example Companion plugin activated');
+    host.log('Example Companion plugin activated (primary=boxmover.swf)');
 }
 
 module.exports = {

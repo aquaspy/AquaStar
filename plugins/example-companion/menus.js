@@ -63,14 +63,14 @@ function register(host) {
             label: 'Example',
             submenu: [
                 {
-                    label: 'New stage window',
+                    label: 'New BoxMover window',
                     accelerator: keybinds.newStage,
                     registerAccelerator: false,
                     click: function () { host.windows.openPrimaryGame(); }
                 },
                 {
-                    label: 'Open rectangle.swf only',
-                    click: function () { host.windows.openLaunch('example-swf-only'); }
+                    label: 'Open static rectangle.swf',
+                    click: function () { host.windows.openLaunch('example-static-rect'); }
                 },
                 { type: 'separator' },
                 {

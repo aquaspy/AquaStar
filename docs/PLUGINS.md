@@ -497,7 +497,7 @@ Checklist:
 | Path | Role |
 |------|------|
 | `plugins/_template/` | Starter stub (minimal) |
-| `plugins/example-companion/` | **Worked example** — stage + SWF, keybinds to GitHub/docs, menus, session, injection, settings, dashboard IPC/store/`net-fetch` |
+| `plugins/example-companion/` | **Worked example** — shipped `boxmover.swf` (arrows move a square), GitHub/docs keybinds, menus, session, injection, settings, dashboard |
 | `test/fixtures/sample-plugin/` | Contract-test fixture (minimal) |
 | `plugins/adventure-quest-worlds/` | Full production plugin (AQW) |
 
