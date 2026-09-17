@@ -106,6 +106,31 @@
 
   .swf-status { flex: 1 1 auto; min-width: 0; font-size: 11px; color: #9a9a9a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .swf-status.active { color: #7fd08a; }
+
+  .tabs {
+    flex: 0 0 auto;
+    display: flex; gap: 4px; padding: 0 18px;
+    border-bottom: 1px solid #2c2c2c; background: #121212;
+  }
+  .tab {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    border-radius: 0; color: #9a9a9a; padding: 10px 12px; font-size: 12px;
+  }
+  .tab:hover { background: #1a1a1a; color: #e6e6e6; }
+  .tab.active { color: #e6e6e6; border-bottom-color: #4da3ff; }
+  .panels { flex: 1 1 auto; min-height: 0; position: relative; }
+  .panel {
+    display: none; height: 100%; overflow-y: auto; padding: 4px 18px; box-sizing: border-box;
+  }
+  .panel.active { display: block; }
+  .empty-state {
+    margin: 24px 0; padding: 16px; border: 1px dashed #333; border-radius: 6px;
+    color: #9a9a9a; line-height: 1.45;
+  }
+  .keybind-group-heading {
+    padding: 14px 0 4px; font-size: 11px; color: #7a7a7a;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
 </style>
 <link rel="stylesheet" href="../common/focus.css">
 </head>
@@ -117,7 +142,16 @@
     <div id="saveLocation"></div>
   </header>
 
-  <div id="rows"></div>
+  <nav id="tabs" class="tabs" role="tablist" aria-label="Settings sections">
+    <button type="button" class="tab active" data-tab="general" id="tab-general"></button>
+    <button type="button" class="tab" data-tab="plugin" id="tab-plugin"></button>
+    <button type="button" class="tab" data-tab="keybinds" id="tab-keybinds"></button>
+  </nav>
+  <div id="panels" class="panels">
+    <div id="panel-general" class="panel active" role="tabpanel"></div>
+    <div id="panel-plugin" class="panel" role="tabpanel"></div>
+    <div id="panel-keybinds" class="panel" role="tabpanel"></div>
+  </div>
 
   <footer>
     <span id="status"></span>
@@ -151,28 +185,27 @@
   const MAC_ONLY_KEYS = new Set(['forward', 'backward']);
   const CHARPAGE_ONLY_KEYS = new Set(['cpSshot']);
 
-  // Non-keybind settings shown in the "Other Options" section - which widget renders each.
-  const OPTION_TYPES = {
-    playerCharacter:   'text',
-    featurePlayerName: 'boolean',
+  // Platform-owned options on the General tab (plugin fields come from registerSettingsSection).
+  const PLATFORM_OPTION_TYPES = {
     customUrl:         'text',
     recordingFormat:   'select',
     renderMode:        'select',
     ruffleUpdateChannel: 'select',
     ruffleAutoUpdate:  'boolean',
     showGameMenu:      'boolean',
-    autoSync:          'boolean',
     enableDevTools:    'boolean'
   };
 
-  // Only playerCharacter needs the alphanumeric-only filter (it lands in a URL query
-  // string / window title) - other text options like customUrl are real URLs and need
-  // their punctuation intact.
+  // Plugin field keys that need alphanumeric sanitization (filled from layout).
   const SANITIZE_ALPHANUMERIC_KEYS = new Set(['playerCharacter']);
 
-  // Rendered inside the "Custom SWF File" section instead of the generic "Other Options"
-  // loop - see buildCustomSwfSection().
+  // Rendered inside the primary-game override section instead of the generic options loop.
   const CUSTOM_SWF_SECTION_KEYS = new Set(['customUrl']);
+
+  const PLATFORM_RESERVED_KEYBIND_IDS = new Set([
+    'settings', 'fullscreen', 'sshot', 'record', 'reload', 'reloadCache',
+    'help', 'about', 'forward', 'backward'
+  ]);
 
   // Boolean options that need an explicit confirm before flipping on.
   const WARN_ON_ENABLE_KEYS = new Set(['enableDevTools']);
@@ -502,13 +535,8 @@
     return row;
   }
 
-  // Custom SWF File section - groups the two ways to override which game AQLite loads:
-  // customUrl (a plain option, reuses buildTextOptionRow) and the aqlite_old.swf drop-in
-  // file (not a simple key/value option, it's a file the main process copies/deletes on
-  // disk, so it gets its own row with a file picker instead of a generic option builder).
-  // customUrl is deliberately excluded from the generic "Other Options" loop below and
-  // rendered here instead, since the two settings only make sense read together (the SWF
-  // file wins over the URL when both are set).
+  // Primary-game override (platform): customUrl + local SWF file. Applies to whichever
+  // plugin is active; the on-disk SWF wins over the URL when both are set.
   let customSwfStatusEl, customSwfRemoveBtn;
   function buildCustomSwfSection() {
     const heading = document.createElement('div');
@@ -956,12 +984,89 @@
     return nodes;
   }
 
+  function setupTabs() {
+    const tabs = document.querySelectorAll('#tabs .tab');
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const name = tab.getAttribute('data-tab');
+        tabs.forEach((t) => t.classList.toggle('active', t === tab));
+        ['general', 'plugin', 'keybinds'].forEach((id) => {
+          const panel = document.getElementById('panel-' + id);
+          if (panel) panel.classList.toggle('active', id === name);
+        });
+      });
+    });
+  }
+
+  function appendNodes(parent, nodes) {
+    (nodes || []).forEach((el) => parent.appendChild(el));
+  }
+
+  function buildPluginSectionsPanel(layout, optionChoices) {
+    const nodes = [];
+    const sections = (layout && layout.pluginSections) || [];
+    if (!sections.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = messages.pluginSettingsEmpty ||
+        'This plugin has no extra settings.';
+      nodes.push(empty);
+      return nodes;
+    }
+    sections.forEach((section) => {
+      const heading = document.createElement('div');
+      heading.className = 'section-heading';
+      const localized = section.titleKey && messages.settingsSections
+        ? messages.settingsSections[section.titleKey]
+        : null;
+      heading.textContent = localized || section.title || section.id;
+      nodes.push(heading);
+      (section.fields || []).forEach((field) => {
+        if (!field || !field.key) return;
+        if (field.sanitize === 'alphanumeric') SANITIZE_ALPHANUMERIC_KEYS.add(field.key);
+        const type = field.type || 'text';
+        if (type === 'boolean') nodes.push(buildBooleanOptionRow(field.key));
+        else if (type === 'select') {
+          nodes.push(buildSelectOptionRow(field.key, optionChoices[field.key] || []));
+        } else nodes.push(buildTextOptionRow(field.key));
+      });
+    });
+    return nodes;
+  }
+
+  function buildKeybindPanels(visibleIds) {
+    const appKeys = [];
+    const gameKeys = [];
+    Object.keys(defaults).forEach((key) => {
+      if (visibleIds && !visibleIds.has(key)) return;
+      if (PLATFORM_RESERVED_KEYBIND_IDS.has(key)) appKeys.push(key);
+      else gameKeys.push(key);
+    });
+    const nodes = [];
+    if (appKeys.length) {
+      const h = document.createElement('div');
+      h.className = 'keybind-group-heading';
+      h.textContent = messages.keybindsAppHeading || 'App';
+      nodes.push(h);
+      appKeys.forEach((key) => nodes.push(buildRow(key)));
+    }
+    if (gameKeys.length) {
+      const h = document.createElement('div');
+      h.className = 'keybind-group-heading';
+      h.textContent = messages.keybindsGameHeading || 'Game';
+      nodes.push(h);
+      gameKeys.forEach((key) => nodes.push(buildRow(key)));
+    }
+    return nodes;
+  }
+
   async function init() {
-    const [kb, msgs, pluginList, pluginSettings] = await Promise.all([
+    const [kb, msgs, pluginList, pluginSettings, layout] = await Promise.all([
       api.getKeybindings(),
       api.getMessages(),
       api.getPluginList(),
-      api.getPluginSettings()
+      api.getPluginSettings(),
+      api.getSettingsLayout()
     ]);
     current = kb.current;
     defaults = kb.defaults;
@@ -974,38 +1079,53 @@
     document.getElementById('saveLocation').innerHTML =
       messages.saveLocationLabel + '<code>' + kb.savePath.replace(/</g, '&lt;') + '</code>';
 
-    const rowsEl = document.getElementById('rows');
-    const visibleIds = Array.isArray(kb.visibleKeybindIds) ? new Set(kb.visibleKeybindIds) : null;
-    Object.keys(defaults).forEach((key) => {
-      if (visibleIds && !visibleIds.has(key)) return;
-      rowsEl.appendChild(buildRow(key));
-    });
+    const pluginName = (layout && layout.plugin && layout.plugin.name) ||
+      messages.tabPluginFallback || 'Active plugin';
+    document.getElementById('tab-general').textContent = messages.tabGeneral || 'General';
+    document.getElementById('tab-plugin').textContent = pluginName;
+    document.getElementById('tab-keybinds').textContent = messages.tabKeybinds || 'Keybinds';
+    setupTabs();
 
-    // Choices for 'select' type options, keyed by option name.
+    const generalEl = document.getElementById('panel-general');
+    const pluginEl = document.getElementById('panel-plugin');
+    const keybindsEl = document.getElementById('panel-keybinds');
+
+    const visibleIds = Array.isArray(kb.visibleKeybindIds) ? new Set(kb.visibleKeybindIds) : null;
+    appendNodes(keybindsEl, buildKeybindPanels(visibleIds));
+
     const optionChoices = {
       recordingFormat: kb.recordingFormatChoices || [],
       renderMode:      kb.renderModeChoices || []
     };
     updateChannelChoices = kb.ruffleUpdateChannelChoices || [];
 
-    const optionKeys = Object.keys(options).filter((key) => !CUSTOM_SWF_SECTION_KEYS.has(key) && key !== 'ruffleUpdateChannel' && key !== 'ruffleAutoUpdate');
-    if (optionKeys.length) {
+    // General: plugins meta first, then platform options, primary SWF override, Ruffle.
+    appendNodes(generalEl, buildPluginsSection(pluginList, pluginSettings || layout.pluginSettings || {}));
+
+    const platformOptionKeys = Object.keys(options).filter((key) =>
+      PLATFORM_OPTION_TYPES[key] &&
+      !CUSTOM_SWF_SECTION_KEYS.has(key) &&
+      key !== 'ruffleUpdateChannel' &&
+      key !== 'ruffleAutoUpdate'
+    );
+    if (platformOptionKeys.length) {
       const heading = document.createElement('div');
       heading.className = 'section-heading';
-      heading.textContent = messages.optionsHeading || '';
-      rowsEl.appendChild(heading);
-      optionKeys.forEach((key) => {
-        const type = OPTION_TYPES[key];
-        if (type === 'boolean') rowsEl.appendChild(buildBooleanOptionRow(key));
-        else if (type === 'select') rowsEl.appendChild(buildSelectOptionRow(key, optionChoices[key]));
-        else rowsEl.appendChild(buildTextOptionRow(key));
+      heading.textContent = messages.optionsHeading || 'General options';
+      generalEl.appendChild(heading);
+      platformOptionKeys.forEach((key) => {
+        const type = PLATFORM_OPTION_TYPES[key];
+        if (type === 'boolean') generalEl.appendChild(buildBooleanOptionRow(key));
+        else if (type === 'select') generalEl.appendChild(buildSelectOptionRow(key, optionChoices[key]));
+        else generalEl.appendChild(buildTextOptionRow(key));
       });
     }
 
-    buildCustomSwfSection().forEach((el) => rowsEl.appendChild(el));
-    buildRuffleSection().forEach((el) => rowsEl.appendChild(el));
-    buildPluginsSection(pluginList, pluginSettings || {}).forEach((el) => rowsEl.appendChild(el));
+    appendNodes(generalEl, buildCustomSwfSection());
+    appendNodes(generalEl, buildRuffleSection());
     await refreshCustomSwfStatus();
+
+    appendNodes(pluginEl, buildPluginSectionsPanel(layout, optionChoices));
 
     document.getElementById('saveBtn').textContent = messages.saveButton;
     document.getElementById('resetAllBtn').textContent = messages.resetAllButton;

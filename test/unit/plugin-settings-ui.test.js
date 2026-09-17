@@ -21,8 +21,10 @@ test('Settings UI exposes active plugin selector and restart copy', () => {
   assert.ok(html.indexOf('allowLocalPluginOverride') !== -1);
   assert.ok(html.indexOf('trustedLocalPlugins') !== -1);
   assert.ok(html.indexOf('renderTrustRows') !== -1);
+  assert.ok(html.indexOf('data-tab="general"') !== -1);
   assert.ok(preload.indexOf('getPluginList') !== -1);
   assert.ok(preload.indexOf('getPluginSettings') !== -1);
+  assert.ok(preload.indexOf('getSettingsLayout') !== -1);
 });
 
 test('platform locales include plugin selector strings', () => {

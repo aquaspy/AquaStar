@@ -15,5 +15,6 @@ module.exports = {
     applySessionRules: require('./session-rules.js').applySessionRules,
     createNamespacedStore: require('./storage/namespaced-store.js').createNamespacedStore,
     resolveOption: require('./settings-resolve.js').resolveOption,
-    menuRegistry: require('./menu-registry.js')
+    menuRegistry: require('./menu-registry.js'),
+    settingsRegistry: require('./settings-registry.js')
 };

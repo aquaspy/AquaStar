@@ -84,6 +84,18 @@ function activate(host) {
         'pt-BR': require('./locales/pt-BR.js')
     });
 
+    host.registerSettingsSection({
+        id: 'aqw-account',
+        titleKey: 'account',
+        title: 'Account & Inventory',
+        order: 10,
+        fields: [
+            { key: 'playerCharacter', type: 'text', sanitize: 'alphanumeric' },
+            { key: 'featurePlayerName', type: 'boolean' },
+            { key: 'autoSync', type: 'boolean' }
+        ]
+    });
+
     host.log('Adventure Quest Worlds plugin activated (adapter mode)');
 }
 

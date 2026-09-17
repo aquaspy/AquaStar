@@ -43,6 +43,29 @@ Local plugins require enabling **Enable local plugins** and trusting the plugin 
 - Plugin switch = **restart** (v1)
 - `contributeWebBuild()` — optional; used by `npm run web:build` (Node only)
 
+## Settings contribution
+
+Settings is a **platform shell** with three tabs: **General** | **Active plugin** | **Keybinds**.
+
+Register plugin-only options from `activate()`:
+
+```js
+host.registerSettingsSection({
+  id: 'my-account',
+  titleKey: 'account', // optional: settingsMessages.settingsSections.account
+  title: 'Account',
+  order: 10,
+  fields: [
+    { key: 'playerCharacter', type: 'text', sanitize: 'alphanumeric' },
+    { key: 'autoSync', type: 'boolean' }
+  ]
+});
+```
+
+Provide labels/hints under `settingsMessages.optionLabels` / `optionHints` in your locale files. Field keys still save to top-level `aquastar.json` (compatible with existing installs).
+
+Platform owns: plugin picker, primary-game SWF/URL override, recording, Ruffle, DevTools, game menu toggle.
+
 ## IPC
 
 - Bundled `adventure-quest-worlds`: **legacy channel names** (`getReminders`, …)

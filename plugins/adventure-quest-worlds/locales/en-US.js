@@ -100,17 +100,15 @@ exports.settingsMessages = {
     optionLabels: {
         playerCharacter: "Player Character",
         featurePlayerName: "Show Player Character in Window Title",
-        customUrl: "Custom Game URL",
-        showGameMenu: "Show Menu Above Game",
         autoSync: "Auto Sync Inventory",
     },
     optionHints: {
         playerCharacter: "Letters and numbers only. Used by the Char Page shortcut (Alt+P) to open straight to this character.",
         featurePlayerName: "When on, replaces \"AquaStar\" in the main window title with your Player Character above.",
-        customUrl: "Loads a different SWF/game URL instead of the default AQW game. Leave empty for the default. Ignored if a custom SWF file (below) is active.",
-        showGameMenu: "Shows a menu bar above AQW and DragonFable windows with the same commands as the shortcuts. Turn it off if you prefer keyboard-only controls.",
         autoSync: "Periodically syncs your Inventory/BuyBack data from account.aq.com in the background (about every 2 hours) once you've logged in there at least once via Alt+A. When off, sync only happens when you use a Sync Now button (in the Inventory window or on account.aq.com/Home).",
-        renderMode: "Which Flash runtime loads AQW (main, new instance, Testing) and DragonFable (Alt+1). The Char Page is unaffected (Artix already uses Ruffle there).",
+    },
+    settingsSections: {
+        account: "Account & Inventory"
     }
 };
 

@@ -100,17 +100,15 @@ exports.settingsMessages = {
     optionLabels: {
         playerCharacter: "Personagem",
         featurePlayerName: "Mostrar Personagem no Título da Janela",
-        customUrl: "URL Customizada do Jogo",
-        showGameMenu: "Mostrar Menu Acima do Jogo",
         autoSync: "Auto Sincronizar Inventário",
     },
     optionHints: {
         playerCharacter: "Apenas letras e números. Usado pelo atalho da Char Page (Alt+P) para abrir direto neste personagem.",
         featurePlayerName: "Quando ativado, substitui \"AquaStar\" no título da janela principal pelo Personagem acima.",
-        customUrl: "Carrega um SWF/URL de jogo diferente ao invés do AQW padrão. Deixe vazio para usar o padrão. Ignorado se um arquivo SWF customizado (abaixo) estiver ativo.",
-        showGameMenu: "Mostra uma barra de menu acima das janelas de AQW e DragonFable, com os mesmos comandos dos atalhos. Desative se preferir usar somente o teclado.",
         autoSync: "Sincroniza periodicamente seus dados de Inventário/BuyBack do account.aq.com em segundo plano (a cada ~2 horas), depois de você logar lá pelo menos uma vez via Alt+A. Quando desligado, a sincronização só acontece quando você usa um botão Sincronizar Agora (na janela de Inventário ou no account.aq.com/Home).",
-        renderMode: "Qual runtime Flash carrega o AQW (principal, nova instância, Testing) e o DragonFable (Alt+1). A Char Page não é afetada (a Artix já usa Ruffle lá).",
+    },
+    settingsSections: {
+        account: "Conta e Inventário"
     }
 };
 

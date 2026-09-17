@@ -96,6 +96,13 @@ function activateBundledPluginsOrLegacy() {
                 menuProviders.gameMenuPages = aqwMenus.describeGameMenuPages;
             }
             platform.menuRegistry.adoptHostState(state, menuProviders);
+            const pluginInfo = runtime.plugin && runtime.plugin.manifest
+                ? {
+                    id: runtime.plugin.manifest.id,
+                    name: runtime.plugin.manifest.name || runtime.plugin.manifest.id
+                }
+                : null;
+            platform.settingsRegistry.adoptHostState(state, pluginInfo);
             if (state.locales) {
                 locale.mergePluginLocales(state.locales);
             }
@@ -113,6 +120,7 @@ function activateBundledPluginsOrLegacy() {
         console.log('[AquaStar:plugins] Activation failed, falling back to legacy requires: ' +
             (err && err.message ? err.message : err));
         platform.menuRegistry.clear();
+        platform.settingsRegistry.clear();
         loadLegacyFeatureModules();
         return null;
     });

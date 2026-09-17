@@ -293,6 +293,18 @@ function _readPluginSettingsFromDisk() {
 
 ipcMain.handle('getPluginSettings', () => _readPluginSettingsFromDisk());
 
+ipcMain.handle('getSettingsLayout', () => {
+    const pluginSettings = _readPluginSettingsFromDisk();
+    const layout = platform.settingsRegistry.buildSettingsLayout({
+        includeLegacyAqwFallback: true
+    });
+    return {
+        plugin: layout.plugin,
+        pluginSections: layout.pluginSections,
+        pluginSettings: pluginSettings
+    };
+});
+
 ipcMain.handle('getPluginList', (event, opts) => {
     const pluginSettings = _readPluginSettingsFromDisk();
     const enableLocalPlugins = opts && typeof opts.enableLocalPlugins === 'boolean'
