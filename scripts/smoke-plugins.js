@@ -3,14 +3,7 @@
  * Lightweight smoke checks for the plugin system (no Electron window).
  * Exit 1 on failure. Safe for CI alongside npm test.
  *
- * Manual Flash checklist (not automated here — needs PPAPI):
- *   1. npm start with example-companion active
- *   2. BoxMover loads; arrow keys move the square
- *   3. Menu shows plugin entries on first window
- *   4. Alt+N opens exactly one new game window (from game or browser window)
- *   5. Alt+E dashboard: note saves, GitHub API fetch returns data
- *   6. F1 help shows platform section + plugin section
- *   7. Switch back to AQW + restart; Game/Features menus return
+ * Manual PPAPI / UI checklist: docs/FLASH_CHECKLIST.md
  */
 'use strict';
 
@@ -69,20 +62,31 @@ ok(aqwHelp.indexOf('helpDetail:') === -1 || aqwHelp.indexOf('helpDetailExtra') !
 
 const exHelp = fs.readFileSync(path.join(example, 'locales', 'en-US.js'), 'utf8');
 ok(exHelp.indexOf('helpDetailExtra') !== -1, 'example help uses helpDetailExtra');
+ok(exHelp.indexOf('exampleNewBoxMover') !== -1, 'example menuMessages include New BoxMover');
+ok(exHelp.indexOf('injectDemoMessages') !== -1, 'example injectDemoMessages present');
+ok(exHelp.indexOf('windowTitles') !== -1, 'example windowTitles present');
+
+const exHelpPt = fs.readFileSync(path.join(example, 'locales', 'pt-BR.js'), 'utf8');
+ok(exHelpPt.indexOf('Nova janela BoxMover') !== -1, 'example pt-BR menu strings');
 
 const localeSrc = fs.readFileSync(path.join(root, 'res', 'locale.js'), 'utf8');
 ok(localeSrc.indexOf('helpDetailExtra') !== -1, 'locale.js composes helpDetailExtra');
+ok(localeSrc.indexOf('resolveLangFile') !== -1, 'locale.js has language fallback resolver');
 
 const platformHelp = fs.readFileSync(path.join(root, 'res', 'po', 'en-US.js'), 'utf8');
 ok(platformHelp.indexOf('Active-plugin shortcuts') !== -1, 'platform help is plugin-aware');
 ok(platformHelp.indexOf('AQW Wiki') === -1, 'platform help has no AQW wiki line');
+ok(platformHelp.indexOf('appLanguage') !== -1, 'platform settings expose appLanguage');
 
 const mainSrc = fs.readFileSync(path.join(root, 'main.js'), 'utf8');
 ok(mainSrc.indexOf('applyWindowMenu(win, bootGameUrl)') !== -1, 'boot reapplies per-window menu');
+ok(mainSrc.indexOf('appLanguage') !== -1, 'boot respects appLanguage preference');
+
+ok(fs.existsSync(path.join(root, 'docs', 'FLASH_CHECKLIST.md')), 'FLASH_CHECKLIST.md exists');
 
 if (process.exitCode) {
   console.error('smoke-plugins: FAILED');
   process.exit(1);
 }
 console.log('smoke-plugins: all checks passed');
-console.log('Manual Flash checklist: see comment at top of scripts/smoke-plugins.js');
+console.log('Manual Flash checklist: docs/FLASH_CHECKLIST.md');

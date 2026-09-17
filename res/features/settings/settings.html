@@ -187,6 +187,7 @@
 
   // Platform-owned options on the General tab (plugin fields come from registerSettingsSection).
   const PLATFORM_OPTION_TYPES = {
+    appLanguage:       'select',
     customUrl:         'text',
     recordingFormat:   'select',
     renderMode:        'select',
@@ -1113,6 +1114,10 @@
     appendNodes(keybindsEl, buildKeybindPanels(visibleIds));
 
     const optionChoices = {
+      appLanguage: (kb.appLanguageChoices || []).map(function (c) {
+        const localized = messages.languageChoiceLabels && messages.languageChoiceLabels[c.id];
+        return { id: c.id, label: localized || c.label };
+      }),
       recordingFormat: kb.recordingFormatChoices || [],
       renderMode:      kb.renderModeChoices || []
     };

@@ -519,7 +519,7 @@ i18n helpers: `host.getLocaleId()`, `host.getLocaleStrings(ns)`, `host.getAppIco
 
 Sandboxed preload helper: `require('res/platform').buildSandboxedPreloadSource({ pluginId, methods })`.
 
-Smoke: `npm run smoke:plugins` (plus the manual Flash checklist in that script’s header).
+Smoke: `npm run smoke:plugins`. Manual Flash/UI: [`docs/FLASH_CHECKLIST.md`](FLASH_CHECKLIST.md).
 
 What plugins can still do if malicious (in-process CJS, especially **bundled**):
 

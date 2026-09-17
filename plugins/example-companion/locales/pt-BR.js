@@ -30,6 +30,14 @@ exports.dashboardMessages = {
     fetchFail: 'Falha na busca'
 };
 
+exports.injectDemoMessages = {
+    title: 'Página de demo de injeção',
+    heading: 'Página de demo de injeção',
+    body: 'Esta página local é o alvo seguro de registerNavigationHooks. O GitHub em si não é injetado — alterar UA/DOM no github.com quebra o CSS/JS deles.',
+    waiting: 'Aguardando o hook de navegação…',
+    ok: 'Injeção OK — o hook do example-companion executou'
+};
+
 exports.settingsMessages = {
     optionLabels: {
         demoPlayerName: 'Nome de exibição (demo)',
@@ -45,7 +53,19 @@ exports.settingsMessages = {
 };
 
 exports.menuMessages = {
-    exampleGithub: 'AquaStar no GitHub',
-    exampleReleases: 'Releases no GitHub',
-    examplePluginsDocs: 'Guia de plugins'
+    exampleMenu: 'Exemplo',
+    exampleNewBoxMover: 'Nova janela BoxMover',
+    exampleStaticRect: 'Abrir rectangle.swf estático',
+    exampleDashboard: 'Painel de demo',
+    exampleInjectDemo: 'Página de demo de injeção',
+    exampleGithub: 'AquaStar no GitHub (navegador do sistema)',
+    exampleReleases: 'Releases no GitHub (navegador do sistema)',
+    examplePluginsDocs: 'Guia de plugins (navegador do sistema)',
+    exampleDesignDocs: 'Design da arquitetura de plugins (navegador do sistema)'
+};
+
+exports.windowTitles = {
+    primary: 'AquaStar - Example Companion',
+    staticRect: 'AquaStar - rectangle.swf estático',
+    dashboard: 'Painel de exemplo'
 };

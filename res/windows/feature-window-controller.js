@@ -32,7 +32,10 @@ function createFeatureWindowController(definitions, BrowserWindow) {
         const win = new BrowserWindow(definition.config);
         windows.set(featureId, win);
         win.setMenuBarVisibility(false);
-        win.setTitle(definition.title);
+        const title = typeof definition.title === 'function'
+            ? definition.title()
+            : definition.title;
+        if (title) win.setTitle(title);
         if (typeof definition.configure === 'function') definition.configure(win);
         win.loadURL(definition.url);
         win.on('closed', () => { windows.delete(featureId); });

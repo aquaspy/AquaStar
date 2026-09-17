@@ -91,6 +91,7 @@ exports.settingsMessages = {
     keybindsGameHeading: "Game",
     optionsHeading: "General options",
     optionLabels: {
+        appLanguage: "Language",
         customUrl: "Custom game URL",
         recordingFormat: "Recording Format",
         renderMode: "Flash Renderer",
@@ -100,6 +101,7 @@ exports.settingsMessages = {
         enableDevTools: "Enable DevTools"
     },
     optionHints: {
+        appLanguage: "UI language for AquaStar and the active plugin. Restart required after changing.",
         customUrl: "Loads a different SWF URL instead of the active plugin's primary game. Leave empty for the plugin default. Ignored if a local SWF file (below) is active.",
         recordingFormat: "File format used when recording the game screen (Ctrl+J). MP4 isn't available on this Electron version.",
         renderMode: "Which Flash runtime loads game windows from the active plugin. Takes effect after restart when switching to Ruffle.",
@@ -107,6 +109,11 @@ exports.settingsMessages = {
         ruffleAutoUpdate: "Checks the selected channel in the background every time AquaStar opens. A download is applied after restart.",
         showGameMenu: "Shows a menu bar above game windows with the same commands as the shortcuts. Turn it off for keyboard-only controls.",
         enableDevTools: "Opens the DevTools console automatically on startup."
+    },
+    languageChoiceLabels: {
+        system: "System default",
+        "en-US": "English",
+        "pt-BR": "Português (Brasil)"
     },
     customSwfHeading: "Primary game override",
     customSwfLabel: "Local SWF file",

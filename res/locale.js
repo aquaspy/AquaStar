@@ -74,23 +74,46 @@ function mergePluginLocales(catalog) {
     });
 }
 
+function resolveLangFile(requestedLang) {
+    const fs = require('fs');
+    const candidates = [];
+    if (requestedLang) candidates.push(requestedLang);
+    // pt → pt-BR, en → en-US, etc.
+    if (requestedLang && requestedLang.indexOf('-') === -1) {
+        if (requestedLang.toLowerCase() === 'pt') candidates.push('pt-BR');
+        if (requestedLang.toLowerCase() === 'en') candidates.push('en-US');
+        candidates.push(requestedLang + '-' + requestedLang.toUpperCase());
+    } else if (requestedLang && requestedLang.indexOf('-') !== -1) {
+        candidates.push(requestedLang.split('-')[0]);
+    }
+    candidates.push('en-US');
+    for (let i = 0; i < candidates.length; i++) {
+        const code = candidates[i];
+        const filePath = path.join(__dirname, langFolder, code + '.js');
+        if (fs.existsSync(filePath)) {
+            return { code: code, filePath: filePath };
+        }
+    }
+    return {
+        code: 'en-US',
+        filePath: path.join(__dirname, langFolder, 'en-US.js')
+    };
+}
+
 function detectLang(systemLang, keyb){
-    lang       = systemLang;
-    pathToFile = path.join(__dirname, langFolder, lang + ".js");
+    const resolved = resolveLangFile(systemLang);
+    lang = resolved.code;
+    pathToFile = resolved.filePath;
     let langFile;
     function loadPo(filePath) {
         // Fresh copy so prior plugin merges do not stick on the cached module.
         try { delete require.cache[require.resolve(filePath)]; } catch (e) { /* ignore */ }
         return require(filePath);
     }
-    if(require('fs').existsSync(pathToFile)){
-        langFile = loadPo(pathToFile);
+    if (resolved.code !== systemLang) {
+        console.log('[AquaStar:i18n] Locale "' + systemLang + '" → using "' + resolved.code + '"');
     }
-    else {
-        console.log("ALERT: Translations for "+ lang + " not found. Using the default en-US");
-        langFile = loadPo(path.join(__dirname, langFolder, "en-US" + ".js"));
-        //TODO - test for similar langs with substringing the Lang using the '-' as a separator.
-    }
+    langFile = loadPo(pathToFile);
 
     exports.strings = langFile;
 

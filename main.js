@@ -162,7 +162,10 @@ function createWindow () {
     }
 
     // Lang setup. Has to be after Ready event.
-    constant.setLocale(app.getLocale(),finalkeyb);
+    // Prefer explicit Settings → appLanguage over OS locale when set.
+    const langPref = finalkeyb.appLanguage;
+    const localeId = (!langPref || langPref === 'system') ? app.getLocale() : langPref;
+    constant.setLocale(localeId, finalkeyb);
 
     // Minimal global menu first (Windows). Full plugin menus are per-window via setMenu.
     // Setting ApplicationMenu *after* the first setMenu left the initial window on the

@@ -348,6 +348,7 @@ ipcMain.handle('getKeybindings', () => {
         recordingFormatChoices: constant.recordingFormatChoices,
         renderModeChoices: constant.renderModeChoices,
         ruffleUpdateChannelChoices: constant.ruffleUpdateChannelChoices,
+        appLanguageChoices: constant.appLanguageChoices,
         visibleKeybindIds: visibleIds,
         savePath: _keybindSaveTarget()
     };

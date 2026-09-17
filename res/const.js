@@ -277,11 +277,20 @@ exports.ruffleUpdateChannelChoices = Object.keys(ruffleUpdateChannels).map((id) 
     { id: id, label: ruffleUpdateChannels[id].label }
 ));
 
+exports.appLanguageChoices = [
+    { id: 'system', label: 'System default' },
+    { id: 'en-US', label: 'English' },
+    { id: 'pt-BR', label: 'Português (Brasil)' }
+];
+
 // Non-keybind settings. Saved to the same aquastar.json file as the keybinds
 // above, but shown in the Settings screen as plain fields instead of recorders.
 const originalOptions = {
     playerCharacter:   "",
     featurePlayerName: false,
+    // UI language: "system" follows OS; otherwise an explicit catalog id (en-US, pt-BR).
+    appLanguage:       "system",
+
     // Optional URL override for the active plugin's primary game. Ignored when a
     // local SWF override (aqlite_old.swf) is active — see changeMainUrl().
     customUrl:         "",

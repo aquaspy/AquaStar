@@ -15,10 +15,17 @@ function activate(host) {
     const boxmoverSwf = toFileUrl(path.join(__dirname, 'assets', 'boxmover.swf'));
     const rectangleSwf = toFileUrl(path.join(__dirname, 'assets', 'rectangle.swf'));
 
+    function windowTitle(key, fallback) {
+        const titles = host.getLocaleStrings('windowTitles') || {};
+        return titles[key] || fallback;
+    }
+
     host.setPrimaryGame({
         id: 'example-boxmover',
         getUrl: function () { return boxmoverSwf; },
-        title: function () { return 'AquaStar - Example Companion'; },
+        title: function () {
+            return windowTitle('primary', 'AquaStar - Example Companion');
+        },
         isGameUrl: function (candidate) {
             return typeof candidate === 'string' &&
                 /\.swf(\?|#|$)/i.test(candidate) &&
@@ -33,7 +40,9 @@ function activate(host) {
         {
             id: 'example-static-rect',
             getUrl: function () { return rectangleSwf; },
-            title: function () { return 'AquaStar - Static rectangle.swf'; },
+            title: function () {
+                return windowTitle('staticRect', 'AquaStar - Static rectangle.swf');
+            },
             wrap: { preferDirectWmode: true, ruffleEligible: true },
             flashTrust: true
         }
@@ -71,7 +80,7 @@ function activate(host) {
     const dashboardPreload = path.join(__dirname, 'features', 'dashboard', 'preload_dashboard.js');
     host.registerFeatureWindows([{
         id: 'example-dashboard',
-        title: 'Example Dashboard',
+        title: function () { return windowTitle('dashboard', 'Example Dashboard'); },
         url: dashboardHtml,
         config: {
             width: 520,

@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Example injection demo</title>
+<title>Injection demo</title>
+<link rel="stylesheet" href="../../../../res/features/common/focus.css">
 <style>
   :root { color-scheme: dark; }
   body {
@@ -20,11 +21,23 @@
 </style>
 </head>
 <body>
-  <h1>Injection demo page</h1>
-  <p>
-    This local page is the safe target for <code>registerNavigationHooks</code>.
-    GitHub itself is not injected — rewriting UA/DOM on github.com breaks their CSS/JS.
-  </p>
+  <h1 id="heading">Injection demo page</h1>
+  <p id="body">Loading…</p>
   <div id="inject-status">Waiting for navigation hook…</div>
+<script>
+(function () {
+  // Filled by the plugin navigation hook with localized strings.
+  window.__aquastarInjectDemoApply = function (msg) {
+    msg = msg || {};
+    if (msg.title) document.title = msg.title;
+    if (msg.heading) document.getElementById('heading').textContent = msg.heading;
+    if (msg.body) document.getElementById('body').textContent = msg.body;
+    var status = document.getElementById('inject-status');
+    if (msg.waiting && status && !status.classList.contains('ok')) {
+      status.textContent = msg.waiting;
+    }
+  };
+})();
+</script>
 </body>
 </html>

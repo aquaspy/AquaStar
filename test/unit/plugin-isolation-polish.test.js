@@ -72,6 +72,27 @@ test('instances assigns per-window menus and suppresses duplicate opens', () => 
   assert.ok(mainSrc.indexOf('applyWindowMenu(win, bootGameUrl)') !== -1);
 });
 
+test('locale resolveLangFile maps pt to pt-BR', () => {
+  const locale = require('../../res/locale.js');
+  // detectLang uses resolveLangFile internally; pt should load pt-BR catalog.
+  locale.detectLang('pt', { help: 'F1', settings: 'Alt+9', about: 'F9', fullscreen: 'F11',
+    sshot: 'F2', record: 'Ctrl+J', reload: 'F5', reloadCache: 'Ctrl+F5',
+    forward: 'Alt+F', backward: 'Alt+B' });
+  assert.strictEqual(locale.getLang(), 'pt-BR');
+  assert.ok(locale.strings.dialogMessages.helpTitle.indexOf('Ajuda') !== -1);
+});
+
+test('example menus.js reads labels from ctx.labels', () => {
+  const menus = require('../../plugins/example-companion/menus.js');
+  const pages = menus.describeAppUsefulPages({
+    labels: { exampleGithub: 'GitHub PT' },
+    keybinds: {}
+  });
+  assert.strictEqual(pages[0].label, 'GitHub PT');
+  const chrome = menus.register && true;
+  assert.ok(chrome);
+});
+
 test('example companion ships Flex-built SWFs and sandboxed dashboard preload', () => {
   const root = path.join(__dirname, '../../plugins/example-companion');
   const box = fs.readFileSync(path.join(root, 'assets/boxmover.swf'));
