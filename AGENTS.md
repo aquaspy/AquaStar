@@ -72,17 +72,7 @@ The test workflow runs `npm test` on pull requests and packages the Windows app 
 
 Automated: `npm test` and `npm run smoke:plugins`.
 
-**Manual PPAPI / UI:** see [`docs/FLASH_CHECKLIST.md`](docs/FLASH_CHECKLIST.md) (Example Companion + AQW + language switch).
-
-After making changes (AQW path):
-1. `npm start` – verify the game loads and Flash works
-2. Test `Alt+N` (new AQW window) and `Alt+1` (DragonFable)
-3. Test `F2` screenshot saves to `Pictures/AquaStar Screenshots`
-4. Test `Ctrl+J` screen recording saves WebM to a chosen path
-5. Test `Alt+K` on a charpage (opens hidden 4K window, captures, closes)
-6. Test `Alt+9` (Settings: General / Active plugin / Keybinds; Language; plugin fields on plugin tab)
-7. Test `Alt+T` (Reminders) and `Alt+Y` (To-Do) persistence
-8. If modifying build/packaging, test `npm run pack` first (`--dir`, no installer)
+**Manual PPAPI / UI:** follow and tick boxes in [`docs/FLASH_CHECKLIST.md`](docs/FLASH_CHECKLIST.md) (Example, AQW, F2/Ctrl+J/Alt+K, language, local plugins, pack).
 
 ## Build artifacts
 
