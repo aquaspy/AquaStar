@@ -62,7 +62,7 @@ plugins/my-flash-game/
   main.js
 ```
 
-Copy from `plugins/_template/` or `test/fixtures/sample-plugin/`.
+Copy from `plugins/_template/` (empty skeleton) or study `plugins/example-companion/` (full demo). Contract fixture: `test/fixtures/sample-plugin/`.
 
 ### 3.2 `plugin.json`
 
@@ -496,11 +496,12 @@ Checklist:
 
 | Path | Role |
 |------|------|
-| `plugins/_template/` | Starter stub |
+| `plugins/_template/` | Starter stub (minimal) |
+| `plugins/example-companion/` | **Worked example** — stage + SWF, keybinds to GitHub/docs, menus, session, injection, settings, dashboard IPC/store/`net-fetch` |
 | `test/fixtures/sample-plugin/` | Contract-test fixture (minimal) |
-| `plugins/adventure-quest-worlds/` | Full production plugin (URLs, session, injections, features, Studio process, locales, web) |
+| `plugins/adventure-quest-worlds/` | Full production plugin (AQW) |
 
-When unsure how a Host call should look in production, **copy the AQW module that does the same job** and strip AQW-specific URLs/strings.
+Start from **`example-companion`** to see every Host surface wired. Use **`_template`** only when you want an empty skeleton. For production complexity, copy patterns from AQW.
 
 ---
 

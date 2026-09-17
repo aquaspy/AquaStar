@@ -315,11 +315,21 @@ function _keybindSaveTarget(){
 }
 
 ipcMain.handle('getKeybindings', () => {
-    const defaults = Object.assign({}, constant.originalKeybinds);
+    const defaults = Object.assign(
+        {},
+        constant.originalKeybinds,
+        platform.pluginRuntime.getKeybindDefaults()
+    );
     let visibleIds = null;
     if (visibleKeybindIds) {
         visibleIds = Object.keys(defaults).filter(function (id) {
             return !!visibleKeybindIds[id];
+        });
+        // Include plugin-only ids that are visible but not in originalKeybinds.
+        Object.keys(visibleKeybindIds).forEach(function (id) {
+            if (visibleIds.indexOf(id) === -1 && defaults[id] != null) {
+                visibleIds.push(id);
+            }
         });
     }
     return {

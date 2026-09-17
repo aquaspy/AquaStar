@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Example Dashboard</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 16px; background: #121212; color: #e6e6e6;
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-size: 13px;
+  }
+  h1 { margin: 0 0 8px; font-size: 16px; }
+  p { color: #9a9a9a; line-height: 1.45; }
+  .card {
+    border: 1px solid #2c2c2c; border-radius: 8px; padding: 12px; margin: 12px 0; background: #1b1b1b;
+  }
+  label { display: block; margin-bottom: 6px; }
+  textarea {
+    width: 100%; min-height: 72px; box-sizing: border-box;
+    background: #151515; color: #e6e6e6; border: 1px solid #333; border-radius: 4px; padding: 8px;
+  }
+  button {
+    margin-top: 8px; margin-right: 8px; background: #2a2a2a; color: #eee;
+    border: 1px solid #444; border-radius: 4px; padding: 6px 10px; cursor: pointer;
+  }
+  button.primary { background: #3a7fe0; border-color: #3a7fe0; }
+  code { color: #cfcfcf; }
+  #status { min-height: 18px; color: #7fd08a; margin-top: 8px; }
+  #status.err { color: #ff8e8e; }
+</style>
+</head>
+<body>
+  <h1>Example Companion dashboard</h1>
+  <p>
+    Demonstrates <code>persistent-store</code>, namespaced IPC (<code>plugin:example-companion:*</code>),
+    and <code>net-fetch</code> against the GitHub API allowlist.
+  </p>
+  <div class="card">
+    <div>Visits: <strong id="visits">—</strong></div>
+    <div>Last opened: <strong id="last">—</strong></div>
+  </div>
+  <div class="card">
+    <label for="note">Sticky note (saved in aquastar.example-companion.demo.json)</label>
+    <textarea id="note"></textarea>
+    <button class="primary" id="saveNote">Save note</button>
+    <button id="refresh">Refresh</button>
+  </div>
+  <div class="card">
+    <button id="fetchRepo">Fetch aquaspy/AquaStar via net.fetchText</button>
+    <pre id="repo" style="white-space:pre-wrap;color:#cfcfcf;"></pre>
+  </div>
+  <div id="status"></div>
+<script>
+(async function () {
+  const api = window.aquastarPlugin;
+  const status = document.getElementById('status');
+  function setStatus(msg, isErr) {
+    status.textContent = msg || '';
+    status.className = isErr ? 'err' : '';
+  }
+  async function render() {
+    const state = await api.getState();
+    document.getElementById('visits').textContent = String(state.visits || 0);
+    document.getElementById('last').textContent = state.lastOpenedAt || '—';
+    document.getElementById('note').value = state.note || '';
+  }
+  document.getElementById('saveNote').onclick = async function () {
+    await api.saveNote(document.getElementById('note').value);
+    setStatus('Note saved.');
+    await render();
+  };
+  document.getElementById('refresh').onclick = function () { render(); };
+  document.getElementById('fetchRepo').onclick = async function () {
+    setStatus('Fetching…');
+    const meta = await api.fetchRepoMeta();
+    const pre = document.getElementById('repo');
+    if (!meta || !meta.ok) {
+      pre.textContent = '';
+      setStatus((meta && meta.error) || 'Fetch failed', true);
+      return;
+    }
+    pre.textContent = meta.fullName + ' ★' + meta.stars + '\n' + (meta.description || '');
+    setStatus('Fetch ok.');
+  };
+  await api.bumpVisit();
+  await render();
+})();
+</script>
+</body>
+</html>

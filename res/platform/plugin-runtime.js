@@ -209,12 +209,65 @@ function openFeatureWindow(featureId) {
     throw new Error('[AquaStar:plugins] openFeatureWindow not available');
 }
 
+function fetchText(url, fetchOpts) {
+    fetchOpts = fetchOpts || {};
+    const maxBytes = fetchOpts.maxBytes || (2 * 1024 * 1024);
+    const timeoutMs = fetchOpts.timeoutMs || 15000;
+    return new Promise(function (resolve) {
+        let net;
+        try { net = require('electron').net; }
+        catch (e) {
+            resolve({ ok: false, error: 'electron net unavailable' });
+            return;
+        }
+        const request = net.request(url);
+        let body = '';
+        let bodyBytes = 0;
+        let settled = false;
+        const timeout = setTimeout(function () {
+            try { request.abort(); } catch (e) { /* ignore */ }
+            finish({ ok: false, error: 'timeout' });
+        }, timeoutMs);
+        function finish(result) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeout);
+            resolve(result);
+        }
+        request.on('response', function (response) {
+            if (response.statusCode < 200 || response.statusCode >= 300) {
+                try { request.abort(); } catch (e) { /* ignore */ }
+                finish({ ok: false, error: 'http-' + response.statusCode });
+                return;
+            }
+            response.on('data', function (chunk) {
+                bodyBytes += chunk.length;
+                if (bodyBytes > maxBytes) {
+                    try { request.abort(); } catch (e) { /* ignore */ }
+                    finish({ ok: false, error: 'response-too-large' });
+                    return;
+                }
+                body += chunk.toString();
+            });
+            response.on('end', function () { finish({ ok: true, html: body }); });
+            response.on('error', function (err) {
+                finish({ ok: false, error: err.message || String(err) });
+            });
+        });
+        request.on('error', function (err) {
+            finish({ ok: false, error: err.message || String(err) });
+        });
+        request.end();
+    });
+}
+
 function createHostWindowDeps() {
     return {
         openPrimaryGame: openPrimaryGame,
         openLaunch: openLaunch,
         openUrl: openUrl,
-        openFeatureWindow: openFeatureWindow
+        openFeatureWindow: openFeatureWindow,
+        fetchText: fetchText
     };
 }
 

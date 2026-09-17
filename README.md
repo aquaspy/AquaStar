@@ -3,7 +3,7 @@
 
 AquaStar is a Flash-capable companion launcher (Electron 11 + PPAPI). It ships with an **Adventure Quest Worlds** plugin and can be extended for other Flash games.
 
-**Writing a plugin:** see the full authoring guide in [`docs/PLUGINS.md`](docs/PLUGINS.md) (not just the template README). Architecture notes: [`docs/design/plugin-architecture.md`](docs/design/plugin-architecture.md).
+**Writing a plugin:** full guide in [`docs/PLUGINS.md`](docs/PLUGINS.md). Worked example: [`plugins/example-companion/`](plugins/example-companion/) (stage + Flash, GitHub keybinds, dashboard). Empty stub: [`plugins/_template/`](plugins/_template/). Design: [`docs/design/plugin-architecture.md`](docs/design/plugin-architecture.md).
 
 ## How to download
 
