@@ -1,7 +1,7 @@
 {
   "name": "AquaStar",
   "version": "1.12.2",
-  "description": "A custom aqlite launcher",
+  "description": "Flash companion launcher with Adventure Quest Worlds plugin support",
   "homepage": "https://github.com/aquaspy/AquaStar",
   "main": "main.js",
   "scripts": {

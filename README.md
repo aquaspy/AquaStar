@@ -1,7 +1,7 @@
 # AquaStar
 ![AquaStarLogo](Icon/Icon_1024.png)
 
-AquaStar is a custom AqLite launcher. It aims to uses the latest aqlite .swf while providing additional features.
+AquaStar is a Flash-capable companion launcher (Electron 11 + PPAPI). It ships with an **Adventure Quest Worlds** plugin and can be extended for other Flash games — see [`docs/PLUGINS.md`](docs/PLUGINS.md).
 
 ## How to download
 
