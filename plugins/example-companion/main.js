@@ -41,7 +41,7 @@ function activate(host) {
 
     host.trustFlashUrls([boxmoverSwf, rectangleSwf]);
     host.registerSessionRules(session.createSessionRules());
-    host.registerNavigationHooks(navigation.createNavigationHooks());
+    host.registerNavigationHooks(navigation.createNavigationHooks(host));
 
     menus.register(host);
     keybinds.register(host);
