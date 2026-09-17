@@ -16,7 +16,7 @@ test('AQW plugin locale catalogs export feature message namespaces', () => {
     assert.ok(catalog.inventoryMessages && catalog.inventoryMessages.title);
     assert.ok(catalog.wikiMessages && catalog.wikiMessages.mergeMaterialsTitle);
     assert.ok(catalog.charPageStudioMessages && catalog.charPageStudioMessages.heading);
-    assert.strictEqual(typeof catalog.dialogMessages.helpDetail, 'function');
+    assert.strictEqual(typeof catalog.dialogMessages.helpDetailExtra, 'function');
     assert.ok(catalog.menuMessages.menuWiki);
     assert.ok(catalog.settingsMessages.labels.wiki);
   });
@@ -72,7 +72,9 @@ test('mergePluginLocales applies plugin keys without clobbering platformMessages
   assert.ok(locale.strings.settingsMessages.labels.settings);
   assert.ok(locale.strings.menuMessages.menuSettings);
   assert.ok(locale.strings.menuMessages.menuWiki);
+  assert.ok(String(locale.strings.dialogMessages.helpDetail).indexOf('AquaStar (app)') !== -1);
   assert.ok(String(locale.strings.dialogMessages.helpDetail).indexOf('AQW Wiki') !== -1);
+  assert.ok(String(locale.strings.dialogMessages.helpDetail).indexOf('Adventure Quest Worlds') !== -1);
 
   locale.strings.platformMessages = { keep: true };
   locale.mergePluginLocales({

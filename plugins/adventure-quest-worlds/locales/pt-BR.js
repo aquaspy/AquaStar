@@ -28,28 +28,20 @@ exports.charPageStudioMessages = {
 };
 
 exports.dialogMessages = {
-    helpDetail: function (k) {return expand(k.wiki) + ' - AQW Wiki\n' +
+    helpDetailExtra: function (k) {return 'Adventure Quest Worlds\n' +
+        expand(k.wiki)      + ' - AQW Wiki\n' +
         expand(k.design)    + ' - AQW Design Notes\n' +
         expand(k.account)   + ' - Página da conta AQW\n' +
-        expand(k.charpage)  + ' - Consulta a Char Page do personagem configurado nas Configurações\n' +
-        expand(k.cpSshot)   + ' - (Somente Char Pages) salva uma imagem da Char Page aberta\n' +
-        expand(k.newAqw)    + ' - Abre uma nova instância do AQW.\n' +
-        expand(k.newTest)   + ' - Abre uma instância de testes do AQW.\n' +
-        expand(k.dragon)    + ' - Abre o DragonFable.\n' +
-        expand(k.about)     + ' - Sobre AquaStar.\n' +
-        expand(k.fullscreen)+ ' - Ativa/desativa tela cheia.\n' +
-        expand(k.sshot)     + ' - Salva um print da janela do jogo.\n' +
-        expand(k.record)    + ' - Grava a tela do jogo. Use de novo para parar.\n' +
-        expand(k.reload)    + " - Recarrega a página atual.\n" +
-        expand(k.reloadCache)+' - Limpa o cache e dados do jogo, então recarrega a página.\n' +
-        expand(k.settings)  + ' - Abre a tela de Configurações, para customizar as keybindings.\n' +
-        expand(k.reminders) + ' - Abre Lembretes de quests por personagem.\n' +
-        expand(k.todo)      + ' - Abre a Lista de Tarefas.\n' +
-        expand(k.inventory) + ' - Abre Inventário/BuyBack.\n' +
-        expand(k.strategy)  + ' - Abre as ferramentas de Estratégia.\n\n' +
-        'A barra de menu acima do jogo oferece estes mesmos comandos e pode ser desligada nas Configurações.\n' +
-        'Use Char Page Studio pelo menu AquaStar para criar imagens e GIFs.\n\n' +
-        'Nota: ' + expand(k.help) + ' mostra esta mensagem.';
+        expand(k.charpage)  + ' - Char Page do personagem configurado nas Configurações\n' +
+        expand(k.cpSshot)   + ' - (Somente Char Pages) salva a Char Page aberta\n' +
+        expand(k.newAqw)    + ' - Nova instância do AQW\n' +
+        expand(k.newTest)   + ' - Instância de testes do AQW\n' +
+        expand(k.dragon)    + ' - Abre o DragonFable\n' +
+        expand(k.reminders) + ' - Lembretes de quests por personagem\n' +
+        expand(k.todo)      + ' - Lista de Tarefas\n' +
+        expand(k.inventory) + ' - Inventário/BuyBack\n' +
+        expand(k.strategy)  + ' - Ferramentas de Estratégia\n\n' +
+        'A barra de menu do jogo pode ser desligada nas Configurações. Char Page Studio fica no menu Jogo.';
     }
 };
 

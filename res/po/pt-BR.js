@@ -13,24 +13,26 @@ exports.titleMessages = {
 exports.dialogMessages = {
     helpTitle   :"Ajuda:",
     helpMessage :"Atalhos e recursos do AquaStar.",
-    helpDetail(k) {return expand(k.help) + ' - Mostra esta ajuda.\n' +
-        expand(k.settings)  + ' - Abre as Configurações.\n' +
-        expand(k.about)     + ' - Sobre AquaStar.\n' +
+    helpDetail(k) {return 'AquaStar (app)\n' +
+        expand(k.help) + ' - Mostra esta ajuda.\n' +
+        expand(k.settings)  + ' - Abre as Configurações (Geral / plugin ativo / Atalhos).\n' +
+        expand(k.about)     + ' - Sobre o AquaStar.\n' +
         expand(k.fullscreen)+ ' - Ativa/desativa tela cheia.\n' +
-        expand(k.sshot)     + ' - Salva um print da janela do jogo.\n' +
+        expand(k.sshot)     + ' - Salva um print da janela de jogo em foco.\n' +
         expand(k.record)    + ' - Grava a tela do jogo. Use de novo para parar.\n' +
         expand(k.reload)    + ' - Recarrega a página atual.\n' +
-        expand(k.reloadCache)+' - Limpa o cache e dados do jogo, então recarrega a página.\n\n' +
-        'Nota: ' + expand(k.help) + ' mostra esta mensagem.';
+        expand(k.reloadCache)+' - Limpa cache/dados da página e recarrega.\n' +
+        expand(k.forward)   + ' / ' + expand(k.backward) + ' - Histórico em janelas de navegação.\n\n' +
+        'Atalhos do plugin ativo (se houver) aparecem abaixo.';
     },
     helpScreenshot     : "Pasta dos prints: ",
-    helpAqliteOld      : "Pasta do app para o aqlite_old/aquastar.json (Pode mudar se o usuário mover o aplicativo): ",
+    helpAqliteOld      : "Pasta AppData para aquastar.json e SWF local opcional (pode mudar se o usuário mover o app): ",
     helpCustomKeyPath  : "",
 
     aboutTitle     : "Sobre o AquaStar, versão: ",
-    aboutMessage   : "Aquastar não seria possível sem a ajuda de:",
+    aboutMessage   : "AquaStar é um shell Flash com plugins por jogo.",
     aboutDetail    :
-        "133spider (github) por criar o AQLite em si\naquaspy (github)\nbiglavis (github) Por desenvolver a extensão WikiView\nArtix Entertainment (artix.com)\nElectronJs (electronjs.org)\nAdobe Flash Player (adobe.com)\nVOCÊ! (Sim, Você! Obrigado por seu apoio!)\n\nNota: Este não é um produto oficial da Artix. Artix Entertainment não recomenda o uso por qualquer motivo. Você está usando por sua conta e risco.\n\nVocê pode dar suas opiniões, contribuir, e seguir o projeto em: ",
+        "Agradecimentos:\n133spider (AQLite)\naquaspy\nbiglavis (WikiView)\nArtix Entertainment\nElectron\nAdobe Flash Player\ne você pelo apoio.\n\nO AquaStar não é um produto oficial da Artix; use por sua conta e risco.\n\nProjeto / releases: ",
     aboutDebug     : "Informações para Debug",
 
     aboutGithubPrompt : "Releases do AquaStar",

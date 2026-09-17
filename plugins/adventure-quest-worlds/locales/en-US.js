@@ -28,28 +28,21 @@ exports.charPageStudioMessages = {
 };
 
 exports.dialogMessages = {
-    helpDetail: function (k) {return expand(k.wiki) + ' - AQW Wiki\n' +
+    // Appended under platform helpDetail (see res/locale.js).
+    helpDetailExtra: function (k) {return 'Adventure Quest Worlds\n' +
+        expand(k.wiki)      + ' - AQW Wiki\n' +
         expand(k.design)    + ' - AQW Design Notes\n' +
         expand(k.account)   + ' - AQW account page\n' +
         expand(k.charpage)  + " - Opens the configured player character's Char Page\n" +
         expand(k.cpSshot)   + ' - (Char Pages only) saves the open Char Page\n' +
-        expand(k.newAqw)    + ' - Opens a new instance.\n' +
-        expand(k.newTest)   + ' - Opens a Testing AQW instance.\n' +
-        expand(k.dragon)    + ' - Opens DragonFable.\n' +
-        expand(k.about)     + ' - About AquaStar.\n' +
-        expand(k.fullscreen)+ ' - Toggles fullscreen.\n' +
-        expand(k.sshot)     + ' - Saves a screenshot of the game window.\n' +
-        expand(k.record)    + ' - Record the Game Screen. Use it again to stop.\n' +
-        expand(k.reload)    + " - Reloads the current page.\n" +
-        expand(k.reloadCache)+' - Clears game cache and data, then reloads the page.\n' +
-        expand(k.settings)  + ' - Opens the Settings screen, to customize keybindings.\n' +
-        expand(k.reminders) + ' - Opens quest reminders per character.\n' +
-        expand(k.todo)      + ' - Opens the To-Do List.\n' +
-        expand(k.inventory) + ' - Opens Inventory/BuyBack.\n' +
-        expand(k.strategy)  + ' - Opens Strategy tools.\n\n' +
-        'The menu bar above the game offers these same commands and can be disabled in Settings.\n' +
-        'Open Char Page Studio from the AquaStar menu to create images and GIFs.\n\n' +
-        'Note: ' + expand(k.help) + ' shows this message.';
+        expand(k.newAqw)    + ' - Opens a new AQW instance\n' +
+        expand(k.newTest)   + ' - Opens a Testing AQW instance\n' +
+        expand(k.dragon)    + ' - Opens DragonFable\n' +
+        expand(k.reminders) + ' - Quest reminders per character\n' +
+        expand(k.todo)      + ' - To-Do List\n' +
+        expand(k.inventory) + ' - Inventory/BuyBack\n' +
+        expand(k.strategy)  + ' - Strategy tools\n\n' +
+        'Game menu bar can be disabled in Settings. Char Page Studio is under the Game menu.';
     }
 };
 

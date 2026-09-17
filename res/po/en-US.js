@@ -13,24 +13,26 @@ exports.titleMessages = {
 exports.dialogMessages = {
     helpTitle   :"Help:",
     helpMessage :"AquaStar shortcuts and features.",
-    helpDetail(k) {return expand(k.help) + ' - Show this help.\n' +
-        expand(k.settings)  + ' - Opens Settings.\n' +
+    helpDetail(k) {return 'AquaStar (app)\n' +
+        expand(k.help) + ' - Show this help.\n' +
+        expand(k.settings)  + ' - Opens Settings (General / active plugin / Keybinds).\n' +
         expand(k.about)     + ' - About AquaStar.\n' +
         expand(k.fullscreen)+ ' - Toggles fullscreen.\n' +
-        expand(k.sshot)     + ' - Saves a screenshot of the game window.\n' +
-        expand(k.record)    + ' - Record the Game Screen. Use it again to stop.\n' +
+        expand(k.sshot)     + ' - Saves a screenshot of the focused game window.\n' +
+        expand(k.record)    + ' - Record the game screen. Use it again to stop.\n' +
         expand(k.reload)    + ' - Reloads the current page.\n' +
-        expand(k.reloadCache)+' - Clears game cache and data, then reloads the page.\n\n' +
-        'Note: ' + expand(k.help) + ' shows this message.';
+        expand(k.reloadCache)+' - Clears cache/data for the page, then reloads.\n' +
+        expand(k.forward)   + ' / ' + expand(k.backward) + ' - Navigate history in browser windows.\n\n' +
+        'Active-plugin shortcuts (if any) are listed below.';
     },
     helpScreenshot     : "Screenshot folder: ",
-    helpAqliteOld      : "App folder for aqlite_old and aquastar.json (can change if user move the application): ",
+    helpAqliteOld      : "AppData folder for aquastar.json and optional local SWF override (can change if the user moves the app): ",
     helpCustomKeyPath  : "",
 
     aboutTitle     : "About AquaStar Version: ",
-    aboutMessage   : "Aquastar would not be possible without the help of:",
+    aboutMessage   : "AquaStar is a Flash companion shell with game plugins.",
     aboutDetail    :
-        "133spider (github) for creating AQLite itself\naquaspy (github)\nbiglavis (github) For developing the extension WikiView\nArtix Entertainment (artix.com)\nElectronJs (electronjs.org)\nAdobe Flash Player (adobe.com)\nYOU! (Yes, You! Thanks for supporting us!)\n\nNote: This is NOT an official Artix product. Artix Entertainment does not recommends it by any means. You are at your own risk using it.\n\nYou can give your opinion, contribute and follow the project here: ",
+        "Thanks to everyone who made this possible:\n133spider (AQLite)\naquaspy\nbiglavis (WikiView)\nArtix Entertainment\nElectron\nAdobe Flash Player\nand you for supporting the project.\n\nAquaStar is not an official Artix product; use at your own risk.\n\nProject / releases: ",
     aboutDebug     : "Debug Info",
 
     aboutGithubPrompt : "AquaStar Releases page",

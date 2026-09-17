@@ -1,9 +1,17 @@
 exports.dialogMessages = {
     helpMessage: 'Example Companion — demo de plugin do AquaStar',
-    helpDetail: function () {
-        return 'Jogo principal: BoxMover.swf (setas).\n' +
-            'Alt+N nova janela · Alt+E painel · Alt+I demo de injeção.\n' +
-            'Links do GitHub abrem no navegador do sistema (Electron 11 não renderiza o github.com moderno).';
+    helpDetailExtra: function (k) {
+        function expand(keyb) {
+            if (Array.isArray(keyb)) return keyb.join(', ');
+            return keyb || '';
+        }
+        return 'Example Companion\n' +
+            expand(k.newStage) + ' - Nova janela BoxMover.swf (setas movem o quadrado)\n' +
+            expand(k.openDashboard) + ' - Painel de exemplo (store / IPC / fetch)\n' +
+            expand(k.openInjectDemo) + ' - Página local de demo de injeção\n' +
+            expand(k.openGithub) + ' / ' + expand(k.openReleases) + ' / ' +
+            expand(k.openPluginsDocs) + ' - GitHub / docs no navegador do sistema\n' +
+            '(O Electron 11 não renderiza o github.com moderno dentro do app.)';
     }
 };
 

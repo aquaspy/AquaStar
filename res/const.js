@@ -49,7 +49,8 @@ const iconRedPath = path.join(appRoot, 'Icon', 'Iconred_1024.png');
 
 const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
 
-// Links with keybinds — sourced from the AQW plugin catalog (PR 3).
+// Legacy AQW URL re-exports for older call sites and the AQW plugin.
+// Non-AQW plugins should not rely on these — use host.setPrimaryGame / launches.
 const aqwUrls = require('../plugins/adventure-quest-worlds/urls.js');
 const charLookup   = aqwUrls.URLS.charLookup;
 const designNotes  = aqwUrls.URLS.designNotes;
@@ -281,16 +282,14 @@ exports.ruffleUpdateChannelChoices = Object.keys(ruffleUpdateChannels).map((id) 
 const originalOptions = {
     playerCharacter:   "",
     featurePlayerName: false,
-    // Overrides the AQW game SWF loaded on startup. Ignored when a custom SWF file
-    // (aqlite_old.swf, managed just below in the Settings screen) is active - see
-    // changeMainUrl() and the "isOldAqlite" guard inside it.
+    // Optional URL override for the active plugin's primary game. Ignored when a
+    // local SWF override (aqlite_old.swf) is active — see changeMainUrl().
     customUrl:         "",
     recordingFormat:   exports.defaultRecordingFormat,
     renderMode:        exports.defaultRenderMode,
     ruffleUpdateChannel: 'latest',
     ruffleAutoUpdate:  false,
-    // Native menu bar shown above AQW/DragonFable game windows.  It mirrors the
-    // launcher shortcuts for players who prefer discoverable mouse controls.
+    // Native menu bar on game windows (mirrors shortcuts). Default on.
     showGameMenu:      true,
     // Periodic background Inventory/BuyBack sync (res/features/inventory/inventory.js).
     // Off by default - manual "Sync Now" (in-window or the account.aq.com/Home button)

@@ -515,7 +515,11 @@ What the Host already confines:
 
 i18n helpers: `host.getLocaleId()`, `host.getLocaleStrings(ns)`, `host.getAppIconPath()`.
 
+**Help (F1):** platform `dialogMessages.helpDetail` lists app shortcuts. Plugins should export `dialogMessages.helpDetailExtra` (function or string); `res/locale.js` appends it under the platform section. Do not replace `helpDetail` wholesale.
+
 Sandboxed preload helper: `require('res/platform').buildSandboxedPreloadSource({ pluginId, methods })`.
+
+Smoke: `npm run smoke:plugins` (plus the manual Flash checklist in that script’s header).
 
 What plugins can still do if malicious (in-process CJS, especially **bundled**):
 

@@ -1,9 +1,17 @@
 exports.dialogMessages = {
     helpMessage: 'Example Companion — AquaStar plugin demo',
-    helpDetail: function () {
-        return 'Primary game: BoxMover.swf (arrow keys).\n' +
-            'Alt+N new window · Alt+E dashboard · Alt+I injection demo.\n' +
-            'GitHub links open in your system browser (Electron 11 cannot render modern github.com).';
+    helpDetailExtra: function (k) {
+        function expand(keyb) {
+            if (Array.isArray(keyb)) return keyb.join(', ');
+            return keyb || '';
+        }
+        return 'Example Companion\n' +
+            expand(k.newStage) + ' - New BoxMover.swf window (arrow keys move the square)\n' +
+            expand(k.openDashboard) + ' - Example dashboard (store / IPC / fetch)\n' +
+            expand(k.openInjectDemo) + ' - Local injection demo page\n' +
+            expand(k.openGithub) + ' / ' + expand(k.openReleases) + ' / ' +
+            expand(k.openPluginsDocs) + ' - GitHub / docs in the system browser\n' +
+            '(Electron 11 cannot render modern github.com in-app.)';
     }
 };
 

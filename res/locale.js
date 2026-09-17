@@ -99,8 +99,23 @@ function detectLang(systemLang, keyb){
         mergePluginLocales(pendingPluginCatalog);
     }
 
-    if (langFile.dialogMessages && typeof langFile.dialogMessages.helpDetail === 'function') {
-        langFile.dialogMessages.helpDetail = langFile.dialogMessages.helpDetail(_displayKeybinds(keyb));
+    // Platform helpDetail + optional plugin helpDetailExtra (appended).
+    if (langFile.dialogMessages) {
+        const keys = _displayKeybinds(keyb);
+        let detail = '';
+        if (typeof langFile.dialogMessages.helpDetail === 'function') {
+            detail = langFile.dialogMessages.helpDetail(keys);
+        } else if (typeof langFile.dialogMessages.helpDetail === 'string') {
+            detail = langFile.dialogMessages.helpDetail;
+        }
+        const extra = langFile.dialogMessages.helpDetailExtra;
+        if (typeof extra === 'function') {
+            const extraText = extra(keys);
+            if (extraText) detail = detail + (detail ? '\n\n' : '') + extraText;
+        } else if (typeof extra === 'string' && extra) {
+            detail = detail + (detail ? '\n\n' : '') + extra;
+        }
+        langFile.dialogMessages.helpDetail = detail;
     }
 
     return lang;
