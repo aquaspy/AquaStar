@@ -2,7 +2,7 @@
 
 Custom Electron 11 Flash (PPAPI) companion shell. Game-specific behavior lives in **plugins**; the bundled default is Adventure Quest Worlds (`plugins/adventure-quest-worlds/`).
 
-Plugin authoring (full guide): [`docs/PLUGINS.md`](docs/PLUGINS.md). Architecture design: [`docs/design/plugin-architecture.md`](docs/design/plugin-architecture.md). Starter: `plugins/_template/`.
+Plugin authoring (full guide): [`docs/PLUGINS.md`](docs/PLUGINS.md). Architecture design: [`docs/design/plugin-architecture.md`](docs/design/plugin-architecture.md). Starter: `plugins/_template/`. Worked example: `plugins/example-companion/`. Smoke: `npm run smoke:plugins`.
 
 ## Commands
 
