@@ -221,11 +221,31 @@
     const st = rowState[key];
     if (!st) return;
     if (st.recording) stopRecording(key);
+    if (st.type === 'object-option') {
+      st.value = _cloneTrustedMap(st.initial);
+      return;
+    }
     if (st.type === 'text-option' || st.type === 'select-option') {
+      if (key === 'activePluginId' || key === 'enableLocalPlugins' || key === 'allowLocalPluginOverride') {
+        st.value = st.initial;
+        if (st.comboEl) {
+          if (st.type === 'boolean-option' || st.comboEl.type === 'checkbox') st.comboEl.checked = st.value;
+          else st.comboEl.value = st.value;
+          if (st.comboEl.classList && st.comboEl.classList.toggle) {
+            st.comboEl.classList.toggle('changed', st.value !== st.initial);
+          }
+        }
+        return;
+      }
       st.value = options[key] || '';
       st.comboEl.value = st.value;
       st.comboEl.classList.toggle('changed', st.value !== st.initial);
     } else if (st.type === 'boolean-option') {
+      if (key === 'enableLocalPlugins' || key === 'allowLocalPluginOverride') {
+        st.value = st.initial;
+        st.comboEl.checked = st.value;
+        return;
+      }
       st.value = options[key] === true;
       st.comboEl.checked = st.value;
     } else {
@@ -248,7 +268,11 @@
   }
 
   function anyChanges() {
-    return Object.keys(rowState).some((k) => rowState[k].value !== rowState[k].initial);
+    return Object.keys(rowState).some((k) => {
+      const st = rowState[k];
+      if (st.type === 'object-option') return !_trustedMapsEqual(st.value, st.initial);
+      return st.value !== st.initial;
+    });
   }
 
   function refreshSaveState() {
@@ -631,33 +655,65 @@
     return status;
   }
 
+  function _cloneTrustedMap(map) {
+    const out = {};
+    Object.keys(map || {}).forEach((id) => { out[id] = map[id]; });
+    return out;
+  }
+
+  function _trustedMapsEqual(a, b) {
+    const ak = Object.keys(a || {}).sort();
+    const bk = Object.keys(b || {}).sort();
+    if (ak.length !== bk.length) return false;
+    for (let i = 0; i < ak.length; i++) {
+      if (ak[i] !== bk[i]) return false;
+      if (!!a[ak[i]] !== !!b[bk[i]]) return false;
+    }
+    return true;
+  }
+
   function buildPluginsSection(pluginList, pluginSettings) {
+    const nodes = [];
     const heading = document.createElement('div');
     heading.className = 'section-heading';
     heading.textContent = messages.pluginsHeading || 'Plugins';
+    nodes.push(heading);
 
-    const row = document.createElement('div');
-    row.className = 'row';
+    const initialTrusted = _cloneTrustedMap(pluginSettings.trustedLocalPlugins);
+    rowState.trustedLocalPlugins = {
+      initial: initialTrusted,
+      value: _cloneTrustedMap(initialTrusted),
+      recording: false,
+      type: 'object-option',
+      comboEl: { classList: { toggle: function () {} } }
+    };
 
-    const labelEl = document.createElement('div');
-    labelEl.className = 'label';
-    labelEl.textContent = messages.pluginsActiveLabel || 'Active plugin';
-    const hint = document.createElement('span');
-    hint.className = 'hint';
-    hint.textContent = messages.pluginsActiveHint ||
-      'Only one plugin can be active. Changing it requires restarting AquaStar.';
-    labelEl.appendChild(hint);
+    function currentPluginQuery() {
+      return {
+        enableLocalPlugins: rowState.enableLocalPlugins
+          ? rowState.enableLocalPlugins.value === true
+          : !!pluginSettings.enableLocalPlugins,
+        allowLocalPluginOverride: rowState.allowLocalPluginOverride
+          ? rowState.allowLocalPluginOverride.value === true
+          : !!pluginSettings.allowLocalPluginOverride,
+        trustedLocalPlugins: rowState.trustedLocalPlugins
+          ? rowState.trustedLocalPlugins.value
+          : initialTrusted
+      };
+    }
 
-    const selectEl = document.createElement('select');
-    selectEl.className = 'select-input';
-    const plugins = (pluginList && pluginList.plugins) || [];
-    if (!plugins.length) {
-      const empty = document.createElement('option');
-      empty.value = pluginSettings.activePluginId || '';
-      empty.textContent = messages.pluginsEmptyLabel || 'No plugins discovered.';
-      selectEl.appendChild(empty);
-      selectEl.disabled = true;
-    } else {
+    function fillActivePluginSelect(selectEl, list, preferredId) {
+      const plugins = (list && list.plugins) || [];
+      selectEl.innerHTML = '';
+      if (!plugins.length) {
+        const empty = document.createElement('option');
+        empty.value = preferredId || '';
+        empty.textContent = messages.pluginsEmptyLabel || 'No plugins discovered.';
+        selectEl.appendChild(empty);
+        selectEl.disabled = true;
+        return preferredId || '';
+      }
+      selectEl.disabled = false;
       plugins.forEach((plugin) => {
         const optionEl = document.createElement('option');
         optionEl.value = plugin.id;
@@ -668,41 +724,236 @@
           (plugin.version ? ' · ' + plugin.version : '');
         selectEl.appendChild(optionEl);
       });
-      selectEl.value = pluginSettings.activePluginId || plugins[0].id;
+      const ids = plugins.map((p) => p.id);
+      const chosen = ids.indexOf(preferredId) !== -1 ? preferredId : ids[0];
+      selectEl.value = chosen;
+      return chosen;
     }
 
-    const initialValue = selectEl.value;
+    // --- enableLocalPlugins toggle ---
+    function buildFlagRow(key, labelText, hintText, initialBool) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const labelEl = document.createElement('div');
+      labelEl.className = 'label';
+      labelEl.textContent = labelText;
+      if (hintText) {
+        const hint = document.createElement('span');
+        hint.className = 'hint';
+        hint.textContent = hintText;
+        labelEl.appendChild(hint);
+      }
+      const switchLabel = document.createElement('label');
+      switchLabel.className = 'switch';
+      const inputEl = document.createElement('input');
+      inputEl.type = 'checkbox';
+      inputEl.checked = initialBool === true;
+      const sliderEl = document.createElement('span');
+      sliderEl.className = 'slider';
+      switchLabel.appendChild(inputEl);
+      switchLabel.appendChild(sliderEl);
+      const resetBtn = document.createElement('button');
+      resetBtn.className = 'small';
+      resetBtn.textContent = messages.resetButton;
+      row.appendChild(labelEl);
+      row.appendChild(switchLabel);
+      row.appendChild(resetBtn);
+      rowState[key] = {
+        comboEl: inputEl,
+        initial: initialBool === true,
+        value: initialBool === true,
+        recording: false,
+        type: 'boolean-option'
+      };
+      inputEl.addEventListener('change', () => {
+        rowState[key].value = inputEl.checked;
+        refreshSaveState();
+        refreshPluginDiscovery();
+      });
+      resetBtn.onclick = () => {
+        rowState[key].value = rowState[key].initial;
+        inputEl.checked = rowState[key].initial;
+        refreshSaveState();
+        refreshPluginDiscovery();
+      };
+      return row;
+    }
+
+    nodes.push(buildFlagRow(
+      'enableLocalPlugins',
+      messages.pluginsEnableLocalLabel || 'Load local plugins from AppData',
+      messages.pluginsEnableLocalHint || '',
+      pluginSettings.enableLocalPlugins
+    ));
+    nodes.push(buildFlagRow(
+      'allowLocalPluginOverride',
+      messages.pluginsAllowOverrideLabel || 'Allow local plugins to override bundled ids',
+      messages.pluginsAllowOverrideHint || '',
+      pluginSettings.allowLocalPluginOverride
+    ));
+
+    // --- active plugin select ---
+    const activeRow = document.createElement('div');
+    activeRow.className = 'row';
+    const activeLabel = document.createElement('div');
+    activeLabel.className = 'label';
+    activeLabel.textContent = messages.pluginsActiveLabel || 'Active plugin';
+    const activeHint = document.createElement('span');
+    activeHint.className = 'hint';
+    activeHint.textContent = messages.pluginsActiveHint ||
+      'Only one plugin can be active. Changing it requires restarting AquaStar.';
+    activeLabel.appendChild(activeHint);
+    const selectEl = document.createElement('select');
+    selectEl.className = 'select-input';
+    const initialActive = fillActivePluginSelect(
+      selectEl,
+      pluginList,
+      pluginSettings.activePluginId
+    );
     selectEl.addEventListener('change', () => {
       const st = rowState.activePluginId;
       st.value = selectEl.value;
       st.comboEl.classList.toggle('changed', st.value !== st.initial);
       refreshSaveState();
     });
-
-    const resetBtn = document.createElement('button');
-    resetBtn.className = 'small';
-    resetBtn.textContent = messages.resetButton;
-    resetBtn.onclick = () => {
+    const activeReset = document.createElement('button');
+    activeReset.className = 'small';
+    activeReset.textContent = messages.resetButton;
+    activeReset.onclick = () => {
       const st = rowState.activePluginId;
       st.value = st.initial;
       selectEl.value = st.initial;
       selectEl.classList.remove('changed');
       refreshSaveState();
     };
-
-    row.appendChild(labelEl);
-    row.appendChild(selectEl);
-    row.appendChild(resetBtn);
-
+    activeRow.appendChild(activeLabel);
+    activeRow.appendChild(selectEl);
+    activeRow.appendChild(activeReset);
     rowState.activePluginId = {
       comboEl: selectEl,
-      initial: initialValue,
-      value: initialValue,
+      initial: initialActive,
+      value: initialActive,
       recording: false,
       type: 'select-option'
     };
+    nodes.push(activeRow);
 
-    return [heading, row];
+    const dirRow = document.createElement('div');
+    dirRow.className = 'row';
+    const dirLabel = document.createElement('div');
+    dirLabel.className = 'label';
+    dirLabel.innerHTML = (messages.pluginsLocalDirLabel || 'Local plugins folder: ') +
+      '<code style="color:#cfcfcf;word-break:break-all;">' +
+      String((pluginList && pluginList.localPluginsDir) || '').replace(/</g, '&lt;') +
+      '</code>';
+    dirRow.appendChild(dirLabel);
+    nodes.push(dirRow);
+
+    const notesEl = document.createElement('div');
+    notesEl.className = 'row';
+    const notesLabel = document.createElement('div');
+    notesLabel.className = 'label';
+    notesEl.appendChild(notesLabel);
+    notesEl.style.display = 'none';
+    nodes.push(notesEl);
+
+    const trustHeading = document.createElement('div');
+    trustHeading.className = 'section-heading';
+    trustHeading.textContent = messages.pluginsTrustHeading || 'Trust local plugins';
+    nodes.push(trustHeading);
+
+    const trustHintRow = document.createElement('div');
+    trustHintRow.className = 'row';
+    const trustHintLabel = document.createElement('div');
+    trustHintLabel.className = 'label';
+    const trustHint = document.createElement('span');
+    trustHint.className = 'hint';
+    trustHint.textContent = messages.pluginsTrustHint || '';
+    trustHintLabel.appendChild(trustHint);
+    trustHintRow.appendChild(trustHintLabel);
+    nodes.push(trustHintRow);
+
+    const trustContainer = document.createElement('div');
+    nodes.push(trustContainer);
+
+    function renderTrustRows(list) {
+      trustContainer.innerHTML = '';
+      const localPlugins = ((list && list.plugins) || []).filter((p) => p.source === 'local');
+      trustHeading.style.display = localPlugins.length ? '' : 'none';
+      trustHintRow.style.display = localPlugins.length ? '' : 'none';
+      localPlugins.forEach((plugin) => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const labelEl = document.createElement('div');
+        labelEl.className = 'label';
+        labelEl.textContent = plugin.name + ' (' + plugin.id + ')' +
+          (plugin.version ? ' · ' + plugin.version : '');
+        const switchLabel = document.createElement('label');
+        switchLabel.className = 'switch';
+        const inputEl = document.createElement('input');
+        inputEl.type = 'checkbox';
+        inputEl.checked = !!rowState.trustedLocalPlugins.value[plugin.id];
+        inputEl.addEventListener('change', () => {
+          if (inputEl.checked) rowState.trustedLocalPlugins.value[plugin.id] = true;
+          else delete rowState.trustedLocalPlugins.value[plugin.id];
+          refreshSaveState();
+        });
+        const sliderEl = document.createElement('span');
+        sliderEl.className = 'slider';
+        switchLabel.appendChild(inputEl);
+        switchLabel.appendChild(sliderEl);
+        const trustText = document.createElement('span');
+        trustText.style.flex = '0 0 auto';
+        trustText.style.color = '#9a9a9a';
+        trustText.style.fontSize = '11px';
+        trustText.textContent = messages.pluginsTrustLabel || 'Trust';
+        row.appendChild(labelEl);
+        row.appendChild(trustText);
+        row.appendChild(switchLabel);
+        trustContainer.appendChild(row);
+      });
+    }
+
+    function renderDiscoveryNotes(list) {
+      const errors = (list && list.errors) || [];
+      if (!errors.length) {
+        notesEl.style.display = 'none';
+        notesLabel.textContent = '';
+        return;
+      }
+      notesEl.style.display = '';
+      notesLabel.innerHTML = '';
+      const title = document.createElement('div');
+      title.textContent = messages.pluginsCollisionLabel || 'Discovery notes:';
+      notesLabel.appendChild(title);
+      errors.forEach((err) => {
+        const line = document.createElement('span');
+        line.className = 'hint';
+        line.style.display = 'block';
+        line.textContent = err;
+        notesLabel.appendChild(line);
+      });
+    }
+
+    async function refreshPluginDiscovery() {
+      const list = await api.getPluginList(currentPluginQuery());
+      const preferred = rowState.activePluginId ? rowState.activePluginId.value : pluginSettings.activePluginId;
+      const chosen = fillActivePluginSelect(selectEl, list, preferred);
+      if (rowState.activePluginId) {
+        rowState.activePluginId.value = chosen;
+        rowState.activePluginId.comboEl.classList.toggle(
+          'changed',
+          rowState.activePluginId.value !== rowState.activePluginId.initial
+        );
+      }
+      renderDiscoveryNotes(list);
+      renderTrustRows(list);
+      refreshSaveState();
+    }
+
+    renderDiscoveryNotes(pluginList);
+    renderTrustRows(pluginList);
+    return nodes;
   }
 
   async function init() {
@@ -769,15 +1020,26 @@
       const changed = {};
       Object.keys(rowState).forEach((key) => {
         const st = rowState[key];
+        if (st.type === 'object-option') {
+          if (!_trustedMapsEqual(st.value, st.initial)) changed[key] = _cloneTrustedMap(st.value);
+          return;
+        }
         if (st.value !== st.initial) changed[key] = st.value;
       });
       if (Object.keys(changed).length === 0) return;
 
-      const pluginChanged = Object.prototype.hasOwnProperty.call(changed, 'activePluginId');
+      const pluginChanged = Object.prototype.hasOwnProperty.call(changed, 'activePluginId') ||
+        Object.prototype.hasOwnProperty.call(changed, 'enableLocalPlugins') ||
+        Object.prototype.hasOwnProperty.call(changed, 'allowLocalPluginOverride') ||
+        Object.prototype.hasOwnProperty.call(changed, 'trustedLocalPlugins');
       document.getElementById('saveBtn').disabled = true;
       try {
         const result = await api.saveKeybindings(changed);
-        Object.keys(changed).forEach((key) => { rowState[key].initial = rowState[key].value; });
+        Object.keys(changed).forEach((key) => {
+          const st = rowState[key];
+          if (st.type === 'object-option') st.initial = _cloneTrustedMap(st.value);
+          else st.initial = st.value;
+        });
         setStatus(
           pluginChanged
             ? (messages.pluginsRestartHint || messages.savedMessage)
@@ -787,7 +1049,7 @@
         document.getElementById('saveLocation').innerHTML =
           messages.saveLocationLabel + '<code>' + result.savedTo.replace(/</g, '&lt;') + '</code>';
         document.getElementById('restartBtn').disabled = false;
-        if (pluginChanged) {
+        if (Object.prototype.hasOwnProperty.call(changed, 'activePluginId')) {
           const prompt = messages.pluginsRestartPrompt ||
             'Active plugin changed. Restart AquaStar now to apply it?';
           if (window.confirm(prompt)) api.restartApp();

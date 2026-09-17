@@ -293,13 +293,22 @@ function _readPluginSettingsFromDisk() {
 
 ipcMain.handle('getPluginSettings', () => _readPluginSettingsFromDisk());
 
-ipcMain.handle('getPluginList', () => {
+ipcMain.handle('getPluginList', (event, opts) => {
     const pluginSettings = _readPluginSettingsFromDisk();
+    const enableLocalPlugins = opts && typeof opts.enableLocalPlugins === 'boolean'
+        ? opts.enableLocalPlugins
+        : pluginSettings.enableLocalPlugins;
+    const allowLocalPluginOverride = opts && typeof opts.allowLocalPluginOverride === 'boolean'
+        ? opts.allowLocalPluginOverride
+        : pluginSettings.allowLocalPluginOverride;
+    const trustedLocalPlugins = opts && opts.trustedLocalPlugins && typeof opts.trustedLocalPlugins === 'object'
+        ? opts.trustedLocalPlugins
+        : pluginSettings.trustedLocalPlugins;
     const discovered = platform.discoverPlugins({
         bundledDir: path.join(constant.appRootPath, 'plugins'),
         localDir: path.join(constant.appDataDirectory, 'plugins'),
-        enableLocalPlugins: pluginSettings.enableLocalPlugins,
-        allowLocalPluginOverride: pluginSettings.allowLocalPluginOverride,
+        enableLocalPlugins: enableLocalPlugins,
+        allowLocalPluginOverride: allowLocalPluginOverride,
         appVersion: constant.appVersion,
         log: function () {}
     });
@@ -311,11 +320,12 @@ ipcMain.handle('getPluginList', () => {
                 version: p.manifest.version || '',
                 source: p.source,
                 trusted: platform.isLocalTrusted(p, {
-                    trustedLocalPlugins: pluginSettings.trustedLocalPlugins
+                    trustedLocalPlugins: trustedLocalPlugins
                 })
             };
         }),
-        errors: discovered.errors || []
+        errors: discovered.errors || [],
+        localPluginsDir: path.join(constant.appDataDirectory, 'plugins')
     };
 });
 

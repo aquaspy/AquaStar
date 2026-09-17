@@ -137,5 +137,14 @@ exports.settingsMessages = {
     pluginsRestartPrompt: "O plugin ativo foi alterado. Reiniciar o AquaStar agora para aplicar?",
     pluginsEmptyLabel: "Nenhum plugin encontrado.",
     pluginsSourceBundled: "empacotado",
-    pluginsSourceLocal: "local"
+    pluginsSourceLocal: "local",
+    pluginsEnableLocalLabel: "Carregar plugins locais do AppData",
+    pluginsEnableLocalHint: "Procura plugins em AppData/AquaStar/plugins. Plugins locais rodam no mesmo processo, com acesso total ao app depois de você confiar neles.",
+    pluginsAllowOverrideLabel: "Permitir que plugins locais substituam ids empacotados",
+    pluginsAllowOverrideHint: "Se um plugin local reutilizar um id empacotado, preferir a cópia local. Sem isso, conflitos mantêm o plugin empacotado.",
+    pluginsTrustHeading: "Confiar em plugins locais",
+    pluginsTrustHint: "Plugins locais sem confiança não são ativados. Confiar concede todas as permissões pedidas por aquele plugin.",
+    pluginsTrustLabel: "Confiar",
+    pluginsLocalDirLabel: "Pasta de plugins locais: ",
+    pluginsCollisionLabel: "Notas da descoberta:"
 }

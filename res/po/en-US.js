@@ -137,5 +137,14 @@ exports.settingsMessages = {
     pluginsRestartPrompt: "Active plugin changed. Restart AquaStar now to apply it?",
     pluginsEmptyLabel: "No plugins discovered.",
     pluginsSourceBundled: "bundled",
-    pluginsSourceLocal: "local"
+    pluginsSourceLocal: "local",
+    pluginsEnableLocalLabel: "Load local plugins from AppData",
+    pluginsEnableLocalHint: "Looks for plugins under AppData/AquaStar/plugins. Local plugins run in-process with full app access after you trust them.",
+    pluginsAllowOverrideLabel: "Allow local plugins to override bundled ids",
+    pluginsAllowOverrideHint: "If a local plugin reuses a bundled id, prefer the local copy. Collision errors otherwise keep the bundled plugin.",
+    pluginsTrustHeading: "Trust local plugins",
+    pluginsTrustHint: "Unchecked local plugins will not activate. Trust grants all requested permissions for that plugin.",
+    pluginsTrustLabel: "Trust",
+    pluginsLocalDirLabel: "Local plugins folder: ",
+    pluginsCollisionLabel: "Discovery notes:"
 }

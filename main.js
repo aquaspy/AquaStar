@@ -34,10 +34,11 @@ const constant = require('./res/const.js');
 const locale   = require('./res/locale.js');
 const platform = require('./res/platform');
 
-const bootFlags = platform.readPluginFlagsFromDisk(
+const bootPluginDisk = platform.readPluginFlagsFromDisk(
     constant.appDataDirectory,
     process.env
-).flags;
+);
+const bootFlags = bootPluginDisk.flags;
 
 let activePluginRuntime = null;
 
@@ -74,7 +75,9 @@ function activateBundledPluginsOrLegacy() {
         appRootPath: constant.appRootPath,
         appDataDirectory: constant.appDataDirectory,
         platformSettings: Object.assign({}, bootFlags, {
-            activePluginId: bootFlags.activePluginId
+            activePluginId: bootFlags.activePluginId,
+            trustedLocalPlugins: (bootPluginDisk.settings &&
+                bootPluginDisk.settings.trustedLocalPlugins) || {}
         }),
         defaultPluginId: 'adventure-quest-worlds',
         legacyIpc: true
