@@ -287,28 +287,18 @@ host.ipc.handle('getProgress', function () {
 });
 ```
 
-Preload helper (`res/platform/preload-bridge.js`):
+**Preloads with `sandbox: true` (recommended):** only `require('electron')` — do **not** `require()` other project files (Electron 11 sandboxed preloads fail and the page sees no API).
 
 ```js
-const { exposePluginApi } = require('../../../res/platform/preload-bridge.js');
-// Adjust relative path from your plugin preload location.
-
-exposePluginApi('my-flash-game', {
+const { contextBridge, ipcRenderer } = require('electron');
+contextBridge.exposeInMainWorld('aquastarPlugin', {
   getProgress: function () {
-    return require('electron').ipcRenderer
-      .invoke('plugin:my-flash-game:getProgress');
+    return ipcRenderer.invoke('plugin:my-flash-game:getProgress');
   }
 });
-// Or use the invoker: exposePluginApi already attaches ipc.invoke('getProgress').
 ```
 
-Prefer:
-
-```js
-const { exposePluginApi } = require('...');
-exposePluginApi('my-flash-game');
-// window.aquastarPlugin.ipc.invoke('getProgress')
-```
+`res/platform/preload-bridge.js` is for documentation / non-sandboxed experiments only.
 
 Bundled `adventure-quest-worlds` keeps **legacy unprefixed** names for compatibility (`getReminders`, …). New plugins should not rely on bare names.
 

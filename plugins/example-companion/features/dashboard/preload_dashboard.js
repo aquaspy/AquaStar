@@ -1,14 +1,26 @@
-const path = require('path');
-const bridge = require(path.join(
-    __dirname, '..', '..', '..', '..', 'res', 'platform', 'preload-bridge.js'
-));
+// Sandboxed preloads (Electron 11) can require('electron') but must not require
+// arbitrary project files — that fails silently and leaves window.aquastarPlugin unset.
+const { contextBridge, ipcRenderer } = require('electron');
 
-const ipc = bridge.createInvoker('example-companion');
-// Everything must be passed into exposeInMainWorld up front (no post-mutate).
-bridge.exposePluginApi('example-companion', {
-    getState: function () { return ipc.invoke('getDashboardState'); },
-    bumpVisit: function () { return ipc.invoke('bumpDashboardVisit'); },
-    saveNote: function (note) { return ipc.invoke('saveDashboardNote', note); },
-    fetchRepoMeta: function () { return ipc.invoke('fetchGithubRepoMeta'); },
-    getMessages: function () { return ipc.invoke('getDashboardMessages'); }
+const CH = function (name) {
+    return 'plugin:example-companion:' + name;
+};
+
+contextBridge.exposeInMainWorld('aquastarPlugin', {
+    pluginId: 'example-companion',
+    getState: function () {
+        return ipcRenderer.invoke(CH('getDashboardState'));
+    },
+    bumpVisit: function () {
+        return ipcRenderer.invoke(CH('bumpDashboardVisit'));
+    },
+    saveNote: function (note) {
+        return ipcRenderer.invoke(CH('saveDashboardNote'), note);
+    },
+    fetchRepoMeta: function () {
+        return ipcRenderer.invoke(CH('fetchGithubRepoMeta'));
+    },
+    getMessages: function () {
+        return ipcRenderer.invoke(CH('getDashboardMessages'));
+    }
 });
