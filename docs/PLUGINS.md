@@ -275,6 +275,8 @@ const data = store.readOrCreate(function () { return { level: 0 }; });
 
 **AQW special case:** namespaces `reminders` / `todo` / `strategy` / `inventory` keep the historic filenames `aquastar_reminders.json`, etc. Third-party plugins always get `aquastar.<id>.<ns>.json`.
 
+**Settings / keybinds (`aquastar.json`) — hybrid:** platform chrome stays **top-level** (`settings`, `sshot`, `record`, `recordingFormat`, `customUrl`, plugin flags…). Game keybinds and plugin options live under **`plugins[<activeId>]`**, with legacy top-level fallback and dual-write on save. Register defaults with `host.registerOptionDefaults({ ... })`.
+
 ### 4.7 IPC from your feature windows
 
 Third-party channels are prefixed: `plugin:<your-id>:<channel>`.
