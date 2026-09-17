@@ -385,6 +385,17 @@ function createPluginHost(options) {
                 }
                 throw new Error('[AquaStar:plugins] windows.openUrl not wired');
             },
+            openExternal: function (url) {
+                if (typeof deps.openExternal === 'function') {
+                    return deps.openExternal(url);
+                }
+                // Fallback for tests / unwired hosts
+                try {
+                    return require('electron').shell.openExternal(url);
+                } catch (e) {
+                    throw new Error('[AquaStar:plugins] windows.openExternal not wired');
+                }
+            },
             spawnHelperProcess: function (spawnOpts) {
                 requirePermission('windows.spawnHelperProcess', 'spawn-helper-process');
                 if (!spawnOpts || !spawnOpts.argvFlag || !spawnOpts.scriptRelativePath) {

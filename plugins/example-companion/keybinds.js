@@ -20,18 +20,18 @@ function register(host) {
         },
         {
             id: 'openGithub',
-            openMode: 'new-window',
-            action: function () { host.windows.openUrl(urls.URLS.githubRepo, 'new-window'); }
+            openMode: 'external',
+            action: function () { host.windows.openExternal(urls.URLS.githubRepo); }
         },
         {
             id: 'openReleases',
-            openMode: 'new-window',
-            action: function () { host.windows.openUrl(urls.URLS.githubReleases, 'new-window'); }
+            openMode: 'external',
+            action: function () { host.windows.openExternal(urls.URLS.githubReleases); }
         },
         {
             id: 'openPluginsDocs',
-            openMode: 'new-window',
-            action: function () { host.windows.openUrl(urls.URLS.pluginsDocs, 'new-window'); }
+            openMode: 'external',
+            action: function () { host.windows.openExternal(urls.URLS.pluginsDocs); }
         },
         {
             id: 'openDashboard',

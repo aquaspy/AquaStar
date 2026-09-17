@@ -21,13 +21,18 @@ function command(label, action, accelerator) {
     };
 }
 
-function generateLink(label, link, keybind) {
+function generateLink(label, link, keybind, openMode) {
+    openMode = openMode || 'in-place';
     return {
         label: label,
         accelerator: keybind,
         registerAccelerator: false,
-        openMode: 'in-place',
+        openMode: openMode,
         click(menuItem, focusedWin) {
+            if (openMode === 'external') {
+                require('../platform').pluginRuntime.openExternal(link);
+                return;
+            }
             if (focusedWin && focusedWin.webContents) focusedWin.webContents.loadURL(link);
         }
     };
@@ -44,7 +49,12 @@ function usefulPagesFromDescriptor(items) {
             };
         }
         if (!item.url) return null;
-        return generateLink(item.label, item.url, item.accelerator || null);
+        return generateLink(
+            item.label,
+            item.url,
+            item.accelerator || null,
+            item.openMode || 'in-place'
+        );
     }).filter(Boolean);
 }
 
@@ -70,6 +80,10 @@ function gamePagesFromDescriptor(items, keybinds) {
                 registerAccelerator: false,
                 openMode: openMode,
                 click(_menuItem, focusedWin) {
+                    if (openMode === 'external') {
+                        require('../platform').pluginRuntime.openExternal(item.url);
+                        return;
+                    }
                     if (openMode === 'in-place' && focusedWin && focusedWin.webContents) {
                         focusedWin.webContents.loadURL(item.url);
                         return;

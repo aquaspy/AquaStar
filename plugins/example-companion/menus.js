@@ -4,39 +4,41 @@ function describeAppUsefulPages(ctx) {
     ctx = ctx || {};
     const U = (ctx.urls && ctx.urls.URLS) ? ctx.urls.URLS : urls.URLS;
     const keybinds = ctx.keybinds || {};
+    // GitHub must open externally: Electron 11 / Chromium 87 cannot run modern
+    // github.com (import maps / bare "react" specifiers → broken CSS/JS).
     return [
         {
             id: 'ex-github',
-            label: 'AquaStar on GitHub',
+            label: 'AquaStar on GitHub (system browser)',
             url: U.githubRepo,
             keybindId: 'openGithub',
             accelerator: keybinds.openGithub,
-            openMode: 'in-place',
+            openMode: 'external',
             surface: 'app-menu'
         },
         {
             id: 'ex-releases',
-            label: 'GitHub Releases',
+            label: 'GitHub Releases (system browser)',
             url: U.githubReleases,
             keybindId: 'openReleases',
             accelerator: keybinds.openReleases,
-            openMode: 'in-place',
+            openMode: 'external',
             surface: 'app-menu'
         },
         {
             id: 'ex-plugins-docs',
-            label: 'Plugin authoring guide',
+            label: 'Plugin authoring guide (system browser)',
             url: U.pluginsDocs,
             keybindId: 'openPluginsDocs',
             accelerator: keybinds.openPluginsDocs,
-            openMode: 'in-place',
+            openMode: 'external',
             surface: 'app-menu'
         },
         {
             id: 'ex-design-docs',
-            label: 'Plugin architecture design',
+            label: 'Plugin architecture design (system browser)',
             url: U.designDocs,
-            openMode: 'in-place',
+            openMode: 'external',
             surface: 'app-menu'
         }
     ];
@@ -45,7 +47,7 @@ function describeAppUsefulPages(ctx) {
 function describeGameMenuPages(ctx) {
     return describeAppUsefulPages(ctx).map(function (item) {
         return Object.assign({}, item, {
-            openMode: 'new-window',
+            openMode: 'external',
             surface: 'game-menu'
         });
     });

@@ -21,7 +21,8 @@ Reference AquaStar plugin. The **primary game is `assets/boxmover.swf`** — a c
 1. `npm start`
 2. Alt+9 → **Example Companion** → Save → **restart**
 3. Main window loads **BoxMover.swf** — click the window, use arrow keys
-4. Alt+G / Alt+R / Alt+D / Alt+E for GitHub / docs / dashboard
+4. Alt+G / Alt+R / Alt+D open GitHub/docs in the **system browser** (Electron 11 cannot render modern github.com)
+5. Alt+E dashboard · Alt+I local injection demo
 
 ## Rebuild the SWF
 

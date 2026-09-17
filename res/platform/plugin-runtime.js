@@ -189,6 +189,9 @@ function openLaunch(launchId) {
 
 function openUrl(url, mode) {
     mode = mode || 'new-window';
+    if (mode === 'external') {
+        return openExternal(url);
+    }
     const instances = instancesApi || require('../instances.js');
     if (mode === 'in-place') {
         const BW = BrowserWindowApi || require('electron').BrowserWindow;
@@ -199,6 +202,14 @@ function openUrl(url, mode) {
         }
     }
     return instances.newBrowserWindow(url);
+}
+
+function openExternal(url) {
+    if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+        throw new Error('[AquaStar:plugins] openExternal requires an http(s) URL');
+    }
+    const shell = require('electron').shell;
+    return shell.openExternal(url);
 }
 
 function openFeatureWindow(featureId) {
@@ -267,6 +278,7 @@ function createHostWindowDeps() {
         openLaunch: openLaunch,
         openUrl: openUrl,
         openFeatureWindow: openFeatureWindow,
+        openExternal: openExternal,
         fetchText: fetchText
     };
 }
@@ -298,6 +310,7 @@ module.exports = {
     openPrimaryGame: openPrimaryGame,
     openLaunch: openLaunch,
     openUrl: openUrl,
+    openExternal: openExternal,
     openFeatureWindow: openFeatureWindow,
     createHostWindowDeps: createHostWindowDeps,
     applyFlashTrust: applyFlashTrust
