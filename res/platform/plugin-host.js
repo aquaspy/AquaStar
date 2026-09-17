@@ -49,6 +49,7 @@ function createPluginHost(options) {
         menuProviders: null,
         locales: {},
         settingsSections: [],
+        optionDefaults: {},
         trustedFlashUrls: [],
         ipcHandlers: [],
         ipcListeners: [],
@@ -153,6 +154,15 @@ function createPluginHost(options) {
             }
             Object.keys(defs).forEach(function (key) {
                 state.keybindDefaults[key] = defs[key];
+            });
+        },
+
+        registerOptionDefaults: function (defs) {
+            if (!defs || typeof defs !== 'object') {
+                throw new Error('[AquaStar:plugins] registerOptionDefaults expects an object');
+            }
+            Object.keys(defs).forEach(function (key) {
+                state.optionDefaults[key] = defs[key];
             });
         },
 

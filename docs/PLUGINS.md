@@ -285,10 +285,27 @@ host.ipc.handle('getProgress', function () {
 });
 ```
 
-In a preload (example):
+Preload helper (`res/platform/preload-bridge.js`):
 
 ```js
-ipcRenderer.invoke('plugin:my-flash-game:getProgress');
+const { exposePluginApi } = require('../../../res/platform/preload-bridge.js');
+// Adjust relative path from your plugin preload location.
+
+exposePluginApi('my-flash-game', {
+  getProgress: function () {
+    return require('electron').ipcRenderer
+      .invoke('plugin:my-flash-game:getProgress');
+  }
+});
+// Or use the invoker: exposePluginApi already attaches ipc.invoke('getProgress').
+```
+
+Prefer:
+
+```js
+const { exposePluginApi } = require('...');
+exposePluginApi('my-flash-game');
+// window.aquastarPlugin.ipc.invoke('getProgress')
 ```
 
 Bundled `adventure-quest-worlds` keeps **legacy unprefixed** names for compatibility (`getReminders`, …). New plugins should not rely on bare names.

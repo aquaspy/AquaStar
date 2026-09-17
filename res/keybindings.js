@@ -33,15 +33,27 @@ const CACHE_STORAGES = [
 
 function customKeybinds() {
     var list = constant.listValidKeybindLocations;
-    finalKeybinds = Object.assign({}, constant.originalKeybinds, constant.originalOptions);
+    const pluginDefaults = Object.assign(
+        {},
+        platform.pluginRuntime.getKeybindDefaults(),
+        (platform.pluginRuntime.getState() &&
+            platform.pluginRuntime.getState().optionDefaults) || {}
+    );
+    const platformDefaults = Object.assign({}, constant.originalKeybinds, constant.originalOptions);
 
-    if (list != null && list.length != 0 ) {
+    let topLevel = {};
+    let pluginsBlock = {};
+    if (list != null && list.length != 0) {
         list.forEach((jsonPath) => {
             try {
                 var tempJson = JSON.parse(fs.readFileSync(jsonPath));
-                Object.assign(finalKeybinds,tempJson);
-            }
-            catch (e) { // If it fails, wont matter rly
+                if (tempJson && typeof tempJson === 'object') {
+                    Object.assign(topLevel, tempJson);
+                    if (tempJson.plugins && typeof tempJson.plugins === 'object') {
+                        pluginsBlock = tempJson.plugins;
+                    }
+                }
+            } catch (e) {
                 const errorMsg = e.error + " " + e.message + "\n" +
                 "Check out " + jsonPath;
                 console.log(errorMsg);
@@ -57,8 +69,20 @@ function customKeybinds() {
                 };
                 dialog.showMessageBox(null,dialog_options);
             }
-        })
+        });
     }
+
+    const activeId = (topLevel.activePluginId) ||
+        (platform.pluginRuntime.getPluginInfo() && platform.pluginRuntime.getPluginInfo().id) ||
+        'adventure-quest-worlds';
+
+    finalKeybinds = platform.settingsMerge.mergeLoadedSettings({
+        activePluginId: activeId,
+        platformDefaults: platformDefaults,
+        pluginDefaults: pluginDefaults,
+        topLevel: topLevel,
+        plugins: pluginsBlock
+    });
     return finalKeybinds;
 }
 
@@ -389,8 +413,12 @@ ipcMain.handle('saveKeybindings', (event, updatedBinds) => {
         try { existing = JSON.parse(fs.readFileSync(target)); }
         catch (e) { existing = {}; }
     }
-    Object.assign(existing, updatedBinds);
-    fs.writeFileSync(target, JSON.stringify(existing, null, 4));
+    const activeId = (updatedBinds && updatedBinds.activePluginId) ||
+        existing.activePluginId ||
+        (platform.pluginRuntime.getPluginInfo() && platform.pluginRuntime.getPluginInfo().id) ||
+        'adventure-quest-worlds';
+    const next = platform.settingsMerge.splitSavePatch(updatedBinds || {}, activeId, existing);
+    fs.writeFileSync(target, JSON.stringify(next, null, 4));
     return { savedTo: target };
 });
 

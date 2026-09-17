@@ -84,6 +84,12 @@ function activate(host) {
         'pt-BR': require('./locales/pt-BR.js')
     });
 
+    host.registerOptionDefaults({
+        playerCharacter: '',
+        featurePlayerName: false,
+        autoSync: false
+    });
+
     host.registerSettingsSection({
         id: 'aqw-account',
         titleKey: 'account',

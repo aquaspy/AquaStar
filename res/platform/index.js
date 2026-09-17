@@ -18,5 +18,6 @@ module.exports = {
     menuRegistry: require('./menu-registry.js'),
     settingsRegistry: require('./settings-registry.js'),
     pluginRuntime: require('./plugin-runtime.js'),
-    keybindDispatcher: require('./keybind-dispatcher.js')
+    keybindDispatcher: require('./keybind-dispatcher.js'),
+    settingsMerge: require('./settings-merge.js')
 };

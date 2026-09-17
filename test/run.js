@@ -18,6 +18,8 @@ global.test = function (name, fn) {
   './unit/plugin-locales.test.js',
   './unit/plugin-settings-ui.test.js',
   './unit/settings-layout.test.js',
+  './unit/settings-merge.test.js',
+  './unit/preload-bridge.test.js',
   './unit/release-staging.test.js',
   './unit/web-build.test.js',
   './unit/web-preview.test.js',
