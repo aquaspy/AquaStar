@@ -7,7 +7,8 @@ Reference AquaStar plugin that exercises the Host API end-to-end.
 | Capability | Where |
 |------------|--------|
 | Primary “game” stage | `stage/index.html` — canvas box mover (arrows) + embedded SWF |
-| Valid Flash binary | `assets/rectangle.swf` (minimal). Optional interactive `assets/boxmover.swf` from `flash/BoxMover.as` |
+| Valid Flash binary | `assets/rectangle.swf` (static shape — proves PPAPI). Optional interactive `assets/boxmover.swf` via Flex + `flash/BoxMover.as` |
+| Keyboard demo | Left canvas in `stage/index.html` (always works; click then use arrows) |
 | Keybinds | Alt+N stage, Alt+G GitHub, Alt+R Releases, Alt+D plugin docs, Alt+E dashboard |
 | Menus | App Useful Pages (in-place) + game menu (new-window) + Example submenu |
 | Session rules | Custom header on `github.com` requests |
