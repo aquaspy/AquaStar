@@ -69,7 +69,6 @@ function activate(host) {
 
     const dashboardHtml = toFileUrl(path.join(__dirname, 'features', 'dashboard', 'dashboard.html'));
     const dashboardPreload = path.join(__dirname, 'features', 'dashboard', 'preload_dashboard.js');
-    const iconPath = path.join(host.appRootPath || path.join(__dirname, '..', '..'), 'Icon', 'Icon_1024.png');
     host.registerFeatureWindows([{
         id: 'example-dashboard',
         title: 'Example Dashboard',
@@ -78,7 +77,7 @@ function activate(host) {
             width: 520,
             height: 560,
             useContentSize: true,
-            icon: iconPath,
+            icon: host.getAppIconPath(),
             webPreferences: {
                 nodeIntegration: false,
                 sandbox: true,

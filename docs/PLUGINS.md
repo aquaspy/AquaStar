@@ -506,23 +506,29 @@ What the Host already confines:
 | API | Guard |
 |-----|--------|
 | `getStore(ns)` | JSON only under appData (`aquastar.<pluginId>.<ns>.json` or AQW aliases) |
-| `net.fetchText` | Requires `net-fetch` + manifest `fetchAllowlist` |
+| `net.fetchText` | Requires `net-fetch` + manifest `fetchAllowlist` + default UA |
 | `windows.openExternal` | `http(s):` only |
 | `windows.spawnHelperProcess` | Script path must stay inside `pluginRoot` |
 | `readPluginText(rel)` | Relative path, no `..`, must resolve under `pluginRoot` |
 | Session / inject | Declared permissions + allowlists / host patterns |
+| Local `require` | **Local plugins only:** blocks `fs` / `child_process` / `worker_threads` / `cluster` and path escapes outside `pluginRoot` (caller must be under the plugin). Bundled plugins are not gated. |
 
-What plugins can still do if malicious (by design of in-process CJS):
+i18n helpers: `host.getLocaleId()`, `host.getLocaleStrings(ns)`, `host.getAppIconPath()`.
 
-- `require('fs')` / `child_process` directly (bypass Host)
-- Register arbitrary `ipcMain` handlers if they get a reference
+Sandboxed preload helper: `require('res/platform').buildSandboxedPreloadSource({ pluginId, methods })`.
+
+What plugins can still do if malicious (in-process CJS, especially **bundled**):
+
+- Bypass Host with allowed builtins / `electron`
+- Register arbitrary `ipcMain` handlers if they obtain a reference
 
 Mitigations in practice:
 
 1. **Bundled plugins** = reviewed code in this repo  
-2. **Local plugins** = off by default + explicit trust prompt (treat like installing software)  
+2. **Local plugins** = off by default + trust prompt + require gate  
 3. Prefer Host APIs (`getStore`, `readPluginText`, `net.fetchText`) over raw Node  
-4. Do not open modern sites like **github.com** inside Electron 11 — use `openExternal`
+4. Do not open modern sites like **github.com** inside Electron 11 — use `openExternal`  
+5. CI: `npm run smoke:plugins`
 
 ## 12. Non-goals (do not expect these yet)
 

@@ -61,13 +61,7 @@ function attach(host) {
     });
 
     host.ipc.handle('getDashboardMessages', function () {
-        try {
-            const locale = require('../../../../res/locale.js');
-            const msg = locale.strings && locale.strings.dashboardMessages;
-            return msg && typeof msg === 'object' ? msg : {};
-        } catch (e) {
-            return {};
-        }
+        return host.getLocaleStrings('dashboardMessages') || {};
     });
 }
 

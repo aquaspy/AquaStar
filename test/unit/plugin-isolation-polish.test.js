@@ -1,0 +1,64 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const platform = require('../../res/platform');
+
+test('instances titles prefer plugin primary/launch helpers', () => {
+  const src = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
+  assert.ok(src.indexOf('_titleForGameWindow') !== -1);
+  assert.ok(src.indexOf('_titleForLaunchWindow') !== -1);
+  // Hardcoded AQW title only as legacy fallback, not the sole path.
+  assert.ok(src.indexOf('Adventure Quest Worlds') !== -1);
+  assert.ok(src.indexOf('primary.title') !== -1 || src.indexOf('primary.title({') !== -1);
+});
+
+test('Host exposes getLocaleStrings and getAppIconPath', () => {
+  const { createPluginHost } = require('../../res/platform/plugin-host.js');
+  const host = createPluginHost({
+    manifest: {
+      id: 'sample-swf',
+      name: 'Sample',
+      version: '1.0.0',
+      apiVersion: 1,
+      main: 'main.js',
+      minAppVersion: '1.12.2',
+      permissions: []
+    },
+    pluginRoot: path.join(__dirname, '../fixtures/sample-plugin'),
+    appRootPath: path.join(__dirname, '../..'),
+    deps: {}
+  });
+  assert.strictEqual(typeof host.getLocaleId, 'function');
+  assert.strictEqual(typeof host.getLocaleStrings, 'function');
+  assert.strictEqual(typeof host.getAppIconPath, 'function');
+  assert.strictEqual(typeof host.readPluginText, 'function');
+  const icon = host.getAppIconPath();
+  assert.ok(typeof icon === 'string' && icon.indexOf('Icon') !== -1);
+});
+
+test('sandboxed preload template only requires electron', () => {
+  const src = platform.buildSandboxedPreloadSource({
+    pluginId: 'demo',
+    methods: ['getState', 'saveNote']
+  });
+  assert.ok(src.indexOf("require('electron')") !== -1);
+  assert.ok(src.indexOf('plugin:demo:') !== -1);
+  assert.ok(src.indexOf('getState') !== -1);
+  assert.ok(src.indexOf('path.join') === -1);
+});
+
+test('example companion ships Flex-built SWFs and sandboxed dashboard preload', () => {
+  const root = path.join(__dirname, '../../plugins/example-companion');
+  const box = fs.readFileSync(path.join(root, 'assets/boxmover.swf'));
+  const rect = fs.readFileSync(path.join(root, 'assets/rectangle.swf'));
+  assert.ok(box.length > 500);
+  assert.ok(rect.length > 500);
+  const preload = fs.readFileSync(
+    path.join(root, 'features/dashboard/preload_dashboard.js'),
+    'utf8'
+  );
+  assert.ok(preload.indexOf("require('electron')") !== -1);
+  assert.ok(preload.indexOf('preload-bridge') === -1);
+  assert.ok(fs.existsSync(path.join(root, 'flash/StaticRect.as')));
+});

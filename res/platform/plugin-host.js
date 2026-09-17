@@ -376,6 +376,40 @@ function createPluginHost(options) {
             return fs.readFileSync(full, 'utf8');
         },
 
+        /** Active app locale id (e.g. en-US). */
+        getLocaleId: function () {
+            try {
+                const locale = require('../locale.js');
+                if (typeof locale.getLang === 'function') return locale.getLang() || 'en-US';
+                return 'en-US';
+            } catch (e) {
+                return 'en-US';
+            }
+        },
+
+        /**
+         * Merged locale strings for a namespace (plugin + platform).
+         * Example: host.getLocaleStrings('dashboardMessages')
+         */
+        getLocaleStrings: function (namespace) {
+            try {
+                const locale = require('../locale.js');
+                if (!namespace) return locale.strings || {};
+                return (locale.strings && locale.strings[namespace]) || {};
+            } catch (e) {
+                return {};
+            }
+        },
+
+        /** Absolute path to the app window icon (for feature BrowserWindows). */
+        getAppIconPath: function () {
+            try {
+                return require('../const.js').iconPath;
+            } catch (e) {
+                return path.join(options.appRootPath || '', 'Icon', 'Icon_1024.png');
+            }
+        },
+
         registerSettingsSection: function (section) {
             if (!section || typeof section !== 'object') {
                 throw new Error('[AquaStar:plugins] registerSettingsSection expects an object');

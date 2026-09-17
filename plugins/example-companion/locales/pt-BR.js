@@ -1,3 +1,12 @@
+exports.dialogMessages = {
+    helpMessage: 'Example Companion — demo de plugin do AquaStar',
+    helpDetail: function () {
+        return 'Jogo principal: BoxMover.swf (setas).\n' +
+            'Alt+N nova janela · Alt+E painel · Alt+I demo de injeção.\n' +
+            'Links do GitHub abrem no navegador do sistema (Electron 11 não renderiza o github.com moderno).';
+    }
+};
+
 exports.dashboardMessages = {
     title: 'Painel do Example Companion',
     blurb: 'Demonstra persistent-store, IPC namespaced e net-fetch (API do GitHub).',

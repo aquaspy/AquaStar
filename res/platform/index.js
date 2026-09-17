@@ -19,5 +19,6 @@ module.exports = {
     settingsRegistry: require('./settings-registry.js'),
     pluginRuntime: require('./plugin-runtime.js'),
     keybindDispatcher: require('./keybind-dispatcher.js'),
-    settingsMerge: require('./settings-merge.js')
+    settingsMerge: require('./settings-merge.js'),
+    buildSandboxedPreloadSource: require('./preload-sandbox-template.js').buildSandboxedPreloadSource
 };

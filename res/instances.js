@@ -106,25 +106,7 @@ function newBrowserWindow(new_path, isMainWin=false){
             };
         }
         
-        var winTitle = "";
-        if (primary && typeof primary.title === 'function' &&
-            (isPluginPrimary || originalPath == constant.mainPath)) {
-            var displayName = constant.resolveAppDisplayName(keybinds.keybinds);
-            try {
-                winTitle = primary.title({
-                    displayName: displayName,
-                    settings: keybinds.keybinds || {}
-                }) || ('AquaStar - ' + displayName);
-            } catch (e) {
-                winTitle = 'AquaStar';
-            }
-        } else if (originalPath == constant.mainPath){
-            var displayName2 = constant.resolveAppDisplayName(keybinds.keybinds);
-            winTitle = displayName2 + " - " + (constant.isOldAqlite ? "Older/Custom AQLite":" Adventure Quest Worlds");
-        }
-        else {
-            winTitle = "AquaStar - AQW Testing Version!";
-        }
+        var winTitle = _titleForGameWindow(originalPath, primary, isPluginPrimary, keybinds.keybinds);
         if (windowNumber > 1) winTitle += " (Window " + windowNumber + ")";
             
         newWin.setTitle(winTitle);
@@ -135,12 +117,11 @@ function newBrowserWindow(new_path, isMainWin=false){
                 usedAltPagesNumbers.indexOf(windowNumber), 1);
         });
     }
-    else if (originalPath == constant.df_url) {
-        newWin.setTitle("AquaStar - DragonFable");
-    }
     else {
-        /// Usual HTML / browser page window.
-        newWin.setMenuBarVisibility(true);
+        // Launch entries (secondary SWFs / pages) — prefer plugin launch title.
+        var launchTitle = _titleForLaunchWindow(originalPath);
+        if (launchTitle) newWin.setTitle(launchTitle);
+        else newWin.setMenuBarVisibility(true);
     }
 
     // Primary plugin window and SWF game windows get the game menu when enabled.
@@ -322,6 +303,63 @@ function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
 
 function _looksLikeSwfUrl(url) {
     return typeof url === 'string' && /\.swf(\?|#|$)/i.test(url);
+}
+
+function _titleForGameWindow(originalPath, primary, isPluginPrimary, settings) {
+    var displayName = constant.resolveAppDisplayName(settings);
+    if (primary && typeof primary.title === 'function' &&
+        (isPluginPrimary || originalPath == constant.mainPath)) {
+        try {
+            return primary.title({
+                displayName: displayName,
+                settings: settings || {}
+            }) || ('AquaStar - ' + displayName);
+        } catch (e) {
+            return 'AquaStar';
+        }
+    }
+    // Active plugin primary URL may differ from constant.mainPath (non-AQW).
+    if (primary && typeof primary.getUrl === 'function' && typeof primary.title === 'function') {
+        try {
+            if (originalPath === primary.getUrl()) {
+                return primary.title({ displayName: displayName, settings: settings || {} }) ||
+                    ('AquaStar - ' + displayName);
+            }
+        } catch (e) { /* fall through */ }
+    }
+    // Legacy / AQW-only fallbacks when plugin titles are unavailable.
+    if (originalPath == constant.mainPath) {
+        return displayName + ' - ' +
+            (constant.isOldAqlite ? 'Older/Custom AQLite' : 'Adventure Quest Worlds');
+    }
+    if (_isTestingAqwUrl(originalPath)) {
+        return 'AquaStar - AQW Testing Version!';
+    }
+    return 'AquaStar - ' + displayName;
+}
+
+function _titleForLaunchWindow(originalPath) {
+    try {
+        const runtime = require('./platform').pluginRuntime;
+        const launches = runtime.listLaunches();
+        for (let i = 0; i < launches.length; i++) {
+            const entry = launches[i];
+            if (!entry || typeof entry.getUrl !== 'function') continue;
+            try {
+                if (entry.getUrl() === originalPath) {
+                    if (typeof entry.title === 'function') return entry.title();
+                    return 'AquaStar';
+                }
+            } catch (e) { /* ignore */ }
+        }
+        // DragonFable only when AQW plugin exposed it as a launch (or legacy const).
+        if (originalPath == constant.df_url) {
+            return 'AquaStar - DragonFable';
+        }
+    } catch (e) {
+        if (originalPath == constant.df_url) return 'AquaStar - DragonFable';
+    }
+    return null;
 }
 
 function _isGameWindow(target, considerDF = true){
