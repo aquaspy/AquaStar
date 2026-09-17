@@ -48,6 +48,18 @@ test('sandboxed preload template only requires electron', () => {
   assert.ok(src.indexOf('path.join') === -1);
 });
 
+test('menu templates force registerAccelerator false to avoid double keybind fire', () => {
+  const src = fs.readFileSync(path.join(__dirname, '../../res/windows/menu.js'), 'utf8');
+  assert.ok(src.indexOf('sanitizeMenuAccelerators') !== -1);
+  assert.ok(src.indexOf('return sanitizeMenuAccelerators(template)') !== -1);
+});
+
+test('plugin-runtime dedupes duplicate window/external opens', () => {
+  const src = fs.readFileSync(path.join(__dirname, '../../res/platform/plugin-runtime.js'), 'utf8');
+  assert.ok(src.indexOf('shouldSkipDuplicate') !== -1);
+  assert.ok(src.indexOf('ACTION_DEDUP_MS') !== -1);
+});
+
 test('example companion ships Flex-built SWFs and sandboxed dashboard preload', () => {
   const root = path.join(__dirname, '../../plugins/example-companion');
   const box = fs.readFileSync(path.join(root, 'assets/boxmover.swf'));

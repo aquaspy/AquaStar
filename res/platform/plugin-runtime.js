@@ -172,9 +172,29 @@ function getTrustedFlashUrls() {
     return urls;
 }
 
+// Menu accelerators + electron-localshortcut can both fire for the same key
+// (especially on browser/HTML windows). Collapse duplicate opens within a short window.
+const recentActions = {};
+const ACTION_DEDUP_MS = 450;
+
+function shouldSkipDuplicate(kind, key) {
+    const id = kind + '\0' + String(key || '');
+    const now = Date.now();
+    const prev = recentActions[id] || 0;
+    if (now - prev < ACTION_DEDUP_MS) {
+        console.log('[AquaStar:plugins] Ignoring duplicate ' + kind + ' for ' + key);
+        return true;
+    }
+    recentActions[id] = now;
+    return false;
+}
+
 function openPrimaryGame(opts) {
     const instances = instancesApi || require('../instances.js');
     const url = getPrimaryUrl();
+    if (shouldSkipDuplicate('window', url)) {
+        return null;
+    }
     return instances.newBrowserWindow(url, !!(opts && opts.isMainWin));
 }
 
@@ -184,7 +204,11 @@ function openLaunch(launchId) {
         throw new Error('[AquaStar:plugins] Unknown launch id: ' + launchId);
     }
     const instances = instancesApi || require('../instances.js');
-    return instances.newBrowserWindow(entry.getUrl());
+    const url = entry.getUrl();
+    if (shouldSkipDuplicate('window', url)) {
+        return null;
+    }
+    return instances.newBrowserWindow(url);
 }
 
 function openUrl(url, mode) {
@@ -197,10 +221,12 @@ function openUrl(url, mode) {
         const BW = BrowserWindowApi || require('electron').BrowserWindow;
         const focused = BW.getFocusedWindow();
         if (focused && !focused.isDestroyed()) {
+            if (shouldSkipDuplicate('navigate', url)) return focused;
             focused.loadURL(url);
             return focused;
         }
     }
+    if (shouldSkipDuplicate('window', url)) return null;
     return instances.newBrowserWindow(url);
 }
 
@@ -208,11 +234,17 @@ function openExternal(url) {
     if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
         throw new Error('[AquaStar:plugins] openExternal requires an http(s) URL');
     }
+    if (shouldSkipDuplicate('external', url)) {
+        return Promise.resolve(undefined);
+    }
     const shell = require('electron').shell;
     return shell.openExternal(url);
 }
 
 function openFeatureWindow(featureId) {
+    if (shouldSkipDuplicate('feature', featureId)) {
+        return null;
+    }
     const instances = instancesApi || require('../instances.js');
     if (typeof instances.openFeatureWindow === 'function') {
         return instances.openFeatureWindow(featureId);

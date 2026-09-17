@@ -68,10 +68,12 @@ function register(host) {
                     label: 'New BoxMover window',
                     accelerator: keybinds.newStage,
                     registerAccelerator: false,
+                    // Same path as the keybind (deduped in plugin-runtime).
                     click: function () { host.windows.openPrimaryGame(); }
                 },
                 {
                     label: 'Open static rectangle.swf',
+                    registerAccelerator: false,
                     click: function () { host.windows.openLaunch('example-static-rect'); }
                 },
                 { type: 'separator' },

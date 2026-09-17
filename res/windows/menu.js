@@ -10,6 +10,21 @@ function runAction(action, focusedWin) {
     require('../keybindings.js').runGameMenuAction(action, focusedWin);
 }
 
+/**
+ * electron-localshortcut already owns accelerators. If Menu also registers them
+ * (or ignores registerAccelerator:false on some platforms), Alt+N fires twice —
+ * once from the menu and once from localshortcut — especially on browser windows.
+ */
+function sanitizeMenuAccelerators(items) {
+    if (!Array.isArray(items)) return items;
+    items.forEach(function (item) {
+        if (!item || typeof item !== 'object') return;
+        if (item.accelerator) item.registerAccelerator = false;
+        if (Array.isArray(item.submenu)) sanitizeMenuAccelerators(item.submenu);
+    });
+    return items;
+}
+
 function command(label, action, accelerator) {
     return {
         label: label,
@@ -219,7 +234,7 @@ exports.getMenu = (keybinds, funcTakeSS, isContext) => {
 
     template.push(platformAquaStarMenu(menuMessages, keybinds));
 
-    return template;
+    return sanitizeMenuAccelerators(template);
 };
 
 exports.getGameMenu = (keybinds) => {
@@ -249,7 +264,7 @@ exports.getGameMenu = (keybinds) => {
         template.push(item);
     });
 
-    return template;
+    return sanitizeMenuAccelerators(template);
 };
 
 function showHelpMessage(win){
