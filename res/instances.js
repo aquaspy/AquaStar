@@ -500,6 +500,15 @@ function _notifyWindow(targetWin, notif, resetAfter = true){
 
 const featureWindows = createFeatureWindowController(windowConfig.featureWindows, BrowserWindow);
 function openFeatureWindow(featureId) {
+    try {
+        const runtime = require('./platform').pluginRuntime;
+        const pluginDef = runtime.getFeatureWindow(featureId);
+        if (pluginDef) {
+            const host = typeof runtime.getHost === 'function' ? runtime.getHost() : null;
+            const pluginRoot = (host && host.pluginRoot) || '';
+            return featureWindows.open(featureId, pluginDef, pluginRoot);
+        }
+    } catch (e) { /* fall back to platform config map */ }
     return featureWindows.open(featureId);
 }
 

@@ -96,6 +96,36 @@ function activate(host) {
         ]
     });
 
+    // Settings stays platform-owned in res/windows/config.js. Studio is a
+    // detached helper process (openCharPageStudioWindow), not a feature window.
+    const windowConfig = require(path.join(resRoot, 'windows', 'config.js'));
+    host.registerFeatureWindows([
+        {
+            id: 'reminders',
+            title: windowConfig.featureWindows.reminders.title,
+            url: windowConfig.remindersUrl,
+            config: windowConfig.remindersConfig
+        },
+        {
+            id: 'todo',
+            title: windowConfig.featureWindows.todo.title,
+            url: windowConfig.todoUrl,
+            config: windowConfig.todoConfig
+        },
+        {
+            id: 'inventory',
+            title: windowConfig.featureWindows.inventory.title,
+            url: windowConfig.inventoryUrl,
+            config: windowConfig.inventoryConfig
+        },
+        {
+            id: 'strategy',
+            title: windowConfig.featureWindows.strategy.title,
+            url: windowConfig.strategyUrl,
+            config: windowConfig.strategyConfig
+        }
+    ]);
+
     host.log('Adventure Quest Worlds plugin activated (adapter mode)');
 }
 

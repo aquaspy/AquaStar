@@ -173,6 +173,33 @@ test('plugin-runtime isGameUrl drives eligibility for adopted primary and launch
   assert.strictEqual(runtime.isGameUrl('https://plugin.example/game.swf'), false);
 });
 
+test('openFeatureWindow path consults pluginRuntime.getFeatureWindow', () => {
+  const fs = require('fs');
+  const instancesSrc = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
+  assert.ok(instancesSrc.indexOf('getFeatureWindow') !== -1);
+  assert.ok(instancesSrc.indexOf('featureWindows.open(featureId, pluginDef, pluginRoot)') !== -1);
+  assert.ok(instancesSrc.indexOf("require('./platform').pluginRuntime") !== -1);
+
+  runtime.clear();
+  runtime.adopt(fakeHost({
+    primaryGame: null,
+    launches: [],
+    trustedFlashUrls: [],
+    keybinds: [],
+    keybindDefaults: {},
+    featureWindows: [{
+      id: 'reminders',
+      title: 'Reminders',
+      url: 'file:///reminders.html',
+      config: { width: 1 }
+    }]
+  }), { id: 'sample' });
+  const def = runtime.getFeatureWindow('reminders');
+  assert.ok(def);
+  assert.strictEqual(def.title, 'Reminders');
+  assert.strictEqual(runtime.getFeatureWindow('settings'), null);
+});
+
 test('plugin-runtime applyFlashTrust refreshes trust list', () => {
   runtime.clear();
   const added = [];

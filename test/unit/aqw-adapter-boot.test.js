@@ -77,3 +77,15 @@ test('discoverPlugins finds bundled adventure-quest-worlds', () => {
   assert.ok(aqw, 'bundled AQW plugin missing');
   assert.strictEqual(aqw.source, 'bundled');
 });
+
+test('AQW activate registers feature windows for reminders/todo/inventory/strategy', () => {
+  const src = fs.readFileSync(aqwMainPath, 'utf8');
+  assert.ok(src.indexOf('registerFeatureWindows') !== -1);
+  assert.ok(src.indexOf("id: 'reminders'") !== -1);
+  assert.ok(src.indexOf("id: 'todo'") !== -1);
+  assert.ok(src.indexOf("id: 'inventory'") !== -1);
+  assert.ok(src.indexOf("id: 'strategy'") !== -1);
+  // Settings remains platform-owned; studio stays a helper process.
+  assert.ok(src.indexOf("id: 'settings'") === -1);
+  assert.ok(src.indexOf("id: 'charPageStudio'") === -1);
+});
