@@ -164,6 +164,14 @@ exports.wrapSwfUrl = function(swfUrl, opts) {
 const ruffleWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_wrapper.html'));
 exports.isRuffleEligible = function(swfUrl) {
     if (!swfUrl) return false;
+    // When a plugin primary is adopted, eligibility follows pluginRuntime.isGameUrl
+    // (primary + launches + platform custom SWF / mainPath checks inside the runtime).
+    try {
+        var runtime = require('./platform').pluginRuntime;
+        if (runtime.getPrimaryGame()) {
+            return runtime.isGameUrl(swfUrl);
+        }
+    } catch (e) { /* legacy boot / platform unavailable */ }
     if (swfUrl === exports.mainPath) return true;
     if (swfUrl === exports.df_url) return true;
     // testingAQW carries a random cache-busting "?ver=" suffix per call, so match by prefix.

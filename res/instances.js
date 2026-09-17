@@ -307,6 +307,19 @@ function _isGameWindow(target, considerDF = true){
     } else {
         url = target;
     }
+
+    // Active plugin primary: trust pluginRuntime.isGameUrl (custom SWF / launches included).
+    if (typeof url === 'string' && url) {
+        try {
+            var runtime = require('./platform').pluginRuntime;
+            if (runtime.getPrimaryGame()) {
+                if (!runtime.isGameUrl(url)) return false;
+                // Direct-wmode / game-menu callers pass considerDF=false to skip DragonFable.
+                if (!considerDF && url === constant.df_url) return false;
+                return true;
+            }
+        } catch (e) { /* legacy boot / platform unavailable */ }
+    }
     
     var aqliteValue = constant.mainPath;
     if(process.platform == "win32") {

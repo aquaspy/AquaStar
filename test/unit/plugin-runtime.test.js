@@ -112,6 +112,67 @@ test('main.js boots primary URL from pluginRuntime', () => {
   assert.ok(mainSrc.indexOf('applyFlashTrust') !== -1);
 });
 
+test('instances.js and const.js consult pluginRuntime.isGameUrl when primary adopted', () => {
+  const fs = require('fs');
+  const instancesSrc = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
+  const constSrc = fs.readFileSync(path.join(__dirname, '../../res/const.js'), 'utf8');
+  const mainSrc = fs.readFileSync(path.join(__dirname, '../../main.js'), 'utf8');
+
+  assert.ok(instancesSrc.indexOf("require('./platform').pluginRuntime") !== -1);
+  assert.ok(instancesSrc.indexOf('getPrimaryGame()') !== -1);
+  assert.ok(instancesSrc.indexOf('isGameUrl(url)') !== -1);
+  assert.ok(instancesSrc.indexOf('_isTestingAqwUrl(url)') !== -1, 'legacy fallback kept');
+
+  assert.ok(constSrc.indexOf("require('./platform').pluginRuntime") !== -1);
+  assert.ok(constSrc.indexOf('getPrimaryGame()') !== -1);
+  assert.ok(constSrc.indexOf('runtime.isGameUrl(swfUrl)') !== -1);
+  assert.ok(constSrc.indexOf('aqwUrls.isTestingAqwUrl(swfUrl)') !== -1, 'legacy Ruffle checks kept');
+
+  // Permission handler still goes through isRuffleEligible (which delegates to runtime).
+  assert.ok(mainSrc.indexOf('constant.isRuffleEligible(swfUrl)') !== -1);
+});
+
+test('plugin-runtime isGameUrl drives eligibility for adopted primary and launches', () => {
+  runtime.clear();
+  let gameUrlCalls = 0;
+  runtime.setDependencies({
+    instances: { newBrowserWindow: function () { return {}; } },
+    constant: {
+      mainPath: 'https://fallback.example/game.swf',
+      isOldAqlite: false
+    }
+  });
+  runtime.adopt(fakeHost({
+    primaryGame: {
+      getUrl: function () { return 'https://plugin.example/game.swf'; },
+      isGameUrl: function (url) {
+        gameUrlCalls++;
+        return url.indexOf('https://plugin.example/game.swf') === 0;
+      }
+    },
+    launches: [{
+      id: 'side',
+      getUrl: function () { return 'https://plugin.example/side.swf'; }
+    }],
+    trustedFlashUrls: [],
+    keybinds: [],
+    keybindDefaults: {},
+    featureWindows: []
+  }), { id: 'sample' });
+
+  assert.strictEqual(runtime.getPrimaryGame() != null, true);
+  assert.strictEqual(runtime.isGameUrl('https://plugin.example/game.swf?ver=1'), true);
+  assert.ok(gameUrlCalls >= 1, 'primary isGameUrl consulted');
+  assert.strictEqual(runtime.isGameUrl('https://plugin.example/side.swf'), true);
+  assert.strictEqual(runtime.isGameUrl('https://other.example/nope.swf'), false);
+
+  runtime.clear();
+  assert.strictEqual(runtime.getPrimaryGame(), null);
+  // Without an adopted primary, only constant.mainPath (injected) still matches.
+  assert.strictEqual(runtime.isGameUrl('https://fallback.example/game.swf'), true);
+  assert.strictEqual(runtime.isGameUrl('https://plugin.example/game.swf'), false);
+});
+
 test('plugin-runtime applyFlashTrust refreshes trust list', () => {
   runtime.clear();
   const added = [];
