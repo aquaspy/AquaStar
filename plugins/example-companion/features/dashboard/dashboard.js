@@ -32,11 +32,22 @@ function attach(host) {
         return state;
     });
     host.ipc.handle('fetchGithubRepoMeta', async function () {
-        const result = await host.net.fetchText('https://api.github.com/repos/aquaspy/AquaStar');
-        if (!result || !result.ok) {
-            return { ok: false, error: (result && result.error) || 'fetch failed' };
-        }
         try {
+            const result = await host.net.fetchText(
+                'https://api.github.com/repos/aquaspy/AquaStar',
+                {
+                    headers: {
+                        'User-Agent': 'AquaStar-ExampleCompanion',
+                        'Accept': 'application/vnd.github+json'
+                    }
+                }
+            );
+            if (!result || !result.ok) {
+                return {
+                    ok: false,
+                    error: (result && result.error) || 'fetch failed'
+                };
+            }
             const json = JSON.parse(result.html || result.text || '{}');
             return {
                 ok: true,
@@ -46,6 +57,16 @@ function attach(host) {
             };
         } catch (e) {
             return { ok: false, error: e.message || String(e) };
+        }
+    });
+
+    host.ipc.handle('getDashboardMessages', function () {
+        try {
+            const locale = require('../../../../res/locale.js');
+            const msg = locale.strings && locale.strings.dashboardMessages;
+            return msg && typeof msg === 'object' ? msg : {};
+        } catch (e) {
+            return {};
         }
     });
 }

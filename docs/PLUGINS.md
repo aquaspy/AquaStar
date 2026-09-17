@@ -507,10 +507,37 @@ Start from **`example-companion`** to see every Host surface wired. Use **`_temp
 
 ---
 
-## 11. Non-goals (do not expect these yet)
+## 11. Security model (honest)
+
+Plugins run **in-process** as CommonJS in Electron’s main (and their own preloads). That is **full trust** once enabled — the Host is a *supported API*, not a hard sandbox.
+
+What the Host already confines:
+
+| API | Guard |
+|-----|--------|
+| `getStore(ns)` | JSON only under appData (`aquastar.<pluginId>.<ns>.json` or AQW aliases) |
+| `net.fetchText` | Requires `net-fetch` + manifest `fetchAllowlist` |
+| `windows.openExternal` | `http(s):` only |
+| `windows.spawnHelperProcess` | Script path must stay inside `pluginRoot` |
+| `readPluginText(rel)` | Relative path, no `..`, must resolve under `pluginRoot` |
+| Session / inject | Declared permissions + allowlists / host patterns |
+
+What plugins can still do if malicious (by design of in-process CJS):
+
+- `require('fs')` / `child_process` directly (bypass Host)
+- Register arbitrary `ipcMain` handlers if they get a reference
+
+Mitigations in practice:
+
+1. **Bundled plugins** = reviewed code in this repo  
+2. **Local plugins** = off by default + explicit trust prompt (treat like installing software)  
+3. Prefer Host APIs (`getStore`, `readPluginText`, `net.fetchText`) over raw Node  
+4. Do not open modern sites like **github.com** inside Electron 11 — use `openExternal`
+
+## 12. Non-goals (do not expect these yet)
 
 - Plugin marketplace / remote install / auto-update of plugins
 - Multiple plugins active in one process
-- Strong sandbox for untrusted third-party code
+- Strong sandbox / OS-level confinement for untrusted third-party code
 - Hot-reload without restart
 - Separate `.aqplugin` installer format (distribution is still “a folder”)

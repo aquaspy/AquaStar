@@ -1,3 +1,18 @@
+exports.dashboardMessages = {
+    title: 'Example Companion dashboard',
+    blurb: 'Demonstrates persistent-store, namespaced IPC, and net-fetch (GitHub API).',
+    labelVisits: 'Visits',
+    labelLast: 'Last opened',
+    labelNote: 'Sticky note (aquastar.example-companion.demo.json)',
+    saveNote: 'Save note',
+    refresh: 'Refresh',
+    fetchRepo: 'Fetch aquaspy/AquaStar via net.fetchText',
+    saved: 'Note saved.',
+    fetchOk: 'Fetch ok.',
+    fetching: 'Fetching…',
+    fetchFail: 'Fetch failed'
+};
+
 exports.settingsMessages = {
     optionLabels: {
         demoPlayerName: 'Demo display name',

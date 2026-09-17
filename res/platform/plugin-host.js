@@ -56,10 +56,48 @@ function createPluginHost(options) {
         stores: {}
     };
 
-    const deps = options.deps || {};
+    const deps = Object.assign({}, options.deps || {});
     const log = typeof options.log === 'function'
         ? options.log
         : function (msg) { console.log('[AquaStar:plugins] ' + msg); };
+
+    // Auto-wire main-process IPC + namespaced JSON stores when running under Electron.
+    try {
+        const electron = require('electron');
+        if (electron.ipcMain) {
+            if (typeof deps.ipcHandle !== 'function') {
+                deps.ipcHandle = function (channel, listener) {
+                    electron.ipcMain.handle(channel, listener);
+                };
+            }
+            if (typeof deps.ipcOn !== 'function') {
+                deps.ipcOn = function (channel, listener) {
+                    electron.ipcMain.on(channel, listener);
+                };
+            }
+            if (typeof deps.ipcRemoveHandler !== 'function') {
+                deps.ipcRemoveHandler = function (channel) {
+                    if (typeof electron.ipcMain.removeHandler === 'function') {
+                        electron.ipcMain.removeHandler(channel);
+                    }
+                };
+            }
+        }
+    } catch (e) { /* unit tests without Electron */ }
+
+    if (typeof deps.createStore !== 'function' && options.appDataDirectory) {
+        try {
+            const nsFactory = require('./storage/namespaced-store.js').createNamespacedStore({
+                appDataDirectory: options.appDataDirectory,
+                pluginId: pluginId
+            });
+            deps.createStore = function (ns) {
+                return nsFactory.getStore(ns);
+            };
+        } catch (e) {
+            log('namespaced-store unavailable: ' + (e && e.message ? e.message : e));
+        }
+    }
 
     function requirePermission(method, permission) {
         if (!permissions[permission]) {
@@ -308,7 +346,31 @@ function createPluginHost(options) {
             if (typeof deps.getPlatformSettings === 'function') {
                 return deps.getPlatformSettings();
             }
+            try {
+                const keyb = require('../keybindings.js');
+                if (keyb.keybinds && typeof keyb.keybinds === 'object') {
+                    return Object.assign({}, options.platformSettings || {}, keyb.keybinds);
+                }
+            } catch (e) { /* ignore */ }
             return options.platformSettings || {};
+        },
+
+        /**
+         * Read a UTF-8 file confined to the plugin root (no ".." escape).
+         * Prefer this over raw fs for plugin assets.
+         */
+        readPluginText: function (relativePath) {
+            if (schema.hasPathEscape(relativePath)) {
+                throw new Error('[AquaStar:plugins] readPluginText path escapes plugin root');
+            }
+            const fs = require('fs');
+            const full = path.resolve(options.pluginRoot, relativePath);
+            const rootResolved = path.resolve(options.pluginRoot);
+            const prefix = rootResolved.endsWith(path.sep) ? rootResolved : rootResolved + path.sep;
+            if (full !== rootResolved && full.indexOf(prefix) !== 0) {
+                throw new Error('[AquaStar:plugins] readPluginText escaped plugin root');
+            }
+            return fs.readFileSync(full, 'utf8');
         },
 
         registerSettingsSection: function (section) {

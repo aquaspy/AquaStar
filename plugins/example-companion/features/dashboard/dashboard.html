@@ -3,87 +3,155 @@
 <head>
 <meta charset="UTF-8">
 <title>Example Dashboard</title>
+<link rel="stylesheet" href="../../../../res/features/common/focus.css">
 <style>
   :root { color-scheme: dark; }
-  body {
-    margin: 0; padding: 16px; background: #121212; color: #e6e6e6;
+  html, body {
+    margin: 0; height: 100%; background: #121212; color: #e6e6e6;
     font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-size: 13px;
   }
+  body { padding: 16px; box-sizing: border-box; }
   h1 { margin: 0 0 8px; font-size: 16px; }
-  p { color: #9a9a9a; line-height: 1.45; }
+  p { color: #9a9a9a; line-height: 1.45; margin: 0 0 12px; }
   .card {
     border: 1px solid #2c2c2c; border-radius: 8px; padding: 12px; margin: 12px 0; background: #1b1b1b;
   }
   label { display: block; margin-bottom: 6px; }
-  textarea {
-    width: 100%; min-height: 72px; box-sizing: border-box;
+  textarea, input[type="text"] {
+    width: 100%; box-sizing: border-box;
     background: #151515; color: #e6e6e6; border: 1px solid #333; border-radius: 4px; padding: 8px;
   }
+  textarea { min-height: 72px; resize: vertical; }
   button {
     margin-top: 8px; margin-right: 8px; background: #2a2a2a; color: #eee;
     border: 1px solid #444; border-radius: 4px; padding: 6px 10px; cursor: pointer;
   }
   button.primary { background: #3a7fe0; border-color: #3a7fe0; }
+  button:disabled { opacity: 0.55; cursor: default; }
   code { color: #cfcfcf; }
   #status { min-height: 18px; color: #7fd08a; margin-top: 8px; }
   #status.err { color: #ff8e8e; }
+  #repo { white-space: pre-wrap; color: #cfcfcf; margin: 8px 0 0; }
 </style>
 </head>
 <body>
-  <h1>Example Companion dashboard</h1>
-  <p>
-    Demonstrates <code>persistent-store</code>, namespaced IPC (<code>plugin:example-companion:*</code>),
-    and <code>net-fetch</code> against the GitHub API allowlist.
-  </p>
+  <h1 id="title">Example Companion dashboard</h1>
+  <p id="blurb"></p>
   <div class="card">
-    <div>Visits: <strong id="visits">—</strong></div>
-    <div>Last opened: <strong id="last">—</strong></div>
+    <div><span id="labelVisits">Visits</span>: <strong id="visits">—</strong></div>
+    <div><span id="labelLast">Last opened</span>: <strong id="last">—</strong></div>
   </div>
   <div class="card">
-    <label for="note">Sticky note (saved in aquastar.example-companion.demo.json)</label>
+    <label for="note" id="labelNote">Sticky note</label>
     <textarea id="note"></textarea>
     <button class="primary" id="saveNote">Save note</button>
     <button id="refresh">Refresh</button>
   </div>
   <div class="card">
-    <button id="fetchRepo">Fetch aquaspy/AquaStar via net.fetchText</button>
-    <pre id="repo" style="white-space:pre-wrap;color:#cfcfcf;"></pre>
+    <button id="fetchRepo">Fetch aquaspy/AquaStar</button>
+    <pre id="repo"></pre>
   </div>
   <div id="status"></div>
 <script>
 (async function () {
   const api = window.aquastarPlugin;
   const status = document.getElementById('status');
+  const defaults = {
+    title: 'Example Companion dashboard',
+    blurb: 'Demonstrates persistent-store, namespaced IPC, and net-fetch (GitHub API).',
+    labelVisits: 'Visits',
+    labelLast: 'Last opened',
+    labelNote: 'Sticky note (aquastar.example-companion.demo.json)',
+    saveNote: 'Save note',
+    refresh: 'Refresh',
+    fetchRepo: 'Fetch aquaspy/AquaStar via net.fetchText',
+    saved: 'Note saved.',
+    fetchOk: 'Fetch ok.',
+    fetching: 'Fetching…',
+    fetchFail: 'Fetch failed'
+  };
+
   function setStatus(msg, isErr) {
     status.textContent = msg || '';
     status.className = isErr ? 'err' : '';
   }
+
+  function applyMessages(msg) {
+    msg = Object.assign({}, defaults, msg || {});
+    document.title = msg.title;
+    document.getElementById('title').textContent = msg.title;
+    document.getElementById('blurb').textContent = msg.blurb;
+    document.getElementById('labelVisits').textContent = msg.labelVisits;
+    document.getElementById('labelLast').textContent = msg.labelLast;
+    document.getElementById('labelNote').textContent = msg.labelNote;
+    document.getElementById('saveNote').textContent = msg.saveNote;
+    document.getElementById('refresh').textContent = msg.refresh;
+    document.getElementById('fetchRepo').textContent = msg.fetchRepo;
+    return msg;
+  }
+
+  let messages = defaults;
+  try {
+    if (api && typeof api.getMessages === 'function') {
+      messages = applyMessages(await api.getMessages());
+    } else {
+      messages = applyMessages(defaults);
+    }
+  } catch (e) {
+    messages = applyMessages(defaults);
+  }
+
+  if (!api || typeof api.getState !== 'function') {
+    setStatus('Dashboard API missing (preload/IPC). Restart AquaStar.', true);
+    return;
+  }
+
   async function render() {
     const state = await api.getState();
-    document.getElementById('visits').textContent = String(state.visits || 0);
-    document.getElementById('last').textContent = state.lastOpenedAt || '—';
-    document.getElementById('note').value = state.note || '';
+    document.getElementById('visits').textContent = String((state && state.visits) || 0);
+    document.getElementById('last').textContent = (state && state.lastOpenedAt) || '—';
+    document.getElementById('note').value = (state && state.note) || '';
   }
+
   document.getElementById('saveNote').onclick = async function () {
-    await api.saveNote(document.getElementById('note').value);
-    setStatus('Note saved.');
-    await render();
-  };
-  document.getElementById('refresh').onclick = function () { render(); };
-  document.getElementById('fetchRepo').onclick = async function () {
-    setStatus('Fetching…');
-    const meta = await api.fetchRepoMeta();
-    const pre = document.getElementById('repo');
-    if (!meta || !meta.ok) {
-      pre.textContent = '';
-      setStatus((meta && meta.error) || 'Fetch failed', true);
-      return;
+    try {
+      await api.saveNote(document.getElementById('note').value);
+      setStatus(messages.saved);
+      await render();
+    } catch (e) {
+      setStatus((e && e.message) || String(e), true);
     }
-    pre.textContent = meta.fullName + ' ★' + meta.stars + '\n' + (meta.description || '');
-    setStatus('Fetch ok.');
   };
-  await api.bumpVisit();
-  await render();
+  document.getElementById('refresh').onclick = function () {
+    render().catch(function (e) { setStatus((e && e.message) || String(e), true); });
+  };
+  document.getElementById('fetchRepo').onclick = async function () {
+    const btn = document.getElementById('fetchRepo');
+    btn.disabled = true;
+    setStatus(messages.fetching);
+    try {
+      const meta = await api.fetchRepoMeta();
+      const pre = document.getElementById('repo');
+      if (!meta || !meta.ok) {
+        pre.textContent = '';
+        setStatus((meta && meta.error) || messages.fetchFail, true);
+        return;
+      }
+      pre.textContent = meta.fullName + ' ★' + meta.stars + '\n' + (meta.description || '');
+      setStatus(messages.fetchOk);
+    } catch (e) {
+      setStatus((e && e.message) || String(e), true);
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  try {
+    await api.bumpVisit();
+    await render();
+  } catch (e) {
+    setStatus((e && e.message) || String(e), true);
+  }
 })();
 </script>
 </body>

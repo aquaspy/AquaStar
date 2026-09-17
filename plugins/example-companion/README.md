@@ -13,8 +13,9 @@ Reference AquaStar plugin. The **primary game is `assets/boxmover.swf`** — a c
 | Session rules | Custom header on `api.github.com` only (never rewrite GitHub page UA) |
 | Navigation hooks | Local inject-demo page (Alt+I) — GitHub DOM is not touched |
 | Settings section | Demo name + tip toggle |
-| Feature window | Dashboard (store, IPC, `net-fetch`) |
-| Locales | `locales/en-US.js`, `pt-BR.js` |
+| Feature window | Dashboard (store, IPC, `net-fetch`, AquaStar focus CSS + app icon) |
+| Locales | `locales/en-US.js` / `pt-BR.js` merged into app language (dashboard strings included) |
+| Injection demo | Alt+I local page (not GitHub) |
 
 ## Try it
 

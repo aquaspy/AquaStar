@@ -231,7 +231,18 @@ function fetchText(url, fetchOpts) {
             resolve({ ok: false, error: 'electron net unavailable' });
             return;
         }
-        const request = net.request(url);
+        const request = net.request({
+            method: (fetchOpts.method || 'GET'),
+            url: url
+        });
+        // GitHub API and many hosts require a UA; Electron net often sends none.
+        const headers = Object.assign({
+            'User-Agent': 'AquaStar/' + (require('../const.js').appVersion || '1.0') + ' (plugin-host)',
+            'Accept': 'application/json, text/plain, */*'
+        }, fetchOpts.headers || {});
+        Object.keys(headers).forEach(function (key) {
+            try { request.setHeader(key, headers[key]); } catch (e) { /* ignore */ }
+        });
         let body = '';
         let bodyBytes = 0;
         let settled = false;
@@ -248,7 +259,11 @@ function fetchText(url, fetchOpts) {
         request.on('response', function (response) {
             if (response.statusCode < 200 || response.statusCode >= 300) {
                 try { request.abort(); } catch (e) { /* ignore */ }
-                finish({ ok: false, error: 'http-' + response.statusCode });
+                finish({
+                    ok: false,
+                    error: 'http-' + response.statusCode,
+                    statusCode: response.statusCode
+                });
                 return;
             }
             response.on('data', function (chunk) {
