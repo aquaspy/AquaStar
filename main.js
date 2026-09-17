@@ -31,6 +31,7 @@ const windowsMenu   = require('./res/windows/menu.js');
 const socketProxy   = require('./res/socketProxy.js');
 const ruffleUpdate  = require('./res/ruffleUpdate.js');
 const constant = require('./res/const.js');
+const locale   = require('./res/locale.js');
 const platform = require('./res/platform');
 
 const bootFlags = platform.readPluginFlagsFromDisk(
@@ -40,6 +41,13 @@ const bootFlags = platform.readPluginFlagsFromDisk(
 
 let activePluginRuntime = null;
 
+function mergeAqwLocalesFromDisk() {
+    locale.mergePluginLocales({
+        'en-US': require('./plugins/adventure-quest-worlds/locales/en-US.js'),
+        'pt-BR': require('./plugins/adventure-quest-worlds/locales/pt-BR.js')
+    });
+}
+
 function loadLegacyFeatureModules() {
     require('./plugins/adventure-quest-worlds/features/reminders/reminders.js');
     require('./plugins/adventure-quest-worlds/features/todo/todo.js');
@@ -47,6 +55,7 @@ function loadLegacyFeatureModules() {
     require('./plugins/adventure-quest-worlds/features/strategy/strategy.js');
     require('./plugins/adventure-quest-worlds/features/charpage/studio.js');
     require('./res/ipc/wikiFetch.js');
+    mergeAqwLocalesFromDisk();
 }
 
 function activateBundledPluginsOrLegacy() {
@@ -84,6 +93,9 @@ function activateBundledPluginsOrLegacy() {
                 menuProviders.gameMenuPages = aqwMenus.describeGameMenuPages;
             }
             platform.menuRegistry.adoptHostState(state, menuProviders);
+            if (state.locales) {
+                locale.mergePluginLocales(state.locales);
+            }
         }
         return runtime;
     }).catch(function (err) {

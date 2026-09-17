@@ -79,6 +79,11 @@ function activate(host) {
     menus.register(host);
     keybinds.register(host);
 
+    host.registerLocales({
+        'en-US': require('./locales/en-US.js'),
+        'pt-BR': require('./locales/pt-BR.js')
+    });
+
     host.log('Adventure Quest Worlds plugin activated (adapter mode)');
 }
 

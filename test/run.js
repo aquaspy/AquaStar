@@ -15,6 +15,7 @@ global.test = function (name, fn) {
   './unit/charpage-lab.test.js',
   './unit/game-menu.test.js',
   './unit/inventory-locales.test.js',
+  './unit/plugin-locales.test.js',
   './unit/release-staging.test.js',
   './unit/web-build.test.js',
   './unit/web-preview.test.js',

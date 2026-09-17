@@ -50,7 +50,8 @@ copy(`${aqwFeatures}/reminders/reminders_default.json`, path.join(output, 'defau
 copy(`${aqwFeatures}/strategy/strategy_default.json`, path.join(output, 'defaults/strategy.json'));
 
 ['pt-BR', 'en-US'].forEach((code) => {
-  const locale = require(path.join(root, 'res/po', `${code}.js`));
+  // Feature catalogs live in the AQW plugin locale tree (platform chrome stays in res/po).
+  const locale = require(path.join(root, 'plugins/adventure-quest-worlds/locales', `${code}.js`));
   fs.mkdirSync(path.join(output, 'locale'), { recursive: true });
   fs.writeFileSync(
     path.join(output, 'locale', `${code}.json`),

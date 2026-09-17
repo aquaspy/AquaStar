@@ -209,8 +209,11 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   );
   assert.ok(config.indexOf("on('new-window'") !== -1);
   assert.ok(config.indexOf('webContents.setWindowOpenHandler(') === -1);
-  ['en-US.js', 'pt-BR.js', 'template.js'].forEach((localeName) => {
-    const messages = fs.readFileSync(path.join(__dirname, '../../res/po', localeName), 'utf8');
+  ['en-US.js', 'pt-BR.js'].forEach((localeName) => {
+    const messages = fs.readFileSync(
+      path.join(__dirname, '../../plugins/adventure-quest-worlds/locales', localeName),
+      'utf8'
+    );
     assert.ok(messages.indexOf('charPageStudioMessages') !== -1, localeName + ' must define Char Page Studio strings');
   });
 });

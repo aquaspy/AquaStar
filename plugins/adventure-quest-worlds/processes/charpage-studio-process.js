@@ -143,4 +143,17 @@ ipcMain.handle('charpage-studio-capture-gif', async (event, renderer, flashVars,
 });
 app.allowRendererProcessReuse = false;
 flash.flashManager(app, root, root, 'AquaStar');
-app.whenReady().then(() => { locale.detectLang(app.getLocale(), {}); installProtocol(); Menu.setApplicationMenu(null); studioWindow = new BrowserWindow({ width: 1280, height: 800, icon: constant.iconPath, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false, plugins: true, webSecurity: false, preload: path.join(charpageDir, 'lab', 'preload_lab.js') } }); studioWindow.setMenu(null); studioWindow.setMenuBarVisibility(false); studioWindow.loadFile(path.join(charpageDir, 'lab', 'characterB-lab.html')); studioWindow.on('closed', () => app.quit()); });
+app.whenReady().then(() => {
+  locale.mergePluginLocales({
+    'en-US': require('../locales/en-US.js'),
+    'pt-BR': require('../locales/pt-BR.js')
+  });
+  locale.detectLang(app.getLocale(), {});
+  installProtocol();
+  Menu.setApplicationMenu(null);
+  studioWindow = new BrowserWindow({ width: 1280, height: 800, icon: constant.iconPath, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false, plugins: true, webSecurity: false, preload: path.join(charpageDir, 'lab', 'preload_lab.js') } });
+  studioWindow.setMenu(null);
+  studioWindow.setMenuBarVisibility(false);
+  studioWindow.loadFile(path.join(charpageDir, 'lab', 'characterB-lab.html'));
+  studioWindow.on('closed', () => app.quit());
+});
