@@ -71,6 +71,7 @@ exports.menuMessages = {
     menuTwitter: "Twitter da Alina",
     menuTakeShot: "Printa a Charpage (somente CP!)",
     menuCharPageStudio: "Char Page Studio",
+    menuGame: "Jogo",
     menuReminders: "Lembretes",
     menuTodo: "Lista de Tarefas",
     menuInventory: "Inventário",

@@ -39,7 +39,16 @@ function customKeybinds() {
         (platform.pluginRuntime.getState() &&
             platform.pluginRuntime.getState().optionDefaults) || {}
     );
-    const platformDefaults = Object.assign({}, constant.originalKeybinds, constant.originalOptions);
+    // When no plugin is adopted (legacy boot), keep historic AQW accelerators available.
+    const legacyDefaults = platform.pluginRuntime.getPrimaryGame()
+        ? {}
+        : (constant.legacyAqwKeybinds || {});
+    const platformDefaults = Object.assign(
+        {},
+        constant.originalKeybinds,
+        legacyDefaults,
+        constant.originalOptions
+    );
 
     let topLevel = {};
     let pluginsBlock = {};

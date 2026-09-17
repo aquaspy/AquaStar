@@ -189,24 +189,17 @@ exports.wrapRuffleUrl = function(swfUrl) {
 /// Section 2 - Original KeyBindings and Custom swf stuff
 /// -------------------------------
 
-// Default values - Also present at aquastar_testing.json as a copy of easy access!
+// Platform-only defaults. Game/plugin keybinds (wiki, newAqw, reminders, …) are
+// registered by the active plugin via host.registerKeybindDefaults.
 const originalKeybinds = {
-    wiki:        "Alt+W",
-    account:     "Alt+A",
-    design:      "Alt+D",
-    charpage:    "Alt+P",
-    newAqw:      "Alt+N",
-    newTest:     "Alt+Q",
     about:       "F9",
     fullscreen:  "F11",
     sshot:       "F2",
-    cpSshot:     "Alt+K",
     reload:      [
         "CmdOrCtrl+F5",
         "CmdOrCtrl+R"
     ],
     reloadCache: "CmdOrCtrl+Shift+F5",
-    dragon:      "Alt+1",
     forward:     "Alt+F",
     backward:    "Alt+B",
     help : [
@@ -214,14 +207,26 @@ const originalKeybinds = {
         "CmdOrCtrl+H",
         "F1"
     ],
-    settings: "Alt+9", //TODO - Make a screen and do your stuff XD. This is for future proofing
-    reminders: "Alt+T",
-    todo:     "Alt+Y",
-    inventory: "Alt+I",
-    strategy: "Alt+U",
+    settings: "Alt+9",
     record:   "Ctrl+J"
 }
 exports.originalKeybinds = originalKeybinds;
+
+// Used only when pluginSystem is disabled (legacy boot still expects AQW ids).
+exports.legacyAqwKeybinds = {
+    wiki:        "Alt+W",
+    account:     "Alt+A",
+    design:      "Alt+D",
+    charpage:    "Alt+P",
+    newAqw:      "Alt+N",
+    newTest:     "Alt+Q",
+    cpSshot:     "Alt+K",
+    dragon:      "Alt+1",
+    reminders: "Alt+T",
+    todo:     "Alt+Y",
+    inventory: "Alt+I",
+    strategy: "Alt+U"
+};
 
 // Screen recording (Ctrl+J) format choices, shown as a <select> in Settings.
 // Verified against this Electron's bundled Chromium via MediaRecorder.isTypeSupported() -

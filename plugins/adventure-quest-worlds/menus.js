@@ -259,8 +259,96 @@ function createMenuContributor(options) {
     };
 }
 
+function createAqwChromeContributor(options) {
+    options = options || {};
+    return function menuContributor(ctx) {
+        ctx = ctx || {};
+        const labels = ctx.labels || {};
+        const keybinds = ctx.keybinds || {};
+        const actions = ctx.actions || {};
+        function clickAction(id, fallback) {
+            return function () {
+                if (typeof actions[id] === 'function') return actions[id]();
+                if (typeof fallback === 'function') return fallback();
+                require('../../res/keybindings.js').runGameMenuAction(id);
+            };
+        }
+        return [
+            {
+                label: labelOr(labels, 'menuGame', 'Game'),
+                submenu: [
+                    {
+                        label: labelOr(labels, 'menuNewAqw', 'New AQW Instance'),
+                        accelerator: keybinds.newAqw,
+                        registerAccelerator: false,
+                        click: clickAction('newAqw')
+                    },
+                    {
+                        label: labelOr(labels, 'menuNewTest', 'AQW Testing'),
+                        accelerator: keybinds.newTest,
+                        registerAccelerator: false,
+                        click: clickAction('newTest')
+                    },
+                    {
+                        label: labelOr(labels, 'menuDragon', 'DragonFable'),
+                        accelerator: keybinds.dragon,
+                        registerAccelerator: false,
+                        click: clickAction('dragon')
+                    },
+                    { type: 'separator' },
+                    {
+                        label: labelOr(labels, 'menuCharPageStudio', 'Char Page Studio'),
+                        click: clickAction('studio', function () {
+                            require('../../res/instances.js').openCharPageStudioWindow();
+                        })
+                    },
+                    {
+                        label: labelOr(labels, 'menuTakeShot', 'Char Page Screenshot'),
+                        accelerator: keybinds.cpSshot,
+                        registerAccelerator: false,
+                        click: clickAction('cpSshot', function () {
+                            require('../../res/instances.js').charPagePrint();
+                        })
+                    }
+                ]
+            },
+            {
+                label: labelOr(labels, 'menuFeatures', 'Features'),
+                submenu: [
+                    {
+                        label: labelOr(labels, 'menuReminders', 'Reminders'),
+                        accelerator: keybinds.reminders,
+                        registerAccelerator: false,
+                        click: clickAction('reminders')
+                    },
+                    {
+                        label: labelOr(labels, 'menuTodo', 'To-Do'),
+                        accelerator: keybinds.todo,
+                        registerAccelerator: false,
+                        click: clickAction('todo')
+                    },
+                    {
+                        label: labelOr(labels, 'menuInventory', 'Inventory'),
+                        accelerator: keybinds.inventory,
+                        registerAccelerator: false,
+                        click: clickAction('inventory')
+                    },
+                    {
+                        label: labelOr(labels, 'menuStrategy', 'Strategy'),
+                        accelerator: keybinds.strategy,
+                        registerAccelerator: false,
+                        click: clickAction('strategy')
+                    }
+                ]
+            }
+        ];
+    };
+}
+
 function register(host, options) {
-    host.registerMenus(createMenuContributor(options));
+    // Game / Features chrome that used to live hardcoded in res/windows/menu.js
+    host.registerMenus(createAqwChromeContributor(options));
+    // Pages come only from registerMenuPages (avoid duplicating Useful Pages).
     host.registerMenuPages({
         appUsefulPages: describeAppUsefulPages,
         gameMenuPages: describeGameMenuPages

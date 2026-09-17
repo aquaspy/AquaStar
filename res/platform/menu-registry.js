@@ -65,7 +65,12 @@ function buildMenuItems(ctx) {
 function adoptHostState(hostState, providers) {
     hostState = hostState || {};
     setContributors(hostState.menus || []);
-    if (providers) setPageProviders(providers);
+    // Always replace providers so a previous plugin cannot leak pages.
+    setPageProviders(providers || hostState.menuProviders || null);
+}
+
+function hasGameMenuPages() {
+    return typeof gameMenuPagesBuilder === 'function';
 }
 
 module.exports = {
@@ -76,6 +81,7 @@ module.exports = {
     getAppUsefulPages: getAppUsefulPages,
     getGameMenuPages: getGameMenuPages,
     hasAppUsefulPages: hasAppUsefulPages,
+    hasGameMenuPages: hasGameMenuPages,
     buildMenuItems: buildMenuItems,
     adoptHostState: adoptHostState
 };

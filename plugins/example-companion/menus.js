@@ -57,22 +57,27 @@ function register(host) {
         gameMenuPages: describeGameMenuPages
     });
     host.registerMenus(function (ctx) {
+        ctx = ctx || {};
+        const keybinds = ctx.keybinds || {};
         return [{
             label: 'Example',
             submenu: [
                 {
                     label: 'New stage window',
-                    click: function () {
-                        if (ctx.actions && ctx.actions.newStage) ctx.actions.newStage();
-                        else host.windows.openPrimaryGame();
-                    }
+                    accelerator: keybinds.newStage,
+                    registerAccelerator: false,
+                    click: function () { host.windows.openPrimaryGame(); }
                 },
                 {
+                    label: 'Open rectangle.swf only',
+                    click: function () { host.windows.openLaunch('example-swf-only'); }
+                },
+                { type: 'separator' },
+                {
                     label: 'Demo dashboard',
-                    click: function () {
-                        if (ctx.actions && ctx.actions.openDashboard) ctx.actions.openDashboard();
-                        else host.windows.openFeatureWindow('example-dashboard');
-                    }
+                    accelerator: keybinds.openDashboard,
+                    registerAccelerator: false,
+                    click: function () { host.windows.openFeatureWindow('example-dashboard'); }
                 }
             ]
         }];

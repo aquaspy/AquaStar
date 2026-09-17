@@ -1,261 +1,241 @@
-// App menu + the Help/About dialogs it opens. Split out of const.js so menu-building
-// stays separate from app-wide constants and window-shape configs. Pulls menuMessages/
-// dialogMessages fresh from locale.strings on every call instead of caching them in a
-// module-scoped var (setLocale() re-populates locale.strings whenever the language or
-// keybinds change, so reading it live here is simpler than keeping a second copy in sync).
+// App / game / context menus. Platform chrome is minimal; the active plugin
+// supplies Useful Pages, Game/Features entries via menuRegistry.
 const { BrowserWindow } = require('electron');
 const constant     = require('../const.js');
 const windowConfig = require('./config.js');
 const locale       = require('../locale.js');
 const menuRegistry = require('../platform/menu-registry.js');
 
-exports.getMenu = (keybinds, funcTakeSS, isContext = false) => {
-    // needs to be like that as the function is located on instances...
+function runAction(action, focusedWin) {
+    require('../keybindings.js').runGameMenuAction(action, focusedWin);
+}
+
+function command(label, action, accelerator) {
+    return {
+        label: label,
+        accelerator: accelerator,
+        registerAccelerator: false,
+        click(_item, focusedWin) {
+            runAction(action, focusedWin);
+        }
+    };
+}
+
+function generateLink(label, link, keybind) {
+    return {
+        label: label,
+        accelerator: keybind,
+        registerAccelerator: false,
+        openMode: 'in-place',
+        click(menuItem, focusedWin) {
+            if (focusedWin && focusedWin.webContents) focusedWin.webContents.loadURL(link);
+        }
+    };
+}
+
+function usefulPagesFromDescriptor(items) {
+    return (items || []).map(function (item) {
+        if (!item) return null;
+        if (item.type === 'separator') return { type: 'separator' };
+        if (item.submenu) {
+            return {
+                label: item.label,
+                submenu: usefulPagesFromDescriptor(item.submenu)
+            };
+        }
+        if (!item.url) return null;
+        return generateLink(item.label, item.url, item.accelerator || null);
+    }).filter(Boolean);
+}
+
+function gamePagesFromDescriptor(items, keybinds) {
+    return (items || []).map(function (item) {
+        if (!item) return null;
+        if (item.type === 'separator') return { type: 'separator' };
+        if (item.submenu) {
+            return {
+                label: item.label,
+                submenu: gamePagesFromDescriptor(item.submenu, keybinds)
+            };
+        }
+        const action = item.action || item.keybindId || item.id;
+        if (action && !item.url) {
+            return command(item.label, action, item.accelerator || keybinds[item.keybindId]);
+        }
+        if (item.url) {
+            const openMode = item.openMode || 'new-window';
+            return {
+                label: item.label,
+                accelerator: item.accelerator,
+                registerAccelerator: false,
+                openMode: openMode,
+                click(_menuItem, focusedWin) {
+                    if (openMode === 'in-place' && focusedWin && focusedWin.webContents) {
+                        focusedWin.webContents.loadURL(item.url);
+                        return;
+                    }
+                    require('../instances.js').newBrowserWindow(item.url);
+                }
+            };
+        }
+        return null;
+    }).filter(Boolean);
+}
+
+function pluginContributorMenus(keybinds) {
+    const menuMessages = (locale.strings && locale.strings.menuMessages) || {};
+    return menuRegistry.buildMenuItems({
+        keybinds: keybinds,
+        labels: menuMessages,
+        actions: {
+            // Lazy: resolve through dispatcher when clicked
+        },
+        openLink: function (url, mode, focusedWin) {
+            if (mode === 'in-place' && focusedWin && focusedWin.webContents) {
+                focusedWin.webContents.loadURL(url);
+                return;
+            }
+            require('../instances.js').newBrowserWindow(url);
+        }
+    });
+}
+
+function platformAquaStarMenu(menuMessages, keybinds) {
+    return {
+        label: 'AquaStar',
+        submenu: [
+            command(menuMessages.menuSettings || 'Settings', 'settings', keybinds.settings),
+            { type: 'separator' },
+            command(menuMessages.menuHelp || 'Help', 'help', keybinds.help),
+            command(menuMessages.menuAbout || 'About', 'about', keybinds.about)
+        ]
+    };
+}
+
+function platformToolsMenu(menuMessages, keybinds) {
+    return {
+        label: menuMessages.menuTools || 'Tools',
+        submenu: [
+            command(menuMessages.menuTakeGameShot || 'Screenshot', 'sshot', keybinds.sshot),
+            command(menuMessages.menuRecord || 'Record', 'record', keybinds.record),
+            { type: 'separator' },
+            command(menuMessages.menuReloadPage || 'Reload', 'reload', keybinds.reload),
+            command(menuMessages.menuReloadCache || 'Reload + clear cache', 'reloadCache', keybinds.reloadCache),
+            command(menuMessages.menuFullscreen || 'Fullscreen', 'fullscreen', keybinds.fullscreen)
+        ]
+    };
+}
+
+exports.getMenu = (keybinds, funcTakeSS, isContext) => {
     if (isContext == false && process.platform == 'darwin') return null;
 
-    const menuMessages = locale.strings.menuMessages;
+    const menuMessages = locale.strings.menuMessages || {};
+    const template = [];
 
-    function generateLink (label,link,keybind = null) {
-        return {
-            label: label,
-            accelerator: keybind,
-            // Show the shortcut hint only - don't actually bind it here. These keys
-            // (wiki/design/account/charpage) already open a *new* window via
-            // electron-localshortcut; letting the menu also register the accelerator
-            // races that handler and can replace the current window's URL instead
-            // (most visible once DevTools shifts window focus timing).
-            registerAccelerator: false,
-            openMode: 'in-place',
-            click(menuItem,focusedWin) {
-                focusedWin.webContents.loadURL(link);
-            }
-        }
-    }
-
-    function usefulPagesFromDescriptor(items) {
-        return (items || []).map(function (item) {
-            if (!item) return null;
-            if (item.type === 'separator') return { type: 'separator' };
-            if (item.submenu) {
-                return {
-                    label: item.label,
-                    submenu: usefulPagesFromDescriptor(item.submenu)
-                };
-            }
-            // Plugin-declared Useful Pages must stay in-place (loadURL), matching
-            // legacy generateLink — never newBrowserWindow from the app menu.
-            return generateLink(item.label, item.url, item.accelerator || null);
-        }).filter(Boolean);
-    }
-
-    function buildUsefulPagesSubmenu() {
-        if (menuRegistry.hasAppUsefulPages()) {
-            const described = menuRegistry.getAppUsefulPages({
-                labels: menuMessages,
-                keybinds: keybinds
-            });
-            if (described && described.length) {
-                return usefulPagesFromDescriptor(described);
-            }
-        }
-        return [
-            generateLink(menuMessages.menuWiki,constant.wikiReleases,keybinds.wiki),
-            generateLink(menuMessages.menuDesign,constant.designNotes,keybinds.design),
-            generateLink(menuMessages.menuBalancePatchNotes,constant.balancePatchNotes),
-            generateLink(menuMessages.menuAccount,constant.accountAq,keybinds.account),
-            generateLink(menuMessages.menuCharpage,constant.charLookup,keybinds.charpage),
-            // No keybind now...
-            {type: 'separator'},
+    if (isContext) {
+        template.push(
             {
-                label: menuMessages.menuOtherPages2,
-                submenu: [
-                    generateLink(menuMessages.menuDailyGifts,constant.dailyGifts),
-                    generateLink(menuMessages.menuCalendar,constant.calendar),
-                    generateLink(menuMessages.menuForge,constant.forgeEnchants),
-                    generateLink(menuMessages.menuHeromart,constant.heromart),
-                    generateLink(menuMessages.menuPortal,constant.battleon)
-                ]
+                label: menuMessages.menuCopyURL || 'Copy URL',
+                click(menuItem, focusedWin) {
+                    require('electron').clipboard.writeText(
+                        focusedWin.webContents.getURL(), 'clipboard');
+                }
             },
             {
-                label: menuMessages.menuSocialMedia,
-                submenu: [
-                    generateLink(menuMessages.menuTwitter,constant.twtAlina),
-                    generateLink(menuMessages.menuReddit,constant.redditAqw)
-                ]
-            }
-        ];
+                label: menuMessages.menuReloadPage || 'Reload',
+                click(menuItem, focusedWin) { focusedWin.reload(); }
+            },
+            { type: 'separator' }
+        );
     }
 
-    var links =
-    [
+    template.push(
         {
-            label: '<<< ' + menuMessages.menuBackward,
+            label: '<<< ' + (menuMessages.menuBackward || 'Back'),
             accelerator: keybinds.backward,
-            click(menuItem,focusedWin) {
+            click(menuItem, focusedWin) {
                 var br = focusedWin.webContents;
                 if (br.canGoBack()) br.goBack();
             }
         },
         {
-            label: '>>> ' + menuMessages.menuFoward,
+            label: '>>> ' + (menuMessages.menuFoward || 'Forward'),
             accelerator: keybinds.forward,
-            click(menuItem,focusedWin) {
+            click(menuItem, focusedWin) {
                 var br = focusedWin.webContents;
                 if (br.canGoForward()) br.goForward();
             }
-        }, // Sorry Mac, you cant have those next ones as its not worth it... There is still right click tho
-        {
-            label: menuMessages.menuOtherPages,
-            submenu: buildUsefulPagesSubmenu()
-        },
-        {
-            label: menuMessages.menuTakeShot,
-            accelerator: keybinds.cpSshot,
-            click() {
-                funcTakeSS();
-            }
-        },
-        {
-            label: menuMessages.menuCharPageStudio,
-            click() {
-                require('../instances.js').openCharPageStudioWindow();
-            }
-        },
-        {
-            label: menuMessages.menuSettings,
-            accelerator: keybinds.settings,
-            click() {
-                // Cant pull instances module at top level or else would be cyclical.
-                require('../instances.js').openSettingsWindow();
-            }
-        },
-        {
-            label: menuMessages.menuReminders,
-            accelerator: keybinds.reminders,
-            click() {
-                require('../instances.js').openRemindersWindow();
-            }
-        },
-        {
-            label: menuMessages.menuTodo,
-            accelerator: keybinds.todo,
-            click() {
-                require('../instances.js').openTodoWindow();
-            }
-        },
-        {
-            label: menuMessages.menuInventory,
-            accelerator: keybinds.inventory,
-            click() {
-                require('../instances.js').openInventoryWindow();
-            }
-        },
-        {
-            label: menuMessages.menuStrategy,
-            accelerator: keybinds.strategy,
-            click() { require('../instances.js').openStrategyWindow(); }
         }
-    ];
-    // Wiki and other browser pages need navigation, but their menu should not
-    // become a long row of feature buttons. Keep page links visible and group
-    // the launcher commands exactly like the compact game menu.
-    if (!isContext) {
-        return [
-            links[0],
-            links[1],
-            links[2],
-            {
-                label: menuMessages.menuTools,
-                submenu: links.slice(3, 6)
-            },
-            {
-                label: menuMessages.menuFeatures,
-                submenu: links.slice(6)
-            }
-        ];
-    }
-    if (isContext){
-        var ret = [
-            {
-                label: menuMessages.menuCopyURL,
-                click(menuItem,focusedWin) {
-                    require('electron').clipboard.writeText(
-                        focusedWin.webContents.getURL(),'clipboard');
-                }
-            },
-            {
-                label: menuMessages.menuReloadPage,
-                click(menuItem,focusedWin) {
-                    focusedWin.reload();
-                }
-            },
-            { type: 'separator' }
-        ];
-        ret.reverse().forEach((e) => {links.splice(0, 0, e)}); // Insert at the beginning
-    }
-    return links;
-}
+    );
 
-// Compact menu for AQW/DragonFable windows. It intentionally omits browser
-// navigation and context-menu-only commands; every entry maps to the same action
-// used by the corresponding launcher shortcut.
-exports.getGameMenu = (keybinds) => {
-    const menuMessages = locale.strings.menuMessages;
-    function command(label, action, accelerator) {
-        return {
-            label: label,
-            accelerator: accelerator,
-            registerAccelerator: false,
-            click(_item, focusedWin) {
-                require('../keybindings.js').runGameMenuAction(action, focusedWin);
-            }
-        };
-    }
-    return [
-        {
-            label: 'AquaStar',
-            submenu: [
-                command(menuMessages.menuNewAqw, 'newAqw', keybinds.newAqw),
-                command(menuMessages.menuNewTest, 'newTest', keybinds.newTest),
-                command(menuMessages.menuDragon, 'dragon', keybinds.dragon),
-                { type: 'separator' },
-                command(menuMessages.menuSettings, 'settings', keybinds.settings),
-                command(menuMessages.menuCharPageStudio, 'studio'),
-                { type: 'separator' },
-                command(menuMessages.menuHelp, 'help', keybinds.help),
-                command(menuMessages.menuAbout, 'about', keybinds.about)
-            ]
-        },
-        {
-            label: menuMessages.menuOtherPages,
-            submenu: [
-                command(menuMessages.menuWiki, 'wiki', keybinds.wiki),
-                command(menuMessages.menuDesign, 'design', keybinds.design),
-                command(menuMessages.menuAccount, 'account', keybinds.account),
-                command(menuMessages.menuCharpage, 'charpage', keybinds.charpage)
-            ]
-        },
-        {
-            label: menuMessages.menuTools,
-            submenu: [
-                command(menuMessages.menuTakeGameShot, 'sshot', keybinds.sshot),
-                command(menuMessages.menuRecord, 'record', keybinds.record),
-                { type: 'separator' },
-                command(menuMessages.menuReloadPage, 'reload', keybinds.reload),
-                command(menuMessages.menuReloadCache, 'reloadCache', keybinds.reloadCache),
-                command(menuMessages.menuFullscreen, 'fullscreen', keybinds.fullscreen)
-            ]
-        },
-        {
-            label: menuMessages.menuFeatures,
-            submenu: [
-                command(menuMessages.menuReminders, 'reminders', keybinds.reminders),
-                command(menuMessages.menuTodo, 'todo', keybinds.todo),
-                command(menuMessages.menuInventory, 'inventory', keybinds.inventory),
-                command(menuMessages.menuStrategy, 'strategy', keybinds.strategy)
-            ]
+    // Plugin Useful Pages only — never fall back to the AQW catalog.
+    if (menuRegistry.hasAppUsefulPages()) {
+        const described = menuRegistry.getAppUsefulPages({
+            labels: menuMessages,
+            keybinds: keybinds
+        });
+        const pages = usefulPagesFromDescriptor(described);
+        if (pages.length) {
+            template.push({
+                label: menuMessages.menuOtherPages || 'Pages',
+                submenu: pages
+            });
         }
+    }
+
+    template.push({
+        label: menuMessages.menuTools || 'Tools',
+        submenu: [
+            {
+                label: menuMessages.menuTakeShot || 'Screenshot',
+                accelerator: keybinds.sshot,
+                click: function () {
+                    if (typeof funcTakeSS === 'function') funcTakeSS();
+                    else runAction('sshot');
+                }
+            },
+            command(menuMessages.menuSettings || 'Settings', 'settings', keybinds.settings)
+        ]
+    });
+
+    // Plugin-registered top-level menus (Game / Features / Example / …)
+    pluginContributorMenus(keybinds).forEach(function (item) {
+        template.push(item);
+    });
+
+    template.push(platformAquaStarMenu(menuMessages, keybinds));
+
+    return template;
+};
+
+exports.getGameMenu = (keybinds) => {
+    const menuMessages = locale.strings.menuMessages || {};
+    const template = [
+        platformAquaStarMenu(menuMessages, keybinds),
+        platformToolsMenu(menuMessages, keybinds)
     ];
+
+    if (menuRegistry.hasGameMenuPages && menuRegistry.hasGameMenuPages()) {
+        const pages = gamePagesFromDescriptor(
+            menuRegistry.getGameMenuPages({
+                labels: menuMessages,
+                keybinds: keybinds
+            }),
+            keybinds
+        );
+        if (pages.length) {
+            template.push({
+                label: menuMessages.menuOtherPages || 'Pages',
+                submenu: pages
+            });
+        }
+    }
+
+    pluginContributorMenus(keybinds).forEach(function (item) {
+        template.push(item);
+    });
+
+    return template;
 };
 
 function showHelpMessage(win){
@@ -281,18 +261,13 @@ function showAboutMessage(win) {
         "ARCH - " + process.arch     + "\n"
     };
 
-    // I wish the worse for who created Promisses and async stuff with such poor way to deal with them.
-    // Now i have to do ugly and messy code. Good job. ASSHOLE
-    // and no, sync version isnt available on our version. Freaking flash....
-    require('electron').dialog.showMessageBox(win,dialog_options, (response) => {
+    require('electron').dialog.showMessageBox(win, dialog_options, (response) => {
         if (response != 0) return;
-
-        // Cant pull instances module or else would be cyclical.
         const newWin = new BrowserWindow(windowConfig.winConfig);
         newWin.setMenuBarVisibility(true);
         newWin.loadURL(constant.githubPage);
     });
 }
 
-exports.showHelpMessage  = showHelpMessage;
+exports.showHelpMessage = showHelpMessage;
 exports.showAboutMessage = showAboutMessage;

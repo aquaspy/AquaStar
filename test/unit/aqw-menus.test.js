@@ -190,7 +190,7 @@ test('Host registerMenuPages stores providers for any plugin id', () => {
   }, /appUsefulPages expects a function/);
 });
 
-test('legacy generateLink path stays in-place in menu.js source', () => {
+test('menu.js uses plugin pages without AQW catalog fallback', () => {
   const menuSrc = fs.readFileSync(
     path.join(__dirname, '../../res/windows/menu.js'),
     'utf8'
@@ -198,9 +198,21 @@ test('legacy generateLink path stays in-place in menu.js source', () => {
   assert.ok(menuSrc.indexOf("focusedWin.webContents.loadURL(link)") !== -1);
   assert.ok(menuSrc.indexOf("openMode: 'in-place'") !== -1);
   assert.ok(menuSrc.indexOf('menuRegistry') !== -1);
-  assert.ok(menuSrc.indexOf('buildUsefulPagesSubmenu') !== -1);
-  // Game menu still dispatches through runGameMenuAction (new-window path).
-  assert.ok(menuSrc.indexOf('runGameMenuAction(action, focusedWin)') !== -1);
+  assert.ok(menuSrc.indexOf('hasAppUsefulPages') !== -1);
+  assert.ok(menuSrc.indexOf('constant.wikiReleases') === -1);
+  assert.ok(menuSrc.indexOf('menuReminders') === -1 ||
+    menuSrc.indexOf("command(menuMessages.menuReminders") === -1);
+  assert.ok(menuSrc.indexOf('runGameMenuAction') !== -1);
+});
+
+test('AQW menus register Game/Features contributors', () => {
+  const src = fs.readFileSync(
+    path.join(__dirname, '../../plugins/adventure-quest-worlds/menus.js'),
+    'utf8'
+  );
+  assert.ok(src.indexOf('createAqwChromeContributor') !== -1);
+  assert.ok(src.indexOf("labelOr(labels, 'menuGame'") !== -1);
+  assert.ok(src.indexOf("labelOr(labels, 'menuFeatures'") !== -1);
 });
 
 test('main.js adopts menu providers from host state without AQW id check', () => {

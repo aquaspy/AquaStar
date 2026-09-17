@@ -14,6 +14,7 @@ global.test = function (name, fn) {
   './unit/wikiview-injection.test.js',
   './unit/charpage-lab.test.js',
   './unit/game-menu.test.js',
+  './unit/menu-isolation.test.js',
   './unit/inventory-locales.test.js',
   './unit/plugin-locales.test.js',
   './unit/plugin-settings-ui.test.js',

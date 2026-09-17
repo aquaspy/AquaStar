@@ -71,6 +71,8 @@ exports.menuMessages = {
     menuTwitter: "Alina's Twitter",
     menuTakeShot: "Take a SShot of CP (CP ONLY!)",
     menuCharPageStudio: "Char Page Studio",
+    menuGame: "Game",
+    menuFeatures: "Features",
     menuReminders: "Reminders",
     menuTodo: "To-Do List",
     menuInventory: "Inventory",
@@ -79,7 +81,6 @@ exports.menuMessages = {
     menuNewTest: "AQW Testing Instance",
     menuDragon: "DragonFable",
     menuTools: "Tools",
-    menuFeatures: "Features",
 };
 
 exports.settingsMessages = {
