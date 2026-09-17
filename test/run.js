@@ -26,6 +26,7 @@ global.test = function (name, fn) {
   './unit/plugin-host-permissions.test.js',
   './unit/plugin-runtime.test.js',
   './unit/flash-trust.test.js',
+  './unit/keybind-dispatcher.test.js',
   './unit/aqw-adapter-boot.test.js',
   './unit/aqw-session-urls.test.js',
   './unit/aqw-navigation.test.js',

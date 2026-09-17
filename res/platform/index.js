@@ -17,5 +17,6 @@ module.exports = {
     resolveOption: require('./settings-resolve.js').resolveOption,
     menuRegistry: require('./menu-registry.js'),
     settingsRegistry: require('./settings-registry.js'),
-    pluginRuntime: require('./plugin-runtime.js')
+    pluginRuntime: require('./plugin-runtime.js'),
+    keybindDispatcher: require('./keybind-dispatcher.js')
 };

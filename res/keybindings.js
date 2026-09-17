@@ -14,6 +14,7 @@ var finalKeybinds = {};
 var recordingWinId = 0;
 // null = show every originalKeybinds row (legacy / filter unknown).
 var visibleKeybindIds = null;
+var activeDispatcher = null;
 
 function setVisibleKeybindIds(ids) {
     if (!ids || !ids.length) {
@@ -107,6 +108,48 @@ function toggleFullscreen(focusedWin) {
     }
 }
 
+function buildPlatformActions() {
+    return {
+        settings: function () { inst.openSettingsWindow(); },
+        fullscreen: toggleFullscreen,
+        sshot: function (focusedWin) { inst.takeSS(focusedWin); },
+        record: toggleRecording,
+        reload: function (focusedWin) { if (focusedWin) focusedWin.reload(); },
+        reloadCache: reloadIgnoringCache,
+        help: function (focusedWin) { windowsMenu.showHelpMessage(focusedWin); },
+        about: function (focusedWin) { windowsMenu.showAboutMessage(focusedWin); },
+        forward: function (fw) {
+            if (!fw) return;
+            var br = fw.webContents;
+            if (br.canGoForward()) br.goForward();
+        },
+        backward: function (fw) {
+            if (!fw) return;
+            var br = fw.webContents;
+            if (br.canGoBack()) br.goBack();
+        }
+    };
+}
+
+function registerLegacyAqwKeybinds(k) {
+    addKeybind(k.wiki, function () { inst.newBrowserWindow(constant.wikiReleases); });
+    addKeybind(k.design, function () { inst.newBrowserWindow(constant.designNotes); });
+    addKeybind(k.account, function () { inst.newBrowserWindow(constant.accountAq); });
+    addKeybind(k.charpage, function () {
+        inst.newBrowserWindow(constant.buildCharLookupUrl(k.playerCharacter));
+    });
+    addKeybind(k.newAqw, function () { inst.newBrowserWindow(constant.mainPath); });
+    addKeybind(k.newTest, function () { inst.newBrowserWindow(constant.testingAQW); });
+    addKeybind(k.reminders, function () { inst.openRemindersWindow(); });
+    addKeybind(k.todo, function () { inst.openTodoWindow(); });
+    addKeybind(k.inventory, function () { inst.openInventoryWindow(); });
+    addKeybind(k.strategy, function () { inst.openStrategyWindow(); });
+    addKeybind(k.dragon, function () { inst.newBrowserWindow(constant.df_url); });
+    if (process.platform == 'darwin') {
+        addKeybind(k.cpSshot, function () { inst.charPagePrint(); }, true);
+    }
+}
+
 const processKeybings = function (){
 
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
@@ -126,65 +169,48 @@ const processKeybings = function (){
     if (k.useDirectWmode !== undefined) constant.setUseDirectWmode(k.useDirectWmode);
     if (k.enableDevTools == true) constant.enableDevTools();
 
-    addKeybind(k.wiki    , ()=>{inst.newBrowserWindow(constant.wikiReleases)});
-    addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
-    addKeybind(k.account , ()=>{inst.newBrowserWindow(constant.accountAq)});
-    addKeybind(k.charpage, ()=>{inst.newBrowserWindow(constant.buildCharLookupUrl(k.playerCharacter))});
-    
-    // Open new Aqlite window (usefull for alts)
-    addKeybind(k.newAqw  , ()=>{inst.newBrowserWindow(constant.mainPath)});
-    addKeybind(k.newTest , ()=>{inst.newBrowserWindow(constant.testingAQW)});
-    
-    // Show help message
-    addKeybind(k.help,     (focusedWin)=>{windowsMenu.showHelpMessage(focusedWin)});
+    const pluginBindings = platform.pluginRuntime.listKeybindBindings();
+    activeDispatcher = platform.keybindDispatcher
+        ? platform.keybindDispatcher.createDispatcher({
+            platformActions: buildPlatformActions(),
+            pluginBindings: pluginBindings
+        })
+        : require('./platform/keybind-dispatcher.js').createDispatcher({
+            platformActions: buildPlatformActions(),
+            pluginBindings: pluginBindings
+        });
 
-    addKeybind(k.about,    (focusedWin)=>{windowsMenu.showAboutMessage(focusedWin)});
+    // Platform chrome (always).
+    addKeybind(k.help, function (focusedWin) { activeDispatcher.run('help', focusedWin); });
+    addKeybind(k.about, function (focusedWin) { activeDispatcher.run('about', focusedWin); });
+    addKeybind(k.settings, function () { activeDispatcher.run('settings'); });
+    addKeybind(k.fullscreen, function (focusedWin) { activeDispatcher.run('fullscreen', focusedWin); });
+    addGlobalKeybind(k.sshot, function (focusedWin) { activeDispatcher.run('sshot', focusedWin); }, false, true);
+    addGlobalKeybind(k.record, function (focusedWin) { activeDispatcher.run('record', focusedWin); });
+    addKeybind(k.reload, function (focusedWin) { activeDispatcher.run('reload', focusedWin); });
+    addGlobalKeybind(k.reloadCache, function (focusedWin) { activeDispatcher.run('reloadCache', focusedWin); }, false, true);
 
-    // Open Settings screen - customize keybindings
-    addKeybind(k.settings, ()=>{inst.openSettingsWindow()});
+    if (process.platform == 'darwin') {
+        addKeybind(k.backward, function (fw) { activeDispatcher.run('backward', fw); }, true);
+        addKeybind(k.forward, function (fw) { activeDispatcher.run('forward', fw); }, true);
+    }
 
-    // Open Reminders screen - daily/weekly quest tracker per character
-    addKeybind(k.reminders, ()=>{inst.openRemindersWindow()});
-
-    // Open To-Do screen - per-character task list (drops, shop items, quest rewards...)
-    addKeybind(k.todo, ()=>{inst.openTodoWindow()});
-
-    // Open Inventory screen - synced account.aq.com Inventory/BuyBack browser
-    addKeybind(k.inventory, ()=>{inst.openInventoryWindow()});
-
-    addKeybind(k.strategy, ()=>{inst.openStrategyWindow()});
-
-    // Toggle Fullscreen
-    addKeybind(k.fullscreen, toggleFullscreen);
-
-    // F2 / Ctrl+J must use globalShortcut — Flash PPAPI eats before-input-event keys
-    addGlobalKeybind(k.sshot, (focusedWin) => { inst.takeSS(focusedWin); }, false, true);
-    addGlobalKeybind(k.record, toggleRecording);
-
-
-    // Reload
-    addKeybind(k.reload,   (focusedWin) => {focusedWin.reload()});
-    // Reload and clear cache — globalShortcut so Flash game windows receive Ctrl+Shift+F5
-    addGlobalKeybind(k.reloadCache, reloadIgnoringCache, false, true);
-    
-    // Yay, AquaSP can have his DF too!
-    addKeybind(k.dragon, () => inst.newBrowserWindow(constant.df_url));
-    
-    //FORCED KEYBINDS FOR MAC. NEEDS TESTING
-    if (process.platform == 'darwin'){
-        addKeybind(k.cpSshot, ()=>{inst.charPagePrint()},true)
-        addKeybind(k.backward, 
-            (fw) => {
-                var br = fw.webContents;
-                if (br.canGoBack()) br.goBack();
-            },
-        true);
-        addKeybind(k.forward,
-            (fw) => {
-                var br = fw.webContents;
-                if (br.canGoForward()) br.goForward();
-            },
-        true);
+    if (pluginBindings.length) {
+        pluginBindings.forEach(function (binding) {
+            if (!binding || !binding.id || typeof binding.action !== 'function') return;
+            if (activeDispatcher.PLATFORM_RESERVED[binding.id]) return;
+            const accel = k[binding.id];
+            if (!accel) return;
+            const id = binding.id;
+            const onlyHtml = process.platform == 'darwin' && id === 'cpSshot';
+            if (binding.global) {
+                addGlobalKeybind(accel, function (fw) { activeDispatcher.run(id, fw); }, onlyHtml, !!binding.considerDF);
+            } else {
+                addKeybind(accel, function (fw) { activeDispatcher.run(id, fw); }, onlyHtml, !!binding.considerDF);
+            }
+        });
+    } else {
+        registerLegacyAqwKeybinds(k);
     }
 
     exports.keybinds = k;
@@ -224,6 +250,11 @@ exports.setVisibleKeybindIds = setVisibleKeybindIds;
 // Keeping one implementation is particularly important for recording state and
 // cache clearing, both of which have process-wide side effects.
 exports.runGameMenuAction = function(action, focusedWin) {
+    if (activeDispatcher) {
+        const result = activeDispatcher.run(action, focusedWin);
+        if (result !== undefined) return result;
+    }
+    // Fallbacks when dispatcher missing or action unknown (e.g. studio menu entry).
     switch (action) {
     case 'wiki': return inst.newBrowserWindow(constant.wikiReleases);
     case 'design': return inst.newBrowserWindow(constant.designNotes);
