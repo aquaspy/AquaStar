@@ -53,8 +53,11 @@ exports.menuMessages = {
 
 exports.settingsMessages = {
     title: "AquaStar - Settings",
-    heading: "Keybind Settings",
-    description: "Click \"Record\" and press a new key combination to change a shortcut. Changes are saved to the file shown below and require restarting AquaStar to take effect.",
+    heading: "Settings",
+    description: "Configure AquaStar and the active plugin. Changes are saved to the file shown below; some options need a restart to take effect.",
+    descriptionGeneral: "Plugin selection, primary game override, recording, and runtime options.",
+    descriptionPlugin: "Options provided by the active plugin.",
+    descriptionKeybinds: "Click \"Record\" and press a new key combination to change a shortcut. Restart AquaStar to apply keybind changes.",
     saveLocationLabel: "Saving to: ",
     saveButton: "Save Changes",
     resetAllButton: "Reset All to Default",
@@ -63,7 +66,7 @@ exports.settingsMessages = {
     recordButton: "Record",
     recordingLabel: "Press keys... (Esc to cancel)",
     resetButton: "Reset",
-    savedMessage: "Saved! Restart AquaStar to apply the new keybindings.",
+    savedMessage: "Saved! Restart AquaStar if a change requires it.",
     macOnlyLabel: " (macOS only)",
     charpageOnly: " (char page only)",
     labels: {

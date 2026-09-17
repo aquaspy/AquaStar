@@ -79,5 +79,18 @@ test('platform locales include settings tab strings and generic SWF copy', () =>
     assert.ok(messages.customSwfHeading);
     assert.ok(messages.customSwfHint.indexOf('AQW') === -1);
     assert.ok(messages.customSwfInactiveLabel.indexOf('AQW') === -1);
+    assert.ok(messages.heading.indexOf('Keybind') === -1);
+    assert.ok(messages.descriptionKeybinds);
+    assert.ok(messages.descriptionGeneral);
   });
+});
+
+test('Settings header description switches per tab', () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, '../../res/features/settings/settings.html'),
+    'utf8'
+  );
+  assert.ok(html.indexOf('descriptionForTab') !== -1);
+  assert.ok(html.indexOf('setActiveTab') !== -1);
+  assert.ok(html.indexOf('descriptionKeybinds') !== -1);
 });

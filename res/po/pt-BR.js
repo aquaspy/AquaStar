@@ -53,8 +53,11 @@ exports.menuMessages = {
 
 exports.settingsMessages = {
     title: "AquaStar - Configurações",
-    heading: "Configurações de Keybindings",
-    description: "Clique em \"Gravar\" e pressione uma nova combinação de teclas para alterar um atalho. As mudanças são salvas no arquivo mostrado abaixo e exigem reiniciar o AquaStar para terem efeito.",
+    heading: "Configurações",
+    description: "Configure o AquaStar e o plugin ativo. As mudanças são salvas no arquivo abaixo; algumas opções precisam de reinício para ter efeito.",
+    descriptionGeneral: "Seleção de plugin, override do jogo primário, gravação e opções de runtime.",
+    descriptionPlugin: "Opções fornecidas pelo plugin ativo.",
+    descriptionKeybinds: "Clique em \"Gravar\" e pressione uma nova combinação de teclas para alterar um atalho. Reinicie o AquaStar para aplicar mudanças de atalhos.",
     saveLocationLabel: "Salvando em: ",
     saveButton: "Salvar Alterações",
     resetAllButton: "Restaurar Tudo ao Padrão",
@@ -63,7 +66,7 @@ exports.settingsMessages = {
     recordButton: "Gravar",
     recordingLabel: "Pressione as teclas... (Esc para cancelar)",
     resetButton: "Restaurar",
-    savedMessage: "Salvo! Reinicie o AquaStar para aplicar as novas keybindings.",
+    savedMessage: "Salvo! Reinicie o AquaStar se alguma mudança exigir.",
     macOnlyLabel: " (somente macOS)",
     charpageOnly: " (somente char pages)",
     labels: {

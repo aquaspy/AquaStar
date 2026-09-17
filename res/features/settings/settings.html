@@ -984,16 +984,35 @@
     return nodes;
   }
 
+  function descriptionForTab(name) {
+    if (name === 'general') {
+      return messages.descriptionGeneral || messages.description || '';
+    }
+    if (name === 'plugin') {
+      return messages.descriptionPlugin || messages.description || '';
+    }
+    if (name === 'keybinds') {
+      return messages.descriptionKeybinds || messages.description || '';
+    }
+    return messages.description || '';
+  }
+
+  function setActiveTab(name) {
+    const tabs = document.querySelectorAll('#tabs .tab');
+    tabs.forEach((t) => t.classList.toggle('active', t.getAttribute('data-tab') === name));
+    ['general', 'plugin', 'keybinds'].forEach((id) => {
+      const panel = document.getElementById('panel-' + id);
+      if (panel) panel.classList.toggle('active', id === name);
+    });
+    const descEl = document.getElementById('description');
+    if (descEl) descEl.textContent = descriptionForTab(name);
+  }
+
   function setupTabs() {
     const tabs = document.querySelectorAll('#tabs .tab');
     tabs.forEach((tab) => {
       tab.addEventListener('click', () => {
-        const name = tab.getAttribute('data-tab');
-        tabs.forEach((t) => t.classList.toggle('active', t === tab));
-        ['general', 'plugin', 'keybinds'].forEach((id) => {
-          const panel = document.getElementById('panel-' + id);
-          if (panel) panel.classList.toggle('active', id === name);
-        });
+        setActiveTab(tab.getAttribute('data-tab'));
       });
     });
   }
@@ -1074,8 +1093,7 @@
     messages = msgs;
 
     document.title = messages.title;
-    document.getElementById('heading').textContent = messages.heading;
-    document.getElementById('description').textContent = messages.description;
+    document.getElementById('heading').textContent = messages.heading || 'Settings';
     document.getElementById('saveLocation').innerHTML =
       messages.saveLocationLabel + '<code>' + kb.savePath.replace(/</g, '&lt;') + '</code>';
 
@@ -1085,6 +1103,7 @@
     document.getElementById('tab-plugin').textContent = pluginName;
     document.getElementById('tab-keybinds').textContent = messages.tabKeybinds || 'Keybinds';
     setupTabs();
+    setActiveTab('general');
 
     const generalEl = document.getElementById('panel-general');
     const pluginEl = document.getElementById('panel-plugin');
