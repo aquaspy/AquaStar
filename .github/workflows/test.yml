@@ -29,3 +29,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run pack
+      # electron-builder --dir must ship the bundled AQW plugin (asar: false → resources/app)
+      - name: Assert bundled AQW plugin in pack output
+        run: >
+          node -e "const fs=require('fs');const path=require('path');
+          const rels=['plugins/adventure-quest-worlds/plugin.json','plugins/adventure-quest-worlds/main.js','plugins/adventure-quest-worlds/features/reminders/reminders.js','plugins/adventure-quest-worlds/processes/charpage-studio-process.js'];
+          const roots=['dist/win-unpacked/resources/app','dist/win-ia32-unpacked/resources/app'].filter((r)=>fs.existsSync(r));
+          if(!roots.length){console.error('No unpacked app root under dist/ after pack');process.exit(1);}
+          for (const root of roots){for (const rel of rels){const p=path.join(root,rel);if(!fs.existsSync(p)){console.error('Missing '+p);process.exit(1);}}}
+          console.log('pack plugins ok:', roots.join(', '));"
