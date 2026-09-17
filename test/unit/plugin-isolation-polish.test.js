@@ -64,10 +64,12 @@ test('instances assigns per-window menus and suppresses duplicate opens', () => 
   const src = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
   assert.ok(src.indexOf('_windowOpenGate') !== -1);
   assert.ok(src.indexOf('Suppressed duplicate newBrowserWindow') !== -1);
-  assert.ok(src.indexOf('setMenu(Menu.buildFromTemplate(menuTemplate))') !== -1);
+  assert.ok(src.indexOf('function applyWindowMenu') !== -1);
+  assert.ok(src.indexOf('exports.applyWindowMenu') !== -1);
   const mainSrc = fs.readFileSync(path.join(__dirname, '../../main.js'), 'utf8');
   // Full app menu must not be set globally alongside per-window menus.
   assert.ok(mainSrc.indexOf('Menu.buildFromTemplate(windowsMenu.getMenu(finalkeyb') === -1);
+  assert.ok(mainSrc.indexOf('applyWindowMenu(win, bootGameUrl)') !== -1);
 });
 
 test('example companion ships Flex-built SWFs and sandboxed dashboard preload', () => {

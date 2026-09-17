@@ -164,16 +164,22 @@ function createWindow () {
     // Lang setup. Has to be after Ready event.
     constant.setLocale(app.getLocale(),finalkeyb);
 
+    // Minimal global menu first (Windows). Full plugin menus are per-window via setMenu.
+    // Setting ApplicationMenu *after* the first setMenu left the initial window on the
+    // stub menu only — order matters.
+    if (process.platform === 'darwin') {
+        Menu.setApplicationMenu(null);
+    } else {
+        Menu.setApplicationMenu(Menu.buildFromTemplate([
+            { label: 'AquaStar', submenu: [{ role: 'quit' }] }
+        ]));
+    }
+
     // Primary URL comes from the active plugin (platform custom SWF / customUrl still win).
     const bootGameUrl = platform.pluginRuntime.getPrimaryUrl();
     let win = inst.newBrowserWindow(bootGameUrl, true);
-
-    // Per-window menus only. On Windows/Linux, setApplicationMenu + win.setMenu
-    // together can fire the same plugin action twice (menu click + shared app menu).
-    // instances.newBrowserWindow assigns the correct menu for game vs browser windows.
-    Menu.setApplicationMenu(process.platform === 'darwin' ? null : Menu.buildFromTemplate([
-        { label: 'AquaStar', submenu: [{ role: 'quit' }] }
-    ]));
+    // Re-apply after setApplicationMenu so the first window keeps plugin menu entries.
+    inst.applyWindowMenu(win, bootGameUrl);
     
     win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
     

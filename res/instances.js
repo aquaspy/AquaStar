@@ -144,26 +144,39 @@ function newBrowserWindow(new_path, isMainWin=false){
         else newWin.setMenuBarVisibility(true);
     }
 
-    // Always set an explicit per-window menu on Windows/Linux so we never rely on
-    // a global setApplicationMenu that can double-dispatch with win.setMenu.
-    if (process.platform !== 'darwin') {
-        var showGameMenu = keybinds.keybinds.showGameMenu !== false &&
-            (_looksLikeSwfUrl(originalPath) && _isGameWindow(originalPath, false) || isPluginPrimary);
-        var menuTemplate = showGameMenu
-            ? windowsMenu.getGameMenu(keybinds.keybinds)
-            : windowsMenu.getMenu(keybinds.keybinds, takeSS, false);
-        if (menuTemplate && menuTemplate.length) {
-            newWin.setMenu(Menu.buildFromTemplate(menuTemplate));
-            newWin.setMenuBarVisibility(true);
-        } else {
-            newWin.setMenu(null);
-            newWin.setMenuBarVisibility(false);
-        }
-    }
+    applyWindowMenu(newWin, originalPath);
     
     _windowAddContext(newWin);
     
     return newWin;
+}
+
+/**
+ * Assign the correct per-window menu (game vs browser). Must run after any
+ * Menu.setApplicationMenu call — on Windows that can otherwise leave the first
+ * window stuck on the minimal app menu without plugin entries.
+ */
+function applyWindowMenu(win, originalPath) {
+    if (!win || win.isDestroyed() || process.platform === 'darwin') return;
+    originalPath = originalPath || win.aquaStarSwfUrl || '';
+    var primary = null;
+    try {
+        primary = require('./platform').pluginRuntime.getPrimaryGame();
+    } catch (e) { primary = null; }
+    var isPluginPrimary = !!(primary && typeof primary.getUrl === 'function' &&
+        originalPath === primary.getUrl());
+    var showGameMenu = (!keybinds.keybinds || keybinds.keybinds.showGameMenu !== false) &&
+        ((_looksLikeSwfUrl(originalPath) && _isGameWindow(originalPath, false)) || isPluginPrimary);
+    var menuTemplate = showGameMenu
+        ? windowsMenu.getGameMenu(keybinds.keybinds || {})
+        : windowsMenu.getMenu(keybinds.keybinds || {}, takeSS, false);
+    if (menuTemplate && menuTemplate.length) {
+        win.setMenu(Menu.buildFromTemplate(menuTemplate));
+        win.setMenuBarVisibility(true);
+    } else {
+        win.setMenu(null);
+        win.setMenuBarVisibility(false);
+    }
 }
 
 // Now, every window created with actions like CTRL + click, can have the right click menu too.
@@ -633,6 +646,7 @@ exports.openInventoryWindow = openInventoryWindow;
 exports.openStrategyWindow  = openStrategyWindow;
 exports.openCharPageStudioWindow = openCharPageStudioWindow;
 exports.openFeatureWindow   = openFeatureWindow;
+exports.applyWindowMenu     = applyWindowMenu;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;
