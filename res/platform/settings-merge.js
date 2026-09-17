@@ -2,6 +2,7 @@
 const { PLATFORM_RESERVED_KEYBIND_IDS } = require('./plugin-host.js');
 
 const PLATFORM_OPTION_KEYS = {
+    appLanguage: true,
     customUrl: true,
     recordingFormat: true,
     renderMode: true,
