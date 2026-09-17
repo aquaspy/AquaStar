@@ -145,6 +145,7 @@ test('PluginHost namespaces third-party IPC channels', () => {
   const host = createPluginHost({
     manifest: baseManifest({ id: 'third-party-game' }),
     pluginRoot: path.join(__dirname, '../fixtures/sample-plugin'),
+    legacyIpc: true, // must NOT un-prefix third-party even if requested
     deps: {
       ipcHandle: function (channel, listener) {
         recorded.push({ channel: channel, listener: listener });

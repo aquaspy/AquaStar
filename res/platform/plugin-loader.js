@@ -172,6 +172,11 @@ function activatePlugin(plugin, options) {
         throw new Error('Plugin main must export activate(host)');
     }
 
+    // Legacy unprefixed IPC is only for the bundled AQW plugin. Third-party
+    // plugins always use plugin:<id>:<channel> (preload and Host must agree).
+    const useLegacyIpc = plugin.manifest.id === 'adventure-quest-worlds' &&
+        (options.legacyIpc === true || options.legacyIpc == null);
+
     const host = createPluginHost({
         manifest: plugin.manifest,
         pluginRoot: plugin.root,
@@ -182,7 +187,7 @@ function activatePlugin(plugin, options) {
             path.join(options.appDataDirectory || '', 'plugins', plugin.manifest.id),
         platformSettings: settings,
         deps: options.deps,
-        legacyIpc: options.legacyIpc,
+        legacyIpc: useLegacyIpc,
         log: log
     });
 

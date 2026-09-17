@@ -118,9 +118,12 @@ function createPluginHost(options) {
 
     function resolveChannel(channel, opts) {
         opts = opts || {};
-        const legacyBundled = options.legacyIpc === true ||
-            (pluginId === 'adventure-quest-worlds' && manifest.apiVersion === 1);
-        if (legacyBundled || opts.raw === true) return channel;
+        // Only the official AQW plugin may use unprefixed legacy channel names.
+        const legacyBundled = pluginId === 'adventure-quest-worlds' &&
+            options.legacyIpc !== false &&
+            manifest.apiVersion === 1;
+        if (opts.raw === true) return channel;
+        if (legacyBundled) return channel;
         return 'plugin:' + pluginId + ':' + channel;
     }
 

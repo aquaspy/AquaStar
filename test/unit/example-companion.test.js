@@ -27,6 +27,29 @@ test('instances only wraps real .swf URLs with swf_wrapper', () => {
   assert.ok(src.indexOf('_looksLikeSwfUrl(originalPath)') !== -1);
 });
 
+test('example-companion IPC channels are namespaced even if legacyIpc is requested', async () => {
+  const { createPluginHost } = require('../../res/platform/plugin-host.js');
+  const recorded = [];
+  const host = createPluginHost({
+    manifest: {
+      id: 'example-companion',
+      name: 'Example',
+      version: '1.0.0',
+      apiVersion: 1,
+      main: 'main.js',
+      minAppVersion: '1.12.2',
+      permissions: ['persistent-store']
+    },
+    pluginRoot: root,
+    legacyIpc: true,
+    deps: {
+      ipcHandle: function (channel) { recorded.push(channel); }
+    }
+  });
+  host.ipc.handle('bumpDashboardVisit', function () { return {}; });
+  assert.strictEqual(recorded[0], 'plugin:example-companion:bumpDashboardVisit');
+});
+
 test('example-companion activate registers core Host capabilities', async () => {
   const plugin = {
     root: root,
