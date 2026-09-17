@@ -16,5 +16,6 @@ module.exports = {
     createNamespacedStore: require('./storage/namespaced-store.js').createNamespacedStore,
     resolveOption: require('./settings-resolve.js').resolveOption,
     menuRegistry: require('./menu-registry.js'),
-    settingsRegistry: require('./settings-registry.js')
+    settingsRegistry: require('./settings-registry.js'),
+    pluginRuntime: require('./plugin-runtime.js')
 };

@@ -60,7 +60,14 @@ function loadLegacyFeatureModules() {
 }
 
 function activateBundledPluginsOrLegacy() {
+    platform.pluginRuntime.setDependencies({
+        instances: inst,
+        constant: constant,
+        BrowserWindow: BrowserWindow
+    });
+
     if (!bootFlags.pluginSystem) {
+        platform.pluginRuntime.clear();
         loadLegacyFeatureModules();
         console.log('[AquaStar:plugins] pluginSystem disabled — using legacy main.js requires');
         return Promise.resolve(null);
@@ -80,13 +87,22 @@ function activateBundledPluginsOrLegacy() {
                 bootPluginDisk.settings.trustedLocalPlugins) || {}
         }),
         defaultPluginId: 'adventure-quest-worlds',
-        legacyIpc: true
+        legacyIpc: true,
+        deps: platform.pluginRuntime.createHostWindowDeps()
     }).then(function (runtime) {
         activePluginRuntime = runtime;
         if (runtime && runtime.host) {
             const state = runtime.host._getState();
             const hooks = state.navigationHooks;
             if (hooks) inst.setNavigationHooks(hooks);
+
+            const pluginInfo = runtime.plugin && runtime.plugin.manifest
+                ? {
+                    id: runtime.plugin.manifest.id,
+                    name: runtime.plugin.manifest.name || runtime.plugin.manifest.id
+                }
+                : null;
+            platform.pluginRuntime.adopt(runtime.host, pluginInfo);
 
             const menuProviders = {};
             if (runtime.plugin && runtime.plugin.manifest &&
@@ -96,12 +112,6 @@ function activateBundledPluginsOrLegacy() {
                 menuProviders.gameMenuPages = aqwMenus.describeGameMenuPages;
             }
             platform.menuRegistry.adoptHostState(state, menuProviders);
-            const pluginInfo = runtime.plugin && runtime.plugin.manifest
-                ? {
-                    id: runtime.plugin.manifest.id,
-                    name: runtime.plugin.manifest.name || runtime.plugin.manifest.id
-                }
-                : null;
             platform.settingsRegistry.adoptHostState(state, pluginInfo);
             if (state.locales) {
                 locale.mergePluginLocales(state.locales);
@@ -121,6 +131,7 @@ function activateBundledPluginsOrLegacy() {
             (err && err.message ? err.message : err));
         platform.menuRegistry.clear();
         platform.settingsRegistry.clear();
+        platform.pluginRuntime.clear();
         loadLegacyFeatureModules();
         return null;
     });
@@ -159,8 +170,9 @@ function createWindow () {
     // Lang setup. Has to be after Ready event.
     constant.setLocale(app.getLocale(),finalkeyb);
 
-    // Create the browser window.
-    let win = inst.newBrowserWindow(constant.mainPath,true);
+    // Primary URL comes from the active plugin (platform custom SWF / customUrl still win).
+    const bootGameUrl = platform.pluginRuntime.getPrimaryUrl();
+    let win = inst.newBrowserWindow(bootGameUrl, true);
 
     if (process.platform == 'darwin'){
         Menu.setApplicationMenu(null);

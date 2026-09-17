@@ -24,6 +24,7 @@ global.test = function (name, fn) {
   './unit/pages-workflow.test.js',
   './unit/plugin-loader.test.js',
   './unit/plugin-host-permissions.test.js',
+  './unit/plugin-runtime.test.js',
   './unit/aqw-adapter-boot.test.js',
   './unit/aqw-session-urls.test.js',
   './unit/aqw-navigation.test.js',
