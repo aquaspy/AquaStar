@@ -1,7 +1,9 @@
 # AquaStar
 ![AquaStarLogo](Icon/Icon_1024.png)
 
-AquaStar is a Flash-capable companion launcher (Electron 11 + PPAPI). It ships with an **Adventure Quest Worlds** plugin and can be extended for other Flash games — see [`docs/PLUGINS.md`](docs/PLUGINS.md).
+AquaStar is a Flash-capable companion launcher (Electron 11 + PPAPI). It ships with an **Adventure Quest Worlds** plugin and can be extended for other Flash games.
+
+**Writing a plugin:** see the full authoring guide in [`docs/PLUGINS.md`](docs/PLUGINS.md) (not just the template README). Architecture notes: [`docs/design/plugin-architecture.md`](docs/design/plugin-architecture.md).
 
 ## How to download
 
