@@ -3,11 +3,88 @@
 
 const fs = require('fs');
 const path = require('path');
+const Module = require('module');
 const schema = require('./manifest-schema.js');
 const { createPluginHost } = require('./plugin-host.js');
 
+/** Builtins local plugins must not load directly (Host / platform own these). */
+const BLOCKED_LOCAL_REQUIRES = {
+    fs: true,
+    'fs/promises': true,
+    'node:fs': true,
+    'node:fs/promises': true,
+    child_process: true,
+    'node:child_process': true,
+    worker_threads: true,
+    'node:worker_threads': true,
+    cluster: true,
+    'node:cluster': true
+};
+
 function defaultLog(msg) {
     console.log('[AquaStar:plugins] ' + msg);
+}
+
+function isInsidePluginRoot(candidatePath, rootResolved) {
+    const full = path.resolve(candidatePath);
+    const prefix = rootResolved.endsWith(path.sep) ? rootResolved : rootResolved + path.sep;
+    return full === rootResolved || full.indexOf(prefix) === 0;
+}
+
+function isFilesystemRequireRequest(request) {
+    if (typeof request !== 'string' || request.length === 0) return false;
+    if (path.isAbsolute(request)) return true;
+    if (request[0] !== '.') return false;
+    if (request.length === 1) return true;
+    const second = request[1];
+    return second === '/' || second === '\\' || second === '.';
+}
+
+/**
+ * Temporarily wrap Module.prototype.require so code under pluginRoot cannot
+ * load blocked builtins or resolve filesystem paths outside the plugin tree.
+ * Bare specifiers (path, electron, packages) stay allowed. Restored in finally
+ * (including when fn returns a thenable).
+ * @param {string} pluginRoot
+ * @param {Function} fn
+ */
+function withLocalRequireGate(pluginRoot, fn) {
+    const rootResolved = path.resolve(pluginRoot);
+    const originalRequire = Module.prototype.require;
+    Module.prototype.require = function gatedLocalPluginRequire(request) {
+        const callerFile = this && this.filename;
+        if (callerFile && isInsidePluginRoot(callerFile, rootResolved)) {
+            const id = String(request);
+            if (BLOCKED_LOCAL_REQUIRES[id]) {
+                throw new Error(
+                    'Local plugin require blocked: "' + id + '"'
+                );
+            }
+            if (isFilesystemRequireRequest(id)) {
+                const resolved = path.resolve(path.dirname(callerFile), id);
+                if (!isInsidePluginRoot(resolved, rootResolved)) {
+                    throw new Error(
+                        'Local plugin require blocked: path escapes plugin root (' +
+                        id + ')'
+                    );
+                }
+            }
+        }
+        return originalRequire.apply(this, arguments);
+    };
+    try {
+        const result = fn();
+        if (result != null && typeof result.then === 'function') {
+            return Promise.resolve(result).finally(function () {
+                Module.prototype.require = originalRequire;
+            });
+        }
+        Module.prototype.require = originalRequire;
+        return result;
+    } catch (err) {
+        Module.prototype.require = originalRequire;
+        throw err;
+    }
 }
 
 function readJson(filePath) {
@@ -167,39 +244,46 @@ function activatePlugin(plugin, options) {
         try { delete require.cache[require.resolve(mainPath)]; } catch (e) { /* ignore */ }
     }
 
-    const mod = require(mainPath);
-    if (!mod || typeof mod.activate !== 'function') {
-        throw new Error('Plugin main must export activate(host)');
+    function runActivate() {
+        const mod = require(mainPath);
+        if (!mod || typeof mod.activate !== 'function') {
+            throw new Error('Plugin main must export activate(host)');
+        }
+
+        // Legacy unprefixed IPC is only for the bundled AQW plugin. Third-party
+        // plugins always use plugin:<id>:<channel> (preload and Host must agree).
+        const useLegacyIpc = plugin.manifest.id === 'adventure-quest-worlds' &&
+            (options.legacyIpc === true || options.legacyIpc == null);
+
+        const host = createPluginHost({
+            manifest: plugin.manifest,
+            pluginRoot: plugin.root,
+            appVersion: options.appVersion,
+            appRootPath: options.appRootPath,
+            appDataDirectory: options.appDataDirectory,
+            pluginDataDirectory: options.pluginDataDirectory ||
+                path.join(options.appDataDirectory || '', 'plugins', plugin.manifest.id),
+            platformSettings: settings,
+            deps: options.deps,
+            legacyIpc: useLegacyIpc,
+            log: log
+        });
+
+        log('Activating plugin "' + plugin.manifest.id + '" from ' + plugin.root);
+        const maybePromise = mod.activate(host);
+        return Promise.resolve(maybePromise).then(function () {
+            return {
+                plugin: plugin,
+                host: host,
+                module: mod
+            };
+        });
     }
 
-    // Legacy unprefixed IPC is only for the bundled AQW plugin. Third-party
-    // plugins always use plugin:<id>:<channel> (preload and Host must agree).
-    const useLegacyIpc = plugin.manifest.id === 'adventure-quest-worlds' &&
-        (options.legacyIpc === true || options.legacyIpc == null);
-
-    const host = createPluginHost({
-        manifest: plugin.manifest,
-        pluginRoot: plugin.root,
-        appVersion: options.appVersion,
-        appRootPath: options.appRootPath,
-        appDataDirectory: options.appDataDirectory,
-        pluginDataDirectory: options.pluginDataDirectory ||
-            path.join(options.appDataDirectory || '', 'plugins', plugin.manifest.id),
-        platformSettings: settings,
-        deps: options.deps,
-        legacyIpc: useLegacyIpc,
-        log: log
-    });
-
-    log('Activating plugin "' + plugin.manifest.id + '" from ' + plugin.root);
-    const maybePromise = mod.activate(host);
-    return Promise.resolve(maybePromise).then(function () {
-        return {
-            plugin: plugin,
-            host: host,
-            module: mod
-        };
-    });
+    if (plugin.source === 'local') {
+        return withLocalRequireGate(plugin.root, runActivate);
+    }
+    return runActivate();
 }
 
 /**
@@ -290,5 +374,7 @@ module.exports = {
     activateSelected: activateSelected,
     resolvePluginFlags: resolvePluginFlags,
     isLocalTrusted: isLocalTrusted,
-    listPluginDirs: listPluginDirs
+    listPluginDirs: listPluginDirs,
+    withLocalRequireGate: withLocalRequireGate,
+    BLOCKED_LOCAL_REQUIRES: BLOCKED_LOCAL_REQUIRES
 };
