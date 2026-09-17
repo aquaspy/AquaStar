@@ -35,14 +35,14 @@ test('main.js does not eagerly require AQW feature modules alongside plugin acti
   assert.ok(beforeReady.indexOf("require('./res/platform')") !== -1);
   assert.ok(beforeReady.indexOf("require('./res/ipc/recording.js')") !== -1);
   assert.strictEqual(
-    /require\('\.\/res\/features\/reminders\/reminders\.js'\)/.test(beforeReady) &&
+    /require\('\.\/plugins\/adventure-quest-worlds\/features\/reminders\/reminders\.js'\)/.test(beforeReady) &&
       beforeReady.indexOf('function loadLegacyFeatureModules') === -1,
     false
   );
   // Feature requires live only inside the legacy fallback helper.
   const legacyFn = src.match(/function loadLegacyFeatureModules\([\s\S]*?\n\}/);
   assert.ok(legacyFn, 'loadLegacyFeatureModules helper missing');
-  assert.ok(legacyFn[0].indexOf('reminders.js') !== -1);
+  assert.ok(legacyFn[0].indexOf('plugins/adventure-quest-worlds/features/reminders/reminders.js') !== -1);
   assert.ok(legacyFn[0].indexOf('wikiFetch.js') !== -1);
   assert.ok(src.indexOf('activateBundledPluginsOrLegacy') !== -1);
   assert.ok(src.indexOf('activateSelected') !== -1);

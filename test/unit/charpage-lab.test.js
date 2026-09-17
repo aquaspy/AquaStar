@@ -103,7 +103,9 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   assert.ok(config.indexOf('studio.deactivateProtocol()') !== -1);
   assert.ok(instances.indexOf('openCharPageStudioWindow') !== -1);
   assert.ok(menu.indexOf('menuCharPageStudio') !== -1);
-  assert.ok(main.indexOf("require('./res/features/charpage/studio.js')") !== -1);
+  assert.ok(
+    main.indexOf("require('./plugins/adventure-quest-worlds/features/charpage/studio.js')") !== -1
+  );
   const studioSwf = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/characterB-studio.swf'));
   assert.ok(
     ['CWS', 'FWS'].indexOf(studioSwf.slice(0, 3).toString('ascii')) !== -1,
@@ -130,11 +132,6 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   assert.ok(
     emptySceneBuild.indexOf('-importScript') !== -1 && emptySceneBuild.indexOf('-set version 15') !== -1,
     'Empty Scene must have a reproducible FFDec build'
-  );
-  assert.ok(
-    fs.readFileSync(path.join(__dirname, '../../scripts/charpage-studio-process.js'), 'utf8')
-      .indexOf('plugins/adventure-quest-worlds/processes/charpage-studio-process.js') !== -1,
-    'scripts shim must require the plugin Studio process'
   );
   const studioProcess = fs.readFileSync(
     path.join(__dirname, '../../plugins/adventure-quest-worlds/processes/charpage-studio-process.js'),
@@ -178,11 +175,6 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   assert.ok(
     studioProcess.indexOf("'--charpage-studio-capture'") !== -1,
     'capture must use its dedicated renderer process'
-  );
-  assert.ok(
-    fs.readFileSync(path.join(__dirname, '../../scripts/charpage-studio-capture-process.js'), 'utf8')
-      .indexOf('plugins/adventure-quest-worlds/processes/charpage-studio-capture-process.js') !== -1,
-    'scripts shim must require the plugin capture process'
   );
   const captureProcess = fs.readFileSync(
     path.join(__dirname, '../../plugins/adventure-quest-worlds/processes/charpage-studio-capture-process.js'),

@@ -3,11 +3,11 @@ const {app, session, Menu, BrowserWindow}  = require('electron')
 // PPAPI Flash only preserves LoaderInfo.parameters when the Studio owns the
 // default session. Keep that session in a dedicated AquaStar process.
 if (process.argv.indexOf('--charpage-studio-capture') !== -1) {
-    require('./scripts/charpage-studio-capture-process.js');
+    require('./plugins/adventure-quest-worlds/processes/charpage-studio-capture-process.js');
     return;
 }
 if (process.argv.indexOf('--charpage-studio') !== -1) {
-    require('./scripts/charpage-studio-process.js');
+    require('./plugins/adventure-quest-worlds/processes/charpage-studio-process.js');
     return;
 }
 
@@ -41,11 +41,11 @@ const bootFlags = platform.readPluginFlagsFromDisk(
 let activePluginRuntime = null;
 
 function loadLegacyFeatureModules() {
-    require('./res/features/reminders/reminders.js');
-    require('./res/features/todo/todo.js');
-    require('./res/features/inventory/inventory.js');
-    require('./res/features/strategy/strategy.js');
-    require('./res/features/charpage/studio.js');
+    require('./plugins/adventure-quest-worlds/features/reminders/reminders.js');
+    require('./plugins/adventure-quest-worlds/features/todo/todo.js');
+    require('./plugins/adventure-quest-worlds/features/inventory/inventory.js');
+    require('./plugins/adventure-quest-worlds/features/strategy/strategy.js');
+    require('./plugins/adventure-quest-worlds/features/charpage/studio.js');
     require('./res/ipc/wikiFetch.js');
 }
 
