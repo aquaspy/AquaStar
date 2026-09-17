@@ -195,8 +195,11 @@ test('menu.js uses plugin pages without AQW catalog fallback', () => {
     path.join(__dirname, '../../res/windows/menu.js'),
     'utf8'
   );
-  assert.ok(menuSrc.indexOf("focusedWin.webContents.loadURL(link)") !== -1);
-  assert.ok(menuSrc.indexOf("openMode: 'in-place'") !== -1);
+  assert.ok(menuSrc.indexOf('focusedWin.webContents.loadURL(link)') !== -1 ||
+    menuSrc.indexOf('focusedWin.webContents.loadURL(item.url)') !== -1);
+  assert.ok(menuSrc.indexOf("openMode === 'external'") !== -1 ||
+    menuSrc.indexOf("openMode: 'external'") !== -1 ||
+    menuSrc.indexOf("openMode || 'in-place'") !== -1);
   assert.ok(menuSrc.indexOf('menuRegistry') !== -1);
   assert.ok(menuSrc.indexOf('hasAppUsefulPages') !== -1);
   assert.ok(menuSrc.indexOf('constant.wikiReleases') === -1);

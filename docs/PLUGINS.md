@@ -387,7 +387,9 @@ Available on `host` inside `activate(host)`:
 
 **IPC / storage:** `ipc.handle` / `ipc.on` / `ipc.removeHandler`, `getStore(ns)`
 
-**Windows:** `windows.openPrimaryGame()`, `windows.openLaunch(id)`, `windows.openFeatureWindow(id)`, `windows.openUrl(url, mode)`, `windows.spawnHelperProcess(opts)`
+**Windows:** `windows.openPrimaryGame()`, `windows.openLaunch(id)`, `windows.openFeatureWindow(id)`, `windows.openUrl(url, mode)`, `windows.openExternal(url)`, `windows.spawnHelperProcess(opts)`
+
+Use `openExternal` / menu `openMode: 'external'` for modern sites such as **github.com**. Electron 11 ships Chromium 87, which cannot load GitHub’s current frontend (import maps / bare `react` specifiers → broken CSS/JS).
 
 **Logging:** `host.log(msg)`
 

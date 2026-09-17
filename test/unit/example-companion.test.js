@@ -72,7 +72,11 @@ test('example-companion activate registers core Host capabilities', async () => 
   assert.ok(state.optionDefaults.demoPlayerName);
 
   const pages = state.menuProviders.appUsefulPages({});
-  assert.ok(pages.some(function (p) { return p.openMode === 'in-place'; }));
+  // Modern GitHub must open externally on Electron 11 / Chromium 87.
+  assert.ok(pages.some(function (p) { return p.openMode === 'external'; }));
+  assert.ok(pages.every(function (p) {
+    return !p.url || p.openMode === 'external' || p.url.indexOf('github.com') === -1;
+  }));
 
   state.keybinds.filter(function (b) { return b.id === 'newStage'; })[0].action();
   assert.ok(opened.indexOf('primary') !== -1);
