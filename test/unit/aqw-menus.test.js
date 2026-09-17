@@ -123,14 +123,14 @@ test('menu-registry adopts host contributors and page providers', () => {
 
   const state = host._getState();
   assert.strictEqual(state.menus.length, 1);
+  assert.ok(state.menuProviders);
+  assert.strictEqual(state.menuProviders.appUsefulPages, menus.describeAppUsefulPages);
+  assert.strictEqual(state.menuProviders.gameMenuPages, menus.describeGameMenuPages);
   assert.ok(state.keybinds.length >= 12);
   assert.strictEqual(state.keybindDefaults.wiki, 'Alt+W');
   assert.strictEqual(state.keybindDefaults.newAqw, 'Alt+N');
 
-  menuRegistry.adoptHostState(state, {
-    appUsefulPages: menus.describeAppUsefulPages,
-    gameMenuPages: menus.describeGameMenuPages
-  });
+  menuRegistry.adoptHostState(state, state.menuProviders || null);
 
   assert.strictEqual(menuRegistry.getContributors().length, 1);
   assert.ok(menuRegistry.hasAppUsefulPages());
@@ -149,6 +149,47 @@ test('menu-registry adopts host contributors and page providers', () => {
   assert.strictEqual(menuRegistry.hasAppUsefulPages(), false);
 });
 
+test('Host registerMenuPages stores providers for any plugin id', () => {
+  const host = platform.createPluginHost({
+    manifest: {
+      id: 'third-party-game',
+      name: 'Third Party',
+      version: '1.0.0',
+      apiVersion: 1,
+      main: 'main.js',
+      minAppVersion: '1.12.2',
+      permissions: [],
+      capabilities: ['menus']
+    },
+    pluginRoot: path.join(__dirname, '../fixtures/sample-plugin'),
+    appVersion: '1.12.2',
+    log: function () {}
+  });
+
+  function appPages() { return [{ id: 'home', openMode: 'in-place' }]; }
+  function gamePages() { return [{ id: 'shop', openMode: 'new-window' }]; }
+
+  host.registerMenuPages({
+    appUsefulPages: appPages,
+    gameMenuPages: gamePages
+  });
+
+  const state = host._getState();
+  assert.strictEqual(state.menuProviders.appUsefulPages, appPages);
+  assert.strictEqual(state.menuProviders.gameMenuPages, gamePages);
+
+  menuRegistry.clear();
+  menuRegistry.adoptHostState(state, state.menuProviders || null);
+  assert.ok(menuRegistry.hasAppUsefulPages());
+  assert.strictEqual(menuRegistry.getAppUsefulPages({})[0].id, 'home');
+  assert.strictEqual(menuRegistry.getGameMenuPages({})[0].openMode, 'new-window');
+  menuRegistry.clear();
+
+  assert.throws(function () {
+    host.registerMenuPages({ appUsefulPages: 'nope' });
+  }, /appUsefulPages expects a function/);
+});
+
 test('legacy generateLink path stays in-place in menu.js source', () => {
   const menuSrc = fs.readFileSync(
     path.join(__dirname, '../../res/windows/menu.js'),
@@ -162,6 +203,18 @@ test('legacy generateLink path stays in-place in menu.js source', () => {
   assert.ok(menuSrc.indexOf('runGameMenuAction(action, focusedWin)') !== -1);
 });
 
+test('main.js adopts menu providers from host state without AQW id check', () => {
+  const mainSrc = fs.readFileSync(
+    path.join(__dirname, '../../main.js'),
+    'utf8'
+  );
+  assert.ok(
+    mainSrc.indexOf('platform.menuRegistry.adoptHostState(state, state.menuProviders || null)') !== -1
+  );
+  assert.ok(mainSrc.indexOf("manifest.id === 'adventure-quest-worlds'") === -1);
+  assert.ok(mainSrc.indexOf("require('./plugins/adventure-quest-worlds/menus.js')") === -1);
+});
+
 test('AQW activate source registers menus and keybinds', () => {
   const src = fs.readFileSync(
     path.join(__dirname, '../../plugins/adventure-quest-worlds/main.js'),
@@ -171,4 +224,12 @@ test('AQW activate source registers menus and keybinds', () => {
   assert.ok(src.indexOf("require('./keybinds.js')") !== -1);
   assert.ok(src.indexOf('menus.register(host)') !== -1);
   assert.ok(src.indexOf('keybinds.register(host)') !== -1);
+
+  const menusSrc = fs.readFileSync(
+    path.join(__dirname, '../../plugins/adventure-quest-worlds/menus.js'),
+    'utf8'
+  );
+  assert.ok(menusSrc.indexOf('host.registerMenuPages') !== -1);
+  assert.ok(menusSrc.indexOf('appUsefulPages: describeAppUsefulPages') !== -1);
+  assert.ok(menusSrc.indexOf('gameMenuPages: describeGameMenuPages') !== -1);
 });

@@ -46,6 +46,7 @@ function createPluginHost(options) {
         keybindDefaults: {},
         keybinds: [],
         menus: [],
+        menuProviders: null,
         locales: {},
         settingsSections: [],
         trustedFlashUrls: [],
@@ -179,6 +180,34 @@ function createPluginHost(options) {
                 throw new Error('[AquaStar:plugins] registerMenus expects a function');
             }
             state.menus.push(contributor);
+        },
+
+        registerMenuPages: function (providers) {
+            if (!providers || typeof providers !== 'object') {
+                throw new Error('[AquaStar:plugins] registerMenuPages expects an object');
+            }
+            if (providers.appUsefulPages != null &&
+                typeof providers.appUsefulPages !== 'function') {
+                throw new Error(
+                    '[AquaStar:plugins] registerMenuPages.appUsefulPages expects a function'
+                );
+            }
+            if (providers.gameMenuPages != null &&
+                typeof providers.gameMenuPages !== 'function') {
+                throw new Error(
+                    '[AquaStar:plugins] registerMenuPages.gameMenuPages expects a function'
+                );
+            }
+            const next = state.menuProviders
+                ? Object.assign({}, state.menuProviders)
+                : {};
+            if (typeof providers.appUsefulPages === 'function') {
+                next.appUsefulPages = providers.appUsefulPages;
+            }
+            if (typeof providers.gameMenuPages === 'function') {
+                next.gameMenuPages = providers.gameMenuPages;
+            }
+            state.menuProviders = next;
         },
 
         registerFeatureWindows: function (windows) {

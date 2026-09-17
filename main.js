@@ -105,14 +105,7 @@ function activateBundledPluginsOrLegacy() {
             platform.pluginRuntime.adopt(runtime.host, pluginInfo);
             platform.pluginRuntime.applyFlashTrust(flash);
 
-            const menuProviders = {};
-            if (runtime.plugin && runtime.plugin.manifest &&
-                runtime.plugin.manifest.id === 'adventure-quest-worlds') {
-                const aqwMenus = require('./plugins/adventure-quest-worlds/menus.js');
-                menuProviders.appUsefulPages = aqwMenus.describeAppUsefulPages;
-                menuProviders.gameMenuPages = aqwMenus.describeGameMenuPages;
-            }
-            platform.menuRegistry.adoptHostState(state, menuProviders);
+            platform.menuRegistry.adoptHostState(state, state.menuProviders || null);
             platform.settingsRegistry.adoptHostState(state, pluginInfo);
             if (state.locales) {
                 locale.mergePluginLocales(state.locales);

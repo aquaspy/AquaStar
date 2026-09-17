@@ -261,6 +261,10 @@ function createMenuContributor(options) {
 
 function register(host, options) {
     host.registerMenus(createMenuContributor(options));
+    host.registerMenuPages({
+        appUsefulPages: describeAppUsefulPages,
+        gameMenuPages: describeGameMenuPages
+    });
 }
 
 module.exports = {

@@ -59,7 +59,8 @@ function buildMenuItems(ctx) {
 }
 
 /**
- * Wire host menu state + optional AQW page descriptor providers after activate.
+ * Wire host menu contributors + optional page providers after activate.
+ * providers typically comes from host state.menuProviders (registerMenuPages).
  */
 function adoptHostState(hostState, providers) {
     hostState = hostState || {};
