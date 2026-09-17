@@ -23,7 +23,7 @@ function _getWinConfig(type){
                 webviewTag: false,
                 preload: isGame ?
                     path.join(appRoot, 'res', 'features', 'capture', 'preload_capture.js') :
-                    path.join(appRoot, 'res', 'features', 'wikiview', 'preload_wikiview.js'),
+                    path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'wikiview', 'preload_wikiview.js'),
                 // Plugins (Flash) enabled everywhere - Blame Char page breaking in a update or two.
                 // AquaStar shouldnt navigate to random websites anyway. Not endorsed to.
                 plugins: true,
@@ -49,7 +49,7 @@ function _getWinConfig(type){
             sandbox: false,
             plugins: true,
             contextIsolation: true,
-            preload: path.join(appRoot, 'res', 'features', 'charpage', 'preload_charpage.js'),
+            preload: path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'charpage', 'preload_charpage.js'),
         }
     };
 }
@@ -91,12 +91,12 @@ exports.remindersConfig = {
         nodeIntegration: false,
         sandbox: true,
         webviewTag: false,
-        preload: path.join(appRoot, 'res', 'features', 'reminders', 'preload_reminders.js'),
+        preload: path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'reminders', 'preload_reminders.js'),
         plugins: false,
         contextIsolation: true
     }
 };
-exports.remindersUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'reminders', 'reminders.html'));
+exports.remindersUrl = toFileUrl(path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'reminders', 'reminders.html'));
 
 // To-Do screen - same per-character list shape as Reminders (see
 // res/features/common/list_window_common.js) but without the type/join/time columns, so a
@@ -111,12 +111,12 @@ exports.todoConfig = {
         nodeIntegration: false,
         sandbox: true,
         webviewTag: false,
-        preload: path.join(appRoot, 'res', 'features', 'todo', 'preload_todo.js'),
+        preload: path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'todo', 'preload_todo.js'),
         plugins: false,
         contextIsolation: true
     }
 };
-exports.todoUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'todo', 'todo.html'));
+exports.todoUrl = toFileUrl(path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'todo', 'todo.html'));
 
 // Inventory screen - same per-character list shape as Reminders/Todo. Own preload merges
 // the synced-data bridge (aquastarInventory) with a re-exposed aquastarWiki.fetchWikiPage
@@ -131,20 +131,20 @@ exports.inventoryConfig = {
         nodeIntegration: false,
         sandbox: true,
         webviewTag: false,
-        preload: path.join(appRoot, 'res', 'features', 'inventory', 'preload_inventory.js'),
+        preload: path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'inventory', 'preload_inventory.js'),
         plugins: false,
         contextIsolation: true
     }
 };
-exports.inventoryUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'inventory', 'inventory.html'));
+exports.inventoryUrl = toFileUrl(path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'inventory', 'inventory.html'));
 
 exports.strategyConfig = {
     width: 1040, height: 680, useContentSize: true, icon: iconPath, resizable: true,
     webPreferences: { nodeIntegration: false, sandbox: true, webviewTag: false,
-        preload: path.join(appRoot, 'res', 'features', 'strategy', 'preload_strategy.js'),
+        preload: path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'strategy', 'preload_strategy.js'),
         plugins: false, contextIsolation: true }
 };
-exports.strategyUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'strategy', 'strategy.html'));
+exports.strategyUrl = toFileUrl(path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'strategy', 'strategy.html'));
 
 // Char Page Studio is deliberately not sandboxed: Chromium 87 only exposes the
 // required PPAPI Flash plugin to this kind of window. Its local renderer has no
@@ -161,14 +161,14 @@ exports.charPageStudioConfig = {
         nodeIntegration: false,
         sandbox: false,
         webviewTag: false,
-        preload: path.join(appRoot, 'res', 'features', 'charpage', 'lab', 'preload_lab.js'),
+        preload: path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'charpage', 'lab', 'preload_lab.js'),
         plugins: true,
         contextIsolation: true,
         webSecurity: false,
         backgroundThrottling: false
     }
 };
-exports.charPageStudioUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'charpage', 'lab', 'characterB-lab.html'));
+exports.charPageStudioUrl = toFileUrl(path.join(appRoot, 'plugins', 'adventure-quest-worlds', 'features', 'charpage', 'lab', 'characterB-lab.html'));
 
 // Local feature windows all use the same singleton lifecycle.  Keeping their
 // declarative metadata here prevents every caller from reimplementing it.
@@ -183,7 +183,7 @@ exports.featureWindows = {
         url: exports.charPageStudioUrl,
         title: 'AquaStar - Char Page Studio',
         configure: (win) => {
-            const studio = require('../features/charpage/studio.js');
+            const studio = require('../../plugins/adventure-quest-worlds/features/charpage/studio.js');
             studio.activateProtocol();
             win.webContents.on('new-window', (event) => event.preventDefault());
             win.webContents.on('will-navigate', (event) => event.preventDefault());

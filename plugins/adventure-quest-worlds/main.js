@@ -7,12 +7,14 @@ const path = require('path');
 
 const resRoot = path.join(__dirname, '..', '..', 'res');
 
+const pluginFeaturesRoot = path.join(__dirname, 'features');
+
 const LEGACY_FEATURE_MODULES = [
-    path.join(resRoot, 'features', 'reminders', 'reminders.js'),
-    path.join(resRoot, 'features', 'todo', 'todo.js'),
-    path.join(resRoot, 'features', 'inventory', 'inventory.js'),
-    path.join(resRoot, 'features', 'strategy', 'strategy.js'),
-    path.join(resRoot, 'features', 'charpage', 'studio.js'),
+    path.join(pluginFeaturesRoot, 'reminders', 'reminders.js'),
+    path.join(pluginFeaturesRoot, 'todo', 'todo.js'),
+    path.join(pluginFeaturesRoot, 'inventory', 'inventory.js'),
+    path.join(pluginFeaturesRoot, 'strategy', 'strategy.js'),
+    path.join(pluginFeaturesRoot, 'charpage', 'studio.js'),
     path.join(resRoot, 'ipc', 'wikiFetch.js')
 ];
 
@@ -23,7 +25,7 @@ function requireLegacyFeatures() {
 }
 
 function activate(host) {
-    // @migration-legacy — physical move lands in PR 8; keep IPC channel names stable.
+    // Feature modules live under this plugin; keep legacy IPC channel names stable.
     requireLegacyFeatures();
 
     const constant = require(path.join(resRoot, 'const.js'));

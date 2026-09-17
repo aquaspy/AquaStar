@@ -5,7 +5,7 @@ const { createNavigationHooks } = require('../../plugins/adventure-quest-worlds/
 
 test('AQW navigation classify maps wiki, charpage, and account URLs', () => {
   const hooks = createNavigationHooks({
-    featuresRoot: path.join(__dirname, '../../res/features')
+    featuresRoot: path.join(__dirname, '../../plugins/adventure-quest-worlds/features')
   });
   assert.strictEqual(hooks.classify('https://aqwwiki.wikidot.com/sword'), 'wiki');
   assert.strictEqual(hooks.classify('https://account.aq.com/CharPage?id=Hero'), 'charpage');
@@ -21,7 +21,7 @@ test('AQW navigation classify maps wiki, charpage, and account URLs', () => {
 
 test('AQW navigation onDidFinishLoad injects WikiView for wiki pages', async () => {
   const hooks = createNavigationHooks({
-    featuresRoot: path.join(__dirname, '../../res/features')
+    featuresRoot: path.join(__dirname, '../../plugins/adventure-quest-worlds/features')
   });
   const scripts = [];
   await hooks.onDidFinishLoad({

@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $featureRoot = Split-Path -Parent $PSScriptRoot
-$repositoryRoot = (Resolve-Path (Join-Path $featureRoot '..\..\..')).Path
+$repositoryRoot = (Resolve-Path (Join-Path $featureRoot '..\..\..\..')).Path
 $upstreamSwf = Join-Path $PSScriptRoot 'vendor\swf2png-item-base.swf'
 $sourceRoot = Join-Path $PSScriptRoot 'scripts'
 

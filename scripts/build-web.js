@@ -11,6 +11,12 @@ function copy(source, destination) {
 
 function buildToolPage(source, destination, bridge) {
   let html = fs.readFileSync(path.join(root, source), 'utf8');
+  // Desktop HTML lives under plugins/.../features and reaches kits via ../../../../res/*.
+  // web-dist keeps the flatter tools/{feature} layout, so rewrite those hrefs/srcs.
+  html = html
+    .replace(/(?:\.\.\/)+res\/core\//g, '../../core/')
+    .replace(/(?:\.\.\/)+res\/ui\//g, '../../ui/')
+    .replace(/(?:\.\.\/)+res\/features\/common\//g, '../common/');
   const bridgeTag = `<script src="../../bridges/common.js"></script><script src="../../bridges/${bridge}.js"></script>`;
   html = html.replace(/<script>\s*\(function \(\)/, `${bridgeTag}<script>\n(function ()`);
   if (!html.includes(bridgeTag)) throw new Error(`Could not inject web bridge into ${source}`);
@@ -32,15 +38,16 @@ copy('res/ui/workspace/modals.js', path.join(output, 'ui/workspace/modals.js'));
 copy('res/ui/workspace/character-tabs.js', path.join(output, 'ui/workspace/character-tabs.js'));
 copy('res/features/common/list_window_common.js', path.join(output, 'tools/common/list_window_common.js'));
 
-buildToolPage('res/features/reminders/reminders.html', path.join(output, 'tools/reminders/index.html'), 'reminders');
-buildToolPage('res/features/todo/todo.html', path.join(output, 'tools/todo/index.html'), 'todo');
-buildToolPage('res/features/strategy/strategy.html', path.join(output, 'tools/strategy/index.html'), 'strategy');
+const aqwFeatures = 'plugins/adventure-quest-worlds/features';
+buildToolPage(`${aqwFeatures}/reminders/reminders.html`, path.join(output, 'tools/reminders/index.html'), 'reminders');
+buildToolPage(`${aqwFeatures}/todo/todo.html`, path.join(output, 'tools/todo/index.html'), 'todo');
+buildToolPage(`${aqwFeatures}/strategy/strategy.html`, path.join(output, 'tools/strategy/index.html'), 'strategy');
 
 ['common.js', 'reminders.js', 'todo.js', 'strategy.js'].forEach((file) =>
   copy(`web/bridges/${file}`, path.join(output, 'bridges', file))
 );
-copy('res/features/reminders/reminders_default.json', path.join(output, 'defaults/reminders.json'));
-copy('res/features/strategy/strategy_default.json', path.join(output, 'defaults/strategy.json'));
+copy(`${aqwFeatures}/reminders/reminders_default.json`, path.join(output, 'defaults/reminders.json'));
+copy(`${aqwFeatures}/strategy/strategy_default.json`, path.join(output, 'defaults/strategy.json'));
 
 ['pt-BR', 'en-US'].forEach((code) => {
   const locale = require(path.join(root, 'res/po', `${code}.js`));

@@ -5,7 +5,7 @@ const path = require('path');
 function createNavigationHooks(options) {
     options = options || {};
     const featuresRoot = options.featuresRoot ||
-        path.join(__dirname, '..', '..', '..', 'res', 'features');
+        path.join(__dirname, '..', 'features');
 
     function classify(url) {
         if (typeof url !== 'string') return 'other';

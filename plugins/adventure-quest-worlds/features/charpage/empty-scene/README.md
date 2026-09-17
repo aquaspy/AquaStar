@@ -61,7 +61,7 @@ Prerequisites:
 Or pass `-FFDecPath C:\path\to\ffdec-cli.exe`.
 
 The script imports `scripts/` into a temporary copy of `Item.swf`, then writes
-`res/features/charpage/characterB-empty-scene.swf`. Finally it verifies the
+`plugins/adventure-quest-worlds/features/charpage/characterB-empty-scene.swf`. Finally it verifies the
 header. A successful output must report **version=15**, **715×455**, and
 **30 FPS**. Version 15 is deliberate: AquaStar's PPAPI plugin is Flash 32,
 whereas the supplied AIR build is SWF version 34 and cannot be used directly.
