@@ -29,6 +29,7 @@ entre computadores. A importação substitui os dados web atuais após validaç�
 web/
   landing.html           # landing page do AquaStar Tools
   bridges/               # mocks web dos preloads Electron
+plugins/adventure-quest-worlds/web/contribute.js  # contributeWebBuild() input for scripts/build-web.js
 ```
 
 ## Hospedagem local para desenvolvimento
