@@ -103,6 +103,7 @@ function activateBundledPluginsOrLegacy() {
                 }
                 : null;
             platform.pluginRuntime.adopt(runtime.host, pluginInfo);
+            platform.pluginRuntime.applyFlashTrust(flash);
 
             const menuProviders = {};
             if (runtime.plugin && runtime.plugin.manifest &&

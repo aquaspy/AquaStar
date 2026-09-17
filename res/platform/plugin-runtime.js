@@ -218,6 +218,12 @@ function createHostWindowDeps() {
     };
 }
 
+function applyFlashTrust(flashApi) {
+    const flash = flashApi || require('../flash.js');
+    if (typeof flash.refreshTrust !== 'function') return;
+    flash.refreshTrust(getTrustedFlashUrls());
+}
+
 module.exports = {
     clear: clear,
     setDependencies: setDependencies,
@@ -240,5 +246,6 @@ module.exports = {
     openLaunch: openLaunch,
     openUrl: openUrl,
     openFeatureWindow: openFeatureWindow,
-    createHostWindowDeps: createHostWindowDeps
+    createHostWindowDeps: createHostWindowDeps,
+    applyFlashTrust: applyFlashTrust
 };

@@ -70,6 +70,8 @@ function getPluginName() {
     return pluginName;
 }
 
+let activeTrustManager = null;
+
 const flashTrustManager = (app, appRootPath, aqlitePath, appName) =>{
     appendPerformanceSwitches(app);
 
@@ -84,10 +86,40 @@ const flashTrustManager = (app, appRootPath, aqlitePath, appName) =>{
     app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.465');
 
     const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot');
-    const trustManager = flashTrust.initSync(appName, flashPath);
+    activeTrustManager = flashTrust.initSync(appName, flashPath);
 
-    trustManager.empty();
-    trustManager.add(aqlitePath);
+    activeTrustManager.empty();
+    if (aqlitePath) activeTrustManager.add(aqlitePath);
+}
+
+/**
+ * Replace the Flash trust list (used after plugin activate with trustFlashUrls).
+ * @param {string[]} urls
+ */
+function refreshTrust(urls) {
+    if (!activeTrustManager) {
+        console.log('[AquaStar] Flash trust refresh skipped — trust manager not initialized');
+        return;
+    }
+    activeTrustManager.empty();
+    const list = Array.isArray(urls) ? urls : [];
+    const seen = {};
+    list.forEach(function (url) {
+        if (!url || seen[url]) return;
+        seen[url] = true;
+        try {
+            activeTrustManager.add(url);
+        } catch (e) {
+            console.log('[AquaStar] Flash trust add failed for ' + url + ': ' + e.message);
+        }
+    });
+}
+
+/** @internal tests */
+function _setTrustManagerForTests(manager) {
+    activeTrustManager = manager;
 }
 
 exports.flashManager = flashTrustManager;
+exports.refreshTrust = refreshTrust;
+exports._setTrustManagerForTests = _setTrustManagerForTests;

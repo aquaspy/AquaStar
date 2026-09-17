@@ -109,4 +109,36 @@ test('main.js boots primary URL from pluginRuntime', () => {
   assert.ok(mainSrc.indexOf('pluginRuntime.getPrimaryUrl') !== -1);
   assert.ok(mainSrc.indexOf('createHostWindowDeps') !== -1);
   assert.ok(mainSrc.indexOf('pluginRuntime.adopt') !== -1);
+  assert.ok(mainSrc.indexOf('applyFlashTrust') !== -1);
+});
+
+test('plugin-runtime applyFlashTrust refreshes trust list', () => {
+  runtime.clear();
+  const added = [];
+  let emptied = false;
+  runtime.setDependencies({
+    instances: { newBrowserWindow: function () { return {}; } },
+    constant: { mainPath: 'https://fallback', isOldAqlite: false }
+  });
+  runtime.adopt(fakeHost({
+    primaryGame: {
+      getUrl: function () { return 'https://plugin.example/game.swf'; },
+      isGameUrl: function () { return false; }
+    },
+    launches: [],
+    trustedFlashUrls: ['https://plugin.example/game.swf', 'https://plugin.example/extra.swf'],
+    keybinds: [],
+    keybindDefaults: {},
+    featureWindows: []
+  }), { id: 'sample' });
+
+  runtime.applyFlashTrust({
+    refreshTrust: function (urls) {
+      emptied = true;
+      urls.forEach(function (u) { added.push(u); });
+    }
+  });
+  assert.strictEqual(emptied, true);
+  assert.ok(added.indexOf('https://plugin.example/game.swf') !== -1);
+  assert.ok(added.indexOf('https://plugin.example/extra.swf') !== -1);
 });
