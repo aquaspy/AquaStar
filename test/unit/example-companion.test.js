@@ -19,6 +19,12 @@ test('example-companion ships stage, SWF asset, and AS3 source', () => {
   assert.strictEqual(String.fromCharCode(swf[0], swf[1], swf[2]), 'FWS');
 });
 
+test('instances only wraps real .swf URLs with swf_wrapper', () => {
+  const src = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
+  assert.ok(src.indexOf('_looksLikeSwfUrl') !== -1);
+  assert.ok(src.indexOf('Never wrap HTML') !== -1 || src.indexOf('_looksLikeSwfUrl(originalPath)') !== -1);
+});
+
 test('example-companion activate registers core Host capabilities', async () => {
   const plugin = {
     root: root,
@@ -50,7 +56,15 @@ test('example-companion activate registers core Host capabilities', async () => 
 
   const state = activated.host._getState();
   assert.ok(state.primaryGame);
-  assert.ok(state.primaryGame.getUrl().indexOf('stage') !== -1);
+  const stageUrl = state.primaryGame.getUrl();
+  assert.ok(stageUrl.indexOf('stage') !== -1);
+  assert.ok(stageUrl.indexOf('.html') !== -1);
+  // HTML stage must NOT be classified as a SWF game URL (would hit swf_wrapper → black screen).
+  assert.strictEqual(state.primaryGame.isGameUrl(stageUrl), false);
+  assert.strictEqual(
+    state.primaryGame.isGameUrl(stageUrl.replace(/stage.*/, 'assets/rectangle.swf')),
+    true
+  );
   assert.ok(state.sessionRules.length >= 1);
   assert.ok(state.navigationHooks && state.navigationHooks.onDidFinishLoad);
   assert.ok(state.menuProviders && state.menuProviders.appUsefulPages);

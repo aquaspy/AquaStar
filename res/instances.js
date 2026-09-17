@@ -63,8 +63,11 @@ function newBrowserWindow(new_path, isMainWin=false){
     else if (originalPath === constant.df_url) {
         new_path = constant.wrapSwfUrl(new_path, { wmode: 'opaque', scale: 'showall' });
     }
-    // Wrap AQW SWFs in an HTML page with wmode=direct for maximum performance.
-    else if (constant.useDirectWmode && _isGameWindow(new_path, false)) {
+    // Wrap Flash SWFs in an HTML page with wmode=direct for maximum performance.
+    // Never wrap HTML/feature pages — plugins may use file:// HTML as primary UI.
+    else if (constant.useDirectWmode &&
+        _looksLikeSwfUrl(originalPath) &&
+        _isGameWindow(new_path, false)) {
         new_path = constant.wrapSwfUrl(new_path);
     }
     
@@ -82,10 +85,18 @@ function newBrowserWindow(new_path, isMainWin=false){
         newWin.webContents.openDevTools();
     }
 
-    if (originalPath == constant.mainPath ||
-        _isTestingAqwUrl(originalPath)) {
+    var primary = null;
+    try {
+        primary = require('./platform').pluginRuntime.getPrimaryGame();
+    } catch (e) { primary = null; }
+    var isPluginPrimary = !!(primary && typeof primary.getUrl === 'function' &&
+        originalPath === primary.getUrl());
 
-        // Its alt window, Put the aqlite/Aqw title...
+    if (originalPath == constant.mainPath ||
+        _isTestingAqwUrl(originalPath) ||
+        isPluginPrimary) {
+
+        // Alt / primary game windows — number them and set a plugin-aware title.
         var windowNumber = 1;
         
         for (;usedAltPagesNumbers.includes(windowNumber);windowNumber++){
@@ -95,11 +106,21 @@ function newBrowserWindow(new_path, isMainWin=false){
             };
         }
         
-        // Deciding the new title name...
         var winTitle = "";
-        if (originalPath == constant.mainPath){
+        if (primary && typeof primary.title === 'function' &&
+            (isPluginPrimary || originalPath == constant.mainPath)) {
             var displayName = constant.resolveAppDisplayName(keybinds.keybinds);
-            winTitle = displayName + " - " + (constant.isOldAqlite ? "Older/Custom AQLite":" Adventure Quest Worlds");
+            try {
+                winTitle = primary.title({
+                    displayName: displayName,
+                    settings: keybinds.keybinds || {}
+                }) || ('AquaStar - ' + displayName);
+            } catch (e) {
+                winTitle = 'AquaStar';
+            }
+        } else if (originalPath == constant.mainPath){
+            var displayName2 = constant.resolveAppDisplayName(keybinds.keybinds);
+            winTitle = displayName2 + " - " + (constant.isOldAqlite ? "Older/Custom AQLite":" Adventure Quest Worlds");
         }
         else {
             winTitle = "AquaStar - AQW Testing Version!";
@@ -108,7 +129,6 @@ function newBrowserWindow(new_path, isMainWin=false){
             
         newWin.setTitle(winTitle);
 
-        // Storing and Removing the window number from a list.
         usedAltPagesNumbers.push(windowNumber);
         newWin.on('closed', () => {
             usedAltPagesNumbers.splice(
@@ -119,15 +139,16 @@ function newBrowserWindow(new_path, isMainWin=false){
         newWin.setTitle("AquaStar - DragonFable");
     }
     else {
-        /// Its a usual HTML page window then! features incomming
-        /// ... but only if its win or lunix. Mac doesnt have the feature -_-
-        /// Mac still get keybinds tho, just not the menu.
+        /// Usual HTML / browser page window.
         newWin.setMenuBarVisibility(true);
     }
 
-    // Game windows get a small discoverable command bar when enabled. Browser
-    // windows keep the application menu created in main.js.
-    if (_isGameWindow(originalPath, false) && keybinds.keybinds.showGameMenu !== false && process.platform !== 'darwin') {
+    // Primary plugin window and SWF game windows get the game menu when enabled.
+    // HTML primaries (e.g. example-companion stage) are not "SWF games" but still
+    // want the plugin command bar.
+    var showGameMenu = keybinds.keybinds.showGameMenu !== false && process.platform !== 'darwin' &&
+        (_looksLikeSwfUrl(originalPath) && _isGameWindow(originalPath, false) || isPluginPrimary);
+    if (showGameMenu) {
         newWin.setMenu(Menu.buildFromTemplate(windowsMenu.getGameMenu(keybinds.keybinds)));
         newWin.setMenuBarVisibility(true);
     }
@@ -297,6 +318,10 @@ function _resolveTargetWindow(onlyHtml = false, considerDF = false) {
 function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
     var target = _resolveTargetWindow(onlyHtml, considerDF);
     if (target !== null) funcForWindow(target);
+}
+
+function _looksLikeSwfUrl(url) {
+    return typeof url === 'string' && /\.swf(\?|#|$)/i.test(url);
 }
 
 function _isGameWindow(target, considerDF = true){

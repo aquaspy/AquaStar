@@ -19,12 +19,14 @@ function activate(host) {
         id: 'example-stage',
         getUrl: function () { return stageUrl; },
         title: function () { return 'AquaStar - Example Companion'; },
+        // Only real SWFs are "game" URLs. Matching the whole plugin path made
+        // stage/index.html go through swf_wrapper.html → black screen.
         isGameUrl: function (candidate) {
-            return typeof candidate === 'string' && (
-                candidate.indexOf('example-companion') !== -1 ||
-                candidate.indexOf('rectangle.swf') !== -1 ||
-                candidate.indexOf('boxmover.swf') !== -1
-            );
+            return typeof candidate === 'string' &&
+                /\.swf(\?|#|$)/i.test(candidate) &&
+                (candidate.indexOf('rectangle.swf') !== -1 ||
+                    candidate.indexOf('boxmover.swf') !== -1 ||
+                    candidate.indexOf('example-companion') !== -1);
         },
         wrap: { preferDirectWmode: false, ruffleEligible: false },
         flashTrust: true

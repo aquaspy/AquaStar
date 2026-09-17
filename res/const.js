@@ -164,6 +164,8 @@ exports.wrapSwfUrl = function(swfUrl, opts) {
 const ruffleWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_wrapper.html'));
 exports.isRuffleEligible = function(swfUrl) {
     if (!swfUrl) return false;
+    // HTML/stage pages are never Ruffle SWF targets.
+    if (!/\.swf(\?|#|$)/i.test(swfUrl)) return false;
     // When a plugin primary is adopted, eligibility follows pluginRuntime.isGameUrl
     // (primary + launches + platform custom SWF / mainPath checks inside the runtime).
     try {
