@@ -60,6 +60,16 @@ test('plugin-runtime dedupes duplicate window/external opens', () => {
   assert.ok(src.indexOf('ACTION_DEDUP_MS') !== -1);
 });
 
+test('instances assigns per-window menus and suppresses duplicate opens', () => {
+  const src = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
+  assert.ok(src.indexOf('_windowOpenGate') !== -1);
+  assert.ok(src.indexOf('Suppressed duplicate newBrowserWindow') !== -1);
+  assert.ok(src.indexOf('setMenu(Menu.buildFromTemplate(menuTemplate))') !== -1);
+  const mainSrc = fs.readFileSync(path.join(__dirname, '../../main.js'), 'utf8');
+  // Full app menu must not be set globally alongside per-window menus.
+  assert.ok(mainSrc.indexOf('Menu.buildFromTemplate(windowsMenu.getMenu(finalkeyb') === -1);
+});
+
 test('example companion ships Flex-built SWFs and sandboxed dashboard preload', () => {
   const root = path.join(__dirname, '../../plugins/example-companion');
   const box = fs.readFileSync(path.join(root, 'assets/boxmover.swf'));

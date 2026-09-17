@@ -41,10 +41,30 @@ function _executeJavaScriptSafely(webContents, source, label) {
 }
 
 
+// Collapse duplicate opens from menu+shortcut or dual app/window menus.
+var _windowOpenGate = { key: '', at: 0 };
+var WINDOW_OPEN_DEDUP_MS = 750;
+
+function _normalizeWindowOpenKey(url) {
+    var key = String(url || '');
+    if (process.platform === 'win32') key = key.toLowerCase();
+    return key;
+}
+
 // New page function
 function newBrowserWindow(new_path, isMainWin=false){
     var config;
     var originalPath = new_path;
+    var gateKey = _normalizeWindowOpenKey(originalPath);
+    var now = Date.now();
+    if (gateKey && gateKey === _windowOpenGate.key &&
+        (now - _windowOpenGate.at) < WINDOW_OPEN_DEDUP_MS) {
+        console.log('[AquaStar] Suppressed duplicate newBrowserWindow:', originalPath);
+        var existing = BrowserWindow.getAllWindows();
+        return existing.length ? existing[existing.length - 1] : null;
+    }
+    _windowOpenGate = { key: gateKey, at: now };
+
     if (isMainWin) config = windowConfig.mainConfig;
     else if (_isGameWindow(new_path)) config = windowConfig.gameConfig;
     else config = windowConfig.winConfig;
@@ -124,14 +144,21 @@ function newBrowserWindow(new_path, isMainWin=false){
         else newWin.setMenuBarVisibility(true);
     }
 
-    // Primary plugin window and SWF game windows get the game menu when enabled.
-    // HTML primaries (e.g. example-companion stage) are not "SWF games" but still
-    // want the plugin command bar.
-    var showGameMenu = keybinds.keybinds.showGameMenu !== false && process.platform !== 'darwin' &&
-        (_looksLikeSwfUrl(originalPath) && _isGameWindow(originalPath, false) || isPluginPrimary);
-    if (showGameMenu) {
-        newWin.setMenu(Menu.buildFromTemplate(windowsMenu.getGameMenu(keybinds.keybinds)));
-        newWin.setMenuBarVisibility(true);
+    // Always set an explicit per-window menu on Windows/Linux so we never rely on
+    // a global setApplicationMenu that can double-dispatch with win.setMenu.
+    if (process.platform !== 'darwin') {
+        var showGameMenu = keybinds.keybinds.showGameMenu !== false &&
+            (_looksLikeSwfUrl(originalPath) && _isGameWindow(originalPath, false) || isPluginPrimary);
+        var menuTemplate = showGameMenu
+            ? windowsMenu.getGameMenu(keybinds.keybinds)
+            : windowsMenu.getMenu(keybinds.keybinds, takeSS, false);
+        if (menuTemplate && menuTemplate.length) {
+            newWin.setMenu(Menu.buildFromTemplate(menuTemplate));
+            newWin.setMenuBarVisibility(true);
+        } else {
+            newWin.setMenu(null);
+            newWin.setMenuBarVisibility(false);
+        }
     }
     
     _windowAddContext(newWin);

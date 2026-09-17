@@ -168,17 +168,12 @@ function createWindow () {
     const bootGameUrl = platform.pluginRuntime.getPrimaryUrl();
     let win = inst.newBrowserWindow(bootGameUrl, true);
 
-    if (process.platform == 'darwin'){
-        Menu.setApplicationMenu(null);
-    }
-    else {
-        Menu.setApplicationMenu(
-            Menu.buildFromTemplate(windowsMenu.getMenu(finalkeyb, inst.charPagePrint)));
-        if (finalkeyb.showGameMenu !== false) {
-            win.setMenu(Menu.buildFromTemplate(windowsMenu.getGameMenu(finalkeyb)));
-            win.setMenuBarVisibility(true);
-        }
-    }
+    // Per-window menus only. On Windows/Linux, setApplicationMenu + win.setMenu
+    // together can fire the same plugin action twice (menu click + shared app menu).
+    // instances.newBrowserWindow assigns the correct menu for game vs browser windows.
+    Menu.setApplicationMenu(process.platform === 'darwin' ? null : Menu.buildFromTemplate([
+        { label: 'AquaStar', submenu: [{ role: 'quit' }] }
+    ]));
     
     win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
     
