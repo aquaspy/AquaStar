@@ -4,6 +4,7 @@ const fs = require('fs');
 const https = require('https');
 const { spawn } = require('child_process');
 const flash = require('../../../res/flash.js');
+const helperProcess = require('../../../res/platform/helper-process.js');
 const constant = require('../../../res/const.js');
 const locale = require('../../../res/locale.js');
 
@@ -12,6 +13,15 @@ const charpageDir = path.join(__dirname, '..', 'features', 'charpage');
 const studioSwf = path.join(charpageDir, 'characterB-studio.swf');
 const emptySceneSwf = path.join(charpageDir, 'characterB-empty-scene.swf');
 let studioWindow = null;
+
+// The capture renderer runs in its own Electron process (see res/platform/helper-process.js).
+const captureScript = path.join(__dirname, 'charpage-studio-capture-process.js');
+function captureProcessArgs(requestPath) {
+    return helperProcess.buildHelperArgs(captureScript, ['--capture-request=' + requestPath], {
+        defaultApp: !!process.defaultApp,
+        appPath: app.getAppPath()
+    });
+}
 
 function fetchUrl(url) {
     return new Promise((resolve, reject) => https.get(url, { headers: { 'User-Agent': 'AquaStar Char Page Studio' } }, (response) => {
@@ -96,9 +106,7 @@ ipcMain.handle('charpage-studio-capture-preview', async (event, renderer, flashV
         outputPath: result.filePath,
         statusPath: statusPath
     }));
-    const childArgs = process.defaultApp
-        ? [app.getAppPath(), '--charpage-studio-capture', '--capture-request=' + requestPath]
-        : ['--charpage-studio-capture', '--capture-request=' + requestPath];
+    const childArgs = captureProcessArgs(requestPath);
     try {
         await waitForCaptureProcess(spawn(process.execPath, childArgs, { stdio: 'ignore', windowsHide: true }));
         const status = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
@@ -127,7 +135,7 @@ ipcMain.handle('charpage-studio-capture-gif', async (event, renderer, flashVars,
     const statusPath = path.join(temporaryDirectory, 'status.json');
     const fps = Math.max(1, Math.min(60, Math.round(Number(requestedFps) || 10)));
     fs.writeFileSync(requestPath, JSON.stringify({ kind: 'gif', swfUrl: config.swfUrl, flashVars: config.flashVars, outputPath: result.filePath, statusPath: statusPath, duration: 8000, fps: fps, colors: colors }));
-    const childArgs = process.defaultApp ? [app.getAppPath(), '--charpage-studio-capture', '--capture-request=' + requestPath] : ['--charpage-studio-capture', '--capture-request=' + requestPath];
+    const childArgs = captureProcessArgs(requestPath);
     try {
         await waitForCaptureProcess(spawn(process.execPath, childArgs, { stdio: 'ignore', windowsHide: true }));
         const status = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
@@ -154,6 +162,10 @@ app.whenReady().then(() => {
   studioWindow = new BrowserWindow({ width: 1280, height: 800, icon: constant.iconPath, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false, plugins: true, webSecurity: false, preload: path.join(charpageDir, 'lab', 'preload_lab.js') } });
   studioWindow.setMenu(null);
   studioWindow.setMenuBarVisibility(false);
+  // This window runs with webSecurity off and Flash on: it must never navigate away from its
+  // packaged page or open other windows, whatever the loaded content asks for.
+  studioWindow.webContents.on('new-window', (event) => event.preventDefault());
+  studioWindow.webContents.on('will-navigate', (event) => event.preventDefault());
   studioWindow.loadFile(path.join(charpageDir, 'lab', 'characterB-lab.html'));
   studioWindow.on('closed', () => app.quit());
 });

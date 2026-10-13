@@ -1,5 +1,5 @@
 const assert = require('assert');
-const time = require('../../res/core/reset-time.js');
+const time = require('../../plugins/adventure-quest-worlds/core/reset-time.js');
 
 test('daily reset remains midnight in New York across daylight saving time', () => {
   const beforeDst = new Date('2026-03-08T16:00:00.000Z');

@@ -4,7 +4,7 @@ const flashTrust = require('nw-flash-trust');
 
 function appendPerformanceSwitches(app) {
     // Prevent Chromium from throttling the renderer when the window loses focus.
-    // Critical for AQW: alt-tabbing or opening a wiki window must not drop FPS.
+    // Critical for games: alt-tabbing or opening another window must not drop FPS.
     app.commandLine.appendSwitch('disable-renderer-backgrounding');
     app.commandLine.appendSwitch('disable-background-timer-throttling');
 
@@ -72,10 +72,10 @@ function getPluginName() {
 
 let activeTrustManager = null;
 
-const flashTrustManager = (app, appRootPath, aqlitePath, appName) =>{
+const flashTrustManager = (app, appRootPath, trustedPath, appName) =>{
     appendPerformanceSwitches(app);
 
-    // Required for PPAPI Flash on Linux (matches Artix AppRun --no-sandbox)
+    // Required for PPAPI Flash on Linux (the PPAPI plugin cannot load inside the sandbox)
     app.commandLine.appendSwitch('no-sandbox');
 
     const flashPluginPath = path.resolve(appRootPath, 'FlashPlayer', getPluginName());
@@ -89,7 +89,7 @@ const flashTrustManager = (app, appRootPath, aqlitePath, appName) =>{
     activeTrustManager = flashTrust.initSync(appName, flashPath);
 
     activeTrustManager.empty();
-    if (aqlitePath) activeTrustManager.add(aqlitePath);
+    if (trustedPath) activeTrustManager.add(trustedPath);
 }
 
 /**

@@ -298,17 +298,13 @@ function createAqwChromeContributor(options) {
                     { type: 'separator' },
                     {
                         label: labelOr(labels, 'menuCharPageStudio', 'Char Page Studio'),
-                        click: clickAction('studio', function () {
-                            require('../../res/instances.js').openCharPageStudioWindow();
-                        })
+                        click: clickAction('studio')
                     },
                     {
                         label: labelOr(labels, 'menuTakeShot', 'Char Page Screenshot'),
                         accelerator: keybinds.cpSshot,
                         registerAccelerator: false,
-                        click: clickAction('cpSshot', function () {
-                            require('../../res/instances.js').charPagePrint();
-                        })
+                        click: clickAction('cpSshot')
                     }
                 ]
             },

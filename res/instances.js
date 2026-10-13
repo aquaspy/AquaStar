@@ -5,14 +5,11 @@ const keybinds               = require('./keybindings.js');
 const socketProxy            = require('./socketProxy.js');
 const createFeatureWindowController = require('./windows/feature-window-controller.js');
 const {app, BrowserWindow, Menu}  = require('electron');
-const {spawn} = require('child_process');
 
 let usedAltPagesNumbers = [];
 
-// SS asks for them.... Also WikiView JUST because i wanted it in a separeted file organized.
 const fs       = require('fs');
 const path     = require('path');
-let   isAltKPageUp = false;
 // Plugin navigation hooks (PR 5). When set, did-finish-load delegates to the plugin.
 let navigationHooks = null;
 
@@ -77,8 +74,12 @@ function newBrowserWindow(new_path, isMainWin=false){
     var wrap = (gameEntry && gameEntry.wrap) || null;
     var renderMode = (keybinds.keybinds && keybinds.keybinds.renderMode) || constant.defaultRenderMode;
     if (renderMode === 'ruffle' && constant.isRuffleEligible(new_path)) {
-        socketProxy.start();
-        new_path = constant.wrapRuffleUrl(new_path);
+        const ruffleOpts = (wrap && wrap.ruffle) || null;
+        if (ruffleOpts && ruffleOpts.socket) {
+            socketProxy.allowHosts(ruffleOpts.socket.allowedHosts);
+            socketProxy.start();
+        }
+        new_path = constant.wrapRuffleUrl(new_path, ruffleOpts);
     }
     // Explicit wrap options (e.g. wmode=opaque + scale=showall for a game whose relative
     // loads break under wmode=direct from file://). Applies even with useDirectWmode off.
@@ -99,9 +100,8 @@ function newBrowserWindow(new_path, isMainWin=false){
     newWin.loadURL(new_path);
 
     // Debug mode opens DevTools on every window created through here (main, wiki,
-    // design notes, account, char page lookup, game instances...). The char page
-    // PRINT window (charPagePrint(), below) is built directly with `new BrowserWindow`
-    // and never goes through this function, so it's never affected.
+    // design notes, account, game instances...). Windows a plugin builds directly with
+    // `new BrowserWindow` never go through this function, so they are never affected.
     if (constant.isDebugBuild || constant.isDevToolsEnabled) {
         newWin.webContents.openDevTools();
     }
@@ -262,13 +262,14 @@ function _findGameEntry(url) {
 
 // Window title for a game entry; the plugin owns the wording.
 function _titleForGameEntry(entry, settings) {
-    var displayName = constant.resolveAppDisplayName(settings);
+    // Plugins build their own title from the app name and the saved settings.
+    var displayName = constant.appName;
     if (entry && typeof entry.title === 'function') {
         try {
             return entry.title({
                 displayName: displayName,
                 settings: settings || {},
-                usingCustomSwf: !!constant.isOldAqlite
+                usingCustomSwf: !!constant.hasCustomSwf
             }) || ('AquaStar - ' + displayName);
         } catch (e) {
             return 'AquaStar';
@@ -294,77 +295,8 @@ function _isGameWindow(target, considerDF = true){
     return true;
 }
 
-// Weird char page config - For Alt + K
-function charPagePrint(){
-    // Check if its valid keybind.
-    var focusedWindow = BrowserWindow.getFocusedWindow();
-    if (focusedWindow == null) return;
-    var url = focusedWindow.webContents.getURL();
-    // Whether this page is a char page is the plugin's call (navigation classify hook).
-    if (!navigationHooks || typeof navigationHooks.classify !== 'function' ||
-        navigationHooks.classify(url) !== 'charpage') { return };
-
-    let code = `(document.getElementsByTagName("object")[0] == undefined)? false : true;`;
-    _executeJavaScriptSafely(focusedWindow.webContents, code, 'Char page check').then((flashExists) =>{
-        if(!flashExists){
-            _notifyWindow(focusedWindow,constant.titleMessages.invalidCharpage);
-        }
-        else {
-            //VALID! Lets start...
-            const newWin = new BrowserWindow(windowConfig.charConfig);
-            newWin.setMenuBarVisibility(false);
-            _notifyWindow(focusedWindow,constant.titleMessages.loadingCharpage, false);
-            newWin.loadURL(url);
-            
-            // Fix for closing the window too soon...
-            isAltKPageUp = true;
-            focusedWindow.on('closed', () => {
-                isAltKPageUp = false;
-            });
-            
-            newWin.webContents.on("did-finish-load", () => {
-
-                if(isAltKPageUp) _notifyWindow(focusedWindow,constant.titleMessages.buildingCharpage, false);
-
-                // Lets figure it out how to take the sizes
-                const wOri = 715;
-                const hOri = 455;
-                var rect = null;
-                setTimeout(()=>{ 
-                    const siz = newWin.getSize();
-                    if ( (siz[0]/siz[1]) > (wOri/hOri) ){
-                        // Window has bigger Width ratio than the original
-                        // Scale using Height! reduction is to account for window bar.
-                        var h = siz[1]
-                        var nw = wOri*(h/hOri)
-                        rect = {
-                            x: Math.round((siz[0]-nw)/2),
-                            y: 0,
-                            width:  Math.round(nw),
-                            height: h
-                        }
-                    }
-                    else {
-                        var w = siz[0]
-                        var nh = hOri*(w/wOri)
-                        rect = {
-                            x: 0,
-                            y: 0,
-                            width:  w,
-                            height: Math.round(nh)
-                        }
-                    }
-                    takeSS(newWin,rect,true);
-                    if(isAltKPageUp) _notifyWindow(focusedWindow,constant.titleMessages.cpDone);
-                },5000);
-            });
-        }
-    });
-//TODO - find a way to detect when flash is done loading!
-}
-
 // Take a screenshot of the screen. 
-// Customizable options in parameter are there for the charPagePrint function
+// Optional rect / destroyWindow let callers (e.g. plugins) screenshot a specific window area.
 function takeSS(focusedWin, ret = null, destroyWindow = false){
     // If ret is passed, we figure how to take the SS.
     // Format is the rectangle one;
@@ -466,17 +398,6 @@ function openFeatureWindow(featureId) {
 }
 
 function openSettingsWindow(){ return openFeatureWindow('settings'); }
-function openRemindersWindow(){ return openFeatureWindow('reminders'); }
-function openTodoWindow(){ return openFeatureWindow('todo'); }
-function openInventoryWindow(){ return openFeatureWindow('inventory'); }
-function openStrategyWindow(){ return openFeatureWindow('strategy'); }
-function openCharPageStudioWindow(){
-    const args = process.defaultApp ? [app.getAppPath(), '--charpage-studio'] : ['--charpage-studio'];
-    const studio = spawn(process.execPath, args, { detached: true, stdio: 'ignore' });
-    studio.unref();
-    return studio;
-}
-
 function _mkdir (filepath){
     try {
         fs.mkdirSync(filepath, { recursive: true });
@@ -488,19 +409,14 @@ function _mkdir (filepath){
 }
 
 exports.newBrowserWindow    = newBrowserWindow;
-exports.charPagePrint       = charPagePrint;
 exports.openSettingsWindow  = openSettingsWindow;
-exports.openRemindersWindow = openRemindersWindow;
-exports.openTodoWindow      = openTodoWindow;
-exports.openInventoryWindow = openInventoryWindow;
-exports.openStrategyWindow  = openStrategyWindow;
-exports.openCharPageStudioWindow = openCharPageStudioWindow;
 exports.openFeatureWindow   = openFeatureWindow;
 exports.applyWindowMenu     = applyWindowMenu;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;
 exports.notifyWin           = _notifyWindow;
+exports.executeJavaScriptSafely = _executeJavaScriptSafely;
 exports.getSavedTitle       = getSavedTitle;
 exports.mkdir               = _mkdir;
 exports.setNavigationHooks  = function (hooks) { navigationHooks = hooks || null; };

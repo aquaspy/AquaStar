@@ -173,6 +173,11 @@ function listKeybindBindings() {
     return (hostState && hostState.keybinds) ? hostState.keybinds.slice() : [];
 }
 
+/** Absolute path of the active plugin's browser-window preload, or null. */
+function getBrowserPreload() {
+    return (hostState && hostState.browserPreload) || null;
+}
+
 function getFeatureWindow(id) {
     if (!hostState || !Array.isArray(hostState.featureWindows)) return null;
     for (let i = 0; i < hostState.featureWindows.length; i++) {
@@ -358,6 +363,20 @@ function fetchText(url, fetchOpts) {
     });
 }
 
+/** Spawn a helper Electron process running a bundled plugin script (see helper-process.js). */
+function spawnHelperProcess(opts) {
+    const spawn = require('child_process').spawn;
+    const helper = require('./helper-process.js');
+    const electron = require('electron');
+    const args = helper.buildHelperArgs(opts.scriptPath, opts.args, {
+        defaultApp: !!process.defaultApp,
+        appPath: electron.app.getAppPath()
+    });
+    const child = spawn(process.execPath, args, { detached: true, stdio: 'ignore' });
+    child.unref();
+    return child;
+}
+
 function createHostWindowDeps() {
     return {
         openPrimaryGame: openPrimaryGame,
@@ -365,7 +384,8 @@ function createHostWindowDeps() {
         openUrl: openUrl,
         openFeatureWindow: openFeatureWindow,
         openExternal: openExternal,
-        fetchText: fetchText
+        fetchText: fetchText,
+        spawnHelperProcess: spawnHelperProcess
     };
 }
 
@@ -393,6 +413,7 @@ module.exports = {
     getKeybindDefaults: getKeybindDefaults,
     getKeybindAction: getKeybindAction,
     listKeybindBindings: listKeybindBindings,
+    getBrowserPreload: getBrowserPreload,
     getFeatureWindow: getFeatureWindow,
     listFeatureWindows: listFeatureWindows,
     getTrustedFlashUrls: getTrustedFlashUrls,

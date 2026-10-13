@@ -18,26 +18,21 @@
   var ruffleUrl = params.get('ruffle') || 'ruffle/ruffle.js';
   if (!swfUrl) return;
 
-  // Same-origin AQW client SWFs always talk to Artix's game servers over raw TCP -
-  // something Ruffle (sandboxed, no raw sockets) can't do directly. It needs every
-  // (host, port) pair it might connect to pre-registered here, redirected through our
-  // local WebSocket<->TCP relay (res/socketProxy.js) instead.
-  var SERVERS_API = 'https://game.aq.com/game/api/data/servers';
-
-  // Used only if SERVERS_API is unreachable. Refresh via:
-  // curl -sL https://game.aq.com/game/api/data/servers | python3 -m json.tool
-  var FALLBACK_HOSTS = {
-    'sock7.aq.com':        [5588, 5589, 5591, 5592, 5593, 5594, 843],
-    'sock8.aq.com':        [5588, 5589, 5590, 5591, 5593, 843],
-    'euro.aqw.artix.com':  [5588, 843],
-    'asia.game.artix.com': [5588, 843]
-  };
+  // Some Flash games talk to their servers over raw TCP, which Ruffle (sandboxed, no raw
+  // sockets) cannot do directly. Every (host, port) pair such a game may connect to must be
+  // pre-registered and redirected through our local WebSocket<->TCP relay (res/socketProxy.js).
+  // The owning plugin declares them in its wrap config (wrap.ruffle.socket), passed here as
+  // the "cfg" parameter: { socket: { serversApi, fallbackHosts, policyPort } }. A game
+  // without a socket section simply gets no relay.
+  var cfg = {};
+  try { cfg = JSON.parse(params.get('cfg') || '{}') || {}; } catch (e) { cfg = {}; }
+  var socketCfg = cfg.socket || null;
 
   function addHostPort(map, host, port) {
     if (!host || !port) return;
     if (!map.has(host)) map.set(host, new Set());
     map.get(host).add(port);
-    map.get(host).add(843); // Flash cross-domain policy socket
+    if (socketCfg && socketCfg.policyPort) map.get(host).add(socketCfg.policyPort); // Flash cross-domain policy socket
   }
 
   function mapToSocketProxies(map) {
@@ -52,31 +47,30 @@
 
   async function buildSocketProxies() {
     var map = new Map();
-    Object.keys(FALLBACK_HOSTS).forEach(function (host) {
-      FALLBACK_HOSTS[host].forEach(function (port) { addHostPort(map, host, port); });
+    var fallback = socketCfg.fallbackHosts || {};
+    Object.keys(fallback).forEach(function (host) {
+      fallback[host].forEach(function (port) { addHostPort(map, host, port); });
     });
 
-    try {
-      var res = await fetch(SERVERS_API);
-      var servers = await res.json();
-      servers.forEach(function (s) { addHostPort(map, s.sIP, s.iPort); });
-    } catch (e) {
-      console.log('[AquaStar] Artix server API unavailable, using fallback hosts only:', e);
+    // The server list is the source of truth; the fallback only covers it being unreachable.
+    if (socketCfg.serversApi) {
+      try {
+        var res = await fetch(socketCfg.serversApi);
+        var servers = await res.json();
+        servers.forEach(function (server) { addHostPort(map, server.sIP, server.iPort); });
+      } catch (e) {
+        console.log('[AquaStar] Server list unavailable, using fallback hosts only:', e);
+      }
     }
 
     return mapToSocketProxies(map);
   }
 
   async function startPlayer() {
-    // AQW needs the TCP↔WebSocket relay. DragonFable talks HTTP for its loader
-    // (DFversion.asp / gamefiles/* relative to the SWF URL) and does not use the
-    // AQW sock* hosts - skip the servers API round-trip for DF only.
-    var isDragonFable = /dragonfable\.com/i.test(swfUrl) || /DFLoader\.swf/i.test(swfUrl);
-    var socketProxy = (proxyUrl && !isDragonFable) ? await buildSocketProxies() : [];
+    var socketProxy = (proxyUrl && socketCfg) ? await buildSocketProxies() : [];
 
-    // Same fix as Flash <param name="base">: DFLoader resolves DFversion.asp and
-    // gamefiles/* as relative URLs. Without base=, Ruffle resolves them against
-    // this file:// wrapper page and shows "Error loading Game Engine!!".
+    // Same fix as Flash <param name="base">: a loader that resolves its own files as relative
+    // URLs would otherwise resolve them against this file:// wrapper page.
     var swfBase = '';
     try {
       var u = new URL(swfUrl);

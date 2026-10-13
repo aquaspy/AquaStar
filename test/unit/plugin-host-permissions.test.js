@@ -156,12 +156,13 @@ test('PluginHost namespaces third-party IPC channels', () => {
   assert.strictEqual(recorded[0].channel, 'plugin:third-party-game:ping');
 });
 
-test('PluginHost keeps legacy IPC names for adventure-quest-worlds', () => {
+test('PluginHost keeps unprefixed IPC names only when the manifest asks and the loader grants', () => {
   const recorded = [];
   const host = createPluginHost({
     manifest: baseManifest({
       id: 'adventure-quest-worlds',
-      apiVersion: 1
+      apiVersion: 1,
+      unprefixedIpc: true
     }),
     pluginRoot: path.join(__dirname, '../fixtures/sample-plugin'),
     legacyIpc: true,
@@ -173,6 +174,30 @@ test('PluginHost keeps legacy IPC names for adventure-quest-worlds', () => {
   });
   host.ipc.handle('getReminders', function () { return {}; });
   assert.strictEqual(recorded[0], 'getReminders');
+});
+
+test('PluginHost never grants unprefixed IPC on a plugin id alone', () => {
+  const recorded = [];
+  const host = createPluginHost({
+    // Same id as the bundled game plugin, loader grant present, but no manifest request.
+    manifest: baseManifest({ id: 'adventure-quest-worlds', apiVersion: 1 }),
+    pluginRoot: path.join(__dirname, '../fixtures/sample-plugin'),
+    legacyIpc: true,
+    deps: { ipcHandle: function (channel) { recorded.push(channel); } }
+  });
+  host.ipc.handle('getReminders', function () { return {}; });
+  assert.strictEqual(recorded[0], 'plugin:adventure-quest-worlds:getReminders');
+
+  const noGrant = [];
+  const unrequested = createPluginHost({
+    // Manifest asks, but the loader did not grant (e.g. a local plugin): still namespaced.
+    manifest: baseManifest({ id: 'copycat', apiVersion: 1, unprefixedIpc: true }),
+    pluginRoot: path.join(__dirname, '../fixtures/sample-plugin'),
+    legacyIpc: false,
+    deps: { ipcHandle: function (channel) { noGrant.push(channel); } }
+  });
+  unrequested.ipc.handle('ping', function () { return {}; });
+  assert.strictEqual(noGrant[0], 'plugin:copycat:ping');
 });
 
 test('PluginHost rejects platform-reserved keybind ids', () => {

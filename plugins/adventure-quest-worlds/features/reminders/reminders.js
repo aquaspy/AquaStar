@@ -9,7 +9,7 @@ const { app, ipcMain, clipboard } = require('electron');
 const constant = require('../../../../res/const.js');
 const locale   = require('../../../../res/locale.js');
 const jsonStore = require('../../../../res/repositories/json-store.js');
-const listState = require('../../../../res/core/list-state.js');
+const listState = require('../../core/list-state.js');
 
 const remindersJsonFileName = constant.appName.toLocaleLowerCase() + '_reminders.json'; // "aquastar_reminders.json"
 const legacyRemindersJsonPath = path.join(app.getPath('appData'), remindersJsonFileName);

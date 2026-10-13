@@ -42,5 +42,16 @@
   ],
   "web": {
     "contribute": "web/contribute.js"
+  },
+  "bundledDefault": true,
+  "unprefixedIpc": true,
+  "customSwfAliases": [
+    "aqlite_old.swf"
+  ],
+  "storeAliases": {
+    "reminders": "aquastar_reminders.json",
+    "todo": "aquastar_todo.json",
+    "strategy": "aquastar_strategy.json",
+    "inventory": "aquastar_inventory.json"
   }
 }

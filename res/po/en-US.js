@@ -1,10 +1,6 @@
 function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else return keyb;};
 
 exports.titleMessages = {
-    invalidCharpage: "Not valid Char Page window!",
-    loadingCharpage: "Loading Char Page...",
-    buildingCharpage: "Building scenario. Please wait some seconds...",
-    cpDone: "DONE! Saved CP in Screenshot folder",
     doneSavedAs: "Done! Saved as ",
     recording: "RECORDING",
     alreadyRecording: "You are already recording another window!"
@@ -26,13 +22,13 @@ exports.dialogMessages = {
         'Active-plugin shortcuts (if any) are listed below.';
     },
     helpScreenshot     : "Screenshot folder: ",
-    helpAqliteOld      : "AppData folder for aquastar.json and optional local SWF override (can change if the user moves the app): ",
+    helpAppDataPath     : "AppData folder for aquastar.json and optional local SWF override (can change if the user moves the app): ",
     helpCustomKeyPath  : "",
 
     aboutTitle     : "About AquaStar Version: ",
     aboutMessage   : "AquaStar is a Flash companion shell with game plugins.",
     aboutDetail    :
-        "Thanks to everyone who made this possible:\n133spider (AQLite)\naquaspy\nbiglavis (WikiView)\nArtix Entertainment\nElectron\nAdobe Flash Player\nand you for supporting the project.\n\nAquaStar is not an official Artix product; use at your own risk.\n\nProject / releases: ",
+        "Thanks to everyone who made this possible:\naquaspy{pluginCredits}\nElectron\nAdobe Flash Player\nand you for supporting the project.\n\nGame plugins are not official products of their publishers; use at your own risk.\n\nProject / releases: ",
     aboutDebug     : "Debug Info",
 
     aboutGithubPrompt : "AquaStar Releases page",
@@ -70,7 +66,6 @@ exports.settingsMessages = {
     resetButton: "Reset",
     savedMessage: "Saved! Restart AquaStar if a change requires it.",
     macOnlyLabel: " (macOS only)",
-    charpageOnly: " (char page only)",
     labels: {
         about: "About AquaStar",
         fullscreen: "Toggle Fullscreen",

@@ -176,7 +176,8 @@ test('resolvePluginFlags defaults pluginSystem on (PR 2+) unless disabled', () =
   assert.strictEqual(flags.pluginSystem, true);
   assert.strictEqual(flags.enableLocalPlugins, false);
   assert.strictEqual(flags.allowLocalPluginOverride, false);
-  assert.strictEqual(flags.activePluginId, 'adventure-quest-worlds');
+  // Empty means "the bundled default": the platform names no plugin.
+  assert.strictEqual(flags.activePluginId, '');
 
   const explicitOff = platform.resolvePluginFlags({ pluginSystem: false }, {});
   assert.strictEqual(explicitOff.pluginSystem, false);

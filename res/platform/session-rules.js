@@ -8,7 +8,7 @@
 // every rule whose patterns match, in registration order.
 
 /**
- * Match an Electron/Chrome match pattern ("*://*.aq.com/*", "<all_urls>") against a URL.
+ * Match an Electron/Chrome match pattern ("*://*.example.com/*", "<all_urls>") against a URL.
  * Supports the subset AquaStar rules use: scheme, host (exact / "*" / "*.suffix"), path glob.
  */
 function matchesPattern(pattern, url) {

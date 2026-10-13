@@ -9,14 +9,14 @@ function copy(source, destination) {
   fs.copyFileSync(path.join(root, source), destination);
 }
 
-function buildToolPage(source, destination, bridgeId) {
+// Desktop pages sit at plugins/<id>/features/<tool>/ and web-dist keeps a flatter
+// tools/<tool>/ layout, so a contribution lists the rewrites its pages need
+// ({ match: <regex source>, replace }).
+function buildToolPage(source, destination, bridgeId, pathRewrites) {
   let html = fs.readFileSync(path.join(root, source), 'utf8');
-  // Desktop HTML lives under plugins/.../features and reaches kits via ../../../../res/*.
-  // web-dist keeps the flatter tools/{feature} layout, so rewrite those hrefs/srcs.
-  html = html
-    .replace(/(?:\.\.\/)+res\/core\//g, '../../core/')
-    .replace(/(?:\.\.\/)+res\/ui\//g, '../../ui/')
-    .replace(/(?:\.\.\/)+res\/features\/common\//g, '../common/');
+  (pathRewrites || []).forEach(function (rule) {
+    html = html.replace(new RegExp(rule.match, 'g'), rule.replace);
+  });
   const bridgeTag = `<script src="../../bridges/common.js"></script><script src="../../bridges/${bridgeId}.js"></script>`;
   html = html.replace(/<script>\s*\(function \(\)/, `${bridgeTag}<script>\n(function ()`);
   if (!html.includes(bridgeTag)) throw new Error(`Could not inject web bridge into ${source}`);
@@ -24,10 +24,31 @@ function buildToolPage(source, destination, bridgeId) {
   fs.writeFileSync(destination, html);
 }
 
+// The tools site is built from what a bundled plugin declares in its manifest
+// ("web": { "contribute": "<relative path>" }): this script names no plugin. When several
+// declare one, the plugin marked bundledDefault is the site's subject.
+function findContributor() {
+  const pluginsDir = path.join(root, 'plugins');
+  const candidates = [];
+  fs.readdirSync(pluginsDir).sort().forEach(function (dir) {
+    const manifestPath = path.join(pluginsDir, dir, 'plugin.json');
+    if (!fs.existsSync(manifestPath)) return;
+    let manifest;
+    try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch (e) { return; }
+    if (manifest.web && manifest.web.contribute && manifest.id !== '_template') {
+      candidates.push({ dir: dir, manifest: manifest });
+    }
+  });
+  const chosen = candidates.filter(function (c) { return c.manifest.bundledDefault === true; })[0] || candidates[0];
+  if (!chosen) throw new Error('No bundled plugin declares web.contribute in its manifest');
+  return chosen;
+}
+
 function loadContribution() {
-  const contributePath = path.join(root, 'plugins', 'adventure-quest-worlds', 'web', 'contribute.js');
+  const chosen = findContributor();
+  const contributePath = path.join(root, 'plugins', chosen.dir, chosen.manifest.web.contribute);
   if (!fs.existsSync(contributePath)) {
-    throw new Error('Missing AQW web contribution: ' + contributePath);
+    throw new Error('Missing web contribution: ' + contributePath);
   }
   const mod = require(contributePath);
   const contrib = typeof mod === 'function'
@@ -37,20 +58,6 @@ function loadContribution() {
     throw new Error('contributeWebBuild() must return landing + tools');
   }
   return contrib;
-}
-
-function sharedKitOutPath(source) {
-  const normalized = source.replace(/\\/g, '/');
-  if (normalized.indexOf('res/core/') === 0) {
-    return normalized.slice('res/'.length);
-  }
-  if (normalized.indexOf('res/ui/') === 0) {
-    return normalized.slice('res/'.length);
-  }
-  if (normalized.indexOf('res/features/common/') === 0) {
-    return 'tools/common/' + path.basename(normalized);
-  }
-  throw new Error('Unsupported sharedKits path: ' + source);
 }
 
 const contribution = loadContribution();
@@ -64,8 +71,14 @@ copy(landing.landingCss, path.join(output, 'assets/landing.css'));
 copy(landing.landingJs, path.join(output, 'assets/landing.js'));
 copy(landing.iconFrom || 'Icon/Icon.png', path.join(output, 'assets/aquastar-icon.png'));
 
-(contribution.sharedKits || []).forEach(function (kitPath) {
-  copy(kitPath, path.join(output, sharedKitOutPath(kitPath)));
+(contribution.sharedKits || []).forEach(function (kit) {
+  if (!kit || typeof kit.from !== 'string' || typeof kit.to !== 'string') {
+    throw new Error('sharedKits entries must be { from, to }');
+  }
+  if (path.isAbsolute(kit.to) || kit.to.split(/[\\/]/).indexOf('..') !== -1) {
+    throw new Error('sharedKits "to" must stay inside web-dist: ' + kit.to);
+  }
+  copy(kit.from, path.join(output, kit.to));
 });
 
 if (contribution.bridges && contribution.bridges.commonBridge) {
@@ -75,9 +88,9 @@ if (contribution.bridges && contribution.bridges.commonBridge) {
 const localeKeys = {};
 contribution.tools.forEach(function (tool) {
   const bridgeId = tool.id;
-  const bridgeSrc = tool.bridge || path.join('web', 'bridges', bridgeId + '.js');
-  copy(bridgeSrc, path.join(output, 'bridges', bridgeId + '.js'));
-  buildToolPage(tool.sourceHtml, path.join(output, tool.outToolsPath), bridgeId);
+  if (!tool.bridge) throw new Error('Tool "' + bridgeId + '" must declare its bridge');
+  copy(tool.bridge, path.join(output, 'bridges', bridgeId + '.js'));
+  buildToolPage(tool.sourceHtml, path.join(output, tool.outToolsPath), bridgeId, contribution.pathRewrites);
   if (tool.defaultsJson) {
     copy(tool.defaultsJson, path.join(output, 'defaults', tool.id + '.json'));
   }

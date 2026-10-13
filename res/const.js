@@ -75,7 +75,7 @@ function _getFileUrl(path) {
         slashes: true
     })
 }
-// Exported for res/windows/config.js to build the settings/reminders window URLs with -
+// Exported for res/windows/config.js to build window URLs with -
 // keeps the file://-URL-building logic in one place instead of duplicated per module.
 exports.toFileUrl = _getFileUrl;
 
@@ -131,9 +131,12 @@ exports.isRuffleEligible = function(swfUrl) {
         return !!entry && !(entry.wrap && entry.wrap.ruffleEligible === false);
     } catch (e) { return false; }
 }
-exports.wrapRuffleUrl = function(swfUrl) {
+// ruffleOpts: the owning plugin's wrap.ruffle ({ socket: { serversApi, fallbackHosts, policyPort } }).
+exports.wrapRuffleUrl = function(swfUrl, ruffleOpts) {
     if (!swfUrl) return swfUrl;
+    const cfg = ruffleOpts && ruffleOpts.socket ? { socket: ruffleOpts.socket } : {};
     return ruffleWrapperUrl + '?swf=' + encodeURIComponent(swfUrl) +
+        '&cfg=' + encodeURIComponent(JSON.stringify(cfg)) +
         '&proxy=' + encodeURIComponent(socketProxy.proxyUrl) +
         '&ruffle=' + encodeURIComponent(exports.rufflePlayerUrl);
 }
@@ -142,8 +145,8 @@ exports.wrapRuffleUrl = function(swfUrl) {
 /// Section 2 - Original KeyBindings and Custom swf stuff
 /// -------------------------------
 
-// Platform-only defaults. Game/plugin keybinds (wiki, newAqw, reminders, …) are
-// registered by the active plugin via host.registerKeybindDefaults.
+// Platform-only defaults. Game/plugin keybinds are registered by the active plugin via
+// host.registerKeybindDefaults.
 const originalKeybinds = {
     about:       "F9",
     fullscreen:  "F11",
@@ -220,13 +223,11 @@ exports.appLanguageChoices = [
 // Non-keybind settings. Saved to the same aquastar.json file as the keybinds
 // above, but shown in the Settings screen as plain fields instead of recorders.
 const originalOptions = {
-    playerCharacter:   "",
-    featurePlayerName: false,
     // UI language: "system" follows OS; otherwise an explicit catalog id (en-US, pt-BR).
     appLanguage:       "system",
 
     // Optional URL override for the active plugin's primary game. Ignored when a
-    // local SWF override (aqlite_old.swf) is active — see plugin-runtime getPrimaryUrl().
+    // local SWF override is active — see plugin-runtime getPrimaryUrl().
     customUrl:         "",
     recordingFormat:   exports.defaultRecordingFormat,
     renderMode:        exports.defaultRenderMode,
@@ -234,30 +235,11 @@ const originalOptions = {
     ruffleAutoUpdate:  false,
     // Native menu bar on game windows (mirrors shortcuts). Default on.
     showGameMenu:      true,
-    // Periodic background Inventory/BuyBack sync (res/features/inventory/inventory.js).
-    // Off by default - manual "Sync Now" (in-window or the account.aq.com/Home button)
-    // always works regardless of this setting.
-    autoSync:          false,
     // Dev-only escape hatch, warned about on enable in the Settings screen.
     // Keep this key last - new options should be added above it.
     enableDevTools:    false
 }
 exports.originalOptions = originalOptions;
-
-// Keeps only what's safe to drop straight into a URL query string / window title -
-// matches the input filter on the Settings screen's Player Character field.
-function _sanitizePlayerCharacter(raw) {
-    if (raw == null) return '';
-    return String(raw).trim().replace(/[^a-zA-Z0-9]/g, '');
-}
-
-// When featurePlayerName is on and a Player Character is set, it replaces "AquaStar"
-// in the main window's title. Falls back to the app name otherwise.
-exports.resolveAppDisplayName = function(k) {
-    if (!k || k.featurePlayerName !== true) return appName;
-    var id = _sanitizePlayerCharacter(k.playerCharacter);
-    return id === '' ? appName : id;
-}
 
 // Finding out which one to load and if it should load...
 var keybingJsonFileName = appName.toLocaleLowerCase() + '.json';
@@ -291,23 +273,22 @@ exports.rufflePlayerUrl = _getFileUrl(fs.existsSync(downloadedRufflePlayerPath)
     ? downloadedRufflePlayerPath : bundledRufflePlayerPath);
 exports.ruffleDirectory = appDataDirectory;
 
-// Custom AQLite SWFs written by Settings belong in AppData: installed builds can
-// live under Program Files, where their working directory is not reliably writable.
-// Keep accepting the old working-directory file so existing portable installs work.
-const customSwfFileName = 'aqlite_old.swf';
-const managedCustomSwfPath = path.join(appDataDirectory, customSwfFileName);
-const legacyCustomSwfPath = path.join(appCurrentDirectory, customSwfFileName);
-const activeCustomSwfPath = fs.existsSync(managedCustomSwfPath) ? managedCustomSwfPath :
-    (fs.existsSync(legacyCustomSwfPath) ? legacyCustomSwfPath : null);
-var oldAqlite = activeCustomSwfPath !== null;
-exports.customSwfPath = managedCustomSwfPath;
-exports.legacyCustomSwfPath = legacyCustomSwfPath;
-exports.activeCustomSwfPath = activeCustomSwfPath;
-// File URL of the local SWF override (Settings → Custom SWF File), or "" when none is set.
-// The platform applies it (and customUrl) on top of the active plugin primary game; see
-// res/platform/plugin-runtime.js getPrimaryUrl().
-exports.customSwfUrl = oldAqlite ? _getFileUrl(activeCustomSwfPath) : "";
-exports.isOldAqlite = oldAqlite;
+// Local SWF override (Settings → Custom SWF File). The lookup lives in customSwf.js; the
+// active plugin's manifest may add older file names via setCustomSwfAliases().
+const customSwf = require('./customSwf.js').createCustomSwf({
+    appDataDirectory: appDataDirectory,
+    appCurrentDirectory: appCurrentDirectory,
+    toFileUrl: _getFileUrl
+});
+exports.setCustomSwfAliases = function (aliases) { customSwf.setAliases(aliases); };
+// Where Settings writes a newly chosen SWF.
+exports.customSwfPath = customSwf.managedPath;
+exports.removeCustomSwfFiles = function () { customSwf.removeAll(); };
+// The platform applies the override on top of the active plugin's primary game (see
+// res/platform/plugin-runtime.js getPrimaryUrl()). Live getters: aliases can arrive after load.
+Object.defineProperty(exports, 'activeCustomSwfPath', { enumerable: true, get: function () { return customSwf.activePath(); } });
+Object.defineProperty(exports, 'customSwfUrl', { enumerable: true, get: function () { return customSwf.url(); } });
+Object.defineProperty(exports, 'hasCustomSwf', { enumerable: true, get: function () { return customSwf.activePath() !== null; } });
 
 /// -------------------------------
 /// Section 3 - Locale stuff
@@ -316,8 +297,8 @@ exports.isOldAqlite = oldAqlite;
 exports.setLocale = (loc, keyb) => {
     locale.detectLang(loc, keyb);
     // Title messages are the only locale strings still consumed from const.js -
-    // instances.js reads them for window-notification text. Menu/dialog/settings/
-    // reminders messages are read straight from locale.strings by the modules that
-    // actually build that UI (res/windows/menu.js, the Settings/Reminders windows).
+    // instances.js reads them for window-notification text. Menu/dialog/settings
+    // messages are read straight from locale.strings by the modules that actually
+    // build that UI (res/windows/menu.js, the Settings window).
     exports.titleMessages = locale.strings.titleMessages;
 }

@@ -26,10 +26,11 @@ entre computadores. A importação substitui os dados web atuais após validaç�
 ## Estrutura planejada
 
 ```
-web/
+plugins/adventure-quest-worlds/web/
   landing.html           # landing page do AquaStar Tools
+  assets/                # CSS/JS da landing
   bridges/               # mocks web dos preloads Electron
-plugins/adventure-quest-worlds/web/contribute.js  # contributeWebBuild() input for scripts/build-web.js
+  contribute.js          # contributeWebBuild(): entrada de scripts/build-web.js (via web.contribute no plugin.json)
 ```
 
 ## Hospedagem local para desenvolvimento

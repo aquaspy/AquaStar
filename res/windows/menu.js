@@ -197,7 +197,7 @@ exports.getMenu = (keybinds, funcTakeSS, isContext) => {
         }
     );
 
-    // Plugin Useful Pages only — never fall back to the AQW catalog.
+    // Plugin Useful Pages only — the platform has no built-in catalog.
     if (menuRegistry.hasAppUsefulPages()) {
         const described = menuRegistry.getAppUsefulPages({
             labels: menuMessages,
@@ -280,11 +280,14 @@ function showHelpMessage(win){
 }
 function showAboutMessage(win) {
     const dialogMessages = locale.strings.dialogMessages;
+    // The active plugin may thank the projects its features build on (aboutMessages.credits).
+    const pluginCredits = (locale.strings.aboutMessages && locale.strings.aboutMessages.credits) || '';
     const dialog_options = {
         buttons: [dialogMessages.aboutGithubPrompt, dialogMessages.aboutClosePrompt],
         title:   dialogMessages.aboutTitle + constant.appVersion,
         message: dialogMessages.aboutMessage,
-        detail:  dialogMessages.aboutDetail + constant.githubPage +'\n\n\n' +
+        detail:  dialogMessages.aboutDetail.replace('{pluginCredits}', pluginCredits ? '\n' + pluginCredits : '') +
+        constant.githubPage +'\n\n\n' +
         dialogMessages.aboutDebug + ":\n" +
         "OS   - " + process.platform + "\n" +
         "ARCH - " + process.arch     + "\n"

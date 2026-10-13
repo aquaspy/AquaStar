@@ -27,6 +27,19 @@ exports.charPageStudioMessages = {
     gifColorsLabel: "Cores do GIF"
 };
 
+// Progresso do print da Char Page, mostrado no título da janela em foco.
+exports.charpageMessages = {
+    invalid: "Janela de Char Page inválida",
+    loading: "Carregando Char Page...",
+    building: "Construindo cenário. Por favor aguarde uns segundos...",
+    done: "PRONTO! Salvo a CP na pasta de Screenshots"
+};
+
+// Projetos nos quais os recursos do AQW se baseiam, mostrados em Sobre.
+exports.aboutMessages = {
+    credits: "133spider (AQLite)\nbiglavis (WikiView)\nArtix Entertainment"
+};
+
 exports.dialogMessages = {
     helpDetailExtra: function (k) {return 'Adventure Quest Worlds\n' +
         expand(k.wiki)      + ' - AQW Wiki\n' +
@@ -88,7 +101,7 @@ exports.settingsMessages = {
         todo: "Abrir Lista de Tarefas",
         inventory: "Abrir Inventário",
         strategy: "Abrir Estratégia",
-        cpSshot: "Printar a Char Page",
+        cpSshot: "Printar a Char Page (somente char pages)",
     },
     optionLabels: {
         playerCharacter: "Personagem",

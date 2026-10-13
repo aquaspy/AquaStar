@@ -4,37 +4,30 @@ const os = require('os');
 const path = require('path');
 const {
   createNamespacedStore,
-  resolveStoreFileName,
-  AQW_ALIASES
+  resolveStoreFileName
 } = require('../../res/platform/storage/namespaced-store.js');
 
-test('AQW aliases map to permanent aquastar_*.json filenames', () => {
-  assert.strictEqual(
-    resolveStoreFileName('adventure-quest-worlds', 'reminders'),
-    'aquastar_reminders.json'
-  );
-  assert.strictEqual(
-    resolveStoreFileName('adventure-quest-worlds', 'todo'),
-    AQW_ALIASES.todo
-  );
-  assert.strictEqual(
-    resolveStoreFileName('adventure-quest-worlds', 'strategy'),
-    'aquastar_strategy.json'
-  );
-  assert.strictEqual(
-    resolveStoreFileName('adventure-quest-worlds', 'inventory'),
-    'aquastar_inventory.json'
-  );
+test('a plugin keeps permanent legacy filenames by declaring storeAliases in its manifest', () => {
+  // The platform no longer knows any plugin: aliases come from the manifest the loader reads.
+  const manifest = require('../../plugins/adventure-quest-worlds/plugin.json');
+  const aliases = manifest.storeAliases;
+  assert.strictEqual(resolveStoreFileName(manifest.id, 'reminders', aliases), 'aquastar_reminders.json');
+  assert.strictEqual(resolveStoreFileName(manifest.id, 'todo', aliases), 'aquastar_todo.json');
+  assert.strictEqual(resolveStoreFileName(manifest.id, 'strategy', aliases), 'aquastar_strategy.json');
+  assert.strictEqual(resolveStoreFileName(manifest.id, 'inventory', aliases), 'aquastar_inventory.json');
+  // Names it did not alias still get the namespaced file.
+  assert.strictEqual(resolveStoreFileName(manifest.id, 'launcher-config', aliases),
+    'aquastar.' + manifest.id + '.launcher-config.json');
 });
 
-test('non-AQW plugins use aquastar.<pluginId>.<ns>.json', () => {
+test('without aliases every plugin uses aquastar.<pluginId>.<ns>.json (no plugin is special)', () => {
   assert.strictEqual(
     resolveStoreFileName('dragon-fable-lite', 'reminders'),
     'aquastar.dragon-fable-lite.reminders.json'
   );
   assert.strictEqual(
-    resolveStoreFileName('adventure-quest-worlds', 'custom-meta'),
-    'aquastar.adventure-quest-worlds.custom-meta.json'
+    resolveStoreFileName('adventure-quest-worlds', 'reminders'),
+    'aquastar.adventure-quest-worlds.reminders.json'
   );
 });
 
@@ -56,7 +49,8 @@ test('namespaced store read/write/readOrCreate bind to resolved path', () => {
   try {
     const aqw = createNamespacedStore({
       appDataDirectory: directory,
-      pluginId: 'adventure-quest-worlds'
+      pluginId: 'adventure-quest-worlds',
+      aliases: require('../../plugins/adventure-quest-worlds/plugin.json').storeAliases
     });
     assert.strictEqual(
       aqw.resolveStorePath('reminders'),

@@ -250,9 +250,11 @@ function activatePlugin(plugin, options) {
             throw new Error('Plugin main must export activate(host)');
         }
 
-        // Legacy unprefixed IPC is only for the bundled AQW plugin. Third-party
-        // plugins always use plugin:<id>:<channel> (preload and Host must agree).
-        const useLegacyIpc = plugin.manifest.id === 'adventure-quest-worlds' &&
+        // Unprefixed (legacy) IPC channel names are a bundled-only privilege that the plugin
+        // asks for in its manifest. Everything else uses plugin:<id>:<channel> (preload and
+        // Host must agree).
+        const useLegacyIpc = plugin.source === 'bundled' &&
+            plugin.manifest.unprefixedIpc === true &&
             (options.legacyIpc === true || options.legacyIpc == null);
 
         const host = createPluginHost({
@@ -286,13 +288,63 @@ function activatePlugin(plugin, options) {
     return runActivate();
 }
 
+/** The bundled plugin that declares bundledDefault in its manifest, or null. */
+function pickBundledDefault(plugins) {
+    for (let i = 0; i < (plugins || []).length; i++) {
+        if (plugins[i].source === 'bundled' && plugins[i].manifest.bundledDefault === true) return plugins[i];
+    }
+    return null;
+}
+
 /**
- * Pick active plugin id and activate it.
+ * Decide which discovered plugin runs. Pure: no activation, no Electron.
+ * The platform names no plugin: the default is whichever bundled plugin declares
+ * "bundledDefault" in its manifest. safeMode narrows the choice to that plugin (or, if none
+ * declares it, to the bundled ones) whatever settings.activePluginId says.
+ * @returns {{ selected: object|null, bundledDefault: object|null, plugins: object[], notes: string[] }}
+ */
+function selectPlugin(discoveredPlugins, settings, options) {
+    options = options || {};
+    settings = settings || {};
+    const notes = [];
+    let plugins = (discoveredPlugins || []).slice();
+
+    const bundledDefault = pickBundledDefault(plugins);
+    if (options.safeMode) {
+        plugins = bundledDefault
+            ? [bundledDefault]
+            : plugins.filter(function (p) { return p.source === 'bundled'; });
+    }
+    if (!plugins.length) return { selected: null, bundledDefault: bundledDefault, plugins: plugins, notes: notes };
+
+    const wantedId = (options.safeMode ? '' : settings.activePluginId) ||
+        (bundledDefault && bundledDefault.manifest.id) || '';
+    let selected = null;
+    for (let i = 0; i < plugins.length; i++) {
+        if (plugins[i].manifest.id === wantedId) { selected = plugins[i]; break; }
+    }
+    if (!selected) {
+        // Prefer the bundled default, else the first bundled plugin, else the first plugin.
+        selected = bundledDefault && plugins.indexOf(bundledDefault) !== -1 ? bundledDefault : null;
+        if (!selected) {
+            for (let k = 0; k < plugins.length; k++) {
+                if (plugins[k].source === 'bundled') { selected = plugins[k]; break; }
+            }
+        }
+        if (!selected) selected = plugins[0];
+        notes.push('Requested plugin "' + wantedId + '" missing; falling back to "' +
+            selected.manifest.id + '"');
+    }
+    return { selected: selected, bundledDefault: bundledDefault, plugins: plugins, notes: notes };
+}
+
+/**
+ * Pick the active plugin (see selectPlugin) and activate it; if that fails, fall back to the
+ * bundled default.
  * @returns {Promise<{ plugin, host, module }|null>}
  */
 function activateSelected(options) {
     options = options || {};
-    const settings = options.platformSettings || {};
     const discovered = discoverPlugins(options);
     const log = options.log || defaultLog;
 
@@ -300,52 +352,20 @@ function activateSelected(options) {
         log('Discovery: ' + err);
     });
 
-    if (!discovered.plugins.length) {
+    const choice = selectPlugin(discovered.plugins, options.platformSettings, options);
+    if (!choice.selected) {
         log('No plugins discovered');
         return Promise.resolve(null);
     }
+    choice.notes.forEach(function (note) { log(note); });
 
-    const wantedId = settings.activePluginId || options.defaultPluginId ||
-        'adventure-quest-worlds';
-    let selected = null;
-    for (let i = 0; i < discovered.plugins.length; i++) {
-        if (discovered.plugins[i].manifest.id === wantedId) {
-            selected = discovered.plugins[i];
-            break;
-        }
-    }
-    if (!selected) {
-        // Prefer bundled AQW fallback, else first bundled, else first plugin.
-        for (let j = 0; j < discovered.plugins.length; j++) {
-            const p = discovered.plugins[j];
-            if (p.manifest.id === 'adventure-quest-worlds' && p.source === 'bundled') {
-                selected = p;
-                break;
-            }
-        }
-        if (!selected) {
-            for (let k = 0; k < discovered.plugins.length; k++) {
-                if (discovered.plugins[k].source === 'bundled') {
-                    selected = discovered.plugins[k];
-                    break;
-                }
-            }
-        }
-        if (!selected) selected = discovered.plugins[0];
-        log('Requested plugin "' + wantedId + '" missing; falling back to "' +
-            selected.manifest.id + '"');
-    }
-
+    const selected = choice.selected;
+    const bundledDefault = choice.bundledDefault;
     return activatePlugin(selected, options).catch(function (err) {
         log('Activation failed for "' + selected.manifest.id + '": ' + err.message);
-        if (selected.manifest.id !== 'adventure-quest-worlds') {
-            const aqw = discovered.plugins.filter(function (p) {
-                return p.manifest.id === 'adventure-quest-worlds' && p.source === 'bundled';
-            })[0];
-            if (aqw) {
-                log('Falling back to bundled adventure-quest-worlds');
-                return activatePlugin(aqw, options);
-            }
+        if (bundledDefault && selected !== bundledDefault) {
+            log('Falling back to bundled default "' + bundledDefault.manifest.id + '"');
+            return activatePlugin(bundledDefault, options);
         }
         throw err;
     });
@@ -364,7 +384,8 @@ function resolvePluginFlags(settings, env) {
         pluginSystem: pluginSystem,
         enableLocalPlugins: settings.enableLocalPlugins === true,
         allowLocalPluginOverride: settings.allowLocalPluginOverride === true,
-        activePluginId: settings.activePluginId || 'adventure-quest-worlds'
+        // Empty = the bundled default (see pickBundledDefault); the platform names no plugin.
+        activePluginId: settings.activePluginId || ''
     };
 }
 
@@ -372,6 +393,8 @@ module.exports = {
     discoverPlugins: discoverPlugins,
     activatePlugin: activatePlugin,
     activateSelected: activateSelected,
+    pickBundledDefault: pickBundledDefault,
+    selectPlugin: selectPlugin,
     resolvePluginFlags: resolvePluginFlags,
     isLocalTrusted: isLocalTrusted,
     listPluginDirs: listPluginDirs,

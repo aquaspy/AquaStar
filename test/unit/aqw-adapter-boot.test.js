@@ -54,7 +54,10 @@ test('main.js carries no AQW/Artix URLs or User-Agent policy', () => {
 });
 
 test('legacy channel inventory covers expected AQW and platform channels', () => {
-  const channels = platform.legacyChannels.ALL_MAIN_PROCESS_CHANNELS;
+  // Each side lists only what it owns: the platform its channels, the plugin its own.
+  const channels = platform.legacyChannels.ALL_MAIN_PROCESS_CHANNELS
+    .concat(require('../../plugins/adventure-quest-worlds/channels.js').AQW_FEATURE_CHANNELS);
+  assert.strictEqual(platform.legacyChannels.AQW_FEATURE_CHANNELS, undefined, 'platform must not list plugin channels');
   assert.ok(channels.indexOf('getReminders') !== -1);
   assert.ok(channels.indexOf('fetchWikiPage') !== -1);
   assert.ok(channels.indexOf('getKeybindings') !== -1);
@@ -85,12 +88,18 @@ test('discoverPlugins finds bundled adventure-quest-worlds', () => {
 
 test('AQW activate registers feature windows for reminders/todo/inventory/strategy', () => {
   const src = fs.readFileSync(aqwMainPath, 'utf8');
+  const windowsSrc = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/windows.js'), 'utf8');
   assert.ok(src.indexOf('registerFeatureWindows') !== -1);
-  assert.ok(src.indexOf("id: 'reminders'") !== -1);
-  assert.ok(src.indexOf("id: 'todo'") !== -1);
-  assert.ok(src.indexOf("id: 'inventory'") !== -1);
-  assert.ok(src.indexOf("id: 'strategy'") !== -1);
+  assert.ok(windowsSrc.indexOf("id: 'reminders'") !== -1);
+  assert.ok(windowsSrc.indexOf("id: 'todo'") !== -1);
+  assert.ok(windowsSrc.indexOf("id: 'inventory'") !== -1);
+  assert.ok(windowsSrc.indexOf("id: 'strategy'") !== -1);
   // Settings remains platform-owned; studio stays a helper process.
-  assert.ok(src.indexOf("id: 'settings'") === -1);
-  assert.ok(src.indexOf("id: 'charPageStudio'") === -1);
+  assert.ok(windowsSrc.indexOf("id: 'settings'") === -1);
+  assert.ok(windowsSrc.indexOf("id: 'charPageStudio'") === -1);
+  // And none of these windows are defined in the platform any more.
+  const platformConfig = fs.readFileSync(path.join(__dirname, '../../res/windows/config.js'), 'utf8');
+  ['reminders', 'todo', 'inventory', 'strategy'].forEach(function (id) {
+    assert.strictEqual(platformConfig.indexOf("'" + id + "'"), -1, id + ' must not be in platform config');
+  });
 });

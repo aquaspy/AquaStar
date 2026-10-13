@@ -183,7 +183,6 @@
   };
 
   const MAC_ONLY_KEYS = new Set(['forward', 'backward']);
-  const CHARPAGE_ONLY_KEYS = new Set(['cpSshot']);
 
   // Platform-owned options on the General tab (plugin fields come from registerSettingsSection).
   const PLATFORM_OPTION_TYPES = {
@@ -198,7 +197,7 @@
   };
 
   // Plugin field keys that need alphanumeric sanitization (filled from layout).
-  const SANITIZE_ALPHANUMERIC_KEYS = new Set(['playerCharacter']);
+  const SANITIZE_ALPHANUMERIC_KEYS = new Set();
 
   // Rendered inside the primary-game override section instead of the generic options loop.
   const CUSTOM_SWF_SECTION_KEYS = new Set(['customUrl']);
@@ -362,8 +361,7 @@
     labelEl.className = 'label';
     labelEl.textContent = label;
     const restrictionText =
-      (MAC_ONLY_KEYS.has(key) ? messages.macOnlyLabel : '') +
-      (CHARPAGE_ONLY_KEYS.has(key) ? messages.charpageOnly : '');
+      (MAC_ONLY_KEYS.has(key) ? messages.macOnlyLabel : '');
     if (restrictionText) {
       const mac = document.createElement('span');
       mac.className = 'mac';

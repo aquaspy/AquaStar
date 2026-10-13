@@ -8,7 +8,7 @@
 // user logs into account.aq.com once through the existing Alt+A window (res/instances.js's
 // newBrowserWindow uses windowConfig.winConfig, which implicitly uses session.defaultSession).
 // net.request() below shares that same default session automatically - same mechanism
-// res/ipc/wikiFetch.js already relies on for wiki pages, just against an authenticated
+// features/wikiview/wikiFetch.js already relies on for wiki pages, just against an authenticated
 // endpoint here instead of a public one.
 const fs       = require('fs');
 const path     = require('path');
@@ -174,7 +174,7 @@ function _saveInventory(state) {
 }
 
 // --- account.aq.com fetch helpers ---
-// Plain net.request(), promise-resolve-never-reject, mirroring res/ipc/wikiFetch.js's
+// Plain net.request(), promise-resolve-never-reject, mirroring features/wikiview/wikiFetch.js's
 // established pattern in this codebase. Requests share Electron's default persistent
 // session automatically, which is what carries the login cookie from the Alt+A window.
 

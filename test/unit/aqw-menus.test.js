@@ -238,7 +238,7 @@ test('AQW activate source registers menus and keybinds', () => {
   assert.ok(src.indexOf("require('./menus.js')") !== -1);
   assert.ok(src.indexOf("require('./keybinds.js')") !== -1);
   assert.ok(src.indexOf('menus.register(host)') !== -1);
-  assert.ok(src.indexOf('keybinds.register(host)') !== -1);
+  assert.ok(src.indexOf('keybinds.register(host, {') !== -1);
 
   const menusSrc = fs.readFileSync(
     path.join(__dirname, '../../plugins/adventure-quest-worlds/menus.js'),

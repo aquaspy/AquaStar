@@ -1,21 +1,25 @@
 // Node-only web build contribution for the AQW plugin (no Electron).
-// Consumed by scripts/build-web.js via contributeWebBuild().
+// Consumed by scripts/build-web.js via contributeWebBuild(); all paths are relative to the
+// repository root. The build script names no plugin: it finds this file through the
+// manifest's "web.contribute".
 
-const FEATURES = 'plugins/adventure-quest-worlds/features';
+const PLUGIN = 'plugins/adventure-quest-worlds';
+const FEATURES = PLUGIN + '/features';
+const WEB = PLUGIN + '/web';
 
 function contributeWebBuild() {
   return {
     landing: {
-      landingHtml: 'web/landing.html',
-      landingJs: 'web/assets/landing.js',
-      landingCss: 'web/assets/landing.css',
+      landingHtml: WEB + '/landing.html',
+      landingJs: WEB + '/assets/landing.js',
+      landingCss: WEB + '/assets/landing.css',
       iconFrom: 'Icon/Icon.png'
     },
     tools: [
       {
         id: 'reminders',
         sourceHtml: FEATURES + '/reminders/reminders.html',
-        bridge: 'web/bridges/reminders.js',
+        bridge: WEB + '/bridges/reminders.js',
         outToolsPath: 'tools/reminders/index.html',
         defaultsJson: FEATURES + '/reminders/reminders_default.json',
         localeKeys: ['remindersMessages']
@@ -23,32 +27,41 @@ function contributeWebBuild() {
       {
         id: 'todo',
         sourceHtml: FEATURES + '/todo/todo.html',
-        bridge: 'web/bridges/todo.js',
+        bridge: WEB + '/bridges/todo.js',
         outToolsPath: 'tools/todo/index.html',
         localeKeys: ['todoMessages']
       },
       {
         id: 'strategy',
         sourceHtml: FEATURES + '/strategy/strategy.html',
-        bridge: 'web/bridges/strategy.js',
+        bridge: WEB + '/bridges/strategy.js',
         outToolsPath: 'tools/strategy/index.html',
         defaultsJson: FEATURES + '/strategy/strategy_default.json',
         localeKeys: ['strategyMessages']
       }
     ],
+    // Kits the web pages share with the desktop pages: copied to web-dist at `to`. The pages
+    // reference them with the same relative paths on desktop and on the web, except the
+    // platform's focus.css (see pathRewrites).
     sharedKits: [
-      'res/core/list-state.js',
-      'res/core/reset-time.js',
-      'res/ui/workspace/modals.js',
-      'res/ui/workspace/character-tabs.js',
-      'res/features/common/list_window_common.js'
+      { from: PLUGIN + '/core/list-state.js', to: 'core/list-state.js' },
+      { from: PLUGIN + '/core/reset-time.js', to: 'core/reset-time.js' },
+      { from: PLUGIN + '/ui/workspace/modals.js', to: 'ui/workspace/modals.js' },
+      { from: PLUGIN + '/ui/workspace/character-tabs.js', to: 'ui/workspace/character-tabs.js' },
+      { from: FEATURES + '/common/list_window_common.js', to: 'tools/common/list_window_common.js' },
+      { from: 'res/features/common/focus.css', to: 'tools/common/focus.css' }
+    ],
+    // The platform stylesheet lives outside the plugin on desktop; on the web it sits next to
+    // the other shared tool files (regex source -> replacement).
+    pathRewrites: [
+      { match: '(?:\\.\\./)+res/features/common/focus\\.css', replace: '../common/focus.css' }
     ],
     bridges: {
-      commonBridge: 'web/bridges/common.js'
+      commonBridge: WEB + '/bridges/common.js'
     },
     localeModules: {
-      'en-US': 'plugins/adventure-quest-worlds/locales/en-US.js',
-      'pt-BR': 'plugins/adventure-quest-worlds/locales/pt-BR.js'
+      'en-US': PLUGIN + '/locales/en-US.js',
+      'pt-BR': PLUGIN + '/locales/pt-BR.js'
     }
   };
 }

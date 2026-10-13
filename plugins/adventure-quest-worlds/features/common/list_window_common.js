@@ -1,5 +1,5 @@
 // Compatibility facade for existing list-window renderers. Domain rules now
-// live in res/core and DOM components in res/ui/workspace.
+// live in ../../core and DOM components in ../../ui/workspace.
 (function (root) {
   const state = root.AquaStarListState;
   const time = root.AquaStarResetTime;

@@ -1,13 +1,15 @@
 const {app, session, Menu, BrowserWindow, dialog}  = require('electron')
 
-// PPAPI Flash only preserves LoaderInfo.parameters when the Studio owns the
-// default session. Keep that session in a dedicated AquaStar process.
-if (process.argv.indexOf('--charpage-studio-capture') !== -1) {
-    require('./plugins/adventure-quest-worlds/processes/charpage-studio-capture-process.js');
-    return;
-}
-if (process.argv.indexOf('--charpage-studio') !== -1) {
-    require('./plugins/adventure-quest-worlds/processes/charpage-studio-process.js');
+// Helper processes (host.windows.spawnHelperProcess): a plugin script that needs its own
+// Electron process. The platform runs it instead of the normal app and knows nothing else.
+const helper = require('./res/platform/helper-process.js').resolveHelperScript(process.argv, __dirname);
+if (helper.requested) {
+    if (!helper.script) {
+        console.error('[AquaStar] ' + helper.error);
+        app.exit(1);
+        return;
+    }
+    require(helper.script);
     return;
 }
 
@@ -43,9 +45,9 @@ const bootFlags = bootPluginDisk.flags;
 let activePluginRuntime = null;
 
 // pluginSystem:false / AQUASTAR_DISABLE_PLUGINS=1 is the emergency "safe mode": only the
-// bundled default plugin is activated (no local plugins, no plugin selector), so a broken
-// local plugin or a bad activePluginId can never keep the app from starting.
-const SAFE_MODE_PLUGIN_ID = 'adventure-quest-worlds';
+// bundled default plugin (the one whose manifest says bundledDefault) is activated, with no
+// local plugins and no plugin selector, so a broken local plugin or a bad activePluginId can
+// never keep the app from starting.
 
 function activatePlugins() {
     platform.pluginRuntime.setDependencies({
@@ -56,8 +58,7 @@ function activatePlugins() {
 
     const safeMode = !bootFlags.pluginSystem;
     if (safeMode) {
-        console.log('[AquaStar:plugins] pluginSystem disabled — safe mode: bundled "' +
-            SAFE_MODE_PLUGIN_ID + '" only');
+        console.log('[AquaStar:plugins] pluginSystem disabled — safe mode: bundled default plugin only');
     }
 
     return platform.activateSelected({
@@ -70,12 +71,12 @@ function activatePlugins() {
         appDataDirectory: constant.appDataDirectory,
         // Saved settings first so plugins can read their own options at activate();
         // boot flags then win for the platform keys.
+        safeMode: safeMode,
         platformSettings: Object.assign({}, bootPluginDisk.settings, bootFlags, {
-            activePluginId: safeMode ? SAFE_MODE_PLUGIN_ID : bootFlags.activePluginId,
+            activePluginId: safeMode ? '' : bootFlags.activePluginId,
             trustedLocalPlugins: (bootPluginDisk.settings &&
                 bootPluginDisk.settings.trustedLocalPlugins) || {}
         }),
-        defaultPluginId: SAFE_MODE_PLUGIN_ID,
         legacyIpc: true,
         deps: platform.pluginRuntime.createHostWindowDeps()
     }).then(function (runtime) {
@@ -92,6 +93,8 @@ function activatePlugins() {
                 }
                 : null;
             platform.pluginRuntime.adopt(runtime.host, pluginInfo);
+            // Older local SWF file names this plugin used to read (manifest customSwfAliases).
+            constant.setCustomSwfAliases(runtime.plugin.manifest.customSwfAliases);
             platform.pluginRuntime.applyFlashTrust(flash);
 
             platform.menuRegistry.adoptHostState(state, state.menuProviders || null);

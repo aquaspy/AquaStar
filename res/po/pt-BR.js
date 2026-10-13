@@ -1,10 +1,6 @@
 function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else return keyb;};
 
 exports.titleMessages = {
-    invalidCharpage: "Janela de Char Page inválida",
-    loadingCharpage: "Carregando Char Page...",
-    buildingCharpage: "Construindo cenário. Por favor aguarde uns segundos...",
-    cpDone: "PRONTO! Salvo a CP na pasta de Screenshots",
     doneSavedAs: "Pronto! Salvo como ",
     recording: "GRAVANDO",
     alreadyRecording: "Você já está gravando em alguma outra janela!"
@@ -26,13 +22,13 @@ exports.dialogMessages = {
         'Atalhos do plugin ativo (se houver) aparecem abaixo.';
     },
     helpScreenshot     : "Pasta dos prints: ",
-    helpAqliteOld      : "Pasta AppData para aquastar.json e SWF local opcional (pode mudar se o usuário mover o app): ",
+    helpAppDataPath     : "Pasta AppData para aquastar.json e SWF local opcional (pode mudar se o usuário mover o app): ",
     helpCustomKeyPath  : "",
 
     aboutTitle     : "Sobre o AquaStar, versão: ",
     aboutMessage   : "AquaStar é um shell Flash com plugins por jogo.",
     aboutDetail    :
-        "Agradecimentos:\n133spider (AQLite)\naquaspy\nbiglavis (WikiView)\nArtix Entertainment\nElectron\nAdobe Flash Player\ne você pelo apoio.\n\nO AquaStar não é um produto oficial da Artix; use por sua conta e risco.\n\nProjeto / releases: ",
+        "Agradecimentos:\naquaspy{pluginCredits}\nElectron\nAdobe Flash Player\ne você pelo apoio.\n\nOs plugins de jogos não são produtos oficiais de suas publicadoras; use por sua conta e risco.\n\nProjeto / releases: ",
     aboutDebug     : "Informações para Debug",
 
     aboutGithubPrompt : "Releases do AquaStar",
@@ -70,7 +66,6 @@ exports.settingsMessages = {
     resetButton: "Restaurar",
     savedMessage: "Salvo! Reinicie o AquaStar se alguma mudança exigir.",
     macOnlyLabel: " (somente macOS)",
-    charpageOnly: " (somente char pages)",
     labels: {
         about: "Sobre o AquaStar",
         fullscreen: "Ativar/Desativar Fullscreen",

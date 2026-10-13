@@ -15,7 +15,7 @@ const LEGACY_FEATURE_MODULES = [
     path.join(pluginFeaturesRoot, 'inventory', 'inventory.js'),
     path.join(pluginFeaturesRoot, 'strategy', 'strategy.js'),
     path.join(pluginFeaturesRoot, 'charpage', 'studio.js'),
-    path.join(resRoot, 'ipc', 'wikiFetch.js')
+    path.join(pluginFeaturesRoot, 'wikiview', 'wikiFetch.js')
 ];
 
 function requireLegacyFeatures() {
@@ -63,6 +63,8 @@ async function activate(host) {
 
     const urls = require('./urls.js');
     const session = require('./session.js');
+    const windowTitle = require('./window-title.js');
+    const ruffle = require('./ruffle.js');
 
     await followLauncherLoader(host, urls);
 
@@ -71,14 +73,12 @@ async function activate(host) {
         // Platform overrides (customUrl / local SWF) are applied by the runtime on top of this.
         getUrl: function () { return urls.loaderUrl(); },
         title: function (ctx) {
-            const displayName = (ctx && ctx.displayName) || 'AquaStar';
-            return displayName + ' - ' +
-                (ctx && ctx.usingCustomSwf ? 'Older/Custom AQLite' : ' Adventure Quest Worlds');
+            return windowTitle.primaryTitle(ctx);
         },
         isGameUrl: function (url) {
             return urls.isLoaderUrl(url) || urls.isTestingAqwUrl(url);
         },
-        wrap: { preferDirectWmode: true, ruffleEligible: true },
+        wrap: { preferDirectWmode: true, ruffleEligible: true, ruffle: ruffle },
         flashTrust: true
     });
 
@@ -88,7 +88,7 @@ async function activate(host) {
             keybindId: 'newTest',
             getUrl: function () { return urls.testingAQW(); },
             title: function () { return 'AquaStar - AQW Testing Version!'; },
-            wrap: { preferDirectWmode: true, ruffleEligible: true },
+            wrap: { preferDirectWmode: true, ruffleEligible: true, ruffle: ruffle },
             flashTrust: true
         },
         {
@@ -108,12 +108,36 @@ async function activate(host) {
     host.trustFlashUrls(session.flashTrustUrlList(urls.loaderUrl()));
 
     const navigation = require('./injections/navigation.js');
-    host.registerNavigationHooks(navigation.createNavigationHooks());
+    const navigationHooks = navigation.createNavigationHooks();
+    host.registerNavigationHooks(navigationHooks);
+    // WikiView enhancements live in the pages this plugin links to (wiki, char page, account).
+    host.registerBrowserPreload('features/wikiview/preload_wikiview.js');
+
+    // Windows owned by this plugin: feature windows + the hidden Char Page print window.
+    const aqwWindows = require('./windows.js').createWindows({ iconPath: host.getAppIconPath() });
+    host.registerFeatureWindows(aqwWindows.featureWindows);
+
+    // Char Page screenshot (Alt+K) and Char Page Studio (its own Electron process).
+    const instances = require(path.join(resRoot, 'instances.js'));
+    const charPagePrint = require('./features/charpage/print.js').createCharPagePrint({
+        BrowserWindow: require('electron').BrowserWindow,
+        windowConfig: aqwWindows.charPrintConfig,
+        classify: navigationHooks.classify,
+        executeJavaScript: instances.executeJavaScriptSafely,
+        notify: instances.notifyWin,
+        takeScreenshot: instances.takeSS,
+        getMessages: function () { return host.getLocaleStrings('charpageMessages'); }
+    });
 
     const menus = require('./menus.js');
     const keybinds = require('./keybinds.js');
     menus.register(host);
-    keybinds.register(host);
+    keybinds.register(host, {
+        charPagePrint: charPagePrint,
+        openStudio: function () {
+            host.windows.spawnHelperProcess({ scriptRelativePath: 'processes/charpage-studio-process.js' });
+        }
+    });
 
     host.registerLocales({
         'en-US': require('./locales/en-US.js'),
@@ -148,36 +172,6 @@ async function activate(host) {
             { key: 'liveLoaderUrl', type: 'boolean' }
         ]
     });
-
-    // Settings stays platform-owned in res/windows/config.js. Studio is a
-    // detached helper process (openCharPageStudioWindow), not a feature window.
-    const windowConfig = require(path.join(resRoot, 'windows', 'config.js'));
-    host.registerFeatureWindows([
-        {
-            id: 'reminders',
-            title: windowConfig.featureWindows.reminders.title,
-            url: windowConfig.remindersUrl,
-            config: windowConfig.remindersConfig
-        },
-        {
-            id: 'todo',
-            title: windowConfig.featureWindows.todo.title,
-            url: windowConfig.todoUrl,
-            config: windowConfig.todoConfig
-        },
-        {
-            id: 'inventory',
-            title: windowConfig.featureWindows.inventory.title,
-            url: windowConfig.inventoryUrl,
-            config: windowConfig.inventoryConfig
-        },
-        {
-            id: 'strategy',
-            title: windowConfig.featureWindows.strategy.title,
-            url: windowConfig.strategyUrl,
-            config: windowConfig.strategyConfig
-        }
-    ]);
 
     host.log('Adventure Quest Worlds plugin activated (adapter mode)');
 }

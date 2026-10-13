@@ -7,6 +7,8 @@ module.exports = {
     discoverPlugins: require('./plugin-loader.js').discoverPlugins,
     activatePlugin: require('./plugin-loader.js').activatePlugin,
     activateSelected: require('./plugin-loader.js').activateSelected,
+    selectPlugin: require('./plugin-loader.js').selectPlugin,
+    pickBundledDefault: require('./plugin-loader.js').pickBundledDefault,
     resolvePluginFlags: require('./plugin-loader.js').resolvePluginFlags,
     isLocalTrusted: require('./plugin-loader.js').isLocalTrusted,
     legacyChannels: require('./legacy-channels.js'),

@@ -7,7 +7,7 @@ test('WikiView injection is retryable and supports hydrated Wiki content', () =>
   const instances = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/injections/navigation.js'), 'utf8');
   const source = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/wikiview/wikiviewsource.js'), 'utf8');
   const hover = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/wikiview/hoverPreview.js'), 'utf8');
-  const wikiFetch = fs.readFileSync(path.join(__dirname, '../../res/ipc/wikiFetch.js'), 'utf8');
+  const wikiFetch = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/wikiview/wikiFetch.js'), 'utf8');
 
   assert.ok(instances.indexOf("if (kind === 'wiki') {") !== -1, 'Wiki pages load AquaStar jQuery');
   assert.ok(instances.indexOf('try {\\n') !== -1, 'injection is guarded transactionally');

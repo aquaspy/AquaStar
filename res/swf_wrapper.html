@@ -15,7 +15,7 @@
     var swfUrl = params.get('swf');
     if (!swfUrl) return;
 
-    // Optional overrides (DragonFable passes wmode=opaque&scale=showall).
+    // Optional overrides, set from a plugin's wrap config (e.g. wmode=opaque&scale=showall).
     var wmode = params.get('wmode') || 'direct';
     var scale = params.get('scale') || 'showall';
 

@@ -21,6 +21,7 @@ const AQW_KEYBIND_DEFAULTS = {
     inventory: 'Alt+I',
     strategy: 'Alt+U',
     cpSshot: 'Alt+K'
+    // 'studio' has no default accelerator: it is menu-only.
 };
 
 /**
@@ -40,7 +41,8 @@ function describeKeybindActions() {
         { id: 'todo', surface: 'keybind' },
         { id: 'inventory', surface: 'keybind' },
         { id: 'strategy', surface: 'keybind' },
-        { id: 'cpSshot', surface: 'keybind' }
+        { id: 'cpSshot', surface: 'keybind' },
+        { id: 'studio', surface: 'menu' }
     ];
 }
 
@@ -63,7 +65,11 @@ function resolveDeps(deps) {
                 }
             } catch (e) { /* settings may not be loaded yet */ }
             return '';
-        }
+        },
+        // Services the plugin wires from its host (see main.js).
+        openFeatureWindow: deps.openFeatureWindow,
+        openStudio: deps.openStudio,
+        charPagePrint: deps.charPagePrint
     };
 }
 
@@ -111,25 +117,29 @@ function createKeybindRegistrations(deps) {
         },
         {
             id: 'reminders',
-            action: function () { inst.openRemindersWindow(); }
+            action: function () { d.openFeatureWindow('reminders'); }
         },
         {
             id: 'todo',
-            action: function () { inst.openTodoWindow(); }
+            action: function () { d.openFeatureWindow('todo'); }
         },
         {
             id: 'inventory',
-            action: function () { inst.openInventoryWindow(); }
+            action: function () { d.openFeatureWindow('inventory'); }
         },
         {
             id: 'strategy',
-            action: function () { inst.openStrategyWindow(); }
+            action: function () { d.openFeatureWindow('strategy'); }
         },
         {
             id: 'cpSshot',
             // macOS has no per-window menu entry for it: HTML (char page) windows only.
             onlyHtml: process.platform === 'darwin',
-            action: function () { inst.charPagePrint(); }
+            action: function () { d.charPagePrint(); }
+        },
+        {
+            id: 'studio',
+            action: function () { d.openStudio(); }
         }
     ];
 }
@@ -156,7 +166,9 @@ function register(host, deps) {
         return;
     }
 
-    host.registerKeybinds(createKeybindRegistrations(deps));
+    host.registerKeybinds(createKeybindRegistrations(Object.assign({
+        openFeatureWindow: host.windows.openFeatureWindow
+    }, deps)));
 }
 
 module.exports = {

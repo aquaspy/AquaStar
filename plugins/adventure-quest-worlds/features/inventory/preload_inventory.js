@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld("aquastarInventory", {
 
 // Re-exposed so hoverPreview.js (res/features/wikiview/hoverPreview.js, loaded directly by
 // inventory.html) can fetch wiki pages the same way it does when injected into wiki/account
-// windows - the 'fetchWikiPage' IPC handler (res/ipc/wikiFetch.js) is already registered
+// windows - the 'fetchWikiPage' IPC handler (features/wikiview/wikiFetch.js) is already registered
 // globally, this just gives this window's renderer a bridge to reach it too.
 contextBridge.exposeInMainWorld("aquastarWiki", {
   fetchWikiPage: (url) => ipcRenderer.invoke("fetchWikiPage", url),

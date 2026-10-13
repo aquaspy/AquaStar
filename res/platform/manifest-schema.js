@@ -166,6 +166,28 @@ function validateManifest(manifest, opts) {
         }
     }
 
+    // Optional declarative fields the platform reads instead of knowing any plugin by id.
+    if (manifest.bundledDefault != null && typeof manifest.bundledDefault !== 'boolean') {
+        errors.push('bundledDefault must be a boolean');
+    }
+    if (manifest.unprefixedIpc != null && typeof manifest.unprefixedIpc !== 'boolean') {
+        errors.push('unprefixedIpc must be a boolean');
+    }
+    if (manifest.customSwfAliases != null) {
+        if (!isStringArray(manifest.customSwfAliases) ||
+            !manifest.customSwfAliases.every(function (n) { return /^[A-Za-z0-9._-]+\.swf$/.test(n); })) {
+            errors.push('customSwfAliases must be an array of plain .swf file names');
+        }
+    }
+    if (manifest.storeAliases != null) {
+        const aliases = manifest.storeAliases;
+        if (typeof aliases !== 'object' || Array.isArray(aliases) || !Object.keys(aliases).every(function (ns) {
+            return typeof aliases[ns] === 'string' && /^[A-Za-z0-9._-]+\.json$/.test(aliases[ns]);
+        })) {
+            errors.push('storeAliases must map store names to plain .json file names');
+        }
+    }
+
     if (errors.length) return { ok: false, errors: errors };
     return { ok: true, manifest: manifest };
 }

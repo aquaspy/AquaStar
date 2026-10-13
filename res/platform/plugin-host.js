@@ -43,6 +43,7 @@ function createPluginHost(options) {
         sessionRules: [],
         navigationHooks: null,
         featureWindows: [],
+        browserPreload: null,
         keybindDefaults: {},
         keybinds: [],
         menus: [],
@@ -89,7 +90,8 @@ function createPluginHost(options) {
         try {
             const nsFactory = require('./storage/namespaced-store.js').createNamespacedStore({
                 appDataDirectory: options.appDataDirectory,
-                pluginId: pluginId
+                pluginId: pluginId,
+                aliases: manifest.storeAliases || null
             });
             deps.createStore = function (ns) {
                 return nsFactory.getStore(ns);
@@ -118,9 +120,10 @@ function createPluginHost(options) {
 
     function resolveChannel(channel, opts) {
         opts = opts || {};
-        // Only the official AQW plugin may use unprefixed legacy channel names.
-        const legacyBundled = pluginId === 'adventure-quest-worlds' &&
-            options.legacyIpc !== false &&
+        // Unprefixed channel names need BOTH the loader's grant (bundled plugins only) and the
+        // plugin's own request in its manifest. The host never decides from a plugin id.
+        const legacyBundled = options.legacyIpc === true &&
+            manifest.unprefixedIpc === true &&
             manifest.apiVersion === 1;
         if (opts.raw === true) return channel;
         if (legacyBundled) return channel;
@@ -278,6 +281,19 @@ function createPluginHost(options) {
                 assertUniqueIds(state.featureWindows, winDef, 'feature window');
                 state.featureWindows.push(winDef);
             });
+        },
+
+        /**
+         * Preload script for the platform's browser windows (the pages a plugin links to, such
+         * as a wiki). Path is relative to the plugin root. Runs in sandboxed renderers, so it
+         * may only require('electron'). Requires permission inject-scripts.
+         */
+        registerBrowserPreload: function (relativePath) {
+            requirePermission('registerBrowserPreload', 'inject-scripts');
+            if (typeof relativePath !== 'string' || !relativePath) {
+                throw new Error('[AquaStar:plugins] registerBrowserPreload expects a relative path');
+            }
+            state.browserPreload = hostPathInsidePlugin(relativePath);
         },
 
         registerSessionRules: function (rules) {
@@ -497,19 +513,19 @@ function createPluginHost(options) {
             },
             spawnHelperProcess: function (spawnOpts) {
                 requirePermission('windows.spawnHelperProcess', 'spawn-helper-process');
-                if (!spawnOpts || !spawnOpts.argvFlag || !spawnOpts.scriptRelativePath) {
+                if (!spawnOpts || !spawnOpts.scriptRelativePath) {
                     throw new Error(
-                        '[AquaStar:plugins] spawnHelperProcess requires argvFlag and scriptRelativePath'
+                        '[AquaStar:plugins] spawnHelperProcess requires scriptRelativePath'
                     );
                 }
                 const scriptPath = hostPathInsidePlugin(spawnOpts.scriptRelativePath);
                 if (typeof deps.spawnHelperProcess === 'function') {
                     return deps.spawnHelperProcess({
-                        argvFlag: spawnOpts.argvFlag,
-                        scriptPath: scriptPath
+                        scriptPath: scriptPath,
+                        args: spawnOpts.args
                     });
                 }
-                return { scriptPath: scriptPath, argvFlag: spawnOpts.argvFlag, stub: true };
+                return { scriptPath: scriptPath, stub: true };
             }
         },
 

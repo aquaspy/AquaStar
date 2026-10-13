@@ -27,6 +27,19 @@ exports.charPageStudioMessages = {
     gifColorsLabel: "GIF colors"
 };
 
+// Char Page screenshot progress, flashed in the focused window's title.
+exports.charpageMessages = {
+    invalid: "Not valid Char Page window!",
+    loading: "Loading Char Page...",
+    building: "Building scenario. Please wait some seconds...",
+    done: "DONE! Saved CP in Screenshot folder"
+};
+
+// Projects AQW features build on, shown in the About dialog.
+exports.aboutMessages = {
+    credits: "133spider (AQLite)\nbiglavis (WikiView)\nArtix Entertainment"
+};
+
 exports.dialogMessages = {
     // Appended under platform helpDetail (see res/locale.js).
     helpDetailExtra: function (k) {return 'Adventure Quest Worlds\n' +
@@ -89,7 +102,7 @@ exports.settingsMessages = {
         todo: "Open To-Do List",
         inventory: "Open Inventory",
         strategy: "Open Strategy",
-        cpSshot: "Screenshot Char Page",
+        cpSshot: "Screenshot Char Page (char page only)",
     },
     optionLabels: {
         playerCharacter: "Player Character",

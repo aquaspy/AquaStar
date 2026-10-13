@@ -30,11 +30,11 @@ function isPlatformKey(key) {
  * Merge settings for the active plugin.
  * Order: platformDefaults → pluginDefaults → top-level file → plugins[id] overlay.
  * Platform keys in top-level always win over plugins[id] for those keys.
- * Plugin keys: plugins[id] wins; fall back to top-level (legacy AQW).
+ * Plugin keys: plugins[id] wins; fall back to the top-level value.
  */
 function mergeLoadedSettings(opts) {
     opts = opts || {};
-    const activeId = opts.activePluginId || 'adventure-quest-worlds';
+    const activeId = opts.activePluginId || '';
     const platformDefaults = opts.platformDefaults || {};
     const pluginDefaults = opts.pluginDefaults || {};
     const topLevel = opts.topLevel || {};
@@ -70,7 +70,7 @@ function splitSavePatch(changed, activePluginId, existingFile) {
     existingFile = existingFile && typeof existingFile === 'object' ? existingFile : {};
     const topLevel = Object.assign({}, existingFile);
     if (!topLevel.plugins || typeof topLevel.plugins !== 'object') topLevel.plugins = {};
-    const id = activePluginId || 'adventure-quest-worlds';
+    const id = activePluginId || '';
     const pluginSlice = Object.assign({}, topLevel.plugins[id] || {});
 
     Object.keys(changed || {}).forEach(function (key) {
@@ -84,7 +84,7 @@ function splitSavePatch(changed, activePluginId, existingFile) {
         }
     });
 
-    topLevel.plugins[id] = pluginSlice;
+    if (id) topLevel.plugins[id] = pluginSlice;
     return topLevel;
 }
 

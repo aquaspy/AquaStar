@@ -84,7 +84,9 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   assert.strictEqual(lab.indexOf('Abrir DevTools'), -1, 'Studio must not expose debugging controls');
   assert.strictEqual(lab.indexOf('Diagnóstico'), -1, 'Studio must not expose diagnostics');
   const bridge = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/studio.js'), 'utf8');
-  const config = fs.readFileSync(path.join(__dirname, '../../res/windows/config.js'), 'utf8');
+  const platformConfig = fs.readFileSync(path.join(__dirname, '../../res/windows/config.js'), 'utf8');
+  const studioProcessSrc = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/processes/charpage-studio-process.js'), 'utf8');
+  const aqwKeybinds = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/keybinds.js'), 'utf8');
   const instances = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
   const aqwMenus = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/menus.js'), 'utf8');
   const main = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/main.js'), 'utf8');
@@ -97,11 +99,13 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   assert.ok(bridge.indexOf('studioAssetBaseUrl') !== -1, 'local Studio SWF receives its AQW asset root');
   assert.ok(bridge.indexOf('interceptBufferProtocol') === -1, 'Studio must not replace the default HTTPS session');
   assert.ok(bridge.indexOf('.filterResponseData(') === -1, 'Electron 11 does not provide filterResponseData');
-  assert.ok(config.indexOf('charPageStudioConfig') !== -1);
-  assert.ok(config.indexOf('plugins: true') !== -1);
-  assert.ok(config.indexOf('sandbox: false') !== -1);
-  assert.ok(config.indexOf('studio.deactivateProtocol()') !== -1);
-  assert.ok(instances.indexOf('openCharPageStudioWindow') !== -1);
+  // The platform knows nothing about the Studio: its window is built by the Studio's own
+  // process, which needs Flash (plugins) and no sandbox, and is launched via the helper API.
+  assert.strictEqual(platformConfig.indexOf('charPageStudio'), -1);
+  assert.strictEqual(instances.indexOf('CharPageStudio'), -1);
+  assert.ok(studioProcessSrc.indexOf('plugins: true') !== -1);
+  assert.ok(studioProcessSrc.indexOf('sandbox: false') !== -1);
+  assert.ok(aqwKeybinds.indexOf("id: 'studio'") !== -1);
   assert.ok(aqwMenus.indexOf('menuCharPageStudio') !== -1);
   assert.ok(
     main.indexOf("path.join(pluginFeaturesRoot, 'charpage', 'studio.js')") !== -1
@@ -173,8 +177,9 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
     'dedicated Studio process must create the preview capture'
   );
   assert.ok(
-    studioProcess.indexOf("'--charpage-studio-capture'") !== -1,
-    'capture must use its dedicated renderer process'
+    studioProcess.indexOf('charpage-studio-capture-process.js') !== -1 &&
+      studioProcess.indexOf('buildHelperArgs') !== -1,
+    'capture must use its dedicated renderer process through the generic helper-process args'
   );
   const captureProcess = fs.readFileSync(
     path.join(__dirname, '../../plugins/adventure-quest-worlds/processes/charpage-studio-capture-process.js'),
@@ -207,8 +212,11 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
     lab.indexOf('player.src = movieUrl') > lab.indexOf("player.setAttribute('flashvars', flashVarString)"),
     'set FlashVars before the native plugin source'
   );
-  assert.ok(config.indexOf("on('new-window'") !== -1);
-  assert.ok(config.indexOf('webContents.setWindowOpenHandler(') === -1);
+  // The Studio window runs with webSecurity off: popups and navigation are blocked in the
+  // process that actually creates it.
+  assert.ok(studioProcessSrc.indexOf("on('new-window'") !== -1);
+  assert.ok(studioProcessSrc.indexOf("on('will-navigate'") !== -1);
+  assert.ok(studioProcessSrc.indexOf('webContents.setWindowOpenHandler(') === -1);
   ['en-US.js', 'pt-BR.js'].forEach((localeName) => {
     const messages = fs.readFileSync(
       path.join(__dirname, '../../plugins/adventure-quest-worlds/locales', localeName),

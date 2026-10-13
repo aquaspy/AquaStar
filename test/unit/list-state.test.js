@@ -1,5 +1,5 @@
 const assert = require('assert');
-const state = require('../../res/core/list-state.js');
+const state = require('../../plugins/adventure-quest-worlds/core/list-state.js');
 
 test('list state keeps shared and per-character hidden state isolated', () => {
   const item = { hiddenBy: {} };

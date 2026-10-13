@@ -28,7 +28,7 @@ AquaStar’s runtime is organized roughly as:
 
 | Layer | Location | Role today |
 |-------|----------|------------|
-| Argv early exits | `main.js` top | `--charpage-studio` / `--charpage-studio-capture` spawn dedicated processes before normal boot |
+| Argv early exit | `main.js` top | `--aquastar-helper=<script>` runs a bundled-plugin script in its own process before normal boot (`res/platform/helper-process.js`); the platform names no helper |
 | Entry / session filters | `main.js` `createWindow` | Single-instance lock, Flash trust bootstrap, ad block, `*.aq.com` / DragonFable UA spoof, SWF logging, media permission gate |
 | Flash / Chromium flags | `res/flash.js` | PPAPI path, performance switches, `nw-flash-trust` for **primary** SWF path only |
 | Constants + defaults | `res/const.js` | AQW/DF URLs, keybind/option defaults, Ruffle/SWF wrappers, settings paths |
@@ -322,14 +322,16 @@ Platform-owned modules that stay in `main.js` even with plugins: `res/ipc/record
 
 Studio is not only an in-process feature window:
 
-1. `instances.openCharPageStudioWindow()` spawns `process.execPath` with `--charpage-studio` (detached).
-2. `main.js` early-returns into `scripts/charpage-studio-process.js` (and capture variant) **before** normal plugin UI boot.
-3. Those scripts load assets under `res/features/charpage/` today.
+1. The AQW plugin calls `host.windows.spawnHelperProcess({ scriptRelativePath: 'processes/charpage-studio-process.js' })`, which spawns `process.execPath` with `--aquastar-helper=<absolute script>` (detached).
+2. `main.js` early-returns into that script **before** normal plugin UI boot, after checking it sits inside the bundled `plugins/` tree.
+3. The scripts load assets from the plugin's own `features/charpage/`.
+
+*Status: implemented as above (this section's original design used per-feature argv flags; the generic `--aquastar-helper` entry replaced them).*
 
 **Design:**
 
 - Studio remains an **AQW-owned** capability. Manifest permission: `spawn-helper-process`.
-- Platform API: `host.windows.spawnHelperProcess({ argvFlag, scriptRelativePath })` where `scriptRelativePath` must resolve **inside the plugin root** after normalization (no `..` escape). Implementation: `spawn(process.execPath, defaultAppArgs.concat([argvFlag]), { detached, stdio: 'ignore' })`.
+- Platform API: `host.windows.spawnHelperProcess({ scriptRelativePath, args })`. `scriptRelativePath` must resolve **inside the plugin root** after normalization (no `..` escape) and, because the child's entry check runs before trust settings load, inside the bundled `plugins/` tree. Implementation: `res/platform/helper-process.js`.
 - `main.js` argv dispatch becomes plugin-aware:
 
 ```js
@@ -479,7 +481,7 @@ Migration-only escape: AQW plugin may `require()` legacy modules until PR 8 comp
  * @property {(launchId: string) => Electron.BrowserWindow} openLaunch
  * @property {(featureId: string) => Electron.BrowserWindow} openFeatureWindow
  * @property {(url: string, mode?: 'new-window'|'in-place') => void} openUrl
- * @property {(opts: { argvFlag: string, scriptRelativePath: string }) => ChildProcess} spawnHelperProcess
+ * @property {(opts: { scriptRelativePath: string, args?: string[] }) => ChildProcess} spawnHelperProcess
  */
 ```
 
@@ -524,7 +526,7 @@ Split by process: the Studio helper process has its **own** `ipcMain` graph and 
 
 | Channel | Module today | Owner after migration |
 |---------|--------------|------------------------|
-| `fetchWikiPage` | `res/ipc/wikiFetch.js` | AQW plugin (legacy name) |
+| `fetchWikiPage` | `plugins/adventure-quest-worlds/features/wikiview/wikiFetch.js` | AQW plugin (legacy name) |
 | `saveDialog`, `saveRecording`, `getDesktopCapturerSourceForWindow` | `res/ipc/recording.js` | Platform |
 | `getKeybindings`, `saveKeybindings`, `getRecordingFormat`, `getSettingsMessages`, `updateRuffle`, `getRuffleStatus`, `restoreBundledRuffle`, `restartApp`, `getCustomSwfStatus`, `chooseCustomSwf`, `removeCustomSwf` | `res/keybindings.js` | Platform |
 | `getReminders`, `getRemindersMessages`, `saveReminders`, `remindersCopyText` | `reminders.js` | AQW |

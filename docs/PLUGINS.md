@@ -330,7 +330,7 @@ host.registerFeatureWindows([{
 
 If `webPreferences.plugins === true` or `webSecurity === false`, you need permission **`unsafe-renderer`**.
 
-Open with `host.windows.openFeatureWindow('my-tracker')` once the platform wires that path for your registration (follow AQW feature windows / `res/windows/config.js` patterns for production-quality windows).
+Open with `host.windows.openFeatureWindow('my-tracker')`. Keep window sizes, preloads and pages in your plugin (the AQW plugin's `windows.js` is the pattern to follow); the platform defines no feature window besides Settings.
 
 ### 4.8b Following a game's published configuration (optional pattern)
 
@@ -373,13 +373,17 @@ See `plugins/adventure-quest-worlds/web/contribute.js` for the full contribution
 | `fetchAllowlist` | if `net-fetch` | URL prefixes; `*` suffix allowed |
 | `injectHostPatterns` | if `inject-scripts` | Hostnames only |
 | `web.contribute` | no | Relative path to Node module |
+| `bundledDefault` | no | `true` on exactly one **bundled** plugin: the one that runs when `activePluginId` is empty and in safe mode. Ignored for local plugins |
+| `unprefixedIpc` | no | Bundled plugins only: keep IPC channel names unprefixed (back-compat). Everyone else is namespaced `plugin:<id>:<channel>` |
+| `customSwfAliases` | no | Older file names for the platform's custom SWF override that this plugin used to read (plain `*.swf` names) |
+| `storeAliases` | no | `{ "<store name>": "<legacy file>.json" }` to keep permanent filenames for `getStore(name)` |
 
 ### Permissions → Host methods
 
 | Permission | Gates |
 |------------|--------|
 | `web-request` | `registerSessionRules` |
-| `inject-scripts` | `registerNavigationHooks` when it injects |
+| `inject-scripts` | `registerNavigationHooks` when it injects, `registerBrowserPreload` |
 | `net-fetch` | `net.fetchText` (+ allowlist) |
 | `flash-trust` | `trustFlashUrls` |
 | `persistent-store` | `getStore` |
@@ -398,13 +402,13 @@ Available on `host` inside `activate(host)`:
 
 **Game:** `setPrimaryGame(cfg)`, `registerLaunches([...])`, `trustFlashUrls([...])`
 
-**Chrome:** `registerKeybindDefaults(obj)`, `registerKeybinds([...])`, `registerMenus(fn)`, `registerMenuPages({ appUsefulPages, gameMenuPages })`, `registerFeatureWindows([...])`, `registerSettingsSection(section)`, `registerLocales(catalog)`
+**Chrome:** `registerBrowserPreload(relativePath)`, `registerKeybindDefaults(obj)`, `registerKeybinds([...])`, `registerMenus(fn)`, `registerMenuPages({ appUsefulPages, gameMenuPages })`, `registerFeatureWindows([...])`, `registerSettingsSection(section)`, `registerLocales(catalog)`
 
 **Network / pages:** `registerSessionRules([...])`, `registerNavigationHooks(hooks)`, `net.fetchText(url)`
 
 **IPC / storage:** `ipc.handle` / `ipc.on` / `ipc.removeHandler`, `getStore(ns)`
 
-**Windows:** `windows.openPrimaryGame()`, `windows.openLaunch(id)`, `windows.openFeatureWindow(id)`, `windows.openUrl(url, mode)`, `windows.openExternal(url)`, `windows.spawnHelperProcess(opts)`
+**Windows:** `windows.openPrimaryGame()`, `windows.openLaunch(id)`, `windows.openFeatureWindow(id)`, `windows.openUrl(url, mode)`, `windows.openExternal(url)`, `windows.spawnHelperProcess({ scriptRelativePath, args })` (script must be inside the plugin root **and** the bundled `plugins/` tree)
 
 Use `openExternal` / menu `openMode: 'external'` for modern sites such as **github.com**. Electron 11 ships Chromium 87, which cannot load GitHub’s current frontend (import maps / bare `react` specifiers → broken CSS/JS).
 

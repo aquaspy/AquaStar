@@ -1,23 +1,12 @@
 // Per-plugin JSON stores wrapping repositories/json-store.js.
-// AQW keeps permanent aquastar_*.json filenames; other plugins use aquastar.<id>.<ns>.json.
+// A plugin may keep permanent legacy filenames by declaring storeAliases in its manifest;
+// otherwise stores are named aquastar.<id>.<ns>.json.
 const path = require('path');
 const jsonStore = require('../../repositories/json-store.js');
-
-const AQW_PLUGIN_ID = 'adventure-quest-worlds';
-
-const AQW_ALIASES = {
-    reminders: 'aquastar_reminders.json',
-    todo: 'aquastar_todo.json',
-    strategy: 'aquastar_strategy.json',
-    inventory: 'aquastar_inventory.json'
-};
 
 function resolveStoreFileName(pluginId, ns, aliases) {
     if (aliases && Object.prototype.hasOwnProperty.call(aliases, ns)) {
         return aliases[ns];
-    }
-    if (pluginId === AQW_PLUGIN_ID && Object.prototype.hasOwnProperty.call(AQW_ALIASES, ns)) {
-        return AQW_ALIASES[ns];
     }
     return 'aquastar.' + pluginId + '.' + ns + '.json';
 }
@@ -73,6 +62,5 @@ function createNamespacedStore(options) {
 module.exports = {
     createNamespacedStore: createNamespacedStore,
     resolveStoreFileName: resolveStoreFileName,
-    AQW_PLUGIN_ID: AQW_PLUGIN_ID,
-    AQW_ALIASES: AQW_ALIASES
+    resolveStorePath: resolveStorePath
 };

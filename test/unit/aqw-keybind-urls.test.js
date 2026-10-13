@@ -12,7 +12,10 @@ function registrations(primaryUrl, player) {
       charPagePrint: function () { opened.push('charpagePrint'); }
     },
     getPrimaryUrl: function () { return primaryUrl; },
-    getPlayerCharacter: function () { return player; }
+    getPlayerCharacter: function () { return player; },
+    openFeatureWindow: function (id) { opened.push('feature:' + id); },
+    openStudio: function () { opened.push('studio'); },
+    charPagePrint: function () { opened.push('charpagePrint'); }
   });
   const byId = {};
   regs.forEach(function (r) { byId[r.id] = r; });
@@ -63,4 +66,16 @@ test('every AQW keybind id registered is described and has an action', () => {
   keybinds.describeKeybindActions().forEach(function (meta) {
     assert.strictEqual(typeof r.byId[meta.id].action, 'function', meta.id);
   });
+});
+
+test('feature, studio and char page actions use the injected services, not platform window helpers', () => {
+  const r = registrations('x', '');
+  r.byId.reminders.action();
+  r.byId.todo.action();
+  r.byId.inventory.action();
+  r.byId.strategy.action();
+  r.byId.studio.action();
+  assert.deepStrictEqual(r.opened, [
+    'feature:reminders', 'feature:todo', 'feature:inventory', 'feature:strategy', 'studio'
+  ]);
 });

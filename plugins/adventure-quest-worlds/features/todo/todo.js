@@ -1,6 +1,6 @@
 // To-Do window - persistence + IPC. Shares the "per-character list" shape with Reminders
 // (character tabs, seasonal tagging, shared/individual hidden-map - see
-// res/features/common/list_window_common.js for the renderer-side logic they both use),
+// features/common/list_window_common.js for the renderer-side logic they both use),
 // but items are simple one-off tasks instead of recurring quests: no type/reset math and
 // no `done` map - "hidden" doubles as "completed" here, there being nothing to reset.
 const fs       = require('fs');
@@ -9,7 +9,7 @@ const { app, ipcMain, clipboard } = require('electron');
 const constant = require('../../../../res/const.js');
 const locale   = require('../../../../res/locale.js');
 const jsonStore = require('../../../../res/repositories/json-store.js');
-const listState = require('../../../../res/core/list-state.js');
+const listState = require('../../core/list-state.js');
 
 const todoJsonFileName = constant.appName.toLocaleLowerCase() + '_todo.json'; // "aquastar_todo.json"
 const todoJsonPath = path.join(constant.appDataDirectory, todoJsonFileName);

@@ -78,7 +78,7 @@ function customKeybinds() {
 
     const activeId = (topLevel.activePluginId) ||
         (platform.pluginRuntime.getPluginInfo() && platform.pluginRuntime.getPluginInfo().id) ||
-        'adventure-quest-worlds';
+        '';
 
     finalKeybinds = platform.settingsMerge.mergeLoadedSettings({
         activePluginId: activeId,
@@ -164,7 +164,7 @@ const processKeybings = function (){
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
     
     if(constant.isDebugBuild){
-        // Alt+I is now the Inventory screen's keybind - moved off this debug-only shortcut.
+        // Debug-only shortcut. Alt+I is left free for plugins.
         addKeybind('Alt+Shift+I', (fw)=>{fw.webContents.openDevTools()},true);
     }
     
@@ -305,7 +305,9 @@ ipcMain.handle('getKeybindings', () => {
     return {
         current:  Object.assign({}, finalKeybinds),
         defaults: defaults,
-        options:  Object.assign({}, constant.originalOptions),
+        // Platform option defaults plus the active plugin's, so Reset restores both.
+        options:  Object.assign({}, constant.originalOptions,
+            (platform.pluginRuntime.getState() && platform.pluginRuntime.getState().optionDefaults) || {}),
         recordingFormatChoices: constant.recordingFormatChoices,
         renderModeChoices: constant.renderModeChoices,
         ruffleUpdateChannelChoices: constant.ruffleUpdateChannelChoices,
@@ -395,7 +397,7 @@ ipcMain.handle('saveKeybindings', (event, updatedBinds) => {
     const activeId = (updatedBinds && updatedBinds.activePluginId) ||
         existing.activePluginId ||
         (platform.pluginRuntime.getPluginInfo() && platform.pluginRuntime.getPluginInfo().id) ||
-        'adventure-quest-worlds';
+        '';
     const next = platform.settingsMerge.splitSavePatch(updatedBinds || {}, activeId, existing);
     fs.writeFileSync(target, JSON.stringify(next, null, 4));
     return { savedTo: target };
@@ -429,43 +431,34 @@ ipcMain.on('restartApp', () => {
 });
 
 /// -------------------------------
-/// Settings screen IPC - custom AQLite SWF file (aqlite_old.swf) management.
-/// Presence of this exact file (checked once at boot in const.js) is what puts the app
-/// into "custom swf" mode, which takes priority over the customUrl option above.
+/// Settings screen IPC - custom SWF file management (see res/customSwf.js).
+/// A custom SWF found at boot puts the app in "custom swf" mode, which takes priority over
+/// the customUrl option above and over the active plugin's own primary game.
 /// -------------------------------
 
-function _customSwfPath() {
-    return constant.customSwfPath;
-}
-
-function _activeCustomSwfPath() {
-    if (fs.existsSync(constant.customSwfPath)) return constant.customSwfPath;
-    if (fs.existsSync(constant.legacyCustomSwfPath)) return constant.legacyCustomSwfPath;
-    return null;
-}
-
 ipcMain.handle('getCustomSwfStatus', () => {
-    const activePath = _activeCustomSwfPath();
-    return { exists: activePath !== null, path: activePath || _customSwfPath() };
+    const activePath = constant.activeCustomSwfPath;
+    return { exists: activePath !== null, path: activePath || constant.customSwfPath };
 });
 
 ipcMain.handle('chooseCustomSwf', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     const result = await dialog.showOpenDialog(win, {
-        title: 'Select a custom AQLite SWF file',
+        title: 'Select a custom SWF file',
         filters: [{ name: 'Flash SWF', extensions: ['swf'] }],
         properties: ['openFile']
     });
     if (result.canceled || !result.filePaths.length) return { canceled: true };
 
-    const target = _customSwfPath();
+    const target = constant.customSwfPath;
     fs.copyFileSync(result.filePaths[0], target);
     return { canceled: false, exists: true, path: target };
 });
 
 ipcMain.handle('removeCustomSwf', () => {
-    const target = _activeCustomSwfPath();
-    if (target) fs.unlinkSync(target);
-    const activePath = _activeCustomSwfPath();
-    return { exists: activePath !== null, path: activePath || _customSwfPath() };
+    // Removes every file that would count as the override (all known names), so one click
+    // really ends custom-SWF mode.
+    constant.removeCustomSwfFiles();
+    const activePath = constant.activeCustomSwfPath;
+    return { exists: activePath !== null, path: activePath || constant.customSwfPath };
 });
