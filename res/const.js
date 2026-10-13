@@ -49,50 +49,9 @@ const iconRedPath = path.join(appRoot, 'Icon', 'Iconred_1024.png');
 
 const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
 
-// Links with keybinds
-const charLookup   = 'https://account.aq.com/CharPage';
-const designNotes  = 'https://www.aq.com/gamedesignnotes/';
-const balancePatchNotes = 'https://www.aq.com/gamedesignnotes/AQW-Balance-PatchNotes-9515';
-const accountAq    = 'https://account.aq.com/';
-const wikiReleases = 'http://aqwwiki.wikidot.com/new-releases';
-
-// Extra usefull links
-const heromart     = 'https://www.heromart.com/';
-const battleon     = 'https://portal.battleon.com/';
-const calendar     = 'https://www.aq.com/lore/calendar';
-const dailyGifts   = 'https://www.aq.com/lore/dailygifts';
-const forgeEnchants= 'https://www.aq.com/lore/guides/enhancementtraits';
-
-// Social Media stuff
-const twtAlina     = "https://twitter.com/Alina_AE";
-const redditAqw    = "https://www.reddit.com/r/AQW/";
-
-//exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
-Object.defineProperty(exports, 'testingAQW', {
-    get() {
-        // Random ending between 100 and 999. Prevents browser cache per load.
-        return 'https://game.aq.com/game/gamefiles/Loader_Spider.swf?ver=' +
-               (Math.floor(Math.random() * 900) + 100);
-    }
-});
-// Same SWF the official web.asp embeds (ver= is only a cache-buster; bytes are identical).
-exports.df_url     = 'https://play.dragonfable.com/game/DFLoader.swf?ver=668201'
-
 // Export farm
 
 exports.githubPage       = githubPage;
-exports.wikiReleases     = wikiReleases;
-exports.accountAq        = accountAq;
-exports.designNotes      = designNotes;
-exports.balancePatchNotes = balancePatchNotes;
-exports.charLookup       = charLookup;
-exports.heromart         = heromart;
-exports.battleon         = battleon;
-exports.calendar         = calendar;
-exports.dailyGifts       = dailyGifts;
-exports.forgeEnchants    = forgeEnchants;
-exports.twtAlina         = twtAlina;
-exports.redditAqw        = redditAqw;
 
 exports.appName          = appName;
 exports.appVersion       = appVersion;
@@ -116,7 +75,7 @@ function _getFileUrl(path) {
         slashes: true
     })
 }
-// Exported for res/windows/config.js to build the settings/reminders window URLs with -
+// Exported for res/windows/config.js to build window URLs with -
 // keeps the file://-URL-building logic in one place instead of duplicated per module.
 exports.toFileUrl = _getFileUrl;
 
@@ -147,8 +106,8 @@ exports.setUseDirectWmode = (val) => {
 
 const swfWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'swf_wrapper.html'));
 // opts: optional { wmode, scale } forwarded to swf_wrapper.html query string.
-// AQW uses defaults (wmode=direct). DragonFable needs opaque + showall + the wrapper's
-// base= param so relative DFversion.asp / gamefiles/* loads still hit play.dragonfable.com.
+// Plugins pick the options per game through their wrap config; the default is wmode=direct.
+// The wrapper's base= param keeps relative loads resolving against the game's own origin.
 exports.wrapSwfUrl = function(swfUrl, opts) {
     if (!swfUrl) return swfUrl;
     var q = '?swf=' + encodeURIComponent(swfUrl);
@@ -158,21 +117,26 @@ exports.wrapSwfUrl = function(swfUrl, opts) {
 }
 
 // Ruffle (open-source Flash emulator) as an alternative to the PPAPI Flash plugin -
-// see res/ruffle_wrapper.html. Covers main AQW / new instance / Testing AQW / DragonFable
-// when Settings → renderMode is "ruffle". The AQW Char Page already loads Ruffle from
-// Artix's own page regardless of this setting, so it needs no wrapper of its own.
+// see res/ruffle_wrapper.html. Covers the active plugin's Flash games when Settings →
+// renderMode is "ruffle".
 const ruffleWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_wrapper.html'));
 exports.isRuffleEligible = function(swfUrl) {
     if (!swfUrl) return false;
-    if (swfUrl === exports.mainPath) return true;
-    if (swfUrl === exports.df_url) return true;
-    // testingAQW carries a random cache-busting "?ver=" suffix per call, so match by prefix.
-    if (swfUrl.indexOf('https://game.aq.com/game/gamefiles/Loader_Spider.swf') === 0) return true;
-    return false;
+    // HTML/stage pages are never Ruffle SWF targets.
+    if (!/\.swf(\?|#|$)/i.test(swfUrl)) return false;
+    // Eligibility is the active plugin's call: any game it owns (primary or launch), unless
+    // its wrap config opts out with ruffleEligible: false.
+    try {
+        const entry = require('./platform').pluginRuntime.findGameEntry(swfUrl);
+        return !!entry && !(entry.wrap && entry.wrap.ruffleEligible === false);
+    } catch (e) { return false; }
 }
-exports.wrapRuffleUrl = function(swfUrl) {
+// ruffleOpts: the owning plugin's wrap.ruffle ({ socket: { serversApi, fallbackHosts, policyPort } }).
+exports.wrapRuffleUrl = function(swfUrl, ruffleOpts) {
     if (!swfUrl) return swfUrl;
+    const cfg = ruffleOpts && ruffleOpts.socket ? { socket: ruffleOpts.socket } : {};
     return ruffleWrapperUrl + '?swf=' + encodeURIComponent(swfUrl) +
+        '&cfg=' + encodeURIComponent(JSON.stringify(cfg)) +
         '&proxy=' + encodeURIComponent(socketProxy.proxyUrl) +
         '&ruffle=' + encodeURIComponent(exports.rufflePlayerUrl);
 }
@@ -181,24 +145,17 @@ exports.wrapRuffleUrl = function(swfUrl) {
 /// Section 2 - Original KeyBindings and Custom swf stuff
 /// -------------------------------
 
-// Default values - Also present at aquastar_testing.json as a copy of easy access!
+// Platform-only defaults. Game/plugin keybinds are registered by the active plugin via
+// host.registerKeybindDefaults.
 const originalKeybinds = {
-    wiki:        "Alt+W",
-    account:     "Alt+A",
-    design:      "Alt+D",
-    charpage:    "Alt+P",
-    newAqw:      "Alt+N",
-    newTest:     "Alt+Q",
     about:       "F9",
     fullscreen:  "F11",
     sshot:       "F2",
-    cpSshot:     "Alt+K",
     reload:      [
         "CmdOrCtrl+F5",
         "CmdOrCtrl+R"
     ],
     reloadCache: "CmdOrCtrl+Shift+F5",
-    dragon:      "Alt+1",
     forward:     "Alt+F",
     backward:    "Alt+B",
     help : [
@@ -206,11 +163,7 @@ const originalKeybinds = {
         "CmdOrCtrl+H",
         "F1"
     ],
-    settings: "Alt+9", //TODO - Make a screen and do your stuff XD. This is for future proofing
-    reminders: "Alt+T",
-    todo:     "Alt+Y",
-    inventory: "Alt+I",
-    strategy: "Alt+U",
+    settings: "Alt+9",
     record:   "Ctrl+J"
 }
 exports.originalKeybinds = originalKeybinds;
@@ -261,50 +214,32 @@ exports.ruffleUpdateChannelChoices = Object.keys(ruffleUpdateChannels).map((id) 
     { id: id, label: ruffleUpdateChannels[id].label }
 ));
 
+exports.appLanguageChoices = [
+    { id: 'system', label: 'System default' },
+    { id: 'en-US', label: 'English' },
+    { id: 'pt-BR', label: 'Português (Brasil)' }
+];
+
 // Non-keybind settings. Saved to the same aquastar.json file as the keybinds
 // above, but shown in the Settings screen as plain fields instead of recorders.
 const originalOptions = {
-    playerCharacter:   "",
-    featurePlayerName: false,
-    // Overrides the AQW game SWF loaded on startup. Ignored when a custom SWF file
-    // (aqlite_old.swf, managed just below in the Settings screen) is active - see
-    // changeMainUrl() and the "isOldAqlite" guard inside it.
+    // UI language: "system" follows OS; otherwise an explicit catalog id (en-US, pt-BR).
+    appLanguage:       "system",
+
+    // Optional URL override for the active plugin's primary game. Ignored when a
+    // local SWF override is active — see plugin-runtime getPrimaryUrl().
     customUrl:         "",
     recordingFormat:   exports.defaultRecordingFormat,
     renderMode:        exports.defaultRenderMode,
     ruffleUpdateChannel: 'latest',
     ruffleAutoUpdate:  false,
-    // Native menu bar shown above AQW/DragonFable game windows.  It mirrors the
-    // launcher shortcuts for players who prefer discoverable mouse controls.
+    // Native menu bar on game windows (mirrors shortcuts). Default on.
     showGameMenu:      true,
-    // Periodic background Inventory/BuyBack sync (res/features/inventory/inventory.js).
-    // Off by default - manual "Sync Now" (in-window or the account.aq.com/Home button)
-    // always works regardless of this setting.
-    autoSync:          false,
     // Dev-only escape hatch, warned about on enable in the Settings screen.
     // Keep this key last - new options should be added above it.
     enableDevTools:    false
 }
 exports.originalOptions = originalOptions;
-
-// Keeps only what's safe to drop straight into a URL query string / window title -
-// matches the input filter on the Settings screen's Player Character field.
-function _sanitizePlayerCharacter(raw) {
-    if (raw == null) return '';
-    return String(raw).trim().replace(/[^a-zA-Z0-9]/g, '');
-}
-exports.buildCharLookupUrl = function(playerCharacter) {
-    var id = _sanitizePlayerCharacter(playerCharacter);
-    return id === '' ? charLookup : charLookup + '?id=' + encodeURIComponent(id);
-}
-
-// When featurePlayerName is on and a Player Character is set, it replaces "AquaStar"
-// in the main window's title. Falls back to the app name otherwise.
-exports.resolveAppDisplayName = function(k) {
-    if (!k || k.featurePlayerName !== true) return appName;
-    var id = _sanitizePlayerCharacter(k.playerCharacter);
-    return id === '' ? appName : id;
-}
 
 // Finding out which one to load and if it should load...
 var keybingJsonFileName = appName.toLocaleLowerCase() + '.json';
@@ -338,28 +273,22 @@ exports.rufflePlayerUrl = _getFileUrl(fs.existsSync(downloadedRufflePlayerPath)
     ? downloadedRufflePlayerPath : bundledRufflePlayerPath);
 exports.ruffleDirectory = appDataDirectory;
 
-// Custom AQLite SWFs written by Settings belong in AppData: installed builds can
-// live under Program Files, where their working directory is not reliably writable.
-// Keep accepting the old working-directory file so existing portable installs work.
-const customSwfFileName = 'aqlite_old.swf';
-const managedCustomSwfPath = path.join(appDataDirectory, customSwfFileName);
-const legacyCustomSwfPath = path.join(appCurrentDirectory, customSwfFileName);
-const activeCustomSwfPath = fs.existsSync(managedCustomSwfPath) ? managedCustomSwfPath :
-    (fs.existsSync(legacyCustomSwfPath) ? legacyCustomSwfPath : null);
-var oldAqlite = activeCustomSwfPath !== null;
-exports.customSwfPath = managedCustomSwfPath;
-exports.legacyCustomSwfPath = legacyCustomSwfPath;
-exports.activeCustomSwfPath = activeCustomSwfPath;
-exports.mainPath = oldAqlite ?
-            _getFileUrl(activeCustomSwfPath) :
-            "https://game.aq.com/game/gamefiles/Loader3.swf?ver=a"
-exports.isOldAqlite = oldAqlite;
-
-exports.changeMainUrl = function(newAqUrl){
-    if (!oldAqlite) {
-        exports.mainPath = newAqUrl;
-    }
-}
+// Local SWF override (Settings → Custom SWF File). The lookup lives in customSwf.js; the
+// active plugin's manifest may add older file names via setCustomSwfAliases().
+const customSwf = require('./customSwf.js').createCustomSwf({
+    appDataDirectory: appDataDirectory,
+    appCurrentDirectory: appCurrentDirectory,
+    toFileUrl: _getFileUrl
+});
+exports.setCustomSwfAliases = function (aliases) { customSwf.setAliases(aliases); };
+// Where Settings writes a newly chosen SWF.
+exports.customSwfPath = customSwf.managedPath;
+exports.removeCustomSwfFiles = function () { customSwf.removeAll(); };
+// The platform applies the override on top of the active plugin's primary game (see
+// res/platform/plugin-runtime.js getPrimaryUrl()). Live getters: aliases can arrive after load.
+Object.defineProperty(exports, 'activeCustomSwfPath', { enumerable: true, get: function () { return customSwf.activePath(); } });
+Object.defineProperty(exports, 'customSwfUrl', { enumerable: true, get: function () { return customSwf.url(); } });
+Object.defineProperty(exports, 'hasCustomSwf', { enumerable: true, get: function () { return customSwf.activePath() !== null; } });
 
 /// -------------------------------
 /// Section 3 - Locale stuff
@@ -368,8 +297,8 @@ exports.changeMainUrl = function(newAqUrl){
 exports.setLocale = (loc, keyb) => {
     locale.detectLang(loc, keyb);
     // Title messages are the only locale strings still consumed from const.js -
-    // instances.js reads them for window-notification text. Menu/dialog/settings/
-    // reminders messages are read straight from locale.strings by the modules that
-    // actually build that UI (res/windows/menu.js, the Settings/Reminders windows).
+    // instances.js reads them for window-notification text. Menu/dialog/settings
+    // messages are read straight from locale.strings by the modules that actually
+    // build that UI (res/windows/menu.js, the Settings window).
     exports.titleMessages = locale.strings.titleMessages;
 }

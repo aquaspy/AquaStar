@@ -13,7 +13,7 @@ test('Ruffle updater exposes stable and nightly channels without labelling every
     settings.indexOf("buildSelectOptionRow('ruffleUpdateChannel'") <
       settings.indexOf('updateRow, buildBooleanOptionRow')
   );
-  assert.ok(english.indexOf('ruffleUpdateLabel      : "Update Ruffle"') !== -1);
+  assert.ok(/ruffleUpdateLabel\s*:\s*"Update Ruffle"/.test(english));
   assert.ok(
     english.indexOf("Downloads Ruffle's self-hosted web build from its official GitHub nightly release") === -1
   );

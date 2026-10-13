@@ -1,5 +1,5 @@
 const assert = require('assert');
-const state = require('../../res/core/list-state.js');
+const state = require('../../plugins/adventure-quest-worlds/core/list-state.js');
 
 test('list state keeps shared and per-character hidden state isolated', () => {
   const item = { hiddenBy: {} };
@@ -36,4 +36,19 @@ test('list state removes a character from shared item maps', () => {
   assert.deepStrictEqual(remaining, [{ id: 'b' }]);
   assert.deepStrictEqual(items[0].hiddenBy, { b: true });
   assert.deepStrictEqual(items[0].done, { b: 2 });
+});
+
+test('default list state recognizes AQW seasonal event keys', () => {
+  assert.strictEqual(state.isSeasonal({ seasonal: true, seasonalEvent: 'frostval' }), true);
+  assert.strictEqual(state.isSeasonal({ seasonal: true, seasonalEvent: 'unknownEvent' }), false);
+  assert.strictEqual(state.isSeasonal({ seasonal: false, seasonalEvent: 'frostval' }), false);
+});
+
+test('createListState uses configured seasonalEventKeys without mutating the default export', () => {
+  const custom = state.createListState({ seasonalEventKeys: ['customFest'] });
+  assert.strictEqual(custom.isSeasonal({ seasonal: true, seasonalEvent: 'customFest' }), true);
+  assert.strictEqual(custom.isSeasonal({ seasonal: true, seasonalEvent: 'frostval' }), false);
+  assert.strictEqual(state.isSeasonal({ seasonal: true, seasonalEvent: 'frostval' }), true);
+  assert.strictEqual(state.isSeasonal({ seasonal: true, seasonalEvent: 'customFest' }), false);
+  assert.deepStrictEqual(state.SEASONAL_EVENT_KEYS, state.DEFAULT_AQW_SEASONAL_KEYS);
 });

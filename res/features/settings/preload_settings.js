@@ -11,5 +11,8 @@ contextBridge.exposeInMainWorld("aquastarSettings", {
   getCustomSwfStatus: () => ipcRenderer.invoke("getCustomSwfStatus"),
   chooseCustomSwf:    () => ipcRenderer.invoke("chooseCustomSwf"),
   removeCustomSwf:    () => ipcRenderer.invoke("removeCustomSwf"),
+  getPluginList:      (opts) => ipcRenderer.invoke("getPluginList", opts || {}),
+  getPluginSettings:  () => ipcRenderer.invoke("getPluginSettings"),
+  getSettingsLayout:  () => ipcRenderer.invoke("getSettingsLayout"),
   platform:         process.platform
 });

@@ -4,13 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'web/**'
-      - 'res/features/reminders/**'
-      - 'res/features/todo/**'
-      - 'res/features/strategy/**'
+      # Plugins own the pages and kits the site is built from (see web.contribute in their manifest).
+      - 'plugins/**'
       - 'res/features/common/**'
-      - 'res/core/**'
-      - 'res/ui/**'
       - 'res/po/**'
       - 'Icon/**'
       - 'scripts/build-web.js'

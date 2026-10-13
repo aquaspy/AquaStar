@@ -1,0 +1,36 @@
+{
+  "id": "example-companion",
+  "name": "Example Companion",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "main": "main.js",
+  "description": "Reference plugin demonstrating AquaStar Host APIs (stage demo, navigation, settings, IPC, store, menus).",
+  "author": "AquaStar",
+  "minAppVersion": "1.12.2",
+  "capabilities": [
+    "game-launch",
+    "session-rules",
+    "navigation-hooks",
+    "feature-windows",
+    "menus",
+    "keybinds",
+    "locales"
+  ],
+  "permissions": [
+    "net-fetch",
+    "web-request",
+    "flash-trust",
+    "inject-scripts",
+    "persistent-store",
+    "unsafe-renderer"
+  ],
+  "fetchAllowlist": [
+    "https://api.github.com/*",
+    "https://github.com/*",
+    "https://raw.githubusercontent.com/*"
+  ],
+  "injectHostPatterns": [
+    "github.com",
+    "www.github.com"
+  ]
+}

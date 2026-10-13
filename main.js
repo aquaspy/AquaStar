@@ -1,13 +1,15 @@
-const {app, session, Menu, BrowserWindow}  = require('electron')
+const {app, session, Menu, BrowserWindow, dialog}  = require('electron')
 
-// PPAPI Flash only preserves LoaderInfo.parameters when the Studio owns the
-// default session. Keep that session in a dedicated AquaStar process.
-if (process.argv.indexOf('--charpage-studio-capture') !== -1) {
-    require('./scripts/charpage-studio-capture-process.js');
-    return;
-}
-if (process.argv.indexOf('--charpage-studio') !== -1) {
-    require('./scripts/charpage-studio-process.js');
+// Helper processes (host.windows.spawnHelperProcess): a plugin script that needs its own
+// Electron process. The platform runs it instead of the normal app and knows nothing else.
+const helper = require('./res/platform/helper-process.js').resolveHelperScript(process.argv, __dirname);
+if (helper.requested) {
+    if (!helper.script) {
+        console.error('[AquaStar] ' + helper.error);
+        app.exit(1);
+        return;
+    }
+    require(helper.script);
     return;
 }
 
@@ -24,24 +26,104 @@ const fs       = require('fs');
 
 const flash         = require('./res/flash.js');
 const keyb          = require('./res/keybindings.js');
-const reminders     = require('./res/features/reminders/reminders.js');
-const todo          = require('./res/features/todo/todo.js');
-const inventory     = require('./res/features/inventory/inventory.js');
-const strategy      = require('./res/features/strategy/strategy.js');
-const charPageStudio = require('./res/features/charpage/studio.js');
-// IPC-only modules (register their ipcMain handlers as a side effect of being required -
-// nothing else calls into them directly, so main.js must require them explicitly).
+// Platform IPC (always registered from main — never by plugins).
 const ipcRecording  = require('./res/ipc/recording.js');
-const ipcWikiFetch  = require('./res/ipc/wikiFetch.js');
 const inst          = require('./res/instances.js');
 const windowsMenu   = require('./res/windows/menu.js');
 const socketProxy   = require('./res/socketProxy.js');
 const ruffleUpdate  = require('./res/ruffleUpdate.js');
-// Important Variables - in const.js
 const constant = require('./res/const.js');
+const locale  = require('./res/locale.js');
+const platform = require('./res/platform');
+
+const bootPluginDisk = platform.readPluginFlagsFromDisk(
+    constant.appDataDirectory,
+    process.env
+);
+const bootFlags = bootPluginDisk.flags;
+
+let activePluginRuntime = null;
+
+// pluginSystem:false / AQUASTAR_DISABLE_PLUGINS=1 is the emergency "safe mode": only the
+// bundled default plugin (the one whose manifest says bundledDefault) is activated, with no
+// local plugins and no plugin selector, so a broken local plugin or a bad activePluginId can
+// never keep the app from starting.
+
+function activatePlugins() {
+    platform.pluginRuntime.setDependencies({
+        instances: inst,
+        constant: constant,
+        BrowserWindow: BrowserWindow
+    });
+
+    const safeMode = !bootFlags.pluginSystem;
+    if (safeMode) {
+        console.log('[AquaStar:plugins] pluginSystem disabled — safe mode: bundled default plugin only');
+    }
+
+    return platform.activateSelected({
+        bundledDir: path.join(__dirname, 'plugins'),
+        localDir: path.join(constant.appDataDirectory, 'plugins'),
+        enableLocalPlugins: safeMode ? false : bootFlags.enableLocalPlugins,
+        allowLocalPluginOverride: safeMode ? false : bootFlags.allowLocalPluginOverride,
+        appVersion: constant.appVersion || app.getVersion(),
+        appRootPath: constant.appRootPath,
+        appDataDirectory: constant.appDataDirectory,
+        // Saved settings first so plugins can read their own options at activate();
+        // boot flags then win for the platform keys.
+        safeMode: safeMode,
+        platformSettings: Object.assign({}, bootPluginDisk.settings, bootFlags, {
+            activePluginId: safeMode ? '' : bootFlags.activePluginId,
+            trustedLocalPlugins: (bootPluginDisk.settings &&
+                bootPluginDisk.settings.trustedLocalPlugins) || {}
+        }),
+        legacyIpc: true,
+        deps: platform.pluginRuntime.createHostWindowDeps()
+    }).then(function (runtime) {
+        activePluginRuntime = runtime;
+        if (runtime && runtime.host) {
+            const state = runtime.host._getState();
+            const hooks = state.navigationHooks;
+            if (hooks) inst.setNavigationHooks(hooks);
+
+            const pluginInfo = runtime.plugin && runtime.plugin.manifest
+                ? {
+                    id: runtime.plugin.manifest.id,
+                    name: runtime.plugin.manifest.name || runtime.plugin.manifest.id
+                }
+                : null;
+            platform.pluginRuntime.adopt(runtime.host, pluginInfo);
+            // Older local SWF file names this plugin used to read (manifest customSwfAliases).
+            constant.setCustomSwfAliases(runtime.plugin.manifest.customSwfAliases);
+            platform.pluginRuntime.applyFlashTrust(flash);
+
+            platform.menuRegistry.adoptHostState(state, state.menuProviders || null);
+            platform.settingsRegistry.adoptHostState(state, pluginInfo);
+            if (state.locales) {
+                locale.mergePluginLocales(state.locales);
+            }
+            const reserved = Object.keys(platform.PLATFORM_RESERVED_KEYBIND_IDS);
+            const pluginBindIds = Object.keys(state.keybindDefaults || {});
+            (state.keybinds || []).forEach(function (binding) {
+                if (binding && binding.id && pluginBindIds.indexOf(binding.id) === -1) {
+                    pluginBindIds.push(binding.id);
+                }
+            });
+            keyb.setVisibleKeybindIds(reserved.concat(pluginBindIds));
+        }
+        return runtime;
+    }).catch(function (err) {
+        console.log('[AquaStar:plugins] Activation failed: ' + (err && err.message ? err.message : err));
+        platform.menuRegistry.clear();
+        platform.settingsRegistry.clear();
+        platform.pluginRuntime.clear();
+        return null;
+    });
+}
 
 // Flash stuff is isolated in flash.js
-flash.flashManager(app, __dirname, constant.mainPath, constant.appName);
+// No game URL is trusted yet: the plugin's trust list is applied right after activation.
+flash.flashManager(app, __dirname, null, constant.appName);
 
 function createWindow () {
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
@@ -71,22 +153,38 @@ function createWindow () {
     }
 
     // Lang setup. Has to be after Ready event.
-    constant.setLocale(app.getLocale(),finalkeyb);
+    // Prefer explicit Settings → appLanguage over OS locale when set.
+    const langPref = finalkeyb.appLanguage;
+    const localeId = (!langPref || langPref === 'system') ? app.getLocale() : langPref;
+    constant.setLocale(localeId, finalkeyb);
 
-    // Create the browser window.
-    let win = inst.newBrowserWindow(constant.mainPath,true);
-
-    if (process.platform == 'darwin'){
+    // Minimal global menu first (Windows). Full plugin menus are per-window via setMenu.
+    // Setting ApplicationMenu *after* the first setMenu left the initial window on the
+    // stub menu only — order matters.
+    if (process.platform === 'darwin') {
         Menu.setApplicationMenu(null);
+    } else {
+        Menu.setApplicationMenu(Menu.buildFromTemplate([
+            { label: 'AquaStar', submenu: [{ role: 'quit' }] }
+        ]));
     }
-    else {
-        Menu.setApplicationMenu(
-            Menu.buildFromTemplate(windowsMenu.getMenu(finalkeyb, inst.charPagePrint)));
-        if (finalkeyb.showGameMenu !== false) {
-            win.setMenu(Menu.buildFromTemplate(windowsMenu.getGameMenu(finalkeyb)));
-            win.setMenuBarVisibility(true);
-        }
+
+    // Primary URL comes from the active plugin (platform custom SWF / customUrl still win).
+    const bootGameUrl = platform.pluginRuntime.getPrimaryUrl();
+    if (!bootGameUrl) {
+        dialog.showErrorBox('AquaStar',
+            'No game plugin could be loaded, so there is nothing to open.\n\n' +
+            'Check the console output for "[AquaStar:plugins]" lines, or reinstall AquaStar.');
+        app.quit();
+        return;
     }
+
+    // webRequest rules go in before the first window loads anything.
+    applySessionRules();
+
+    let win = inst.newBrowserWindow(bootGameUrl, true);
+    // Re-apply after setApplicationMenu so the first window keeps plugin menu entries.
+    inst.applyWindowMenu(win, bootGameUrl);
     
     win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
     
@@ -96,54 +194,39 @@ function createWindow () {
         // when you should delete the corresponding element.
         win = null
     })
+}
 
-    // FIX for the "Save PX" Dialog!! Wiki is annoying to use w/o this!
-    session.defaultSession.webRequest.onBeforeRequest(
-        { urls: ['*://*.adsymptotic.com/*', '*://*.doubleclick.net/*', '*://*.onesignal.com/*',
-                 '*://*.nitropay.com/*', '*://translate.googleapis.com/*'] },
-        function(_details, callback) {
-            callback({ cancel: true });
-        });
-
-    // Enable Flash swf in official char pages. Thanks for /u/gulag1337 for finding this info and posting in reddit. I almost found it myself by accident... oof.
-    // Match patterns must include a path (e.g. /*)
-    const agentTagetFilter = {
-        urls: [
-            '*://*.aq.com/*',
-            '*://aq.com/*',
-            '*://game.aq.com/*',
-            '*://play.dragonfable.com/*'
-        ]
-    }
-    // Match Artix Game Launcher: strip Artix branding from native UA, identify via header
-    const spoofedUA = win.webContents.getUserAgent().replace(/Artix.*\s/, '');
-    session.defaultSession.webRequest.onBeforeSendHeaders(agentTagetFilter, (details, callback) => {
-        details.requestHeaders['User-Agent'] = spoofedUA;
-        details.requestHeaders['artixmode'] = 'launcher';
-        callback({ requestHeaders: details.requestHeaders })
-    })
-    
-    
-    
-    if (constant.isSwfLogEnabled){
+// Platform rules (ad blocking) and the active plugin's rules share one applicator: Electron
+// keeps a single listener per webRequest event, so separate registrations would replace
+// each other. The platform only supplies the browser's own UA; any UA policy is the plugin's.
+function applySessionRules() {
+    let swfLogStream = null;
+    if (constant.isSwfLogEnabled) {
         var t = new Date();
         var logName = "SWF log " +
-            t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate() + "_" + 
+            t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate() + "_" +
             t.getHours() + "-" + t.getMinutes() + ".txt";
-            
         inst.mkdir(constant.swflogPath);
-        var stream = fs.createWriteStream(
-            path.join(constant.swflogPath,logName), 
-            {autoClose:true});
-        
-        const aqwgamefilters = {urls: ['*://game.aq.com/game/*']};
-        session.defaultSession.webRequest.onBeforeRequest( aqwgamefilters, (details,callback) => {
-            //console.log(details.url);
-            stream.write(details.url + "\n");
-            callback({ cancel: false })
-        })
+        swfLogStream = fs.createWriteStream(
+            path.join(constant.swflogPath, logName),
+            { autoClose: true });
     }
 
+    const pluginRules = activePluginRuntime && activePluginRuntime.host
+        ? (activePluginRuntime.host._getState().sessionRules || [])
+        : [];
+
+    platform.applySessionRules(
+        session.defaultSession,
+        platform.createPlatformSessionRules().concat(pluginRules),
+        {
+            defaultUserAgent: session.defaultSession.getUserAgent(),
+            settings: { swfLog: constant.isSwfLogEnabled },
+            logLine: function (line) {
+                if (swfLogStream) swfLogStream.write(line + '\n');
+            }
+        }
+    );
 }
 
 // For anyone looking why we arent sandboxed and neither is AE...
@@ -160,11 +243,20 @@ app.on('second-instance', () => {
     win.focus();
   }
 })
-app.on('ready', createWindow)
+app.on('ready', () => {
+  activatePlugins().then(() => {
+    createWindow();
+  });
+})
 app.on('will-quit', () => {
   keyb.unregisterGlobalShortcuts();
   // No-op if a Ruffle-mode window never started it.
   socketProxy.stop();
+  if (activePluginRuntime && activePluginRuntime.module &&
+      typeof activePluginRuntime.module.deactivate === 'function') {
+    try { activePluginRuntime.module.deactivate(activePluginRuntime.host); }
+    catch (e) { console.log('[AquaStar:plugins] deactivate error: ' + e.message); }
+  }
 })
 app.on('window-all-closed', () => {
   // On macOS it is common for applications and their menu bar

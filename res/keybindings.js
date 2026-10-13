@@ -3,6 +3,7 @@ const constant      = require('./const.js');
 const windowsMenu   = require('./windows/menu.js');
 const ipcRecording  = require('./ipc/recording.js');
 const locale        = require('./locale.js');
+const platform      = require('./platform');
 const fs            = require('fs');
 const path          = require('path');
 const { globalShortcut, BrowserWindow, ipcMain, app, dialog } = require('electron');
@@ -11,6 +12,19 @@ const ruffleUpdate    = require('./ruffleUpdate.js');
 
 var finalKeybinds = {};
 var recordingWinId = 0;
+// null = show every originalKeybinds row (legacy / filter unknown).
+var visibleKeybindIds = null;
+var activeDispatcher = null;
+
+function setVisibleKeybindIds(ids) {
+    if (!ids || !ids.length) {
+        visibleKeybindIds = null;
+        return;
+    }
+    const map = {};
+    ids.forEach(function (id) { map[id] = true; });
+    visibleKeybindIds = map;
+}
 
 const CACHE_STORAGES = [
     'appcache', 'shadercache', 'cachestorage', 'localstorage',
@@ -19,15 +33,31 @@ const CACHE_STORAGES = [
 
 function customKeybinds() {
     var list = constant.listValidKeybindLocations;
-    finalKeybinds = Object.assign({}, constant.originalKeybinds, constant.originalOptions);
+    const pluginDefaults = Object.assign(
+        {},
+        platform.pluginRuntime.getKeybindDefaults(),
+        (platform.pluginRuntime.getState() &&
+            platform.pluginRuntime.getState().optionDefaults) || {}
+    );
+    const platformDefaults = Object.assign(
+        {},
+        constant.originalKeybinds,
+        constant.originalOptions
+    );
 
-    if (list != null && list.length != 0 ) {
+    let topLevel = {};
+    let pluginsBlock = {};
+    if (list != null && list.length != 0) {
         list.forEach((jsonPath) => {
             try {
                 var tempJson = JSON.parse(fs.readFileSync(jsonPath));
-                Object.assign(finalKeybinds,tempJson);
-            }
-            catch (e) { // If it fails, wont matter rly
+                if (tempJson && typeof tempJson === 'object') {
+                    Object.assign(topLevel, tempJson);
+                    if (tempJson.plugins && typeof tempJson.plugins === 'object') {
+                        pluginsBlock = tempJson.plugins;
+                    }
+                }
+            } catch (e) {
                 const errorMsg = e.error + " " + e.message + "\n" +
                 "Check out " + jsonPath;
                 console.log(errorMsg);
@@ -43,8 +73,20 @@ function customKeybinds() {
                 };
                 dialog.showMessageBox(null,dialog_options);
             }
-        })
+        });
     }
+
+    const activeId = (topLevel.activePluginId) ||
+        (platform.pluginRuntime.getPluginInfo() && platform.pluginRuntime.getPluginInfo().id) ||
+        '';
+
+    finalKeybinds = platform.settingsMerge.mergeLoadedSettings({
+        activePluginId: activeId,
+        platformDefaults: platformDefaults,
+        pluginDefaults: pluginDefaults,
+        topLevel: topLevel,
+        plugins: pluginsBlock
+    });
     return finalKeybinds;
 }
 
@@ -94,12 +136,35 @@ function toggleFullscreen(focusedWin) {
     }
 }
 
+function buildPlatformActions() {
+    return {
+        settings: function () { inst.openSettingsWindow(); },
+        fullscreen: toggleFullscreen,
+        sshot: function (focusedWin) { inst.takeSS(focusedWin); },
+        record: toggleRecording,
+        reload: function (focusedWin) { if (focusedWin) focusedWin.reload(); },
+        reloadCache: reloadIgnoringCache,
+        help: function (focusedWin) { windowsMenu.showHelpMessage(focusedWin); },
+        about: function (focusedWin) { windowsMenu.showAboutMessage(focusedWin); },
+        forward: function (fw) {
+            if (!fw) return;
+            var br = fw.webContents;
+            if (br.canGoForward()) br.goForward();
+        },
+        backward: function (fw) {
+            if (!fw) return;
+            var br = fw.webContents;
+            if (br.canGoBack()) br.goBack();
+        }
+    };
+}
+
 const processKeybings = function (){
 
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
     
     if(constant.isDebugBuild){
-        // Alt+I is now the Inventory screen's keybind - moved off this debug-only shortcut.
+        // Debug-only shortcut. Alt+I is left free for plugins.
         addKeybind('Alt+Shift+I', (fw)=>{fw.webContents.openDevTools()},true);
     }
     
@@ -107,71 +172,51 @@ const processKeybings = function (){
     
     /// Shhh... secreat stuff
     if (k.swfLog == true) constant.enableSWFLogging();
-    // Truthy check on purpose - customUrl now always exists (default ""), via originalOptions,
-    // so an empty-string default must NOT be treated as "override with an empty URL".
-    if (k.customUrl) constant.changeMainUrl(k.customUrl);
+    // customUrl (and the local SWF override) are applied by the plugin runtime on top of the
+    // active plugin primary game: see plugin-runtime getPrimaryUrl().
     if (k.useDirectWmode !== undefined) constant.setUseDirectWmode(k.useDirectWmode);
     if (k.enableDevTools == true) constant.enableDevTools();
 
-    addKeybind(k.wiki    , ()=>{inst.newBrowserWindow(constant.wikiReleases)});
-    addKeybind(k.design  , ()=>{inst.newBrowserWindow(constant.designNotes)});
-    addKeybind(k.account , ()=>{inst.newBrowserWindow(constant.accountAq)});
-    addKeybind(k.charpage, ()=>{inst.newBrowserWindow(constant.buildCharLookupUrl(k.playerCharacter))});
-    
-    // Open new Aqlite window (usefull for alts)
-    addKeybind(k.newAqw  , ()=>{inst.newBrowserWindow(constant.mainPath)});
-    addKeybind(k.newTest , ()=>{inst.newBrowserWindow(constant.testingAQW)});
-    
-    // Show help message
-    addKeybind(k.help,     (focusedWin)=>{windowsMenu.showHelpMessage(focusedWin)});
+    const pluginBindings = platform.pluginRuntime.listKeybindBindings();
+    activeDispatcher = platform.keybindDispatcher
+        ? platform.keybindDispatcher.createDispatcher({
+            platformActions: buildPlatformActions(),
+            pluginBindings: pluginBindings
+        })
+        : require('./platform/keybind-dispatcher.js').createDispatcher({
+            platformActions: buildPlatformActions(),
+            pluginBindings: pluginBindings
+        });
 
-    addKeybind(k.about,    (focusedWin)=>{windowsMenu.showAboutMessage(focusedWin)});
+    // Platform chrome (always).
+    addKeybind(k.help, function (focusedWin) { activeDispatcher.run('help', focusedWin); });
+    addKeybind(k.about, function (focusedWin) { activeDispatcher.run('about', focusedWin); });
+    addKeybind(k.settings, function () { activeDispatcher.run('settings'); });
+    addKeybind(k.fullscreen, function (focusedWin) { activeDispatcher.run('fullscreen', focusedWin); });
+    addGlobalKeybind(k.sshot, function (focusedWin) { activeDispatcher.run('sshot', focusedWin); }, false, true);
+    addGlobalKeybind(k.record, function (focusedWin) { activeDispatcher.run('record', focusedWin); });
+    addKeybind(k.reload, function (focusedWin) { activeDispatcher.run('reload', focusedWin); });
+    addGlobalKeybind(k.reloadCache, function (focusedWin) { activeDispatcher.run('reloadCache', focusedWin); }, false, true);
 
-    // Open Settings screen - customize keybindings
-    addKeybind(k.settings, ()=>{inst.openSettingsWindow()});
+    if (process.platform == 'darwin') {
+        addKeybind(k.backward, function (fw) { activeDispatcher.run('backward', fw); }, true);
+        addKeybind(k.forward, function (fw) { activeDispatcher.run('forward', fw); }, true);
+    }
 
-    // Open Reminders screen - daily/weekly quest tracker per character
-    addKeybind(k.reminders, ()=>{inst.openRemindersWindow()});
-
-    // Open To-Do screen - per-character task list (drops, shop items, quest rewards...)
-    addKeybind(k.todo, ()=>{inst.openTodoWindow()});
-
-    // Open Inventory screen - synced account.aq.com Inventory/BuyBack browser
-    addKeybind(k.inventory, ()=>{inst.openInventoryWindow()});
-
-    addKeybind(k.strategy, ()=>{inst.openStrategyWindow()});
-
-    // Toggle Fullscreen
-    addKeybind(k.fullscreen, toggleFullscreen);
-
-    // F2 / Ctrl+J must use globalShortcut — Flash PPAPI eats before-input-event keys
-    addGlobalKeybind(k.sshot, (focusedWin) => { inst.takeSS(focusedWin); }, false, true);
-    addGlobalKeybind(k.record, toggleRecording);
-
-
-    // Reload
-    addKeybind(k.reload,   (focusedWin) => {focusedWin.reload()});
-    // Reload and clear cache — globalShortcut so Flash game windows receive Ctrl+Shift+F5
-    addGlobalKeybind(k.reloadCache, reloadIgnoringCache, false, true);
-    
-    // Yay, AquaSP can have his DF too!
-    addKeybind(k.dragon, () => inst.newBrowserWindow(constant.df_url));
-    
-    //FORCED KEYBINDS FOR MAC. NEEDS TESTING
-    if (process.platform == 'darwin'){
-        addKeybind(k.cpSshot, ()=>{inst.charPagePrint()},true)
-        addKeybind(k.backward, 
-            (fw) => {
-                var br = fw.webContents;
-                if (br.canGoBack()) br.goBack();
-            },
-        true);
-        addKeybind(k.forward,
-            (fw) => {
-                var br = fw.webContents;
-                if (br.canGoForward()) br.goForward();
-            },
-        true);
+    if (pluginBindings.length) {
+        pluginBindings.forEach(function (binding) {
+            if (!binding || !binding.id || typeof binding.action !== 'function') return;
+            if (activeDispatcher.PLATFORM_RESERVED[binding.id]) return;
+            const accel = k[binding.id];
+            if (!accel) return;
+            const id = binding.id;
+            const onlyHtml = !!binding.onlyHtml;
+            if (binding.global) {
+                addGlobalKeybind(accel, function (fw) { activeDispatcher.run(id, fw); }, onlyHtml, !!binding.considerDF);
+            } else {
+                addKeybind(accel, function (fw) { activeDispatcher.run(id, fw); }, onlyHtml, !!binding.considerDF);
+            }
+        });
     }
 
     exports.keybinds = k;
@@ -205,27 +250,21 @@ const addGlobalKeybind = function(keybind, func, onlyHTML = false, considerDF = 
 
 exports.unregisterGlobalShortcuts = () => globalShortcut.unregisterAll();
 exports.addKeybinding = processKeybings;
+exports.setVisibleKeybindIds = setVisibleKeybindIds;
 
 // Menu entries call this dispatcher instead of duplicating shortcut behavior.
 // Keeping one implementation is particularly important for recording state and
 // cache clearing, both of which have process-wide side effects.
 exports.runGameMenuAction = function(action, focusedWin) {
+    if (activeDispatcher) {
+        const result = activeDispatcher.run(action, focusedWin);
+        if (result !== undefined) return result;
+    }
+    // Fallbacks when dispatcher missing or action unknown (e.g. studio menu entry).
     switch (action) {
-    case 'wiki': return inst.newBrowserWindow(constant.wikiReleases);
-    case 'design': return inst.newBrowserWindow(constant.designNotes);
-    case 'account': return inst.newBrowserWindow(constant.accountAq);
-    case 'charpage': return inst.newBrowserWindow(constant.buildCharLookupUrl(finalKeybinds.playerCharacter));
-    case 'newAqw': return inst.newBrowserWindow(constant.mainPath);
-    case 'newTest': return inst.newBrowserWindow(constant.testingAQW);
-    case 'dragon': return inst.newBrowserWindow(constant.df_url);
     case 'help': return windowsMenu.showHelpMessage(focusedWin);
     case 'about': return windowsMenu.showAboutMessage(focusedWin);
     case 'settings': return inst.openSettingsWindow();
-    case 'reminders': return inst.openRemindersWindow();
-    case 'todo': return inst.openTodoWindow();
-    case 'inventory': return inst.openInventoryWindow();
-    case 'strategy': return inst.openStrategyWindow();
-    case 'studio': return inst.openCharPageStudioWindow();
     case 'fullscreen':
         return toggleFullscreen(focusedWin);
     case 'sshot': return inst.takeSS(focusedWin);
@@ -246,14 +285,95 @@ function _keybindSaveTarget(){
 }
 
 ipcMain.handle('getKeybindings', () => {
+    const defaults = Object.assign(
+        {},
+        constant.originalKeybinds,
+        platform.pluginRuntime.getKeybindDefaults()
+    );
+    let visibleIds = null;
+    if (visibleKeybindIds) {
+        visibleIds = Object.keys(defaults).filter(function (id) {
+            return !!visibleKeybindIds[id];
+        });
+        // Include plugin-only ids that are visible but not in originalKeybinds.
+        Object.keys(visibleKeybindIds).forEach(function (id) {
+            if (visibleIds.indexOf(id) === -1 && defaults[id] != null) {
+                visibleIds.push(id);
+            }
+        });
+    }
     return {
         current:  Object.assign({}, finalKeybinds),
-        defaults: Object.assign({}, constant.originalKeybinds),
-        options:  Object.assign({}, constant.originalOptions),
+        defaults: defaults,
+        // Platform option defaults plus the active plugin's, so Reset restores both.
+        options:  Object.assign({}, constant.originalOptions,
+            (platform.pluginRuntime.getState() && platform.pluginRuntime.getState().optionDefaults) || {}),
         recordingFormatChoices: constant.recordingFormatChoices,
         renderModeChoices: constant.renderModeChoices,
         ruffleUpdateChannelChoices: constant.ruffleUpdateChannelChoices,
+        appLanguageChoices: constant.appLanguageChoices,
+        visibleKeybindIds: visibleIds,
         savePath: _keybindSaveTarget()
+    };
+});
+
+function _readPluginSettingsFromDisk() {
+    const settings = platform.readSettingsObject([_keybindSaveTarget()]);
+    const flags = platform.resolvePluginFlags(settings);
+    return {
+        activePluginId: flags.activePluginId,
+        pluginSystem: flags.pluginSystem,
+        enableLocalPlugins: flags.enableLocalPlugins,
+        allowLocalPluginOverride: flags.allowLocalPluginOverride,
+        trustedLocalPlugins: (settings && settings.trustedLocalPlugins) || {}
+    };
+}
+
+ipcMain.handle('getPluginSettings', () => _readPluginSettingsFromDisk());
+
+ipcMain.handle('getSettingsLayout', () => {
+    const pluginSettings = _readPluginSettingsFromDisk();
+    const layout = platform.settingsRegistry.buildSettingsLayout();
+    return {
+        plugin: layout.plugin,
+        pluginSections: layout.pluginSections,
+        pluginSettings: pluginSettings
+    };
+});
+
+ipcMain.handle('getPluginList', (event, opts) => {
+    const pluginSettings = _readPluginSettingsFromDisk();
+    const enableLocalPlugins = opts && typeof opts.enableLocalPlugins === 'boolean'
+        ? opts.enableLocalPlugins
+        : pluginSettings.enableLocalPlugins;
+    const allowLocalPluginOverride = opts && typeof opts.allowLocalPluginOverride === 'boolean'
+        ? opts.allowLocalPluginOverride
+        : pluginSettings.allowLocalPluginOverride;
+    const trustedLocalPlugins = opts && opts.trustedLocalPlugins && typeof opts.trustedLocalPlugins === 'object'
+        ? opts.trustedLocalPlugins
+        : pluginSettings.trustedLocalPlugins;
+    const discovered = platform.discoverPlugins({
+        bundledDir: path.join(constant.appRootPath, 'plugins'),
+        localDir: path.join(constant.appDataDirectory, 'plugins'),
+        enableLocalPlugins: enableLocalPlugins,
+        allowLocalPluginOverride: allowLocalPluginOverride,
+        appVersion: constant.appVersion,
+        log: function () {}
+    });
+    return {
+        plugins: discovered.plugins.map(function (p) {
+            return {
+                id: p.manifest.id,
+                name: p.manifest.name || p.manifest.id,
+                version: p.manifest.version || '',
+                source: p.source,
+                trusted: platform.isLocalTrusted(p, {
+                    trustedLocalPlugins: trustedLocalPlugins
+                })
+            };
+        }),
+        errors: discovered.errors || [],
+        localPluginsDir: path.join(constant.appDataDirectory, 'plugins')
     };
 });
 
@@ -274,8 +394,12 @@ ipcMain.handle('saveKeybindings', (event, updatedBinds) => {
         try { existing = JSON.parse(fs.readFileSync(target)); }
         catch (e) { existing = {}; }
     }
-    Object.assign(existing, updatedBinds);
-    fs.writeFileSync(target, JSON.stringify(existing, null, 4));
+    const activeId = (updatedBinds && updatedBinds.activePluginId) ||
+        existing.activePluginId ||
+        (platform.pluginRuntime.getPluginInfo() && platform.pluginRuntime.getPluginInfo().id) ||
+        '';
+    const next = platform.settingsMerge.splitSavePatch(updatedBinds || {}, activeId, existing);
+    fs.writeFileSync(target, JSON.stringify(next, null, 4));
     return { savedTo: target };
 });
 
@@ -307,43 +431,34 @@ ipcMain.on('restartApp', () => {
 });
 
 /// -------------------------------
-/// Settings screen IPC - custom AQLite SWF file (aqlite_old.swf) management.
-/// Presence of this exact file (checked once at boot in const.js) is what puts the app
-/// into "custom swf" mode, which takes priority over the customUrl option above.
+/// Settings screen IPC - custom SWF file management (see res/customSwf.js).
+/// A custom SWF found at boot puts the app in "custom swf" mode, which takes priority over
+/// the customUrl option above and over the active plugin's own primary game.
 /// -------------------------------
 
-function _customSwfPath() {
-    return constant.customSwfPath;
-}
-
-function _activeCustomSwfPath() {
-    if (fs.existsSync(constant.customSwfPath)) return constant.customSwfPath;
-    if (fs.existsSync(constant.legacyCustomSwfPath)) return constant.legacyCustomSwfPath;
-    return null;
-}
-
 ipcMain.handle('getCustomSwfStatus', () => {
-    const activePath = _activeCustomSwfPath();
-    return { exists: activePath !== null, path: activePath || _customSwfPath() };
+    const activePath = constant.activeCustomSwfPath;
+    return { exists: activePath !== null, path: activePath || constant.customSwfPath };
 });
 
 ipcMain.handle('chooseCustomSwf', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     const result = await dialog.showOpenDialog(win, {
-        title: 'Select a custom AQLite SWF file',
+        title: 'Select a custom SWF file',
         filters: [{ name: 'Flash SWF', extensions: ['swf'] }],
         properties: ['openFile']
     });
     if (result.canceled || !result.filePaths.length) return { canceled: true };
 
-    const target = _customSwfPath();
+    const target = constant.customSwfPath;
     fs.copyFileSync(result.filePaths[0], target);
     return { canceled: false, exists: true, path: target };
 });
 
 ipcMain.handle('removeCustomSwf', () => {
-    const target = _activeCustomSwfPath();
-    if (target) fs.unlinkSync(target);
-    const activePath = _activeCustomSwfPath();
-    return { exists: activePath !== null, path: activePath || _customSwfPath() };
+    // Removes every file that would count as the override (all known names), so one click
+    // really ends custom-SWF mode.
+    constant.removeCustomSwfFiles();
+    const activePath = constant.activeCustomSwfPath;
+    return { exists: activePath !== null, path: activePath || constant.customSwfPath };
 });

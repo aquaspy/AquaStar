@@ -21,7 +21,7 @@ const ignoredDirectories = new Set([
 const ignoredFiles = new Set([
   'package-lock.json',
   'res/ruffle/jquery.min.js',
-  'res/features/wikiview/jquery.min.js'
+  'plugins/adventure-quest-worlds/features/wikiview/jquery.min.js'
 ]);
 
 function filesIn(directory) {

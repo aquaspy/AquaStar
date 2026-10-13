@@ -4,15 +4,14 @@ const windowsMenu            = require('./windows/menu.js');
 const keybinds               = require('./keybindings.js');
 const socketProxy            = require('./socketProxy.js');
 const createFeatureWindowController = require('./windows/feature-window-controller.js');
-const {app, BrowserWindow, Menu}  = require('electron');
-const {spawn} = require('child_process');
+const {BrowserWindow, Menu}  = require('electron');
 
 let usedAltPagesNumbers = [];
 
-// SS asks for them.... Also WikiView JUST because i wanted it in a separeted file organized.
 const fs       = require('fs');
 const path     = require('path');
-let   isAltKPageUp = false;
+// Plugin navigation hooks (PR 5). When set, did-finish-load delegates to the plugin.
+let navigationHooks = null;
 
 // For notify Window's original names.
 let winTimeRef = {};
@@ -39,30 +38,58 @@ function _executeJavaScriptSafely(webContents, source, label) {
 }
 
 
+// Collapse duplicate opens from menu+shortcut or dual app/window menus.
+var _windowOpenGate = { key: '', at: 0 };
+var WINDOW_OPEN_DEDUP_MS = 750;
+
+function _normalizeWindowOpenKey(url) {
+    var key = String(url || '');
+    if (process.platform === 'win32') key = key.toLowerCase();
+    return key;
+}
+
 // New page function
 function newBrowserWindow(new_path, isMainWin=false){
     var config;
     var originalPath = new_path;
+    var gateKey = _normalizeWindowOpenKey(originalPath);
+    var now = Date.now();
+    if (gateKey && gateKey === _windowOpenGate.key &&
+        (now - _windowOpenGate.at) < WINDOW_OPEN_DEDUP_MS) {
+        console.log('[AquaStar] Suppressed duplicate newBrowserWindow:', originalPath);
+        var existing = BrowserWindow.getAllWindows();
+        return existing.length ? existing[existing.length - 1] : null;
+    }
+    _windowOpenGate = { key: gateKey, at: now };
+
     if (isMainWin) config = windowConfig.mainConfig;
     else if (_isGameWindow(new_path)) config = windowConfig.gameConfig;
     else config = windowConfig.winConfig;
     
-    // Ruffle mode (Settings): AQW main/new/Testing + DragonFable. Char Page is
-    // unaffected (Artix's own page already ships Ruffle).
+    // How a game is opened is the owning plugin's call (its primary/launch "wrap" config):
+    // Ruffle when Settings → renderMode is "ruffle" and the SWF is eligible, an explicit
+    // wmode/scale HTML embed, or the default wmode=direct embed. HTML/feature pages are
+    // never wrapped — plugins may use file:// HTML as primary UI.
+    var gameEntry = _findGameEntry(originalPath);
+    var wrap = (gameEntry && gameEntry.wrap) || null;
     var renderMode = (keybinds.keybinds && keybinds.keybinds.renderMode) || constant.defaultRenderMode;
     if (renderMode === 'ruffle' && constant.isRuffleEligible(new_path)) {
-        socketProxy.start();
-        new_path = constant.wrapRuffleUrl(new_path);
+        const ruffleOpts = (wrap && wrap.ruffle) || null;
+        if (ruffleOpts && ruffleOpts.socket) {
+            socketProxy.allowHosts(ruffleOpts.socket.allowedHosts);
+            socketProxy.start();
+        }
+        new_path = constant.wrapRuffleUrl(new_path, ruffleOpts);
     }
-    // Flash path for DragonFable: always use the HTML embed so the 750x550 stage
-    // letterboxes into the window (scale=showall). Bare .swf navigation leaves it
-    // at native stage size. wmode=opaque + base= keep relative DFversion.asp /
-    // gamefiles/* loads working (wmode=direct from file:// breaks them).
-    else if (originalPath === constant.df_url) {
-        new_path = constant.wrapSwfUrl(new_path, { wmode: 'opaque', scale: 'showall' });
+    // Explicit wrap options (e.g. wmode=opaque + scale=showall for a game whose relative
+    // loads break under wmode=direct from file://). Applies even with useDirectWmode off.
+    else if (_looksLikeSwfUrl(originalPath) && wrap && (wrap.wmode || wrap.scale)) {
+        new_path = constant.wrapSwfUrl(new_path, { wmode: wrap.wmode, scale: wrap.scale });
     }
-    // Wrap AQW SWFs in an HTML page with wmode=direct for maximum performance.
-    else if (constant.useDirectWmode && _isGameWindow(new_path, false)) {
+    // Default: wrap Flash SWFs of non-standalone games in an HTML page with wmode=direct.
+    else if (constant.useDirectWmode && _looksLikeSwfUrl(originalPath) &&
+        gameEntry && !gameEntry.standalone &&
+        !(wrap && wrap.preferDirectWmode === false)) {
         new_path = constant.wrapSwfUrl(new_path);
     }
     
@@ -73,17 +100,17 @@ function newBrowserWindow(new_path, isMainWin=false){
     newWin.loadURL(new_path);
 
     // Debug mode opens DevTools on every window created through here (main, wiki,
-    // design notes, account, char page lookup, game instances...). The char page
-    // PRINT window (charPagePrint(), below) is built directly with `new BrowserWindow`
-    // and never goes through this function, so it's never affected.
+    // design notes, account, game instances...). Windows a plugin builds directly with
+    // `new BrowserWindow` never go through this function, so they are never affected.
     if (constant.isDebugBuild || constant.isDevToolsEnabled) {
         newWin.webContents.openDevTools();
     }
 
-    if (originalPath == constant.mainPath ||
-        _isTestingAqwUrl(originalPath)) {
+    // Non-standalone games (the primary and its sibling launches) are numbered and titled
+    // by the plugin; standalone launches keep their own title.
+    if (gameEntry && !gameEntry.standalone) {
 
-        // Its alt window, Put the aqlite/Aqw title...
+        // Alt / primary game windows — number them and set a plugin-aware title.
         var windowNumber = 1;
         
         for (;usedAltPagesNumbers.includes(windowNumber);windowNumber++){
@@ -93,46 +120,55 @@ function newBrowserWindow(new_path, isMainWin=false){
             };
         }
         
-        // Deciding the new title name...
-        var winTitle = "";
-        if (originalPath == constant.mainPath){
-            var displayName = constant.resolveAppDisplayName(keybinds.keybinds);
-            winTitle = displayName + " - " + (constant.isOldAqlite ? "Older/Custom AQLite":" Adventure Quest Worlds");
-        }
-        else {
-            winTitle = "AquaStar - AQW Testing Version!";
-        }
+        var winTitle = _titleForGameEntry(gameEntry, keybinds.keybinds);
         if (windowNumber > 1) winTitle += " (Window " + windowNumber + ")";
             
         newWin.setTitle(winTitle);
 
-        // Storing and Removing the window number from a list.
         usedAltPagesNumbers.push(windowNumber);
         newWin.on('closed', () => {
             usedAltPagesNumbers.splice(
                 usedAltPagesNumbers.indexOf(windowNumber), 1);
         });
     }
-    else if (originalPath == constant.df_url) {
-        newWin.setTitle("AquaStar - DragonFable");
-    }
     else {
-        /// Its a usual HTML page window then! features incomming
-        /// ... but only if its win or lunix. Mac doesnt have the feature -_-
-        /// Mac still get keybinds tho, just not the menu.
-        newWin.setMenuBarVisibility(true);
+        // Standalone launches use their own title; other pages get the normal menu bar.
+        if (gameEntry && typeof gameEntry.title === 'function') {
+            newWin.setTitle(_titleForGameEntry(gameEntry, keybinds.keybinds));
+        } else {
+            newWin.setMenuBarVisibility(true);
+        }
     }
 
-    // Game windows get a small discoverable command bar when enabled. Browser
-    // windows keep the application menu created in main.js.
-    if (_isGameWindow(originalPath, false) && keybinds.keybinds.showGameMenu !== false && process.platform !== 'darwin') {
-        newWin.setMenu(Menu.buildFromTemplate(windowsMenu.getGameMenu(keybinds.keybinds)));
-        newWin.setMenuBarVisibility(true);
-    }
+    applyWindowMenu(newWin, originalPath);
     
     _windowAddContext(newWin);
     
     return newWin;
+}
+
+/**
+ * Assign the correct per-window menu (game vs browser). Must run after any
+ * Menu.setApplicationMenu call — on Windows that can otherwise leave the first
+ * window stuck on the minimal app menu without plugin entries.
+ */
+function applyWindowMenu(win, originalPath) {
+    if (!win || win.isDestroyed() || process.platform === 'darwin') return;
+    originalPath = originalPath || win.aquaStarSwfUrl || '';
+    var entry = _findGameEntry(originalPath);
+    var primary = _getPrimaryGame();
+    var showGameMenu = (!keybinds.keybinds || keybinds.keybinds.showGameMenu !== false) &&
+        !!entry && !entry.standalone && (entry === primary || _looksLikeSwfUrl(originalPath));
+    var menuTemplate = showGameMenu
+        ? windowsMenu.getGameMenu(keybinds.keybinds || {})
+        : windowsMenu.getMenu(keybinds.keybinds || {}, takeSS, false);
+    if (menuTemplate && menuTemplate.length) {
+        win.setMenu(Menu.buildFromTemplate(menuTemplate));
+        win.setMenuBarVisibility(true);
+    } else {
+        win.setMenu(null);
+        win.setMenuBarVisibility(false);
+    }
 }
 
 // Now, every window created with actions like CTRL + click, can have the right click menu too.
@@ -168,96 +204,23 @@ function _windowAddContext(newWin){
         event.newGuest = openChildWindow(url);
     });
     
-    // Bonus: Hug popup (yeah, Hug them hard.)
+    // Page-load injections (cleanup, previews, account sync…) belong to the active plugin:
+    // the platform only forwards did-finish-load to its registered navigation hooks.
     newWin.webContents.on("did-finish-load", () => {
         var url = newWin.getURL();
-        // Keep third-party frames intact outside the Wiki. In particular, Cloudflare
-        // challenges on account.aq.com render inside challenges.cloudflare.com iframes.
-        const isWikiPage = /^https?:\/\/aqwwiki\.wikidot\.com(?:\/|$)/i.test(url);
-        const isMainAqPage = /^https?:\/\/(?:www\.)?aq\.com(?:\/|$)/i.test(url);
-        // Game windows only contain Flash — skip popup/ad injection
-        if (_isGameWindow(newWin)) return;
-        function testAndDelete (testURL,objName,isClass = false) {
-            if(url.includes(testURL)){
-                var codeTest;
-                codeTest = (isClass)? 
-                    "(document.getElementsByClassName('" + objName + "')[0] == undefined)? false : true":
-                    "(document.getElementById('" + objName + "') == undefined)? false : true;";
-
-                _executeJavaScriptSafely(newWin.webContents, codeTest, 'Page cleanup check').then((popUpExists) =>{
-                    if (popUpExists) {
-                        var codeNuke;
-                        codeNuke = (isClass)? 
-                            "document.getElementsByClassName('" + objName + "')[0].innerHTML = ''":
-                            "document.getElementById('" + objName + "').innerHTML = ''";
-                        _executeJavaScriptSafely(newWin.webContents, codeNuke, 'Page cleanup');
-                    }
-                });
-            }
-        }
-        if (isWikiPage) {
-            testAndDelete("wikidot","ncmp__tool",false);
-
-            // Ads. Bc wiki is being too trashy to get ad revenue from me.
-            testAndDelete("wikidot","wad-aqwwiki-above-content",false);
-            testAndDelete("wikidot","wad-aqwwiki-below-content",false);
-            _executeJavaScriptSafely(newWin.webContents,
-                "var rem = document.getElementsByTagName('iframe');" +
-                "for (var i=0;i<rem.length;i++) rem[i].remove()", 'Wiki frame cleanup');
-        }
-
-        // The Facebook widget is only an ad cleanup on the main AQ site. Never
-        // manipulate account.aq.com: it needs its embedded authentication frames.
-        if (isMainAqPage) testAndDelete("aq.com","fb-page",true);
-        // ----------------------------------------------------------------------------------------------
-        // Another bonus: Wiki link preview (WikiView), made by biglavis over at https://github.com/biglavis
-        //  Available on the file res/features/wikiview/wikiviewsource.js.
-
-        const checkWiki     = /aqwwiki\.wikidot\.com\/.+/gi
-        const checkCharPage = /account\.aq\.com\/CharPage\?id=.+/gi
-        const checkAccountAq= /account\.aq\.com\/AQW\/(Inventory|BuyBack|WheelProgress|House)/gi
-        const checkAccountSite = /^https?:\/\/account\.aq\.com(?:\/|$)/i
-        const checkAccountLogin = /^https?:\/\/account\.aq\.com\/Login(?:\/|$)/i
-
-        const bWiki = checkWiki.test(url)
-        const bCp   = checkCharPage.test(url)
-        const bAcc  = checkAccountAq.test(url)
-        const bAccountSite = checkAccountSite.test(url)
-        const bAccountLogin = checkAccountLogin.test(url)
-        const isViewUrl = bWiki || bCp || bAcc
-
-        if (isViewUrl){
-            const wikiviewDir = path.join(__dirname, 'features', 'wikiview');
-            // nameVariants.js provides shared suffix/exception data to both the hover
-            // preview and the main-process ownership matcher. It must run before the hover
-            // engine, which is also used by the standalone Inventory window.
-            const nameVariants = fs.readFileSync(path.join(wikiviewDir, 'nameVariants.js'), 'utf8');
-            const hoverPreview = fs.readFileSync(path.join(wikiviewDir, 'hoverPreview.js'), 'utf8');
-            const wikiviewSource = fs.readFileSync(path.join(wikiviewDir, 'wikiviewsource.js'), 'utf8');
-            var wikiview = nameVariants + '\n;\n' + hoverPreview + '\n;\n' + wikiviewSource;
-            if (bWiki){
-                const jquery = fs.readFileSync(path.join(wikiviewDir, 'jquery.min.js'), 'utf8');
-                wikiview = jquery + '\n;\n' + wikiview;
-            }
-            // Mark success only after every source has run. A transient renderer error must
-            // not permanently suppress the next did-finish-load injection attempt.
-            wikiview = '(function () {\n' +
-                'if (window.__aquastarWikiViewInjected) return false;\n' +
-                'try {\n' + wikiview + '\n' +
-                'window.__aquastarWikiViewInjected = true; return true;\n' +
-                '} catch (error) { delete window.__aquastarWikiViewInjected; console.error("[AquaStar] WikiView injection failed", error); throw error; }\n' +
-                '})();';
-            _executeJavaScriptSafely(newWin.webContents, wikiview, 'Wiki enhancement').then((injected) => {
-                if (injected) console.log('[AquaStar] Wiki enhancement injected into ' + url);
+        if (navigationHooks && typeof navigationHooks.onDidFinishLoad === 'function') {
+            Promise.resolve(navigationHooks.onDidFinishLoad({
+                win: newWin,
+                url: url,
+                isGameWindow: _isGameWindow(newWin),
+                executeJavaScriptSafely: function (source, label) {
+                    return _executeJavaScriptSafely(newWin.webContents, source, label);
+                }
+            })).catch(function (error) {
+                console.log('[AquaStar] Navigation hook failed: ' +
+                    (error && error.message ? error.message : error));
             });
-        }
-
-        // Give every account.aq.com page a manual sync entry point.  The injected installer
-        // waits for a hydrated DOM and restores itself after client-side page changes; see
-        // res/features/inventory/accountSyncButton.js.
-        if (bAccountSite && !bAccountLogin){
-            const syncBtnSrc = fs.readFileSync(path.join(__dirname, 'features', 'inventory', 'accountSyncButton.js'), 'utf8');
-            _executeJavaScriptSafely(newWin.webContents, syncBtnSrc, 'Account sync button');
+            return;
         }
     });
 }
@@ -278,6 +241,45 @@ function executeOnFocused(funcForWindow, onlyHtml = false, considerDF = false){
     if (target !== null) funcForWindow(target);
 }
 
+function _looksLikeSwfUrl(url) {
+    return typeof url === 'string' && /\.swf(\?|#|$)/i.test(url);
+}
+
+function _runtime() {
+    try { return require('./platform').pluginRuntime; } catch (e) { return null; }
+}
+
+function _getPrimaryGame() {
+    var runtime = _runtime();
+    return runtime ? runtime.getPrimaryGame() : null;
+}
+
+/** The active plugin's primary/launch entry that owns this URL, or null. */
+function _findGameEntry(url) {
+    var runtime = _runtime();
+    return runtime ? runtime.findGameEntry(url) : null;
+}
+
+// Window title for a game entry; the plugin owns the wording.
+function _titleForGameEntry(entry, settings) {
+    // Plugins build their own title from the app name and the saved settings.
+    var displayName = constant.appName;
+    if (entry && typeof entry.title === 'function') {
+        try {
+            return entry.title({
+                displayName: displayName,
+                settings: settings || {},
+                usingCustomSwf: !!constant.hasCustomSwf
+            }) || ('AquaStar - ' + displayName);
+        } catch (e) {
+            return 'AquaStar';
+        }
+    }
+    return 'AquaStar - ' + displayName;
+}
+
+// considerDF: also count standalone launches (separate games with their own wrapper and
+// menu rules) as game windows. Direct-wmode and game-menu callers pass false.
 function _isGameWindow(target, considerDF = true){
     var url;
     // If passed a BrowserWindow, use the stored original SWF URL
@@ -286,98 +288,15 @@ function _isGameWindow(target, considerDF = true){
     } else {
         url = target;
     }
-    
-    var aqliteValue = constant.mainPath;
-    if(process.platform == "win32") {
-        // I so want to swear RN... just WHY???
-        // Now when comparing to the file:///, its the same rules as URL.
-        aqliteValue = constant.mainPath.replace(/\\/g,"/");
-    }
-    
-    if (url == aqliteValue || _isTestingAqwUrl(url)) return true;
-    if (considerDF && url === constant.df_url) {
-        return true;
-    }
-    return false;
-}
-
-// The Testing AQW URL gets a fresh cache-busting `ver` value every time it is
-// requested.  It must therefore be identified by its stable SWF path instead
-// of comparing it to another invocation of constant.testingAQW.
-function _isTestingAqwUrl(target) {
-    return typeof target === 'string' &&
-        target.indexOf('https://game.aq.com/game/gamefiles/Loader_Spider.swf') === 0;
-}
-
-// Weird char page config - For Alt + K
-function charPagePrint(){
-    // Check if its valid keybind.
-    var focusedWindow = BrowserWindow.getFocusedWindow();
-    if (focusedWindow == null) return;
-    var url = focusedWindow.webContents.getURL();
-    if( !url.includes(constant.charLookup + "?id=")) { return };
-
-    let code = `(document.getElementsByTagName("object")[0] == undefined)? false : true;`;
-    _executeJavaScriptSafely(focusedWindow.webContents, code, 'Char page check').then((flashExists) =>{
-        if(!flashExists){
-            _notifyWindow(focusedWindow,constant.titleMessages.invalidCharpage);
-        }
-        else {
-            //VALID! Lets start...
-            const newWin = new BrowserWindow(windowConfig.charConfig);
-            newWin.setMenuBarVisibility(false);
-            _notifyWindow(focusedWindow,constant.titleMessages.loadingCharpage, false);
-            newWin.loadURL(url);
-            
-            // Fix for closing the window too soon...
-            isAltKPageUp = true;
-            focusedWindow.on('closed', () => {
-                isAltKPageUp = false;
-            });
-            
-            newWin.webContents.on("did-finish-load", () => {
-
-                if(isAltKPageUp) _notifyWindow(focusedWindow,constant.titleMessages.buildingCharpage, false);
-
-                // Lets figure it out how to take the sizes
-                const wOri = 715;
-                const hOri = 455;
-                var rect = null;
-                setTimeout(()=>{ 
-                    const siz = newWin.getSize();
-                    if ( (siz[0]/siz[1]) > (wOri/hOri) ){
-                        // Window has bigger Width ratio than the original
-                        // Scale using Height! reduction is to account for window bar.
-                        var h = siz[1]
-                        var nw = wOri*(h/hOri)
-                        rect = {
-                            x: Math.round((siz[0]-nw)/2),
-                            y: 0,
-                            width:  Math.round(nw),
-                            height: h
-                        }
-                    }
-                    else {
-                        var w = siz[0]
-                        var nh = hOri*(w/wOri)
-                        rect = {
-                            x: 0,
-                            y: 0,
-                            width:  w,
-                            height: Math.round(nh)
-                        }
-                    }
-                    takeSS(newWin,rect,true);
-                    if(isAltKPageUp) _notifyWindow(focusedWindow,constant.titleMessages.cpDone);
-                },5000);
-            });
-        }
-    });
-//TODO - find a way to detect when flash is done loading!
+    if (typeof url !== 'string' || !url) return false;
+    var entry = _findGameEntry(url);
+    if (!entry) return false;
+    if (!considerDF && entry.standalone) return false;
+    return true;
 }
 
 // Take a screenshot of the screen. 
-// Customizable options in parameter are there for the charPagePrint function
+// Optional rect / destroyWindow let callers (e.g. plugins) screenshot a specific window area.
 function takeSS(focusedWin, ret = null, destroyWindow = false){
     // If ret is passed, we figure how to take the SS.
     // Format is the rectangle one;
@@ -466,21 +385,19 @@ function _notifyWindow(targetWin, notif, resetAfter = true){
 
 const featureWindows = createFeatureWindowController(windowConfig.featureWindows, BrowserWindow);
 function openFeatureWindow(featureId) {
+    try {
+        const runtime = require('./platform').pluginRuntime;
+        const pluginDef = runtime.getFeatureWindow(featureId);
+        if (pluginDef) {
+            const host = typeof runtime.getHost === 'function' ? runtime.getHost() : null;
+            const pluginRoot = (host && host.pluginRoot) || '';
+            return featureWindows.open(featureId, pluginDef, pluginRoot);
+        }
+    } catch (e) { /* fall back to platform config map */ }
     return featureWindows.open(featureId);
 }
 
 function openSettingsWindow(){ return openFeatureWindow('settings'); }
-function openRemindersWindow(){ return openFeatureWindow('reminders'); }
-function openTodoWindow(){ return openFeatureWindow('todo'); }
-function openInventoryWindow(){ return openFeatureWindow('inventory'); }
-function openStrategyWindow(){ return openFeatureWindow('strategy'); }
-function openCharPageStudioWindow(){
-    const args = process.defaultApp ? [app.getAppPath(), '--charpage-studio'] : ['--charpage-studio'];
-    const studio = spawn(process.execPath, args, { detached: true, stdio: 'ignore' });
-    studio.unref();
-    return studio;
-}
-
 function _mkdir (filepath){
     try {
         fs.mkdirSync(filepath, { recursive: true });
@@ -492,17 +409,15 @@ function _mkdir (filepath){
 }
 
 exports.newBrowserWindow    = newBrowserWindow;
-exports.charPagePrint       = charPagePrint;
 exports.openSettingsWindow  = openSettingsWindow;
-exports.openRemindersWindow = openRemindersWindow;
-exports.openTodoWindow      = openTodoWindow;
-exports.openInventoryWindow = openInventoryWindow;
-exports.openStrategyWindow  = openStrategyWindow;
-exports.openCharPageStudioWindow = openCharPageStudioWindow;
 exports.openFeatureWindow   = openFeatureWindow;
+exports.applyWindowMenu     = applyWindowMenu;
 
 exports.executeOnFocused    = executeOnFocused;
 exports.takeSS              = takeSS;
 exports.notifyWin           = _notifyWindow;
+exports.executeJavaScriptSafely = _executeJavaScriptSafely;
 exports.getSavedTitle       = getSavedTitle;
 exports.mkdir               = _mkdir;
+exports.setNavigationHooks  = function (hooks) { navigationHooks = hooks || null; };
+exports.getNavigationHooks  = function () { return navigationHooks; };

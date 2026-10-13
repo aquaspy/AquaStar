@@ -1,7 +1,7 @@
 {
   "name": "AquaStar",
-  "version": "1.12.2",
-  "description": "A custom aqlite launcher",
+  "version": "2.0.0",
+  "description": "Flash companion launcher with Adventure Quest Worlds plugin support",
   "homepage": "https://github.com/aquaspy/AquaStar",
   "main": "main.js",
   "scripts": {
@@ -15,11 +15,12 @@
     "loc": "node scripts/count-loc.js",
     "web:build": "node scripts/build-web.js",
     "web:preview": "npm run web:build && node scripts/serve-web.js",
-    "lint": "eslint main.js res scripts test web --ext .js",
-    "format": "prettier --write package.json .github .eslintrc.cjs .prettierrc.json web scripts/build-web.js scripts/serve-web.js test",
-    "format:check": "prettier --check package.json .github .eslintrc.cjs .prettierrc.json web scripts/build-web.js scripts/serve-web.js test",
+    "lint": "eslint main.js res scripts test \"plugins/*/web/**/*.js\" --ext .js",
+    "format": "prettier --write package.json .github .eslintrc.cjs .prettierrc.json \"plugins/*/web/**/*\" scripts/build-web.js scripts/serve-web.js test",
+    "format:check": "prettier --check package.json .github .eslintrc.cjs .prettierrc.json \"plugins/*/web/**/*\" scripts/build-web.js scripts/serve-web.js test",
     "test": "node test/run.js",
-    "test:ci": "npm run test && npm run pack"
+    "smoke:plugins": "node scripts/smoke-plugins.js",
+    "test:ci": "npm run test && npm run smoke:plugins && npm run pack"
   },
   "keywords": [
     "aqw;",

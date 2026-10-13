@@ -59,6 +59,7 @@ cp -r \
     "${ROOT}/Icon" \
     "${ROOT}/LICENSE.md" \
     "${ROOT}/res" \
+    "${ROOT}/plugins" \
     "${ROOT}/scripts" \
     "${ROOT}/main.js" \
     "${ROOT}/package.json" \
@@ -66,6 +67,17 @@ cp -r \
     "${ROOT}/node_modules" \
     "$WORKDIR/"
 cp "${ROOT}/FlashPlayer/${FLASH}" "$WORKDIR/FlashPlayer/"
+
+# The staging list above is kept by hand, so check the result with the staged copy of the
+# platform itself: every runtime entry exists and a bundled default plugin can be discovered.
+# Without plugins/ the app starts with no game to open and exits (a release shipped like that).
+node "$WORKDIR/scripts/verify-staging.js" "$WORKDIR"
+
+# STAGE_ONLY=1 stops here so the staged folder can be inspected or run without packaging.
+if [ "${STAGE_ONLY:-}" = "1" ]; then
+    echo "--> Staged ${PLATFORM} ${ARCH} at ${WORKDIR} (STAGE_ONLY)"
+    exit 0
+fi
 
 cd "$WORKDIR"
 "${BUILD_ARGS[@]}"

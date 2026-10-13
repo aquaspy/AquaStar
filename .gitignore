@@ -3,6 +3,7 @@ node_modules
 AquaStar Screenshots
 AquaStar Screenshots/*
 aqlite_old*.swf
+custom-game*.swf
 # If it's necessary in the future:
 releases/
 work/

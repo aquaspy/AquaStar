@@ -8,56 +8,54 @@ const appRoot   = constant.appRootPath;
 const iconPath  = constant.iconPath;
 const toFileUrl = constant.toFileUrl;
 
-// For customizing windows themselfs
+function _browserPreloadPath() {
+    // The active plugin may bring its own preload for the pages it links to (e.g. a wiki
+    // enhancer). Without one, browser windows get the neutral preload, so another plugin
+    // never inherits page-side scripts that could interfere with github.com and the like.
+    try {
+        const pluginPreload = require('../platform').pluginRuntime.getBrowserPreload();
+        if (pluginPreload) return pluginPreload;
+    } catch (e) { /* runtime not ready */ }
+    return path.join(appRoot, 'res', 'platform', 'preload_browser.js');
+}
+
+// Window shapes: "game"/"main" hold the game (Flash, no sandbox), anything else is a browser window.
 function _getWinConfig(type){
-    if (type != "cprint") {
-        const isGame = (type == "game" || type == "main");
-        return {
-            width: 960,
-            height: 530,
-            useContentSize: true,
-            icon: iconPath,
-            webPreferences: {
-                nodeIntegration: false,
-                sandbox: isGame ? false : true,
-                webviewTag: false,
-                preload: isGame ?
-                    path.join(appRoot, 'res', 'features', 'capture', 'preload_capture.js') :
-                    path.join(appRoot, 'res', 'features', 'wikiview', 'preload_wikiview.js'),
-                // Plugins (Flash) enabled everywhere - Blame Char page breaking in a update or two.
-                // AquaStar shouldnt navigate to random websites anyway. Not endorsed to.
-                plugins: true,
-                contextIsolation: true,
-                backgroundThrottling: !isGame
-            }
-        };
-    }
+    const isGame = (type == "game" || type == "main");
     return {
-        // First off, yes, this is 4K res, no, it wont be your print size.
-        // The window caps (in Cinnamon's Muffin at least) at your window size
-        // And bc of that, i setted the number as high as i imagined w/o having the chance
-        // of the OS complain about the 1 billion window size. I think 4k is a nice number...
-        // Sec. YES, it NEEDS both Show off (so doesnt show in user's face) and
-        // resizable false, so it stays "maxed size";
-        width: 3840,
-        height: 2160,
-		useContentSize: true,
-        show: false,
-        resizable: false,
+        width: 960,
+        height: 530,
+        useContentSize: true,
+        icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
-            sandbox: false,
+            sandbox: isGame ? false : true,
+            webviewTag: false,
+            preload: isGame ?
+                path.join(appRoot, 'res', 'features', 'capture', 'preload_capture.js') :
+                _browserPreloadPath(),
+            // Plugins (Flash) are enabled everywhere: pages a plugin links to may embed Flash.
             plugins: true,
             contextIsolation: true,
-            preload: path.join(appRoot, 'res', 'features', 'charpage', 'preload_charpage.js'),
+            backgroundThrottling: !isGame
         }
     };
 }
 
-exports.winConfig    = _getWinConfig("win");
-exports.mainConfig   = _getWinConfig("main");
-exports.charConfig   = _getWinConfig("cprint");
-exports.gameConfig   = _getWinConfig("game");
+// Lazy getters so browser preload follows the active plugin at window-open time.
+Object.defineProperty(exports, 'winConfig', {
+    enumerable: true,
+    get: function () { return _getWinConfig('win'); }
+});
+Object.defineProperty(exports, 'mainConfig', {
+    enumerable: true,
+    get: function () { return _getWinConfig('main'); }
+});
+Object.defineProperty(exports, 'gameConfig', {
+    enumerable: true,
+    get: function () { return _getWinConfig('game'); }
+});
+exports.getWinConfig = _getWinConfig;
 
 // Settings screen - own preload, needed for IPC (read/write aquastar.json) under contextIsolation.
 exports.settingsConfig = {
@@ -77,126 +75,8 @@ exports.settingsConfig = {
 };
 exports.settingsUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'settings', 'settings.html'));
 
-// Reminders screen - own preload, needed for IPC (read/write aquastar_reminders.json) under contextIsolation.
-// Width needs to fit every fixed-width quest-row column (type/category/seasonal badges,
-// /join box, copy/switch/time, Hide/Delete buttons) plus a readable amount of quest name
-// text, or the name column gets squeezed down to near-nothing by its flex-shrink.
-exports.remindersConfig = {
-    width: 1040,
-    height: 620,
-    useContentSize: true,
-    icon: iconPath,
-    resizable: true,
-    webPreferences: {
-        nodeIntegration: false,
-        sandbox: true,
-        webviewTag: false,
-        preload: path.join(appRoot, 'res', 'features', 'reminders', 'preload_reminders.js'),
-        plugins: false,
-        contextIsolation: true
-    }
-};
-exports.remindersUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'reminders', 'reminders.html'));
-
-// To-Do screen - same per-character list shape as Reminders (see
-// res/features/common/list_window_common.js) but without the type/join/time columns, so a
-// narrower window still fits its own fixed-width columns (priority star, category, seasonal).
-exports.todoConfig = {
-    width: 960,
-    height: 620,
-    useContentSize: true,
-    icon: iconPath,
-    resizable: true,
-    webPreferences: {
-        nodeIntegration: false,
-        sandbox: true,
-        webviewTag: false,
-        preload: path.join(appRoot, 'res', 'features', 'todo', 'preload_todo.js'),
-        plugins: false,
-        contextIsolation: true
-    }
-};
-exports.todoUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'todo', 'todo.html'));
-
-// Inventory screen - same per-character list shape as Reminders/Todo. Own preload merges
-// the synced-data bridge (aquastarInventory) with a re-exposed aquastarWiki.fetchWikiPage
-// so hover-preview (res/features/wikiview/hoverPreview.js) works inside this window too.
-exports.inventoryConfig = {
-    width: 1040,
-    height: 620,
-    useContentSize: true,
-    icon: iconPath,
-    resizable: true,
-    webPreferences: {
-        nodeIntegration: false,
-        sandbox: true,
-        webviewTag: false,
-        preload: path.join(appRoot, 'res', 'features', 'inventory', 'preload_inventory.js'),
-        plugins: false,
-        contextIsolation: true
-    }
-};
-exports.inventoryUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'inventory', 'inventory.html'));
-
-exports.strategyConfig = {
-    width: 1040, height: 680, useContentSize: true, icon: iconPath, resizable: true,
-    webPreferences: { nodeIntegration: false, sandbox: true, webviewTag: false,
-        preload: path.join(appRoot, 'res', 'features', 'strategy', 'preload_strategy.js'),
-        plugins: false, contextIsolation: true }
-};
-exports.strategyUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'strategy', 'strategy.html'));
-
-// Char Page Studio is deliberately not sandboxed: Chromium 87 only exposes the
-// required PPAPI Flash plugin to this kind of window. Its local renderer has no
-// Node integration and navigation/popups are blocked in featureWindows below.
-exports.charPageStudioConfig = {
-    width: 1280,
-    height: 800,
-    minWidth: 900,
-    minHeight: 600,
-    useContentSize: true,
-    icon: iconPath,
-    resizable: true,
-    webPreferences: {
-        nodeIntegration: false,
-        sandbox: false,
-        webviewTag: false,
-        preload: path.join(appRoot, 'res', 'features', 'charpage', 'lab', 'preload_lab.js'),
-        plugins: true,
-        contextIsolation: true,
-        webSecurity: false,
-        backgroundThrottling: false
-    }
-};
-exports.charPageStudioUrl = toFileUrl(path.join(appRoot, 'res', 'features', 'charpage', 'lab', 'characterB-lab.html'));
-
 // Local feature windows all use the same singleton lifecycle.  Keeping their
 // declarative metadata here prevents every caller from reimplementing it.
 exports.featureWindows = {
-    settings:  { config: exports.settingsConfig,  url: exports.settingsUrl,  title: 'AquaStar - Settings' },
-    reminders: { config: exports.remindersConfig, url: exports.remindersUrl, title: 'AquaStar - Reminders' },
-    todo:      { config: exports.todoConfig,      url: exports.todoUrl,      title: 'AquaStar - To-Do List' },
-    inventory: { config: exports.inventoryConfig, url: exports.inventoryUrl, title: 'AquaStar - Inventory' },
-    strategy:  { config: exports.strategyConfig,  url: exports.strategyUrl,  title: 'AquaStar - Strategy' },
-    charPageStudio: {
-        config: exports.charPageStudioConfig,
-        url: exports.charPageStudioUrl,
-        title: 'AquaStar - Char Page Studio',
-        configure: (win) => {
-            const studio = require('../features/charpage/studio.js');
-            studio.activateProtocol();
-            win.webContents.on('new-window', (event) => event.preventDefault());
-            win.webContents.on('will-navigate', (event) => event.preventDefault());
-            win.webContents.on('console-message', (event, level, message, line, sourceId) => {
-                win.webContents.send('charpage-studio-diagnostic', '[renderer ' + level + '] ' + message + ' (' + sourceId + ':' + line + ')');
-            });
-            win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-                win.webContents.send('charpage-studio-diagnostic', '[navigation] ' + errorDescription + ' (' + errorCode + '): ' + validatedURL);
-            });
-            win.webContents.on('render-process-gone', (event, details) => {
-                console.error('[AquaStar] Char Page Studio renderer exited:', details.reason);
-            });
-            win.on('closed', () => studio.deactivateProtocol());
-        }
-    }
+    settings:  { config: exports.settingsConfig,  url: exports.settingsUrl,  title: 'AquaStar - Settings' }
 };

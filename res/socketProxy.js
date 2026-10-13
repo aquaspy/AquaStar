@@ -2,14 +2,36 @@ const WebSocket = require('ws');
 const net = require('net');
 
 // Ruffle (running in a sandboxed renderer) can't open raw TCP sockets the way Flash's
-// Socket class does, so AQW's netcode needs a local relay. Ruffle's own socketProxy
-// config (built client-side in ruffle_wrapper.html) is the actual allowlist of which
-// (host, port) pairs get redirected here - this relay just blindly forwards whatever
-// it's asked to, same approach as the aquastar-ruffle proof of concept.
+// Socket class does, so games with raw-socket netcode need a local relay. Ruffle's own
+// socketProxy config (built client-side in ruffle_wrapper.html) lists which (host, port)
+// pairs get redirected here. The relay itself only forwards to hosts a plugin declared
+// (wrap.ruffle.socket.allowedHosts): it listens on localhost, so without this any local web
+// page could use it to reach arbitrary TCP endpoints.
 const PROXY_HOST = '127.0.0.1';
 const PROXY_PORT = 8191;
 
 let wss = null;
+// Hostname patterns the relay may connect to: exact hosts or "*.suffix". Empty = deny all.
+let allowedHosts = [];
+
+function allowHosts(patterns) {
+    (Array.isArray(patterns) ? patterns : []).forEach(function (pattern) {
+        if (typeof pattern === 'string' && pattern && allowedHosts.indexOf(pattern) === -1) {
+            allowedHosts.push(pattern.toLowerCase());
+        }
+    });
+}
+
+function isAllowedHost(host) {
+    const name = String(host || '').toLowerCase();
+    return allowedHosts.some(function (pattern) {
+        if (pattern.indexOf('*.') === 0) {
+            const suffix = pattern.slice(2);
+            return name === suffix || name.endsWith('.' + suffix);
+        }
+        return name === pattern;
+    });
+}
 
 function start() {
     if (wss) return;
@@ -22,6 +44,10 @@ function start() {
 
         if (!host || !port) {
             ws.close(1008, 'missing host or port');
+            return;
+        }
+        if (!isAllowedHost(host)) {
+            ws.close(1008, 'host not allowed');
             return;
         }
 
@@ -47,6 +73,8 @@ function stop() {
     wss = null;
 }
 
+exports.allowHosts = allowHosts;
+exports.isAllowedHost = isAllowedHost;
 exports.start = start;
 exports.stop = stop;
 exports.proxyUrl = 'ws://' + PROXY_HOST + ':' + PROXY_PORT;
