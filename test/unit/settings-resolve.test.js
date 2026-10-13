@@ -11,14 +11,8 @@ test('resolveOption prefers top-level settings over plugins[id]', () => {
       }
     }
   };
-  assert.strictEqual(
-    resolveOption(settings, 'customUrl', 'adventure-quest-worlds'),
-    'https://top.example/swf'
-  );
-  assert.strictEqual(
-    resolveOption(settings, 'autoSync', 'adventure-quest-worlds'),
-    true
-  );
+  assert.strictEqual(resolveOption(settings, 'customUrl', 'adventure-quest-worlds'), 'https://top.example/swf');
+  assert.strictEqual(resolveOption(settings, 'autoSync', 'adventure-quest-worlds'), true);
 });
 
 test('resolveOption falls back to nested plugin options when top-level missing', () => {
@@ -43,10 +37,7 @@ test('resolveOption treats explicit top-level undefined as a win', () => {
       }
     }
   };
-  assert.strictEqual(
-    resolveOption(settings, 'customUrl', 'adventure-quest-worlds'),
-    undefined
-  );
+  assert.strictEqual(resolveOption(settings, 'customUrl', 'adventure-quest-worlds'), undefined);
 });
 
 test('resolveOption tolerates null or non-object settings', () => {

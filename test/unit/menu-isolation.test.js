@@ -16,9 +16,11 @@ test('menu registry clears previous plugin pages on adopt', () => {
   assert.strictEqual(menuRegistry.getAppUsefulPages({})[0].label, 'Wiki');
 
   menuRegistry.adoptHostState({
-    menus: [function () {
-      return [{ label: 'Example', submenu: [] }];
-    }],
+    menus: [
+      function () {
+        return [{ label: 'Example', submenu: [] }];
+      }
+    ],
     menuProviders: {
       appUsefulPages: function () {
         return [{ label: 'GitHub', url: 'https://github.com/aquaspy/AquaStar', openMode: 'in-place' }];
@@ -36,15 +38,13 @@ test('menu registry clears previous plugin pages on adopt', () => {
 });
 
 test('menu.js source no longer embeds AQW catalog fallback', () => {
-  const menuSrc = fs.readFileSync(
-    path.join(__dirname, '../../res/windows/menu.js'),
-    'utf8'
-  );
+  const menuSrc = fs.readFileSync(path.join(__dirname, '../../res/windows/menu.js'), 'utf8');
   assert.ok(menuSrc.indexOf('platformAquaStarMenu') !== -1);
   assert.ok(menuSrc.indexOf('constant.wikiReleases') === -1);
   assert.ok(menuSrc.indexOf('constant.accountAq') === -1);
-  assert.ok(menuSrc.indexOf("command(menuMessages.menuReminders") === -1);
-  assert.ok(menuSrc.indexOf("command(menuMessages.menuNewAqw") === -1);
-  assert.ok(menuSrc.indexOf('never fall back to the AQW catalog') !== -1 ||
-    menuSrc.indexOf('Plugin Useful Pages only') !== -1);
+  assert.ok(menuSrc.indexOf('command(menuMessages.menuReminders') === -1);
+  assert.ok(menuSrc.indexOf('command(menuMessages.menuNewAqw') === -1);
+  assert.ok(
+    menuSrc.indexOf('never fall back to the AQW catalog') !== -1 || menuSrc.indexOf('Plugin Useful Pages only') !== -1
+  );
 });

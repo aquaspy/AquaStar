@@ -75,9 +75,18 @@ test('instances assigns per-window menus and suppresses duplicate opens', () => 
 test('locale resolveLangFile maps pt to pt-BR', () => {
   const locale = require('../../res/locale.js');
   // detectLang uses resolveLangFile internally; pt should load pt-BR catalog.
-  locale.detectLang('pt', { help: 'F1', settings: 'Alt+9', about: 'F9', fullscreen: 'F11',
-    sshot: 'F2', record: 'Ctrl+J', reload: 'F5', reloadCache: 'Ctrl+F5',
-    forward: 'Alt+F', backward: 'Alt+B' });
+  locale.detectLang('pt', {
+    help: 'F1',
+    settings: 'Alt+9',
+    about: 'F9',
+    fullscreen: 'F11',
+    sshot: 'F2',
+    record: 'Ctrl+J',
+    reload: 'F5',
+    reloadCache: 'Ctrl+F5',
+    forward: 'Alt+F',
+    backward: 'Alt+B'
+  });
   assert.strictEqual(locale.getLang(), 'pt-BR');
   assert.ok(locale.strings.dialogMessages.helpTitle.indexOf('Ajuda') !== -1);
 });
@@ -99,10 +108,7 @@ test('example companion ships Flex-built SWFs and sandboxed dashboard preload', 
   const rect = fs.readFileSync(path.join(root, 'assets/rectangle.swf'));
   assert.ok(box.length > 500);
   assert.ok(rect.length > 500);
-  const preload = fs.readFileSync(
-    path.join(root, 'features/dashboard/preload_dashboard.js'),
-    'utf8'
-  );
+  const preload = fs.readFileSync(path.join(root, 'features/dashboard/preload_dashboard.js'), 'utf8');
   assert.ok(preload.indexOf("require('electron')") !== -1);
   assert.ok(preload.indexOf('preload-bridge') === -1);
   assert.ok(fs.existsSync(path.join(root, 'flash/StaticRect.as')));

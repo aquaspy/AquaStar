@@ -11,15 +11,18 @@ function silentLog() {}
 
 function writeLocalPlugin(dir, mainSource) {
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'plugin.json'), JSON.stringify({
-    id: 'gate-probe',
-    name: 'Gate Probe',
-    version: '1.0.0',
-    apiVersion: 1,
-    main: 'main.js',
-    minAppVersion: '1.12.2',
-    permissions: []
-  }));
+  fs.writeFileSync(
+    path.join(dir, 'plugin.json'),
+    JSON.stringify({
+      id: 'gate-probe',
+      name: 'Gate Probe',
+      version: '1.0.0',
+      apiVersion: 1,
+      main: 'main.js',
+      minAppVersion: '1.12.2',
+      permissions: []
+    })
+  );
   fs.writeFileSync(path.join(dir, 'main.js'), mainSource);
 }
 
@@ -47,12 +50,15 @@ test('withLocalRequireGate blocks fs from inside the plugin root', () => {
 test('withLocalRequireGate allows path and blocks relative escapes', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aquastar-gate-path-'));
   const pluginFile = path.join(tmp, 'probe.js');
-  fs.writeFileSync(pluginFile, [
-    'module.exports = {',
-    '  loadPath: function () { return require("path"); },',
-    '  escape: function () { return require("../../res/const.js"); }',
-    '};'
-  ].join('\n'));
+  fs.writeFileSync(
+    pluginFile,
+    [
+      'module.exports = {',
+      '  loadPath: function () { return require("path"); },',
+      '  escape: function () { return require("../../res/const.js"); }',
+      '};'
+    ].join('\n')
+  );
 
   const probe = pluginLoader.withLocalRequireGate(tmp, function () {
     delete require.cache[pluginFile];
@@ -73,32 +79,38 @@ test('withLocalRequireGate allows path and blocks relative escapes', () => {
 
 test('activatePlugin does not install the require gate for bundled plugins', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aquastar-gate-bundled-'));
-  writeLocalPlugin(tmp, [
-    'const Module = require("module");',
-    'function activate(host) {',
-    '  host._requireDuringActivate = Module.prototype.require;',
-    '  require("fs");',
-    '  require("path");',
-    '}',
-    'module.exports = { activate: activate };'
-  ].join('\n'));
+  writeLocalPlugin(
+    tmp,
+    [
+      'const Module = require("module");',
+      'function activate(host) {',
+      '  host._requireDuringActivate = Module.prototype.require;',
+      '  require("fs");',
+      '  require("path");',
+      '}',
+      'module.exports = { activate: activate };'
+    ].join('\n')
+  );
 
   const manifest = JSON.parse(fs.readFileSync(path.join(tmp, 'plugin.json'), 'utf8'));
   const validated = schema.validateManifest(manifest, { appVersion: '1.12.2' });
   assert.strictEqual(validated.ok, true);
 
   const originalRequire = Module.prototype.require;
-  const activated = await pluginLoader.activatePlugin({
-    root: tmp,
-    manifest: validated.manifest,
-    source: 'bundled'
-  }, {
-    appVersion: '1.12.2',
-    appDataDirectory: path.join(tmp, 'data'),
-    clearRequireCache: true,
-    log: silentLog,
-    platformSettings: {}
-  });
+  const activated = await pluginLoader.activatePlugin(
+    {
+      root: tmp,
+      manifest: validated.manifest,
+      source: 'bundled'
+    },
+    {
+      appVersion: '1.12.2',
+      appDataDirectory: path.join(tmp, 'data'),
+      clearRequireCache: true,
+      log: silentLog,
+      platformSettings: {}
+    }
+  );
 
   assert.strictEqual(
     activated.host._requireDuringActivate,
@@ -110,40 +122,46 @@ test('activatePlugin does not install the require gate for bundled plugins', asy
 
 test('activatePlugin installs the require gate for local plugins', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aquastar-gate-local-'));
-  writeLocalPlugin(tmp, [
-    'const Module = require("module");',
-    'function activate(host) {',
-    '  host._requireDuringActivate = Module.prototype.require;',
-    '  require("path");',
-    '  try {',
-    '    require("fs");',
-    '    host._fsBlocked = false;',
-    '  } catch (e) {',
-    '    host._fsBlocked = true;',
-    '    host._fsError = e && e.message;',
-    '  }',
-    '}',
-    'module.exports = { activate: activate };'
-  ].join('\n'));
+  writeLocalPlugin(
+    tmp,
+    [
+      'const Module = require("module");',
+      'function activate(host) {',
+      '  host._requireDuringActivate = Module.prototype.require;',
+      '  require("path");',
+      '  try {',
+      '    require("fs");',
+      '    host._fsBlocked = false;',
+      '  } catch (e) {',
+      '    host._fsBlocked = true;',
+      '    host._fsError = e && e.message;',
+      '  }',
+      '}',
+      'module.exports = { activate: activate };'
+    ].join('\n')
+  );
 
   const manifest = JSON.parse(fs.readFileSync(path.join(tmp, 'plugin.json'), 'utf8'));
   const validated = schema.validateManifest(manifest, { appVersion: '1.12.2' });
   assert.strictEqual(validated.ok, true);
 
   const originalRequire = Module.prototype.require;
-  const activated = await pluginLoader.activatePlugin({
-    root: tmp,
-    manifest: validated.manifest,
-    source: 'local'
-  }, {
-    appVersion: '1.12.2',
-    appDataDirectory: path.join(tmp, 'data'),
-    clearRequireCache: true,
-    log: silentLog,
-    platformSettings: {
-      trustedLocalPlugins: { 'gate-probe': true }
+  const activated = await pluginLoader.activatePlugin(
+    {
+      root: tmp,
+      manifest: validated.manifest,
+      source: 'local'
+    },
+    {
+      appVersion: '1.12.2',
+      appDataDirectory: path.join(tmp, 'data'),
+      clearRequireCache: true,
+      log: silentLog,
+      platformSettings: {
+        trustedLocalPlugins: { 'gate-probe': true }
+      }
     }
-  });
+  );
 
   assert.notStrictEqual(
     activated.host._requireDuringActivate,
@@ -152,9 +170,5 @@ test('activatePlugin installs the require gate for local plugins', async () => {
   );
   assert.strictEqual(activated.host._fsBlocked, true);
   assert.ok(/Local plugin require blocked: "fs"/.test(activated.host._fsError));
-  assert.strictEqual(
-    Module.prototype.require,
-    originalRequire,
-    'require gate must be restored after activate'
-  );
+  assert.strictEqual(Module.prototype.require, originalRequire, 'require gate must be restored after activate');
 });

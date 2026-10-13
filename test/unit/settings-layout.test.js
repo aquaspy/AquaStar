@@ -6,18 +6,23 @@ const platform = require('../../res/platform');
 
 test('settings registry exposes AQW account section fields', () => {
   platform.settingsRegistry.clear();
-  platform.settingsRegistry.adoptHostState({
-    settingsSections: [{
-      id: 'aqw-account',
-      title: 'Account & Inventory',
-      titleKey: 'account',
-      order: 10,
-      fields: [
-        { key: 'playerCharacter', type: 'text' },
-        { key: 'autoSync', type: 'boolean' }
+  platform.settingsRegistry.adoptHostState(
+    {
+      settingsSections: [
+        {
+          id: 'aqw-account',
+          title: 'Account & Inventory',
+          titleKey: 'account',
+          order: 10,
+          fields: [
+            { key: 'playerCharacter', type: 'text' },
+            { key: 'autoSync', type: 'boolean' }
+          ]
+        }
       ]
-    }]
-  }, { id: 'adventure-quest-worlds', name: 'Adventure Quest Worlds' });
+    },
+    { id: 'adventure-quest-worlds', name: 'Adventure Quest Worlds' }
+  );
 
   const layout = platform.settingsRegistry.buildSettingsLayout();
   assert.strictEqual(layout.plugin.id, 'adventure-quest-worlds');
@@ -35,32 +40,22 @@ test('settings registry has no built-in AQW sections: empty means empty', () => 
 });
 
 test('Settings UI uses tabs and plugin section rendering', () => {
-  const html = fs.readFileSync(
-    path.join(__dirname, '../../res/features/settings/settings.html'),
-    'utf8'
-  );
-  const preload = fs.readFileSync(
-    path.join(__dirname, '../../res/features/settings/preload_settings.js'),
-    'utf8'
-  );
+  const html = fs.readFileSync(path.join(__dirname, '../../res/features/settings/settings.html'), 'utf8');
+  const preload = fs.readFileSync(path.join(__dirname, '../../res/features/settings/preload_settings.js'), 'utf8');
   assert.ok(html.indexOf('data-tab="general"') !== -1);
   assert.ok(html.indexOf('data-tab="plugin"') !== -1);
   assert.ok(html.indexOf('data-tab="keybinds"') !== -1);
   assert.ok(html.indexOf('panel-general') !== -1);
   assert.ok(html.indexOf('buildPluginSectionsPanel') !== -1);
   assert.ok(html.indexOf('PLATFORM_OPTION_TYPES') !== -1);
-  assert.ok(html.indexOf('playerCharacter') === -1 ||
-    html.indexOf("PLATFORM_OPTION_TYPES") !== -1);
+  assert.ok(html.indexOf('playerCharacter') === -1 || html.indexOf('PLATFORM_OPTION_TYPES') !== -1);
   // playerCharacter must not be a platform option key
   assert.ok(!/PLATFORM_OPTION_TYPES\s*=\s*\{[^}]*playerCharacter/.test(html));
   assert.ok(preload.indexOf('getSettingsLayout') !== -1);
 });
 
 test('AQW activate registers settings section', () => {
-  const src = fs.readFileSync(
-    path.join(__dirname, '../../plugins/adventure-quest-worlds/main.js'),
-    'utf8'
-  );
+  const src = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/main.js'), 'utf8');
   assert.ok(src.indexOf('registerSettingsSection') !== -1);
   assert.ok(src.indexOf('aqw-account') !== -1);
   assert.ok(src.indexOf('playerCharacter') !== -1);
@@ -82,10 +77,7 @@ test('platform locales include settings tab strings and generic SWF copy', () =>
 });
 
 test('Settings header description switches per tab', () => {
-  const html = fs.readFileSync(
-    path.join(__dirname, '../../res/features/settings/settings.html'),
-    'utf8'
-  );
+  const html = fs.readFileSync(path.join(__dirname, '../../res/features/settings/settings.html'), 'utf8');
   assert.ok(html.indexOf('descriptionForTab') !== -1);
   assert.ok(html.indexOf('setActiveTab') !== -1);
   assert.ok(html.indexOf('descriptionKeybinds') !== -1);

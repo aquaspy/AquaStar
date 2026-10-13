@@ -1,5 +1,4 @@
 const assert = require('assert');
-const path = require('path');
 
 const urls = require('../../plugins/adventure-quest-worlds/urls.js');
 const session = require('../../plugins/adventure-quest-worlds/session.js');
@@ -15,8 +14,12 @@ test('AQW url catalog exposes loader, DF, and testing helpers', () => {
 
 test('AQW session rules use Electron callback shapes', () => {
   const rules = session.createSessionRules();
-  const artix = rules.filter(function (r) { return r.id === 'artix-ua'; })[0];
-  const swf = rules.filter(function (r) { return r.id === 'swf-log'; })[0];
+  const artix = rules.filter(function (r) {
+    return r.id === 'artix-ua';
+  })[0];
+  const swf = rules.filter(function (r) {
+    return r.id === 'swf-log';
+  })[0];
   assert.ok(artix && typeof artix.onBeforeSendHeaders === 'function');
   assert.ok(swf && typeof swf.onBeforeRequest === 'function');
   assert.strictEqual(swf.enabledWhen({ swfLog: true }), true);
@@ -26,7 +29,9 @@ test('AQW session rules use Electron callback shapes', () => {
   artix.onBeforeSendHeaders(
     { requestHeaders: {} },
     { defaultUserAgent: 'Mozilla/5.0 (X11) AquaStar/1 Chrome/87 Electron/11 Safari/537.36' },
-    function (result) { headersOut = result; }
+    function (result) {
+      headersOut = result;
+    }
   );
   assert.strictEqual(headersOut.requestHeaders['User-Agent'], 'Mozilla/5.0 (X11) Safari/537.36');
   assert.strictEqual(headersOut.requestHeaders.artixmode, 'launcher');
@@ -35,8 +40,14 @@ test('AQW session rules use Electron callback shapes', () => {
   const logged = [];
   swf.onBeforeRequest(
     { url: 'https://game.aq.com/game/x.swf' },
-    { logLine: function (u) { logged.push(u); } },
-    function (result) { cancelOut = result; }
+    {
+      logLine: function (u) {
+        logged.push(u);
+      }
+    },
+    function (result) {
+      cancelOut = result;
+    }
   );
   assert.deepStrictEqual(cancelOut, { cancel: false });
   assert.deepStrictEqual(logged, ['https://game.aq.com/game/x.swf']);
@@ -59,8 +70,16 @@ test('applySessionRules registers matching Electron webRequest handlers', () => 
     settings: { swfLog: true },
     logLine: function () {}
   });
-  assert.ok(calls.some(function (c) { return c.type === 'headers'; }));
-  assert.ok(calls.some(function (c) { return c.type === 'request'; }));
+  assert.ok(
+    calls.some(function (c) {
+      return c.type === 'headers';
+    })
+  );
+  assert.ok(
+    calls.some(function (c) {
+      return c.type === 'request';
+    })
+  );
 });
 
 test('flashTrustUrlList includes primary and known game hosts', () => {

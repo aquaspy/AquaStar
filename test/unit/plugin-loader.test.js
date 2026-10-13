@@ -18,42 +18,63 @@ test('manifest schema accepts the sample plugin fixture', () => {
 });
 
 test('manifest schema rejects unknown permissions and path escapes', () => {
-  const badPerm = schema.validateManifest({
-    id: 'bad-plugin',
-    name: 'Bad',
-    version: '1.0.0',
-    apiVersion: 1,
-    main: 'main.js',
-    minAppVersion: '1.12.2',
-    permissions: ['rootkit']
-  }, { appVersion: '1.12.2' });
+  const badPerm = schema.validateManifest(
+    {
+      id: 'bad-plugin',
+      name: 'Bad',
+      version: '1.0.0',
+      apiVersion: 1,
+      main: 'main.js',
+      minAppVersion: '1.12.2',
+      permissions: ['rootkit']
+    },
+    { appVersion: '1.12.2' }
+  );
   assert.strictEqual(badPerm.ok, false);
-  assert.ok(badPerm.errors.some(function (e) { return /Unknown permission/.test(e); }));
+  assert.ok(
+    badPerm.errors.some(function (e) {
+      return /Unknown permission/.test(e);
+    })
+  );
 
-  const badMain = schema.validateManifest({
-    id: 'bad-plugin',
-    name: 'Bad',
-    version: '1.0.0',
-    apiVersion: 1,
-    main: '../escape.js',
-    minAppVersion: '1.12.2'
-  }, { appVersion: '1.12.2' });
+  const badMain = schema.validateManifest(
+    {
+      id: 'bad-plugin',
+      name: 'Bad',
+      version: '1.0.0',
+      apiVersion: 1,
+      main: '../escape.js',
+      minAppVersion: '1.12.2'
+    },
+    { appVersion: '1.12.2' }
+  );
   assert.strictEqual(badMain.ok, false);
-  assert.ok(badMain.errors.some(function (e) { return /main must be a relative path/.test(e); }));
+  assert.ok(
+    badMain.errors.some(function (e) {
+      return /main must be a relative path/.test(e);
+    })
+  );
 });
 
 test('manifest schema requires fetchAllowlist when net-fetch is declared', () => {
-  const result = schema.validateManifest({
-    id: 'needs-allowlist',
-    name: 'Needs',
-    version: '1.0.0',
-    apiVersion: 1,
-    main: 'main.js',
-    minAppVersion: '1.12.2',
-    permissions: ['net-fetch']
-  }, { appVersion: '1.12.2' });
+  const result = schema.validateManifest(
+    {
+      id: 'needs-allowlist',
+      name: 'Needs',
+      version: '1.0.0',
+      apiVersion: 1,
+      main: 'main.js',
+      minAppVersion: '1.12.2',
+      permissions: ['net-fetch']
+    },
+    { appVersion: '1.12.2' }
+  );
   assert.strictEqual(result.ok, false);
-  assert.ok(result.errors.some(function (e) { return /fetchAllowlist/.test(e); }));
+  assert.ok(
+    result.errors.some(function (e) {
+      return /fetchAllowlist/.test(e);
+    })
+  );
 });
 
 test('discoverPlugins finds the sample fixture and skips _template', () => {
@@ -72,7 +93,9 @@ test('discoverPlugins finds the sample fixture and skips _template', () => {
     appVersion: '1.12.2',
     log: silentLog
   });
-  const ids = discovered.plugins.map(function (p) { return p.manifest.id; });
+  const ids = discovered.plugins.map(function (p) {
+    return p.manifest.id;
+  });
   assert.ok(ids.indexOf('my-flash-game') === -1, '_template must be skipped');
 
   const fromTmp = platform.discoverPlugins({
@@ -155,7 +178,11 @@ test('local plugin id collision with bundled fails unless override is allowed', 
     appVersion: '1.12.2',
     log: silentLog
   });
-  assert.ok(blocked.errors.some(function (e) { return /conflicts with bundled/.test(e); }));
+  assert.ok(
+    blocked.errors.some(function (e) {
+      return /conflicts with bundled/.test(e);
+    })
+  );
   assert.strictEqual(blocked.plugins.length, 1);
   assert.strictEqual(blocked.plugins[0].source, 'bundled');
 
@@ -182,8 +209,11 @@ test('resolvePluginFlags defaults pluginSystem on (PR 2+) unless disabled', () =
   const explicitOff = platform.resolvePluginFlags({ pluginSystem: false }, {});
   assert.strictEqual(explicitOff.pluginSystem, false);
 
-  const disabled = platform.resolvePluginFlags({ pluginSystem: true }, {
-    AQUASTAR_DISABLE_PLUGINS: '1'
-  });
+  const disabled = platform.resolvePluginFlags(
+    { pluginSystem: true },
+    {
+      AQUASTAR_DISABLE_PLUGINS: '1'
+    }
+  );
   assert.strictEqual(disabled.pluginSystem, false);
 });

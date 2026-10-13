@@ -5,11 +5,7 @@ const locale = require('../../res/locale.js');
 
 test('AQW plugin locale catalogs export feature message namespaces', () => {
   ['en-US', 'pt-BR'].forEach((code) => {
-    const catalog = require(path.join(
-      __dirname,
-      '../../plugins/adventure-quest-worlds/locales',
-      code + '.js'
-    ));
+    const catalog = require(path.join(__dirname, '../../plugins/adventure-quest-worlds/locales', code + '.js'));
     assert.ok(catalog.remindersMessages && catalog.remindersMessages.title);
     assert.ok(catalog.todoMessages && catalog.todoMessages.title);
     assert.ok(catalog.strategyMessages && catalog.strategyMessages.title);

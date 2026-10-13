@@ -7,10 +7,9 @@ const aqwMainPath = path.join(__dirname, '../../plugins/adventure-quest-worlds/m
 const mainJsPath = path.join(__dirname, '../../main.js');
 
 test('AQW plugin manifest validates against current app version', () => {
-  const raw = JSON.parse(fs.readFileSync(
-    path.join(__dirname, '../../plugins/adventure-quest-worlds/plugin.json'),
-    'utf8'
-  ));
+  const raw = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/plugin.json'), 'utf8')
+  );
   const result = platform.manifestSchema.validateManifest(raw, { appVersion: '1.12.2' });
   assert.strictEqual(result.ok, true, (result.errors || []).join('; '));
 });
@@ -55,8 +54,9 @@ test('main.js carries no AQW/Artix URLs or User-Agent policy', () => {
 
 test('legacy channel inventory covers expected AQW and platform channels', () => {
   // Each side lists only what it owns: the platform its channels, the plugin its own.
-  const channels = platform.legacyChannels.ALL_MAIN_PROCESS_CHANNELS
-    .concat(require('../../plugins/adventure-quest-worlds/channels.js').AQW_FEATURE_CHANNELS);
+  const channels = platform.legacyChannels.ALL_MAIN_PROCESS_CHANNELS.concat(
+    require('../../plugins/adventure-quest-worlds/channels.js').AQW_FEATURE_CHANNELS
+  );
   assert.strictEqual(platform.legacyChannels.AQW_FEATURE_CHANNELS, undefined, 'platform must not list plugin channels');
   assert.ok(channels.indexOf('getReminders') !== -1);
   assert.ok(channels.indexOf('fetchWikiPage') !== -1);

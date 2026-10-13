@@ -5,14 +5,8 @@ const path = require('path');
 const platform = require('../../res/platform');
 
 test('Settings UI exposes active plugin selector and restart copy', () => {
-  const html = fs.readFileSync(
-    path.join(__dirname, '../../res/features/settings/settings.html'),
-    'utf8'
-  );
-  const preload = fs.readFileSync(
-    path.join(__dirname, '../../res/features/settings/preload_settings.js'),
-    'utf8'
-  );
+  const html = fs.readFileSync(path.join(__dirname, '../../res/features/settings/settings.html'), 'utf8');
+  const preload = fs.readFileSync(path.join(__dirname, '../../res/features/settings/preload_settings.js'), 'utf8');
   assert.ok(html.indexOf('buildPluginsSection') !== -1);
   assert.ok(html.indexOf('activePluginId') !== -1);
   assert.ok(html.indexOf('pluginsRestartPrompt') !== -1);
@@ -46,13 +40,22 @@ test('isLocalTrusted requires explicit trust for local plugins', () => {
     manifest: { id: 'sample', permissions: ['net-fetch'] }
   };
   assert.strictEqual(platform.isLocalTrusted(localPlugin, {}), false);
-  assert.strictEqual(platform.isLocalTrusted(localPlugin, {
-    trustedLocalPlugins: { sample: true }
-  }), true);
-  assert.strictEqual(platform.isLocalTrusted({
-    source: 'bundled',
-    manifest: { id: 'adventure-quest-worlds', permissions: ['net-fetch'] }
-  }, {}), true);
+  assert.strictEqual(
+    platform.isLocalTrusted(localPlugin, {
+      trustedLocalPlugins: { sample: true }
+    }),
+    true
+  );
+  assert.strictEqual(
+    platform.isLocalTrusted(
+      {
+        source: 'bundled',
+        manifest: { id: 'adventure-quest-worlds', permissions: ['net-fetch'] }
+      },
+      {}
+    ),
+    true
+  );
 });
 
 test('discoverPlugins list shape matches Settings plugin picker needs', () => {

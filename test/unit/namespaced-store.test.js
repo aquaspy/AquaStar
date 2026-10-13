@@ -2,10 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const {
-  createNamespacedStore,
-  resolveStoreFileName
-} = require('../../res/platform/storage/namespaced-store.js');
+const { createNamespacedStore, resolveStoreFileName } = require('../../res/platform/storage/namespaced-store.js');
 
 test('a plugin keeps permanent legacy filenames by declaring storeAliases in its manifest', () => {
   // The platform no longer knows any plugin: aliases come from the manifest the loader reads.
@@ -16,8 +13,10 @@ test('a plugin keeps permanent legacy filenames by declaring storeAliases in its
   assert.strictEqual(resolveStoreFileName(manifest.id, 'strategy', aliases), 'aquastar_strategy.json');
   assert.strictEqual(resolveStoreFileName(manifest.id, 'inventory', aliases), 'aquastar_inventory.json');
   // Names it did not alias still get the namespaced file.
-  assert.strictEqual(resolveStoreFileName(manifest.id, 'launcher-config', aliases),
-    'aquastar.' + manifest.id + '.launcher-config.json');
+  assert.strictEqual(
+    resolveStoreFileName(manifest.id, 'launcher-config', aliases),
+    'aquastar.' + manifest.id + '.launcher-config.json'
+  );
 });
 
 test('without aliases every plugin uses aquastar.<pluginId>.<ns>.json (no plugin is special)', () => {
@@ -38,10 +37,7 @@ test('explicit aliases override permanent and default filenames', () => {
     }),
     'custom_reminders.json'
   );
-  assert.strictEqual(
-    resolveStoreFileName('other-plugin', 'prefs', { prefs: 'prefs.json' }),
-    'prefs.json'
-  );
+  assert.strictEqual(resolveStoreFileName('other-plugin', 'prefs', { prefs: 'prefs.json' }), 'prefs.json');
 });
 
 test('namespaced store read/write/readOrCreate bind to resolved path', () => {
@@ -52,10 +48,7 @@ test('namespaced store read/write/readOrCreate bind to resolved path', () => {
       pluginId: 'adventure-quest-worlds',
       aliases: require('../../plugins/adventure-quest-worlds/plugin.json').storeAliases
     });
-    assert.strictEqual(
-      aqw.resolveStorePath('reminders'),
-      path.join(directory, 'aquastar_reminders.json')
-    );
+    assert.strictEqual(aqw.resolveStorePath('reminders'), path.join(directory, 'aquastar_reminders.json'));
 
     const reminders = aqw.getStore('reminders');
     assert.deepStrictEqual(

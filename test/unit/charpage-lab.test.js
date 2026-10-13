@@ -3,7 +3,10 @@ const fs = require('fs');
 const path = require('path');
 
 test('Char Page Studio loads an explicitly requested Char Page into native Flash controls', () => {
-  const lab = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/lab/characterB-lab.html'), 'utf8');
+  const lab = fs.readFileSync(
+    path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/lab/characterB-lab.html'),
+    'utf8'
+  );
   [
     'player-name',
     'load-character',
@@ -83,9 +86,15 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   assert.strictEqual(lab.indexOf('studioShowBorder'), -1, 'Studio must not expose the unfinished border control');
   assert.strictEqual(lab.indexOf('Abrir DevTools'), -1, 'Studio must not expose debugging controls');
   assert.strictEqual(lab.indexOf('Diagnóstico'), -1, 'Studio must not expose diagnostics');
-  const bridge = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/studio.js'), 'utf8');
+  const bridge = fs.readFileSync(
+    path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/studio.js'),
+    'utf8'
+  );
   const platformConfig = fs.readFileSync(path.join(__dirname, '../../res/windows/config.js'), 'utf8');
-  const studioProcessSrc = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/processes/charpage-studio-process.js'), 'utf8');
+  const studioProcessSrc = fs.readFileSync(
+    path.join(__dirname, '../../plugins/adventure-quest-worlds/processes/charpage-studio-process.js'),
+    'utf8'
+  );
   const aqwKeybinds = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/keybinds.js'), 'utf8');
   const instances = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
   const aqwMenus = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/menus.js'), 'utf8');
@@ -107,15 +116,17 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   assert.ok(studioProcessSrc.indexOf('sandbox: false') !== -1);
   assert.ok(aqwKeybinds.indexOf("id: 'studio'") !== -1);
   assert.ok(aqwMenus.indexOf('menuCharPageStudio') !== -1);
-  assert.ok(
-    main.indexOf("path.join(pluginFeaturesRoot, 'charpage', 'studio.js')") !== -1
+  assert.ok(main.indexOf("path.join(pluginFeaturesRoot, 'charpage', 'studio.js')") !== -1);
+  const studioSwf = fs.readFileSync(
+    path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/characterB-studio.swf')
   );
-  const studioSwf = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/characterB-studio.swf'));
   assert.ok(
     ['CWS', 'FWS'].indexOf(studioSwf.slice(0, 3).toString('ascii')) !== -1,
     'bundled Studio asset must be a valid SWF'
   );
-  const emptySceneSwf = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/characterB-empty-scene.swf'));
+  const emptySceneSwf = fs.readFileSync(
+    path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/characterB-empty-scene.swf')
+  );
   assert.ok(
     ['CWS', 'FWS', 'ZWS'].indexOf(emptySceneSwf.slice(0, 3).toString('ascii')) !== -1,
     'bundled Empty Scene asset must be a valid SWF'
@@ -162,7 +173,10 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
     studioProcess.indexOf('charpage-studio-messages') !== -1,
     'dedicated Studio process must provide localized UI strings'
   );
-  const preloadLab = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/lab/preload_lab.js'), 'utf8');
+  const preloadLab = fs.readFileSync(
+    path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/lab/preload_lab.js'),
+    'utf8'
+  );
   assert.ok(
     preloadLab.indexOf('getRendererConfig') !== -1,
     'renderer selection must cross the isolated preload bridge'
@@ -196,7 +210,10 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   );
   assert.ok(
     fs
-      .readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/lab/capture.html'), 'utf8')
+      .readFileSync(
+        path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/lab/capture.html'),
+        'utf8'
+      )
       .indexOf('application/x-shockwave-flash') !== -1,
     'capture page must render native Flash'
   );

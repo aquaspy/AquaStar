@@ -53,14 +53,18 @@ test('mergeLoadedSettings falls back to top-level plugin keys when slice empty',
 });
 
 test('splitSavePatch dual-writes plugin keys and keeps platform top-level', () => {
-  const next = merge.splitSavePatch({
-    sshot: 'F3',
-    playerCharacter: 'Hero',
-    newAqw: 'Alt+N'
-  }, 'adventure-quest-worlds', {
-    sshot: 'F2',
-    playerCharacter: 'Old'
-  });
+  const next = merge.splitSavePatch(
+    {
+      sshot: 'F3',
+      playerCharacter: 'Hero',
+      newAqw: 'Alt+N'
+    },
+    'adventure-quest-worlds',
+    {
+      sshot: 'F2',
+      playerCharacter: 'Old'
+    }
+  );
   assert.strictEqual(next.sshot, 'F3');
   assert.strictEqual(next.playerCharacter, 'Hero');
   assert.strictEqual(next.plugins['adventure-quest-worlds'].playerCharacter, 'Hero');

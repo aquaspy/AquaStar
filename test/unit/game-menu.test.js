@@ -14,8 +14,8 @@ test('game menu is optional by default and keeps platform AquaStar chrome', () =
   assert.ok(menu.indexOf('platformToolsMenu') !== -1);
   assert.ok(menu.indexOf('pluginContributorMenus') !== -1);
   // Must not hardcode AQW feature entries anymore.
-  assert.ok(menu.indexOf("command(menuMessages.menuReminders") === -1);
-  assert.ok(menu.indexOf("command(menuMessages.menuNewAqw") === -1);
+  assert.ok(menu.indexOf('command(menuMessages.menuReminders') === -1);
+  assert.ok(menu.indexOf('command(menuMessages.menuNewAqw') === -1);
 });
 
 test('game menu useful pages stay new-window while app-menu pages stay in-place', () => {
@@ -38,9 +38,6 @@ test('originalKeybinds are platform-only; AQW ids live on the plugin', () => {
   assert.ok(platformBlock.indexOf('settings:') !== -1);
   assert.ok(platformBlock.indexOf('newAqw:') === -1);
   assert.ok(platformBlock.indexOf('wiki:') === -1);
-  const src = fs.readFileSync(
-    path.join(__dirname, '../../plugins/adventure-quest-worlds/keybinds.js'),
-    'utf8'
-  );
+  const src = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/keybinds.js'), 'utf8');
   assert.ok(src.indexOf("newAqw: 'Alt+N'") !== -1);
 });

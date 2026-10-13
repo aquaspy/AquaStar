@@ -4,7 +4,7 @@ const windowsMenu            = require('./windows/menu.js');
 const keybinds               = require('./keybindings.js');
 const socketProxy            = require('./socketProxy.js');
 const createFeatureWindowController = require('./windows/feature-window-controller.js');
-const {app, BrowserWindow, Menu}  = require('electron');
+const {BrowserWindow, Menu}  = require('electron');
 
 let usedAltPagesNumbers = [];
 

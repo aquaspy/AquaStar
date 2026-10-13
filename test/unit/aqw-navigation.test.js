@@ -9,10 +9,7 @@ test('AQW navigation classify maps wiki, charpage, and account URLs', () => {
   });
   assert.strictEqual(hooks.classify('https://aqwwiki.wikidot.com/sword'), 'wiki');
   assert.strictEqual(hooks.classify('https://account.aq.com/CharPage?id=Hero'), 'charpage');
-  assert.strictEqual(
-    hooks.classify('https://account.aq.com/AQW/Inventory'),
-    'account-aqw'
-  );
+  assert.strictEqual(hooks.classify('https://account.aq.com/AQW/Inventory'), 'account-aqw');
   assert.strictEqual(hooks.classify('https://account.aq.com/Home'), 'account');
   assert.strictEqual(hooks.classify('https://account.aq.com/Login'), 'account-login');
   assert.strictEqual(hooks.classify('https://www.aq.com/'), 'aq-home');
@@ -34,10 +31,17 @@ test('AQW navigation onDidFinishLoad injects WikiView for wiki pages', async () 
       return Promise.resolve(null);
     }
   });
-  assert.ok(scripts.some(function (s) { return s.label === 'Wiki enhancement'; }));
-  assert.ok(scripts.some(function (s) {
-    return s.label === 'Wiki enhancement' && s.source.indexOf('jquery') !== -1;
-  }) || scripts.some(function (s) {
-    return s.source.indexOf('__aquastarWikiViewInjected') !== -1;
-  }));
+  assert.ok(
+    scripts.some(function (s) {
+      return s.label === 'Wiki enhancement';
+    })
+  );
+  assert.ok(
+    scripts.some(function (s) {
+      return s.label === 'Wiki enhancement' && s.source.indexOf('jquery') !== -1;
+    }) ||
+      scripts.some(function (s) {
+        return s.source.indexOf('__aquastarWikiViewInjected') !== -1;
+      })
+  );
 });

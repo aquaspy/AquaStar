@@ -30,16 +30,25 @@ function buildToolPage(source, destination, bridgeId, pathRewrites) {
 function findContributor() {
   const pluginsDir = path.join(root, 'plugins');
   const candidates = [];
-  fs.readdirSync(pluginsDir).sort().forEach(function (dir) {
-    const manifestPath = path.join(pluginsDir, dir, 'plugin.json');
-    if (!fs.existsSync(manifestPath)) return;
-    let manifest;
-    try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch (e) { return; }
-    if (manifest.web && manifest.web.contribute && manifest.id !== '_template') {
-      candidates.push({ dir: dir, manifest: manifest });
-    }
-  });
-  const chosen = candidates.filter(function (c) { return c.manifest.bundledDefault === true; })[0] || candidates[0];
+  fs.readdirSync(pluginsDir)
+    .sort()
+    .forEach(function (dir) {
+      const manifestPath = path.join(pluginsDir, dir, 'plugin.json');
+      if (!fs.existsSync(manifestPath)) return;
+      let manifest;
+      try {
+        manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      } catch (e) {
+        return;
+      }
+      if (manifest.web && manifest.web.contribute && manifest.id !== '_template') {
+        candidates.push({ dir: dir, manifest: manifest });
+      }
+    });
+  const chosen =
+    candidates.filter(function (c) {
+      return c.manifest.bundledDefault === true;
+    })[0] || candidates[0];
   if (!chosen) throw new Error('No bundled plugin declares web.contribute in its manifest');
   return chosen;
 }
@@ -51,9 +60,12 @@ function loadContribution() {
     throw new Error('Missing web contribution: ' + contributePath);
   }
   const mod = require(contributePath);
-  const contrib = typeof mod === 'function'
-    ? mod()
-    : (mod && typeof mod.contributeWebBuild === 'function' ? mod.contributeWebBuild() : mod);
+  const contrib =
+    typeof mod === 'function'
+      ? mod()
+      : mod && typeof mod.contributeWebBuild === 'function'
+        ? mod.contributeWebBuild()
+        : mod;
   if (!contrib || !contrib.landing || !Array.isArray(contrib.tools)) {
     throw new Error('contributeWebBuild() must return landing + tools');
   }
@@ -107,10 +119,7 @@ Object.keys(localeModules).forEach(function (code) {
     payload[key] = locale[key];
   });
   fs.mkdirSync(path.join(output, 'locale'), { recursive: true });
-  fs.writeFileSync(
-    path.join(output, 'locale', code + '.json'),
-    JSON.stringify(payload)
-  );
+  fs.writeFileSync(path.join(output, 'locale', code + '.json'), JSON.stringify(payload));
 });
 
 console.log('Built GitHub Pages artifact: web-dist');

@@ -53,9 +53,7 @@ function contributeWebBuild() {
     ],
     // The platform stylesheet lives outside the plugin on desktop; on the web it sits next to
     // the other shared tool files (regex source -> replacement).
-    pathRewrites: [
-      { match: '(?:\\.\\./)+res/features/common/focus\\.css', replace: '../common/focus.css' }
-    ],
+    pathRewrites: [{ match: '(?:\\.\\./)+res/features/common/focus\\.css', replace: '../common/focus.css' }],
     bridges: {
       commonBridge: WEB + '/bridges/common.js'
     },

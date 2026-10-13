@@ -7,18 +7,36 @@ function registrations(primaryUrl, player) {
   const opened = [];
   const regs = keybinds.createKeybindRegistrations({
     instances: {
-      newBrowserWindow: function (url) { opened.push(url); },
-      openRemindersWindow: function () { opened.push('feature:reminders'); },
-      charPagePrint: function () { opened.push('charpagePrint'); }
+      newBrowserWindow: function (url) {
+        opened.push(url);
+      },
+      openRemindersWindow: function () {
+        opened.push('feature:reminders');
+      },
+      charPagePrint: function () {
+        opened.push('charpagePrint');
+      }
     },
-    getPrimaryUrl: function () { return primaryUrl; },
-    getPlayerCharacter: function () { return player; },
-    openFeatureWindow: function (id) { opened.push('feature:' + id); },
-    openStudio: function () { opened.push('studio'); },
-    charPagePrint: function () { opened.push('charpagePrint'); }
+    getPrimaryUrl: function () {
+      return primaryUrl;
+    },
+    getPlayerCharacter: function () {
+      return player;
+    },
+    openFeatureWindow: function (id) {
+      opened.push('feature:' + id);
+    },
+    openStudio: function () {
+      opened.push('studio');
+    },
+    charPagePrint: function () {
+      opened.push('charpagePrint');
+    }
   });
   const byId = {};
-  regs.forEach(function (r) { byId[r.id] = r; });
+  regs.forEach(function (r) {
+    byId[r.id] = r;
+  });
   return { opened: opened, byId: byId };
 }
 
@@ -51,7 +69,9 @@ test('newTest opens the testing loader with a cache-busting ver each time', () =
   r.byId.newTest.action();
   r.byId.newTest.action();
   assert.strictEqual(r.opened.length, 2);
-  r.opened.forEach(function (u) { assert.ok(urls.isTestingAqwUrl(u), u); });
+  r.opened.forEach(function (u) {
+    assert.ok(urls.isTestingAqwUrl(u), u);
+  });
 });
 
 test('cpSshot is HTML-windows-only on macOS and plugin-declared (platform has no id check)', () => {
@@ -76,6 +96,10 @@ test('feature, studio and char page actions use the injected services, not platf
   r.byId.strategy.action();
   r.byId.studio.action();
   assert.deepStrictEqual(r.opened, [
-    'feature:reminders', 'feature:todo', 'feature:inventory', 'feature:strategy', 'studio'
+    'feature:reminders',
+    'feature:todo',
+    'feature:inventory',
+    'feature:strategy',
+    'studio'
   ]);
 });

@@ -7,8 +7,11 @@ const root = path.join(__dirname, '../..');
 // Everything that is the platform's: the entry point, res/, and the build tooling that
 // serves every plugin. Vendored code (the Ruffle player) is not ours to police.
 function platformFiles() {
-  const files = [path.join(root, 'main.js'), path.join(root, 'scripts', 'build-web.js'),
-    path.join(root, 'scripts', 'make-locale-templates.js')];
+  const files = [
+    path.join(root, 'main.js'),
+    path.join(root, 'scripts', 'build-web.js'),
+    path.join(root, 'scripts', 'make-locale-templates.js')
+  ];
   (function walk(dir) {
     fs.readdirSync(dir, { withFileTypes: true }).forEach(function (entry) {
       const full = path.join(dir, entry.name);
@@ -25,31 +28,53 @@ function platformFiles() {
 
 // Names of the bundled game and of what only it does. If one of these shows up in platform
 // code, the platform has started to know a game again: it belongs in that game's plugin.
-const GAME_SPECIFIC = new RegExp([
-  'aqw', 'adventure[ -]?quest', 'aq\\.com', 'artix', 'dragon ?fable', 'aqlite', 'charpage',
-  'char page', 'wikidot', 'wikiview', 'reminders?\\b', 'to-?do\\b', 'inventory', 'strategy',
-  'spider', 'loader[0-9]'
-].join('|'), 'i');
+const GAME_SPECIFIC = new RegExp(
+  [
+    'aqw',
+    'adventure[ -]?quest',
+    'aq\\.com',
+    'artix',
+    'dragon ?fable',
+    'aqlite',
+    'charpage',
+    'char page',
+    'wikidot',
+    'wikiview',
+    'reminders?\\b',
+    'to-?do\\b',
+    'inventory',
+    'strategy',
+    'spider',
+    'loader[0-9]'
+  ].join('|'),
+  'i'
+);
 
 test('the platform (main.js, res/, shared build tooling) names no game, host or feature of a plugin', () => {
   const offenders = [];
   platformFiles().forEach(function (file) {
-    fs.readFileSync(file, 'utf8').split(/\r?\n/).forEach(function (line, i) {
-      if (GAME_SPECIFIC.test(line)) {
-        offenders.push(path.relative(root, file) + ':' + (i + 1) + ': ' + line.trim().slice(0, 100));
-      }
-    });
+    fs.readFileSync(file, 'utf8')
+      .split(/\r?\n/)
+      .forEach(function (line, i) {
+        if (GAME_SPECIFIC.test(line)) {
+          offenders.push(path.relative(root, file) + ':' + (i + 1) + ': ' + line.trim().slice(0, 100));
+        }
+      });
   });
   assert.deepStrictEqual(offenders, [], 'game-specific code leaked into the platform:\n' + offenders.join('\n'));
 });
 
 test('the platform never requires a plugin by path or id', () => {
   const offenders = [];
-  platformFiles().filter(function (f) { return /\.js$/.test(f); }).forEach(function (file) {
-    const src = fs.readFileSync(file, 'utf8');
-    // Plugins are discovered from the plugins directory; nothing may require one directly.
-    if (/require\([^)]*plugins\/[a-z-]+\//.test(src)) offenders.push(path.relative(root, file));
-  });
+  platformFiles()
+    .filter(function (f) {
+      return /\.js$/.test(f);
+    })
+    .forEach(function (file) {
+      const src = fs.readFileSync(file, 'utf8');
+      // Plugins are discovered from the plugins directory; nothing may require one directly.
+      if (/require\([^)]*plugins\/[a-z-]+\//.test(src)) offenders.push(path.relative(root, file));
+    });
   assert.deepStrictEqual(offenders, []);
 });
 

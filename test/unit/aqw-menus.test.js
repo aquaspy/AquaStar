@@ -17,15 +17,13 @@ test('AQW app-menu Useful Pages declare openMode in-place', () => {
   const links = menus.flattenLinkItems(pages);
   assert.ok(links.length >= 10, 'expected full useful-pages catalog');
   links.forEach(function (link) {
-    assert.strictEqual(
-      link.openMode,
-      'in-place',
-      link.id + ' app-menu link must be in-place'
-    );
+    assert.strictEqual(link.openMode, 'in-place', link.id + ' app-menu link must be in-place');
     assert.strictEqual(link.surface, 'app-menu');
     assert.ok(typeof link.url === 'string' && link.url.indexOf('http') === 0, link.id);
   });
-  const ids = links.map(function (l) { return l.id; });
+  const ids = links.map(function (l) {
+    return l.id;
+  });
   ['wiki', 'design', 'account', 'charpage', 'dailyGifts', 'reddit'].forEach(function (id) {
     assert.ok(ids.indexOf(id) !== -1, 'missing app useful page ' + id);
   });
@@ -43,7 +41,9 @@ test('AQW game-menu page links declare openMode new-window', () => {
 test('AQW keybind URL navigations declare openMode new-window', () => {
   const actions = keybinds.describeKeybindActions();
   const byId = {};
-  actions.forEach(function (a) { byId[a.id] = a; });
+  actions.forEach(function (a) {
+    byId[a.id] = a;
+  });
 
   ['wiki', 'account', 'design', 'charpage', 'newAqw', 'newTest', 'dragon'].forEach(function (id) {
     assert.ok(byId[id], 'missing keybind ' + id);
@@ -56,10 +56,7 @@ test('AQW keybind URL navigations declare openMode new-window', () => {
 
   Object.keys(keybinds.AQW_KEYBIND_DEFAULTS).forEach(function (id) {
     assert.ok(byId[id], 'default without registration meta: ' + id);
-    assert.ok(
-      !platform.PLATFORM_RESERVED_KEYBIND_IDS[id],
-      id + ' must not be platform-reserved'
-    );
+    assert.ok(!platform.PLATFORM_RESERVED_KEYBIND_IDS[id], id + ' must not be platform-reserved');
   });
 });
 
@@ -166,8 +163,12 @@ test('Host registerMenuPages stores providers for any plugin id', () => {
     log: function () {}
   });
 
-  function appPages() { return [{ id: 'home', openMode: 'in-place' }]; }
-  function gamePages() { return [{ id: 'shop', openMode: 'new-window' }]; }
+  function appPages() {
+    return [{ id: 'home', openMode: 'in-place' }];
+  }
+  function gamePages() {
+    return [{ id: 'shop', openMode: 'new-window' }];
+  }
 
   host.registerMenuPages({
     appUsefulPages: appPages,
@@ -191,59 +192,45 @@ test('Host registerMenuPages stores providers for any plugin id', () => {
 });
 
 test('menu.js uses plugin pages without AQW catalog fallback', () => {
-  const menuSrc = fs.readFileSync(
-    path.join(__dirname, '../../res/windows/menu.js'),
-    'utf8'
+  const menuSrc = fs.readFileSync(path.join(__dirname, '../../res/windows/menu.js'), 'utf8');
+  assert.ok(
+    menuSrc.indexOf('focusedWin.webContents.loadURL(link)') !== -1 ||
+      menuSrc.indexOf('focusedWin.webContents.loadURL(item.url)') !== -1
   );
-  assert.ok(menuSrc.indexOf('focusedWin.webContents.loadURL(link)') !== -1 ||
-    menuSrc.indexOf('focusedWin.webContents.loadURL(item.url)') !== -1);
-  assert.ok(menuSrc.indexOf("openMode === 'external'") !== -1 ||
-    menuSrc.indexOf("openMode: 'external'") !== -1 ||
-    menuSrc.indexOf("openMode || 'in-place'") !== -1);
+  assert.ok(
+    menuSrc.indexOf("openMode === 'external'") !== -1 ||
+      menuSrc.indexOf("openMode: 'external'") !== -1 ||
+      menuSrc.indexOf("openMode || 'in-place'") !== -1
+  );
   assert.ok(menuSrc.indexOf('menuRegistry') !== -1);
   assert.ok(menuSrc.indexOf('hasAppUsefulPages') !== -1);
   assert.ok(menuSrc.indexOf('constant.wikiReleases') === -1);
-  assert.ok(menuSrc.indexOf('menuReminders') === -1 ||
-    menuSrc.indexOf("command(menuMessages.menuReminders") === -1);
+  assert.ok(menuSrc.indexOf('menuReminders') === -1 || menuSrc.indexOf('command(menuMessages.menuReminders') === -1);
   assert.ok(menuSrc.indexOf('runGameMenuAction') !== -1);
 });
 
 test('AQW menus register Game/Features contributors', () => {
-  const src = fs.readFileSync(
-    path.join(__dirname, '../../plugins/adventure-quest-worlds/menus.js'),
-    'utf8'
-  );
+  const src = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/menus.js'), 'utf8');
   assert.ok(src.indexOf('createAqwChromeContributor') !== -1);
   assert.ok(src.indexOf("labelOr(labels, 'menuGame'") !== -1);
   assert.ok(src.indexOf("labelOr(labels, 'menuFeatures'") !== -1);
 });
 
 test('main.js adopts menu providers from host state without AQW id check', () => {
-  const mainSrc = fs.readFileSync(
-    path.join(__dirname, '../../main.js'),
-    'utf8'
-  );
-  assert.ok(
-    mainSrc.indexOf('platform.menuRegistry.adoptHostState(state, state.menuProviders || null)') !== -1
-  );
+  const mainSrc = fs.readFileSync(path.join(__dirname, '../../main.js'), 'utf8');
+  assert.ok(mainSrc.indexOf('platform.menuRegistry.adoptHostState(state, state.menuProviders || null)') !== -1);
   assert.ok(mainSrc.indexOf("manifest.id === 'adventure-quest-worlds'") === -1);
   assert.ok(mainSrc.indexOf("require('./plugins/adventure-quest-worlds/menus.js')") === -1);
 });
 
 test('AQW activate source registers menus and keybinds', () => {
-  const src = fs.readFileSync(
-    path.join(__dirname, '../../plugins/adventure-quest-worlds/main.js'),
-    'utf8'
-  );
+  const src = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/main.js'), 'utf8');
   assert.ok(src.indexOf("require('./menus.js')") !== -1);
   assert.ok(src.indexOf("require('./keybinds.js')") !== -1);
   assert.ok(src.indexOf('menus.register(host)') !== -1);
   assert.ok(src.indexOf('keybinds.register(host, {') !== -1);
 
-  const menusSrc = fs.readFileSync(
-    path.join(__dirname, '../../plugins/adventure-quest-worlds/menus.js'),
-    'utf8'
-  );
+  const menusSrc = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/menus.js'), 'utf8');
   assert.ok(menusSrc.indexOf('host.registerMenuPages') !== -1);
   assert.ok(menusSrc.indexOf('appUsefulPages: describeAppUsefulPages') !== -1);
   assert.ok(menusSrc.indexOf('gameMenuPages: describeGameMenuPages') !== -1);

@@ -38,13 +38,15 @@ test('PluginHost throws when registerSessionRules lacks web-request', () => {
 
 test('PluginHost allows registerSessionRules with web-request', () => {
   const host = makeHost(baseManifest({ permissions: ['web-request'] }));
-  host.registerSessionRules([{
-    id: 'r1',
-    urls: ['*://example.com/*'],
-    onBeforeRequest: function (details, ctx, callback) {
-      callback({ cancel: false });
+  host.registerSessionRules([
+    {
+      id: 'r1',
+      urls: ['*://example.com/*'],
+      onBeforeRequest: function (details, ctx, callback) {
+        callback({ cancel: false });
+      }
     }
-  }]);
+  ]);
   assert.strictEqual(host._getState().sessionRules.length, 1);
 });
 
@@ -64,10 +66,12 @@ test('PluginHost requires inject-scripts for navigation injection hooks', () => 
     });
   }, /without permission "inject-scripts"/);
 
-  const allowed = makeHost(baseManifest({
-    permissions: ['inject-scripts'],
-    injectHostPatterns: ['example.com']
-  }));
+  const allowed = makeHost(
+    baseManifest({
+      permissions: ['inject-scripts'],
+      injectHostPatterns: ['example.com']
+    })
+  );
   allowed.registerNavigationHooks({ onDidFinishLoad: function () {} });
   assert.ok(allowed._getState().navigationHooks.onDidFinishLoad);
 });
@@ -116,25 +120,30 @@ test('PluginHost requires spawn-helper-process and keeps scripts inside plugin r
 });
 
 test('PluginHost net.fetchText enforces fetchAllowlist', async () => {
-  const host = makeHost(baseManifest({
-    permissions: ['net-fetch'],
-    fetchAllowlist: ['https://allowed.example/*']
-  }));
+  const host = makeHost(
+    baseManifest({
+      permissions: ['net-fetch'],
+      fetchAllowlist: ['https://allowed.example/*']
+    })
+  );
 
   const denied = await host.net.fetchText('https://evil.example/page');
   assert.strictEqual(denied.ok, false);
   assert.ok(/fetchAllowlist/.test(denied.error));
 
   const calls = [];
-  const wired = makeHost(baseManifest({
-    permissions: ['net-fetch'],
-    fetchAllowlist: ['https://allowed.example/*']
-  }), {
-    fetchText: function (url) {
-      calls.push(url);
-      return Promise.resolve({ ok: true, html: '<ok/>' });
+  const wired = makeHost(
+    baseManifest({
+      permissions: ['net-fetch'],
+      fetchAllowlist: ['https://allowed.example/*']
+    }),
+    {
+      fetchText: function (url) {
+        calls.push(url);
+        return Promise.resolve({ ok: true, html: '<ok/>' });
+      }
     }
-  });
+  );
   const ok = await wired.net.fetchText('https://allowed.example/item');
   assert.strictEqual(ok.ok, true);
   assert.deepStrictEqual(calls, ['https://allowed.example/item']);
@@ -152,7 +161,9 @@ test('PluginHost namespaces third-party IPC channels', () => {
       }
     }
   });
-  host.ipc.handle('ping', function () { return 'pong'; });
+  host.ipc.handle('ping', function () {
+    return 'pong';
+  });
   assert.strictEqual(recorded[0].channel, 'plugin:third-party-game:ping');
 });
 
@@ -172,7 +183,9 @@ test('PluginHost keeps unprefixed IPC names only when the manifest asks and the 
       }
     }
   });
-  host.ipc.handle('getReminders', function () { return {}; });
+  host.ipc.handle('getReminders', function () {
+    return {};
+  });
   assert.strictEqual(recorded[0], 'getReminders');
 });
 
@@ -183,9 +196,15 @@ test('PluginHost never grants unprefixed IPC on a plugin id alone', () => {
     manifest: baseManifest({ id: 'adventure-quest-worlds', apiVersion: 1 }),
     pluginRoot: path.join(__dirname, '../fixtures/sample-plugin'),
     legacyIpc: true,
-    deps: { ipcHandle: function (channel) { recorded.push(channel); } }
+    deps: {
+      ipcHandle: function (channel) {
+        recorded.push(channel);
+      }
+    }
   });
-  host.ipc.handle('getReminders', function () { return {}; });
+  host.ipc.handle('getReminders', function () {
+    return {};
+  });
   assert.strictEqual(recorded[0], 'plugin:adventure-quest-worlds:getReminders');
 
   const noGrant = [];
@@ -194,9 +213,15 @@ test('PluginHost never grants unprefixed IPC on a plugin id alone', () => {
     manifest: baseManifest({ id: 'copycat', apiVersion: 1, unprefixedIpc: true }),
     pluginRoot: path.join(__dirname, '../fixtures/sample-plugin'),
     legacyIpc: false,
-    deps: { ipcHandle: function (channel) { noGrant.push(channel); } }
+    deps: {
+      ipcHandle: function (channel) {
+        noGrant.push(channel);
+      }
+    }
   });
-  unrequested.ipc.handle('ping', function () { return {}; });
+  unrequested.ipc.handle('ping', function () {
+    return {};
+  });
   assert.strictEqual(noGrant[0], 'plugin:copycat:ping');
 });
 
@@ -210,20 +235,24 @@ test('PluginHost rejects platform-reserved keybind ids', () => {
 test('PluginHost requires unsafe-renderer for plugins:true feature windows', () => {
   const host = makeHost(baseManifest());
   assert.throws(function () {
-    host.registerFeatureWindows([{
+    host.registerFeatureWindows([
+      {
+        id: 'wiki',
+        title: 'Wiki',
+        url: 'https://example.com',
+        config: { webPreferences: { plugins: true } }
+      }
+    ]);
+  }, /without permission "unsafe-renderer"/);
+
+  const allowed = makeHost(baseManifest({ permissions: ['unsafe-renderer'] }));
+  allowed.registerFeatureWindows([
+    {
       id: 'wiki',
       title: 'Wiki',
       url: 'https://example.com',
       config: { webPreferences: { plugins: true } }
-    }]);
-  }, /without permission "unsafe-renderer"/);
-
-  const allowed = makeHost(baseManifest({ permissions: ['unsafe-renderer'] }));
-  allowed.registerFeatureWindows([{
-    id: 'wiki',
-    title: 'Wiki',
-    url: 'https://example.com',
-    config: { webPreferences: { plugins: true } }
-  }]);
+    }
+  ]);
   assert.strictEqual(allowed._getState().featureWindows.length, 1);
 });

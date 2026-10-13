@@ -18,6 +18,10 @@ jobs:
       - run: npm run format:check
       - run: npm run lint
       - run: npm test
+      # The release stages the app by an explicit file list (scripts/build-arch.sh); stage it and
+      # verify it can start, so a missing folder fails here instead of in a published release.
+      - run: STAGE_ONLY=1 bash scripts/build-arch.sh linux x64
+      - run: STAGE_ONLY=1 bash scripts/build-arch.sh win x64
 
   package-windows:
     runs-on: windows-latest

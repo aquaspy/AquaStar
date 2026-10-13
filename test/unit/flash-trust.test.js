@@ -5,8 +5,12 @@ test('flash.refreshTrust empties and re-adds URLs', () => {
   const added = [];
   let emptyCount = 0;
   flash._setTrustManagerForTests({
-    empty: function () { emptyCount++; },
-    add: function (url) { added.push(url); }
+    empty: function () {
+      emptyCount++;
+    },
+    add: function (url) {
+      added.push(url);
+    }
   });
   flash.refreshTrust([
     'https://a.example/game.swf',
@@ -16,9 +20,6 @@ test('flash.refreshTrust empties and re-adds URLs', () => {
     null
   ]);
   assert.strictEqual(emptyCount, 1);
-  assert.deepStrictEqual(added, [
-    'https://a.example/game.swf',
-    'https://b.example/alt.swf'
-  ]);
+  assert.deepStrictEqual(added, ['https://a.example/game.swf', 'https://b.example/alt.swf']);
   flash._setTrustManagerForTests(null);
 });

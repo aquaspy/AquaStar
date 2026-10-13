@@ -28,8 +28,7 @@ function listCandidateAppRoots() {
   const pushIfApp = (candidate) => {
     if (
       fs.existsSync(candidate) &&
-      (fs.existsSync(path.join(candidate, 'main.js')) ||
-        fs.existsSync(path.join(candidate, 'package.json')))
+      (fs.existsSync(path.join(candidate, 'main.js')) || fs.existsSync(path.join(candidate, 'package.json')))
     ) {
       roots.push(candidate);
     }

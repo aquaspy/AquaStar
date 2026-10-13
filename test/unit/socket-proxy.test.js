@@ -35,8 +35,14 @@ test('the AQW plugin declares exactly the hosts its server list uses', () => {
 test('relay forwards to an allowed host and refuses everything else', async () => {
   socketProxy.allowHosts(['localhost']);
 
-  const echo = net.createServer(function (socket) { socket.on('data', function (d) { socket.write(d); }); });
-  await new Promise(function (resolve) { echo.listen(0, '127.0.0.1', resolve); });
+  const echo = net.createServer(function (socket) {
+    socket.on('data', function (d) {
+      socket.write(d);
+    });
+  });
+  await new Promise(function (resolve) {
+    echo.listen(0, '127.0.0.1', resolve);
+  });
   const echoPort = echo.address().port;
 
   socketProxy.start();
@@ -44,10 +50,21 @@ test('relay forwards to an allowed host and refuses everything else', async () =
     return new Promise(function (resolve) {
       const ws = new WebSocket(socketProxy.proxyUrl + '/?' + query);
       const result = { messages: [], closeCode: null };
-      ws.on('open', function () { ws.send(Buffer.from('ping')); });
-      ws.on('message', function (m) { result.messages.push(Buffer.from(m).toString()); ws.close(); });
-      ws.on('close', function (code) { result.closeCode = code; resolve(result); });
-      ws.on('error', function () { result.error = true; resolve(result); });
+      ws.on('open', function () {
+        ws.send(Buffer.from('ping'));
+      });
+      ws.on('message', function (m) {
+        result.messages.push(Buffer.from(m).toString());
+        ws.close();
+      });
+      ws.on('close', function (code) {
+        result.closeCode = code;
+        resolve(result);
+      });
+      ws.on('error', function () {
+        result.error = true;
+        resolve(result);
+      });
     });
   };
 
@@ -63,7 +80,9 @@ test('relay forwards to an allowed host and refuses everything else', async () =
     assert.strictEqual(missing.closeCode, 1008, 'missing port is refused');
   } finally {
     socketProxy.stop();
-    await new Promise(function (resolve) { echo.close(resolve); });
+    await new Promise(function (resolve) {
+      echo.close(resolve);
+    });
   }
 });
 

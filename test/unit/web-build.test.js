@@ -32,9 +32,7 @@ test('web build reuses desktop pages through preload-compatible bridges', () => 
     }
   });
 
-  assert.ok(
-    contribute.sharedKits.some((kit) => kit.from.indexOf('list_window_common.js') !== -1)
-  );
+  assert.ok(contribute.sharedKits.some((kit) => kit.from.indexOf('list_window_common.js') !== -1));
   // Every shared kit exists and lands inside web-dist (explicit { from, to }).
   contribute.sharedKits.forEach((kit) => {
     assert.ok(fs.existsSync(path.join(__dirname, '../..', kit.from)), kit.from);

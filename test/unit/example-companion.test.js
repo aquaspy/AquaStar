@@ -43,10 +43,14 @@ test('example-companion IPC channels are namespaced even if legacyIpc is request
     pluginRoot: root,
     legacyIpc: true,
     deps: {
-      ipcHandle: function (channel) { recorded.push(channel); }
+      ipcHandle: function (channel) {
+        recorded.push(channel);
+      }
     }
   });
-  host.ipc.handle('bumpDashboardVisit', function () { return {}; });
+  host.ipc.handle('bumpDashboardVisit', function () {
+    return {};
+  });
   assert.strictEqual(recorded[0], 'plugin:example-companion:bumpDashboardVisit');
 });
 
@@ -63,9 +67,18 @@ test('example-companion activate registers core Host capabilities', async () => 
     clearRequireCache: true,
     log: function () {},
     deps: {
-      openPrimaryGame: function () { opened.push('primary'); return {}; },
-      openUrl: function (u) { opened.push(u); return {}; },
-      openFeatureWindow: function (id) { opened.push(id); return {}; },
+      openPrimaryGame: function () {
+        opened.push('primary');
+        return {};
+      },
+      openUrl: function (u) {
+        opened.push(u);
+        return {};
+      },
+      openFeatureWindow: function (id) {
+        opened.push(id);
+        return {};
+      },
       fetchText: function () {
         return Promise.resolve({
           ok: true,
@@ -88,20 +101,46 @@ test('example-companion activate registers core Host capabilities', async () => 
   assert.ok(state.sessionRules.length >= 1);
   assert.ok(state.navigationHooks && state.navigationHooks.onDidFinishLoad);
   assert.ok(state.menuProviders && state.menuProviders.appUsefulPages);
-  assert.ok(state.keybinds.some(function (b) { return b.id === 'openGithub'; }));
-  assert.ok(state.keybinds.some(function (b) { return b.id === 'openPluginsDocs'; }));
-  assert.ok(state.settingsSections.some(function (s) { return s.id === 'example-demo'; }));
-  assert.ok(state.featureWindows.some(function (w) { return w.id === 'example-dashboard'; }));
+  assert.ok(
+    state.keybinds.some(function (b) {
+      return b.id === 'openGithub';
+    })
+  );
+  assert.ok(
+    state.keybinds.some(function (b) {
+      return b.id === 'openPluginsDocs';
+    })
+  );
+  assert.ok(
+    state.settingsSections.some(function (s) {
+      return s.id === 'example-demo';
+    })
+  );
+  assert.ok(
+    state.featureWindows.some(function (w) {
+      return w.id === 'example-dashboard';
+    })
+  );
   assert.ok(state.optionDefaults.demoPlayerName);
 
   const pages = state.menuProviders.appUsefulPages({});
   // Modern GitHub must open externally on Electron 11 / Chromium 87.
-  assert.ok(pages.some(function (p) { return p.openMode === 'external'; }));
-  assert.ok(pages.every(function (p) {
-    return !p.url || p.openMode === 'external' || p.url.indexOf('github.com') === -1;
-  }));
+  assert.ok(
+    pages.some(function (p) {
+      return p.openMode === 'external';
+    })
+  );
+  assert.ok(
+    pages.every(function (p) {
+      return !p.url || p.openMode === 'external' || p.url.indexOf('github.com') === -1;
+    })
+  );
 
-  state.keybinds.filter(function (b) { return b.id === 'newStage'; })[0].action();
+  state.keybinds
+    .filter(function (b) {
+      return b.id === 'newStage';
+    })[0]
+    .action();
   assert.ok(opened.indexOf('primary') !== -1);
 });
 
@@ -111,7 +150,9 @@ test('discoverPlugins finds example-companion bundled plugin', () => {
     appVersion: '1.12.2',
     log: function () {}
   });
-  const ids = discovered.plugins.map(function (p) { return p.manifest.id; });
+  const ids = discovered.plugins.map(function (p) {
+    return p.manifest.id;
+  });
   assert.ok(ids.indexOf('example-companion') !== -1);
   assert.ok(ids.indexOf('my-flash-game') === -1);
 });

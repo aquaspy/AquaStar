@@ -20,7 +20,8 @@ const APP_LAUNCH_JS = [
   'var neverParsed = { aqw: { url:"https://evil.example/Loader4.swf" } };'
 ].join('\n');
 
-const PAGE_HTML = '<html><head>' +
+const PAGE_HTML =
+  '<html><head>' +
   '<script src="//ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>' +
   '<script src="/scripts/AppLaunch.js?version=220L5"></script></head></html>';
 
@@ -39,10 +40,12 @@ test('parseGameWindows reads the literal as text, skips comments, stops at the e
 });
 
 test('extractScriptUrl only trusts AppLaunch.js served from www.artix.com over https', () => {
-  assert.strictEqual(config.extractScriptUrl(PAGE_HTML),
-    'https://www.artix.com/scripts/AppLaunch.js?version=220L5');
+  assert.strictEqual(config.extractScriptUrl(PAGE_HTML), 'https://www.artix.com/scripts/AppLaunch.js?version=220L5');
   assert.strictEqual(config.extractScriptUrl('<script src="https://evil.example/AppLaunch.js"></script>'), null);
-  assert.strictEqual(config.extractScriptUrl('<script src="http://www.artix.com/scripts/AppLaunch.js"></script>'), null);
+  assert.strictEqual(
+    config.extractScriptUrl('<script src="http://www.artix.com/scripts/AppLaunch.js"></script>'),
+    null
+  );
   assert.strictEqual(config.extractScriptUrl('<html>no scripts</html>'), null);
   assert.strictEqual(config.extractScriptUrl(undefined), null);
 });
@@ -91,11 +94,18 @@ function fakeDeps(responses, initialCache, clock) {
         return Promise.resolve(r || { ok: false, error: 'no fake for ' + url });
       },
       store: {
-        read: function () { return cache; },
-        write: function (v) { cache = v; writes.push(v); }
+        read: function () {
+          return cache;
+        },
+        write: function (v) {
+          cache = v;
+          writes.push(v);
+        }
       },
       urls: urls,
-      now: function () { return clock.t; },
+      now: function () {
+        return clock.t;
+      },
       log: function () {}
     }
   };
@@ -136,9 +146,16 @@ test('refresh keeps the built-in loader when the page is unreachable, malformed 
     {
       name: 'hostile aqw url',
       page: { ok: true, html: PAGE_HTML },
-      script: { ok: true, html: 'var gameWindows =\n{\n aqw: { url:"https://evil.example/game/gamefiles/Loader4.swf" }\n};' }
+      script: {
+        ok: true,
+        html: 'var gameWindows =\n{\n aqw: { url:"https://evil.example/game/gamefiles/Loader4.swf" }\n};'
+      }
     },
-    { name: 'no aqw entry', page: { ok: true, html: PAGE_HTML }, script: { ok: true, html: 'var gameWindows =\n{\n};' } }
+    {
+      name: 'no aqw entry',
+      page: { ok: true, html: PAGE_HTML },
+      script: { ok: true, html: 'var gameWindows =\n{\n};' }
+    }
   ];
   for (const sc of scenarios) {
     freshUrls();
@@ -171,7 +188,8 @@ test('cache: applyCached is synchronous; stale or corrupt entries are not truste
 
   freshUrls();
   const corrupt = config.createLauncherConfig(
-    fakeDeps({}, { loaderUrl: 'https://evil.example/Loader4.swf', checkedAt: clock.t }, clock).deps);
+    fakeDeps({}, { loaderUrl: 'https://evil.example/Loader4.swf', checkedAt: clock.t }, clock).deps
+  );
   assert.strictEqual(corrupt.applyCached(), null);
   assert.strictEqual(urls.loaderUrl(), urls.URLS.loader4);
   freshUrls();
@@ -182,5 +200,10 @@ test('AQW manifest allows exactly the Artix launcher page and scripts for live l
   assert.ok(manifest.permissions.indexOf('net-fetch') !== -1);
   assert.ok(manifest.fetchAllowlist.indexOf('https://www.artix.com/gamelauncher') !== -1);
   assert.ok(manifest.fetchAllowlist.indexOf('https://www.artix.com/scripts/*') !== -1);
-  assert.strictEqual(manifest.fetchAllowlist.some(function (u) { return u === 'https://www.artix.com/*'; }), false);
+  assert.strictEqual(
+    manifest.fetchAllowlist.some(function (u) {
+      return u === 'https://www.artix.com/*';
+    }),
+    false
+  );
 });
