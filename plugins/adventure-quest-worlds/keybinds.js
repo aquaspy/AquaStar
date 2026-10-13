@@ -4,6 +4,8 @@
 
 const path = require('path');
 
+const urls = require('./urls.js');
+
 const resRoot = path.join(__dirname, '..', '..', 'res');
 
 const AQW_KEYBIND_DEFAULTS = {
@@ -46,7 +48,13 @@ function resolveDeps(deps) {
     deps = deps || {};
     return {
         instances: deps.instances || require(path.join(resRoot, 'instances.js')),
-        constant: deps.constant || require(path.join(resRoot, 'const.js')),
+        // Effective URL of the primary game: the plugin's loader unless the user set
+        // customUrl / a local SWF (the platform applies those overrides).
+        getPrimaryUrl: deps.getPrimaryUrl || function () {
+            try {
+                return require(path.join(resRoot, 'platform')).pluginRuntime.getPrimaryUrl();
+            } catch (e) { return urls.loaderUrl(); }
+        },
         getPlayerCharacter: deps.getPlayerCharacter || function () {
             try {
                 const keyb = require(path.join(resRoot, 'keybindings.js'));
@@ -62,45 +70,44 @@ function resolveDeps(deps) {
 function createKeybindRegistrations(deps) {
     const d = resolveDeps(deps);
     const inst = d.instances;
-    const constant = d.constant;
 
     return [
         {
             id: 'wiki',
             openMode: 'new-window',
-            action: function () { inst.newBrowserWindow(constant.wikiReleases); }
+            action: function () { inst.newBrowserWindow(urls.URLS.wikiReleases); }
         },
         {
             id: 'design',
             openMode: 'new-window',
-            action: function () { inst.newBrowserWindow(constant.designNotes); }
+            action: function () { inst.newBrowserWindow(urls.URLS.designNotes); }
         },
         {
             id: 'account',
             openMode: 'new-window',
-            action: function () { inst.newBrowserWindow(constant.accountAq); }
+            action: function () { inst.newBrowserWindow(urls.URLS.accountAq); }
         },
         {
             id: 'charpage',
             openMode: 'new-window',
             action: function () {
-                inst.newBrowserWindow(constant.buildCharLookupUrl(d.getPlayerCharacter()));
+                inst.newBrowserWindow(urls.buildCharLookupUrl(d.getPlayerCharacter()));
             }
         },
         {
             id: 'newAqw',
             openMode: 'new-window',
-            action: function () { inst.newBrowserWindow(constant.mainPath); }
+            action: function () { inst.newBrowserWindow(d.getPrimaryUrl()); }
         },
         {
             id: 'newTest',
             openMode: 'new-window',
-            action: function () { inst.newBrowserWindow(constant.testingAQW); }
+            action: function () { inst.newBrowserWindow(urls.testingAQW()); }
         },
         {
             id: 'dragon',
             openMode: 'new-window',
-            action: function () { inst.newBrowserWindow(constant.df_url); }
+            action: function () { inst.newBrowserWindow(urls.URLS.dfLoader); }
         },
         {
             id: 'reminders',
@@ -120,6 +127,8 @@ function createKeybindRegistrations(deps) {
         },
         {
             id: 'cpSshot',
+            // macOS has no per-window menu entry for it: HTML (char page) windows only.
+            onlyHtml: process.platform === 'darwin',
             action: function () { inst.charPagePrint(); }
         }
     ];

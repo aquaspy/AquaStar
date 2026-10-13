@@ -39,14 +39,9 @@ function customKeybinds() {
         (platform.pluginRuntime.getState() &&
             platform.pluginRuntime.getState().optionDefaults) || {}
     );
-    // When no plugin is adopted (legacy boot), keep historic AQW accelerators available.
-    const legacyDefaults = platform.pluginRuntime.getPrimaryGame()
-        ? {}
-        : (constant.legacyAqwKeybinds || {});
     const platformDefaults = Object.assign(
         {},
         constant.originalKeybinds,
-        legacyDefaults,
         constant.originalOptions
     );
 
@@ -164,25 +159,6 @@ function buildPlatformActions() {
     };
 }
 
-function registerLegacyAqwKeybinds(k) {
-    addKeybind(k.wiki, function () { inst.newBrowserWindow(constant.wikiReleases); });
-    addKeybind(k.design, function () { inst.newBrowserWindow(constant.designNotes); });
-    addKeybind(k.account, function () { inst.newBrowserWindow(constant.accountAq); });
-    addKeybind(k.charpage, function () {
-        inst.newBrowserWindow(constant.buildCharLookupUrl(k.playerCharacter));
-    });
-    addKeybind(k.newAqw, function () { inst.newBrowserWindow(constant.mainPath); });
-    addKeybind(k.newTest, function () { inst.newBrowserWindow(constant.testingAQW); });
-    addKeybind(k.reminders, function () { inst.openRemindersWindow(); });
-    addKeybind(k.todo, function () { inst.openTodoWindow(); });
-    addKeybind(k.inventory, function () { inst.openInventoryWindow(); });
-    addKeybind(k.strategy, function () { inst.openStrategyWindow(); });
-    addKeybind(k.dragon, function () { inst.newBrowserWindow(constant.df_url); });
-    if (process.platform == 'darwin') {
-        addKeybind(k.cpSshot, function () { inst.charPagePrint(); }, true);
-    }
-}
-
 const processKeybings = function (){
 
     // REMEMBER, ADD KEYBIDING FUNC ALREADY EXECUTE ON THE FOCUSED WINDOW!!!
@@ -196,9 +172,8 @@ const processKeybings = function (){
     
     /// Shhh... secreat stuff
     if (k.swfLog == true) constant.enableSWFLogging();
-    // Truthy check on purpose - customUrl now always exists (default ""), via originalOptions,
-    // so an empty-string default must NOT be treated as "override with an empty URL".
-    if (k.customUrl) constant.changeMainUrl(k.customUrl);
+    // customUrl (and the local SWF override) are applied by the plugin runtime on top of the
+    // active plugin primary game: see plugin-runtime getPrimaryUrl().
     if (k.useDirectWmode !== undefined) constant.setUseDirectWmode(k.useDirectWmode);
     if (k.enableDevTools == true) constant.enableDevTools();
 
@@ -235,15 +210,13 @@ const processKeybings = function (){
             const accel = k[binding.id];
             if (!accel) return;
             const id = binding.id;
-            const onlyHtml = process.platform == 'darwin' && id === 'cpSshot';
+            const onlyHtml = !!binding.onlyHtml;
             if (binding.global) {
                 addGlobalKeybind(accel, function (fw) { activeDispatcher.run(id, fw); }, onlyHtml, !!binding.considerDF);
             } else {
                 addKeybind(accel, function (fw) { activeDispatcher.run(id, fw); }, onlyHtml, !!binding.considerDF);
             }
         });
-    } else {
-        registerLegacyAqwKeybinds(k);
     }
 
     exports.keybinds = k;
@@ -289,21 +262,9 @@ exports.runGameMenuAction = function(action, focusedWin) {
     }
     // Fallbacks when dispatcher missing or action unknown (e.g. studio menu entry).
     switch (action) {
-    case 'wiki': return inst.newBrowserWindow(constant.wikiReleases);
-    case 'design': return inst.newBrowserWindow(constant.designNotes);
-    case 'account': return inst.newBrowserWindow(constant.accountAq);
-    case 'charpage': return inst.newBrowserWindow(constant.buildCharLookupUrl(finalKeybinds.playerCharacter));
-    case 'newAqw': return inst.newBrowserWindow(constant.mainPath);
-    case 'newTest': return inst.newBrowserWindow(constant.testingAQW);
-    case 'dragon': return inst.newBrowserWindow(constant.df_url);
     case 'help': return windowsMenu.showHelpMessage(focusedWin);
     case 'about': return windowsMenu.showAboutMessage(focusedWin);
     case 'settings': return inst.openSettingsWindow();
-    case 'reminders': return inst.openRemindersWindow();
-    case 'todo': return inst.openTodoWindow();
-    case 'inventory': return inst.openInventoryWindow();
-    case 'strategy': return inst.openStrategyWindow();
-    case 'studio': return inst.openCharPageStudioWindow();
     case 'fullscreen':
         return toggleFullscreen(focusedWin);
     case 'sshot': return inst.takeSS(focusedWin);
@@ -370,9 +331,7 @@ ipcMain.handle('getPluginSettings', () => _readPluginSettingsFromDisk());
 
 ipcMain.handle('getSettingsLayout', () => {
     const pluginSettings = _readPluginSettingsFromDisk();
-    const layout = platform.settingsRegistry.buildSettingsLayout({
-        includeLegacyAqwFallback: true
-    });
+    const layout = platform.settingsRegistry.buildSettingsLayout();
     return {
         plugin: layout.plugin,
         pluginSections: layout.pluginSections,

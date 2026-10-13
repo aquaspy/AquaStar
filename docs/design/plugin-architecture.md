@@ -369,6 +369,7 @@ Migration-only escape: AQW plugin may `require()` legacy modules until PR 8 comp
  * @property {(url: string) => boolean} isGameUrl
  * @property {{ preferDirectWmode?: boolean, ruffleEligible?: boolean, wmode?: string, scale?: string }} [wrap]
  * @property {boolean} [flashTrust]  // if true, host.trustFlashUrls includes getUrl() result
+ * @property {(ctx: { displayName: string, settings: object, usingCustomSwf: boolean }) => string} [title]
  */
 
 /**
@@ -379,6 +380,7 @@ Migration-only escape: AQW plugin may `require()` legacy modules until PR 8 comp
  * @property {(ctx: object) => string} [title]
  * @property {GameLaunchConfig['wrap']} [wrap]
  * @property {boolean} [flashTrust]
+ * @property {boolean} [standalone]  // separate game: own title, not numbered, no game bar, no default direct-wmode embed
  * @property {'game'|'browser'} [windowKind]  // default game if isGameUrl
  */
 
@@ -387,7 +389,7 @@ Migration-only escape: AQW plugin may `require()` legacy modules until PR 8 comp
  * @property {string} id
  * @property {string[]} urls  // Electron filter URLs
  * @property {(settings: object) => boolean} [enabledWhen]
- * @property {(details: Electron.OnBeforeSendHeadersListenerDetails, ctx: { spoofedUA: string }, callback: Function) => void} [onBeforeSendHeaders]
+ * @property {(details: Electron.OnBeforeSendHeadersListenerDetails, ctx: { defaultUserAgent: string, settings: object, logLine: function }, callback: Function) => void} [onBeforeSendHeaders]
  * @property {(details: Electron.OnBeforeRequestListenerDetails, ctx: { logLine: function }, callback: Function) => void} [onBeforeRequest]
  * // IMPORTANT: adapters MUST call Electron callbacks in today's shapes:
  * //   callback({ requestHeaders: details.requestHeaders })
@@ -556,7 +558,7 @@ PR 8a (and/or existing `test/unit/charpage-lab.test.js`): contract check that th
 ```js
 host.setPrimaryGame({
   id: 'aqw-main',
-  getUrl: () => resolveAqwMainUrl(host), // Loader3, customUrl, or aqlite_old.swf file URL
+  getUrl: () => resolveAqwMainUrl(host), // Loader4, customUrl, or aqlite_old.swf file URL
   title: (ctx) => ctx.displayName + ' - ' + (isOldAqlite ? 'Older/Custom AQLite' : ' Adventure Quest Worlds'),
   isGameUrl: (url) => isMainOrTesting(url),
   wrap: { preferDirectWmode: true, ruffleEligible: true },
@@ -572,7 +574,7 @@ host.registerLaunches([
 
 #### Flash trust semantics (`nw-flash-trust`)
 
-Today `flash.js` calls `trustManager.empty()` then `trustManager.add(aqlitePath)` once for `constant.mainPath` (file URL or remote Loader3 string as passed today).
+Today `flash.js` calls `trustManager.empty()` then `trustManager.add(aqlitePath)` once for `constant.mainPath` (file URL or remote Loader4 string as passed today).
 
 Host `trustFlashUrls(urls)`:
 
@@ -589,7 +591,7 @@ host.registerSessionRules([
     id: 'artix-ua',
     urls: ['*://*.aq.com/*', '*://aq.com/*', '*://game.aq.com/*', '*://play.dragonfable.com/*'],
     onBeforeSendHeaders: (details, ctx, callback) => {
-      details.requestHeaders['User-Agent'] = ctx.spoofedUA;
+      details.requestHeaders['User-Agent'] = launcherUserAgent(ctx.defaultUserAgent); // plugin policy
       details.requestHeaders['artixmode'] = 'launcher';
       callback({ requestHeaders: details.requestHeaders });
     }
@@ -606,7 +608,7 @@ host.registerSessionRules([
 ]);
 ```
 
-Platform ad-block remains in `main.js` with the same `callback({ cancel: true })` pattern. Duplicate rule `id` → activation error.
+Platform ad-block is a platform-owned rule (`res/platform/platform-rules.js`) applied through the same applicator. `res/platform/session-rules.js` registers **one** listener per webRequest event (Electron keeps one per event; a second registration would replace the first) and fans each request out to the matching rules in order. Duplicate rule `id` → activation error.
 
 #### 3. Navigation / injection
 
@@ -735,7 +737,7 @@ Restart-to-apply selector; local trust; template already present from PR 1.
 
 ### Compatibility checklist (user-visible)
 
-1. Default load Loader3 unless `aqlite_old.swf` / `customUrl`.
+1. Default load Loader4 unless `aqlite_old.swf` / `customUrl`.
 2. Alt+N / Alt+Q / Alt+1 titles and wrapping.
 3. UA spoof + `artixmode` on aq.com + DragonFable.
 4. WikiView + account sync injection; `fetchWikiPage` CORS path.

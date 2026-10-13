@@ -33,32 +33,10 @@ function getSettingsSections() {
     return settingsSections.slice();
 }
 
-/** Fallback when pluginSystem is off so AQW fields still appear on the plugin tab. */
-function getLegacyAqwSettingsSections() {
-    return [{
-        id: 'aqw-account',
-        title: 'Account & Inventory',
-        titleKey: 'account',
-        order: 10,
-        fields: [
-            { key: 'playerCharacter', type: 'text', sanitize: 'alphanumeric' },
-            { key: 'featurePlayerName', type: 'boolean' },
-            { key: 'autoSync', type: 'boolean' }
-        ]
-    }];
-}
-
-function buildSettingsLayout(opts) {
-    opts = opts || {};
-    const sections = settingsSections.length
-        ? getSettingsSections()
-        : (opts.includeLegacyAqwFallback === false ? [] : getLegacyAqwSettingsSections());
+function buildSettingsLayout() {
     return {
-        plugin: activePluginInfo || {
-            id: 'adventure-quest-worlds',
-            name: 'Adventure Quest Worlds'
-        },
-        pluginSections: sections
+        plugin: activePluginInfo || { id: '', name: '' },
+        pluginSections: getSettingsSections()
     };
 }
 
@@ -67,6 +45,5 @@ module.exports = {
     adoptHostState: adoptHostState,
     getActivePluginInfo: getActivePluginInfo,
     getSettingsSections: getSettingsSections,
-    getLegacyAqwSettingsSections: getLegacyAqwSettingsSections,
     buildSettingsLayout: buildSettingsLayout
 };

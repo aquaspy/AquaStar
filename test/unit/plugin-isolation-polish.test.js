@@ -4,13 +4,13 @@ const path = require('path');
 
 const platform = require('../../res/platform');
 
-test('instances titles prefer plugin primary/launch helpers', () => {
+test('instances titles come from the owning plugin entry, never hard-coded', () => {
   const src = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
-  assert.ok(src.indexOf('_titleForGameWindow') !== -1);
-  assert.ok(src.indexOf('_titleForLaunchWindow') !== -1);
-  // Hardcoded AQW title only as legacy fallback, not the sole path.
-  assert.ok(src.indexOf('Adventure Quest Worlds') !== -1);
-  assert.ok(src.indexOf('primary.title') !== -1 || src.indexOf('primary.title({') !== -1);
+  assert.ok(src.indexOf('_titleForGameEntry') !== -1);
+  assert.ok(src.indexOf('entry.title(') !== -1);
+  // Game names are the plugin's to say.
+  assert.strictEqual(src.indexOf('Adventure Quest Worlds'), -1);
+  assert.strictEqual(src.indexOf('DragonFable'), -1);
 });
 
 test('Host exposes getLocaleStrings and getAppIconPath', () => {

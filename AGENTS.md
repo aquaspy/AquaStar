@@ -24,7 +24,7 @@ The test workflow runs `npm test` on pull requests and packages the Windows app 
 - **`asar: false` is required.** The PPAPI Flash plugin must exist as a real file on disk (`FlashPlayer/*.so`, `*.dll`, `*.plugin`). Electron passes the path directly to Chromium.
 - **The app runs without `app.enableSandbox()`** in the main process because Electron needs filesystem access to locate the Flash plugin. Game/main windows use `sandbox: false` so PPAPI Flash loads; wiki/settings/reminders-style windows use `sandbox: true`.
 - **Flash `webPreferences.plugins`:** `true` on game/wiki/charpage/studio windows; **`false`** on settings/reminders/todo/inventory/strategy (see `res/windows/config.js`). Do not assume Flash is enabled on every window type.
-- **One active plugin per process** (`activePluginId`); switching requires an app restart. `AQUASTAR_DISABLE_PLUGINS=1` or `"pluginSystem": false` forces the legacy boot path.
+- **One active plugin per process** (`activePluginId`); switching requires an app restart. `AQUASTAR_DISABLE_PLUGINS=1` or `"pluginSystem": false` is safe mode: only the bundled AQW plugin is activated. There is no legacy boot path and the platform has no built-in game.
 
 ## Architecture
 
@@ -35,7 +35,7 @@ The test workflow runs `npm test` on pull requests and packages the Windows app 
 | `plugins/adventure-quest-worlds/` | Bundled AQW plugin: URLs, session rules, navigation injections, menus/keybinds, features, Studio processes, locales, web contribute |
 | `plugins/_template/` | Starter plugin for third-party games |
 | `res/flash.js` | Picks platform/arch-specific PPAPI binary from `FlashPlayer/` and registers it with `app.commandLine.appendSwitch` |
-| `res/const.js` | Core app-wide constants; AQW URL catalog re-exported from the plugin for migration callers |
+| `res/const.js` | Core app-wide constants (no game URLs: those live in plugins; exposes `customSwfUrl` for the platform SWF override) |
 | `res/instances.js` | Window factory, screenshot/charpage capture, context menus; delegates did-finish-load to plugin navigation hooks when set |
 | `res/keybindings.js` | Registers app keybinds; Settings IPC for `aquastar.json` |
 | `res/windows/config.js` | `BrowserWindow` configs + `file://` URLs (feature HTML may live under the active plugin tree) |
@@ -48,7 +48,7 @@ The test workflow runs `npm test` on pull requests and packages the Windows app 
 ## Runtime behavior
 
 - **Active plugin:** default `adventure-quest-worlds`. Change via Settings → Plugins (restart required) or `"activePluginId"` in `aquastar.json`.
-- **Default AQW game URL:** `https://game.aq.com/game/gamefiles/Loader3.swf?ver=a` (plugin URL catalog).
+- **Default AQW game URL:** `https://game.aq.com/game/gamefiles/Loader4.swf?ver=b` (built-in default in `plugins/adventure-quest-worlds/urls.js`). At startup the AQW plugin reads the loader Artix Game Launcher currently uses from `https://www.artix.com/gamelauncher` (`launcher-config.js`), validates it, caches it, and falls back to the built-in default. Turn off with `"liveLoaderUrl": false`. The launcher page, not its `app.asar`, is the source of truth.
 - **Override:** Drop `aqlite_old.swf` in AppData (or legacy install dir), or use Settings → Custom SWF File. Platform primary-game override; takes priority over `customUrl`. Restart required.
 - **Custom URL override:** `"customUrl"` in `aquastar.json` / Settings. Ignored when `aqlite_old.swf` is present.
 - **SWF logging:** `"swfLog": true` logs `game.aq.com/game/*` via the AQW plugin session rule.
@@ -64,8 +64,8 @@ The test workflow runs `npm test` on pull requests and packages the Windows app 
 - **F2 / Ctrl+J** use `globalShortcut` because Flash PPAPI consumes keyboard events before `before-input-event`.
 - **WikiView's hover-preview image** is fetched from the main process (`res/ipc/wikiFetch.js`), not the renderer - a page-side `fetch()` to aqwwiki.wikidot.com from an account.aq.com window would be blocked by CORS.
 - **Screen recording** saves WebM (VP8 preferred). Native MP4 is not supported on Chromium 87; upgrading to Electron 12+ drops Flash.
-- **User-Agent** for `*.aq.com` requests matches Artix Game Launcher: native Chromium UA with any `Artix...` token stripped, plus `artixmode: launcher` header (no hardcoded ArtixGameLauncher string). Registered as an AQW plugin session rule when `pluginSystem` is on.
-- **Ad blocking** blocks known ad domains only via `session.webRequest.onBeforeRequest` (aq.com traffic is not filtered) — platform-owned.
+- **User-Agent** for `*.aq.com` requests is an AQW plugin policy (`plugins/adventure-quest-worlds/user-agent.js`, applied by its `artix-ua` session rule): it matches what Artix Game Launcher 2.2.0 actually sends, `... (KHTML, like Gecko) Safari/537.36` with no `Chrome/`, `Electron/` or app-name tokens (the launcher's `replace(/Artix.*\s/, '')` eats them), plus an `artixmode: launcher` header. The platform only passes the browser's own UA to rules as `ctx.defaultUserAgent`.
+- **Ad blocking** blocks known ad domains only (aq.com traffic is not filtered). It is a platform-owned session rule (`res/platform/platform-rules.js`). All session rules, platform and plugin, go through `res/platform/session-rules.js`, which registers one listener per webRequest event, because Electron keeps only one and a second registration silently replaces the first.
 - **Char Page Studio** runs in a second Electron process (`--charpage-studio`); entrypoints live under `plugins/adventure-quest-worlds/processes/`.
 
 ## Testing checklist

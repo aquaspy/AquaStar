@@ -30,7 +30,9 @@
     "https://aqwwiki.wikidot.com/*",
     "https://account.aq.com/*",
     "https://game.aq.com/*",
-    "https://www.aq.com/*"
+    "https://www.aq.com/*",
+    "https://www.artix.com/gamelauncher",
+    "https://www.artix.com/scripts/*"
   ],
   "injectHostPatterns": [
     "aqwwiki.wikidot.com",

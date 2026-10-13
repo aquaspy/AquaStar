@@ -94,13 +94,16 @@ exports.settingsMessages = {
         playerCharacter: "Personagem",
         featurePlayerName: "Mostrar Personagem no Título da Janela",
         autoSync: "Auto Sincronizar Inventário",
+        liveLoaderUrl: "Seguir o Loader do Jogo da Artix",
     },
     optionHints: {
+        liveLoaderUrl: "Ao iniciar, lê qual loader do jogo o Artix Game Launcher usa no momento (em artix.com) para o AquaStar continuar funcionando quando a Artix trocar de loader. Usa o loader embutido se a página não puder ser lida. Ignorado quando URL Personalizada ou um SWF personalizado está definido. Reinicie para aplicar.",
         playerCharacter: "Apenas letras e números. Usado pelo atalho da Char Page (Alt+P) para abrir direto neste personagem.",
         featurePlayerName: "Quando ativado, substitui \"AquaStar\" no título da janela principal pelo Personagem acima.",
         autoSync: "Sincroniza periodicamente seus dados de Inventário/BuyBack do account.aq.com em segundo plano (a cada ~2 horas), depois de você logar lá pelo menos uma vez via Alt+A. Quando desligado, a sincronização só acontece quando você usa um botão Sincronizar Agora (na janela de Inventário ou no account.aq.com/Home).",
     },
     settingsSections: {
+        game: "Jogo",
         account: "Conta e Inventário"
     }
 };

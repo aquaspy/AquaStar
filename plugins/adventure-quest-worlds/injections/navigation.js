@@ -42,6 +42,9 @@ function createNavigationHooks(options) {
             });
         }
 
+        // Frame cleanup is scoped to the Wiki only. Keep third-party frames intact elsewhere:
+        // in particular, Cloudflare challenges on account.aq.com render inside
+        // challenges.cloudflare.com iframes and must not be removed.
         if (kind === 'wiki' || kind === 'wiki-root') {
             await testAndDelete('wikidot', 'ncmp__tool', false);
             await testAndDelete('wikidot', 'wad-aqwwiki-above-content', false);

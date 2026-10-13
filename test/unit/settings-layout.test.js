@@ -19,9 +19,7 @@ test('settings registry exposes AQW account section fields', () => {
     }]
   }, { id: 'adventure-quest-worlds', name: 'Adventure Quest Worlds' });
 
-  const layout = platform.settingsRegistry.buildSettingsLayout({
-    includeLegacyAqwFallback: false
-  });
+  const layout = platform.settingsRegistry.buildSettingsLayout();
   assert.strictEqual(layout.plugin.id, 'adventure-quest-worlds');
   assert.strictEqual(layout.pluginSections.length, 1);
   assert.strictEqual(layout.pluginSections[0].id, 'aqw-account');
@@ -29,13 +27,11 @@ test('settings registry exposes AQW account section fields', () => {
   assert.deepStrictEqual(keys, ['playerCharacter', 'autoSync']);
 });
 
-test('settings registry falls back to legacy AQW sections when empty', () => {
+test('settings registry has no built-in AQW sections: empty means empty', () => {
   platform.settingsRegistry.clear();
   const layout = platform.settingsRegistry.buildSettingsLayout();
-  assert.ok(layout.pluginSections.some((s) => s.id === 'aqw-account'));
-  const keys = layout.pluginSections[0].fields.map((f) => f.key);
-  assert.ok(keys.indexOf('playerCharacter') !== -1);
-  assert.ok(keys.indexOf('autoSync') !== -1);
+  assert.deepStrictEqual(layout.pluginSections, []);
+  assert.strictEqual(typeof platform.settingsRegistry.getLegacyAqwSettingsSections, 'undefined');
 });
 
 test('Settings UI uses tabs and plugin section rendering', () => {

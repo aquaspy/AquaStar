@@ -131,7 +131,7 @@ module.exports = { activate: activate };
 3. Set **Active plugin** to *My Flash Game*, Save, confirm restart.
 4. Main window should load your SWF; Alt+N opens another game window.
 
-If activation fails, AquaStar logs `[AquaStar:plugins] …` and may fall back to AQW / legacy boot.
+If activation fails, AquaStar logs `[AquaStar:plugins] …` and falls back to the bundled AQW plugin. If no plugin can be activated at all it shows an error and exits: the platform has no built-in game.
 
 ---
 
@@ -161,7 +161,19 @@ host.registerKeybinds([{
 
 Include every trusted SWF URL in `host.trustFlashUrls([...])` (permission `flash-trust`).
 
-### 4.2 Session rules (UA spoof, request logging)
+**How a game window is opened is decided by your `wrap` config, not by the platform.** The platform asks the active plugin which primary/launch entry owns a URL (`pluginRuntime.findGameEntry`) and reads these optional fields:
+
+| Field | Where | Meaning |
+|-------|-------|---------|
+| `wrap.preferDirectWmode` | primary / launch | Default `true`. `false` = never use the `wmode=direct` HTML embed. |
+| `wrap.wmode`, `wrap.scale` | primary / launch | Explicit embed options (e.g. `opaque` + `showall`). Used even when the user turned direct wmode off. |
+| `wrap.ruffleEligible` | primary / launch | Default `true`. `false` = never route through Ruffle. |
+| `standalone: true` | launch | A separate game with its own title: not numbered "(Window N)", no game command bar, no default direct-wmode embed. |
+| `title(ctx)` | primary / launch | Window title. `ctx` = `{ displayName, settings, usingCustomSwf }`. |
+
+Platform overrides are applied on top of `getUrl()`: a local SWF (Settings → Custom SWF File) beats `customUrl`, which beats your URL. Do not re-implement them.
+
+### 4.2 Session rules (UA policy, request logging)
 
 Permission: `web-request`.
 
@@ -173,7 +185,8 @@ host.registerSessionRules([
     id: 'my-ua',
     urls: ['*://example.com/*'],
     onBeforeSendHeaders: function (details, ctx, callback) {
-      details.requestHeaders['User-Agent'] = ctx.spoofedUA;
+      // The platform only gives you the browser's own UA; any spoofing policy is yours.
+      details.requestHeaders['User-Agent'] = myUserAgent(ctx.defaultUserAgent);
       callback({ requestHeaders: details.requestHeaders });
     }
   },
@@ -189,7 +202,9 @@ host.registerSessionRules([
 ]);
 ```
 
-Rules are **register-once per process** (another reason plugin switch = restart).
+`ctx` is `{ defaultUserAgent, settings, logLine }`. Rules are **register-once per process** (another reason plugin switch = restart).
+
+Electron keeps one listener per `webRequest` event, so rules never register their own: the platform registers a single listener per event (filtered by the union of every rule's `urls`) and runs the rules whose patterns match, in order, platform rules first. Header rules chain (a later rule sees earlier changes); for `onBeforeRequest` a `cancel` or `redirectURL` from any rule is final. Platform ad blocking is one of these rules, so a plugin rule on the same event can never switch it off.
 
 ### 4.3 Navigation / script injection
 
@@ -316,6 +331,18 @@ host.registerFeatureWindows([{
 If `webPreferences.plugins === true` or `webSecurity === false`, you need permission **`unsafe-renderer`**.
 
 Open with `host.windows.openFeatureWindow('my-tracker')` once the platform wires that path for your registration (follow AQW feature windows / `res/windows/config.js` patterns for production-quality windows).
+
+### 4.8b Following a game's published configuration (optional pattern)
+
+Games move their files. Hard-coding a loader URL means the plugin breaks the day the publisher changes it, while the publisher's own launcher keeps working. If the publisher exposes the current value somewhere, read it instead of guessing. The bundled AQW plugin does this for its loader: [`launcher-config.js`](../plugins/adventure-quest-worlds/launcher-config.js).
+
+Rules that keep it safe:
+
+- Fetch with `host.net.fetchText` and list only the exact URLs in `fetchAllowlist` (permission `net-fetch`).
+- **Parse, never evaluate** remote text, and **validate** the result against a strict pattern (scheme, host, path) before using it.
+- Keep a built-in default; any fetch or validation failure must fall back to it.
+- Cache the last good value in `host.getStore(...)`. Apply it synchronously at `activate()`; only wait (with a short timeout) when there is no fresh cache, and refresh in the background otherwise.
+- Offer an option to turn it off (AQW: `liveLoaderUrl`).
 
 ### 4.9 Helper Electron processes (advanced)
 
@@ -461,7 +488,7 @@ Ship it: commit under `plugins/`, bump AquaStar if needed, tag a release. Portab
 
 | Flag | Default | Meaning |
 |------|---------|---------|
-| `pluginSystem` | `true` | `false` or env `AQUASTAR_DISABLE_PLUGINS=1` → legacy boot |
+| `pluginSystem` | `true` | `false` or env `AQUASTAR_DISABLE_PLUGINS=1` → **safe mode**: only the bundled AQW plugin is activated (no local plugins, `activePluginId` ignored) |
 | `activePluginId` | `adventure-quest-worlds` | Which plugin’s `activate` runs |
 | `enableLocalPlugins` | `false` | Scan AppData plugins |
 | `allowLocalPluginOverride` | `false` | Local may replace bundled id |

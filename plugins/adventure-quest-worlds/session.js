@@ -1,6 +1,7 @@
-// AQW session webRequest rules (PR 3). Electron callback shapes match main.js today.
+// AQW session webRequest rules. Electron callback shapes match res/platform/session-rules.js.
 
 const urls = require('./urls.js');
+const { launcherUserAgent } = require('./user-agent.js');
 
 function createSessionRules() {
     return [
@@ -13,7 +14,11 @@ function createSessionRules() {
                 '*://play.dragonfable.com/*'
             ],
             onBeforeSendHeaders: function (details, ctx, callback) {
-                details.requestHeaders['User-Agent'] = ctx.spoofedUA;
+                // The platform only hands over the browser's own UA; what Artix servers
+                // should see is this plugin's decision (see user-agent.js).
+                if (ctx && ctx.defaultUserAgent) {
+                    details.requestHeaders['User-Agent'] = launcherUserAgent(ctx.defaultUserAgent);
+                }
                 details.requestHeaders['artixmode'] = 'launcher';
                 callback({ requestHeaders: details.requestHeaders });
             }
@@ -35,7 +40,7 @@ function createSessionRules() {
 function flashTrustUrlList(primaryUrl) {
     const list = [];
     if (primaryUrl) list.push(primaryUrl);
-    list.push(urls.URLS.loader3);
+    list.push(urls.loaderUrl());
     list.push(urls.URLS.dfLoader);
     list.push(urls.URLS.testingPrefix);
     return list;

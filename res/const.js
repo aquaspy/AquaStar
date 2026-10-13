@@ -49,51 +49,9 @@ const iconRedPath = path.join(appRoot, 'Icon', 'Iconred_1024.png');
 
 const githubPage   = "https://github.com/aquaspy/AquaStar/releases";
 
-// Legacy AQW URL re-exports for older call sites and the AQW plugin.
-// Non-AQW plugins should not rely on these — use host.setPrimaryGame / launches.
-const aqwUrls = require('../plugins/adventure-quest-worlds/urls.js');
-const charLookup   = aqwUrls.URLS.charLookup;
-const designNotes  = aqwUrls.URLS.designNotes;
-const balancePatchNotes = aqwUrls.URLS.balancePatchNotes;
-const accountAq    = aqwUrls.URLS.accountAq;
-const wikiReleases = aqwUrls.URLS.wikiReleases;
-
-// Extra usefull links
-const heromart     = aqwUrls.URLS.heromart;
-const battleon     = aqwUrls.URLS.battleon;
-const calendar     = aqwUrls.URLS.calendar;
-const dailyGifts   = aqwUrls.URLS.dailyGifts;
-const forgeEnchants= aqwUrls.URLS.forgeEnchants;
-
-// Social Media stuff
-const twtAlina     = aqwUrls.URLS.twtAlina;
-const redditAqw    = aqwUrls.URLS.redditAqw;
-
-//exports.vanillaAQW = 'https://www.aq.com/game/gamefiles/Loader.swf'
-Object.defineProperty(exports, 'testingAQW', {
-    get() {
-        // Random ending between 100 and 999. Prevents browser cache per load.
-        return aqwUrls.testingAQW();
-    }
-});
-// Same SWF the official web.asp embeds (ver= is only a cache-buster; bytes are identical).
-exports.df_url     = aqwUrls.URLS.dfLoader
-
 // Export farm
 
 exports.githubPage       = githubPage;
-exports.wikiReleases     = wikiReleases;
-exports.accountAq        = accountAq;
-exports.designNotes      = designNotes;
-exports.balancePatchNotes = balancePatchNotes;
-exports.charLookup       = charLookup;
-exports.heromart         = heromart;
-exports.battleon         = battleon;
-exports.calendar         = calendar;
-exports.dailyGifts       = dailyGifts;
-exports.forgeEnchants    = forgeEnchants;
-exports.twtAlina         = twtAlina;
-exports.redditAqw        = redditAqw;
 
 exports.appName          = appName;
 exports.appVersion       = appVersion;
@@ -148,8 +106,8 @@ exports.setUseDirectWmode = (val) => {
 
 const swfWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'swf_wrapper.html'));
 // opts: optional { wmode, scale } forwarded to swf_wrapper.html query string.
-// AQW uses defaults (wmode=direct). DragonFable needs opaque + showall + the wrapper's
-// base= param so relative DFversion.asp / gamefiles/* loads still hit play.dragonfable.com.
+// Plugins pick the options per game through their wrap config; the default is wmode=direct.
+// The wrapper's base= param keeps relative loads resolving against the game's own origin.
 exports.wrapSwfUrl = function(swfUrl, opts) {
     if (!swfUrl) return swfUrl;
     var q = '?swf=' + encodeURIComponent(swfUrl);
@@ -159,27 +117,19 @@ exports.wrapSwfUrl = function(swfUrl, opts) {
 }
 
 // Ruffle (open-source Flash emulator) as an alternative to the PPAPI Flash plugin -
-// see res/ruffle_wrapper.html. Covers main AQW / new instance / Testing AQW / DragonFable
-// when Settings → renderMode is "ruffle". The AQW Char Page already loads Ruffle from
-// Artix's own page regardless of this setting, so it needs no wrapper of its own.
+// see res/ruffle_wrapper.html. Covers the active plugin's Flash games when Settings →
+// renderMode is "ruffle".
 const ruffleWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_wrapper.html'));
 exports.isRuffleEligible = function(swfUrl) {
     if (!swfUrl) return false;
     // HTML/stage pages are never Ruffle SWF targets.
     if (!/\.swf(\?|#|$)/i.test(swfUrl)) return false;
-    // When a plugin primary is adopted, eligibility follows pluginRuntime.isGameUrl
-    // (primary + launches + platform custom SWF / mainPath checks inside the runtime).
+    // Eligibility is the active plugin's call: any game it owns (primary or launch), unless
+    // its wrap config opts out with ruffleEligible: false.
     try {
-        var runtime = require('./platform').pluginRuntime;
-        if (runtime.getPrimaryGame()) {
-            return runtime.isGameUrl(swfUrl);
-        }
-    } catch (e) { /* legacy boot / platform unavailable */ }
-    if (swfUrl === exports.mainPath) return true;
-    if (swfUrl === exports.df_url) return true;
-    // testingAQW carries a random cache-busting "?ver=" suffix per call, so match by prefix.
-    if (aqwUrls.isTestingAqwUrl(swfUrl)) return true;
-    return false;
+        const entry = require('./platform').pluginRuntime.findGameEntry(swfUrl);
+        return !!entry && !(entry.wrap && entry.wrap.ruffleEligible === false);
+    } catch (e) { return false; }
 }
 exports.wrapRuffleUrl = function(swfUrl) {
     if (!swfUrl) return swfUrl;
@@ -214,22 +164,6 @@ const originalKeybinds = {
     record:   "Ctrl+J"
 }
 exports.originalKeybinds = originalKeybinds;
-
-// Used only when pluginSystem is disabled (legacy boot still expects AQW ids).
-exports.legacyAqwKeybinds = {
-    wiki:        "Alt+W",
-    account:     "Alt+A",
-    design:      "Alt+D",
-    charpage:    "Alt+P",
-    newAqw:      "Alt+N",
-    newTest:     "Alt+Q",
-    cpSshot:     "Alt+K",
-    dragon:      "Alt+1",
-    reminders: "Alt+T",
-    todo:     "Alt+Y",
-    inventory: "Alt+I",
-    strategy: "Alt+U"
-};
 
 // Screen recording (Ctrl+J) format choices, shown as a <select> in Settings.
 // Verified against this Electron's bundled Chromium via MediaRecorder.isTypeSupported() -
@@ -292,7 +226,7 @@ const originalOptions = {
     appLanguage:       "system",
 
     // Optional URL override for the active plugin's primary game. Ignored when a
-    // local SWF override (aqlite_old.swf) is active — see changeMainUrl().
+    // local SWF override (aqlite_old.swf) is active — see plugin-runtime getPrimaryUrl().
     customUrl:         "",
     recordingFormat:   exports.defaultRecordingFormat,
     renderMode:        exports.defaultRenderMode,
@@ -315,10 +249,6 @@ exports.originalOptions = originalOptions;
 function _sanitizePlayerCharacter(raw) {
     if (raw == null) return '';
     return String(raw).trim().replace(/[^a-zA-Z0-9]/g, '');
-}
-exports.buildCharLookupUrl = function(playerCharacter) {
-    var id = _sanitizePlayerCharacter(playerCharacter);
-    return id === '' ? charLookup : charLookup + '?id=' + encodeURIComponent(id);
 }
 
 // When featurePlayerName is on and a Player Character is set, it replaces "AquaStar"
@@ -373,16 +303,11 @@ var oldAqlite = activeCustomSwfPath !== null;
 exports.customSwfPath = managedCustomSwfPath;
 exports.legacyCustomSwfPath = legacyCustomSwfPath;
 exports.activeCustomSwfPath = activeCustomSwfPath;
-exports.mainPath = oldAqlite ?
-            _getFileUrl(activeCustomSwfPath) :
-            aqwUrls.URLS.loader3
+// File URL of the local SWF override (Settings → Custom SWF File), or "" when none is set.
+// The platform applies it (and customUrl) on top of the active plugin primary game; see
+// res/platform/plugin-runtime.js getPrimaryUrl().
+exports.customSwfUrl = oldAqlite ? _getFileUrl(activeCustomSwfPath) : "";
 exports.isOldAqlite = oldAqlite;
-
-exports.changeMainUrl = function(newAqUrl){
-    if (!oldAqlite) {
-        exports.mainPath = newAqUrl;
-    }
-}
 
 /// -------------------------------
 /// Section 3 - Locale stuff

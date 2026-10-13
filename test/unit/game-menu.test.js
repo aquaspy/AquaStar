@@ -28,10 +28,9 @@ test('game menu useful pages stay new-window while app-menu pages stay in-place'
 
 test('originalKeybinds are platform-only; AQW ids live on the plugin', () => {
   const constants = fs.readFileSync(path.join(__dirname, '../../res/const.js'), 'utf8');
-  assert.ok(constants.indexOf('legacyAqwKeybinds') !== -1);
-  assert.ok(constants.indexOf('wiki:        "Alt+W"') === -1 ||
-    constants.indexOf('exports.legacyAqwKeybinds') !== -1);
-  // Platform block should not list newAqw before legacy export.
+  // No AQW shortcut defaults anywhere in the platform constants.
+  assert.strictEqual(constants.indexOf('legacyAqwKeybinds'), -1);
+  assert.strictEqual(constants.indexOf('wiki:        "Alt+W"'), -1);
   const platformBlock = constants.slice(
     constants.indexOf('const originalKeybinds'),
     constants.indexOf('exports.originalKeybinds')

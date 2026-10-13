@@ -65,52 +65,91 @@ function listLaunches() {
 }
 
 /**
- * Resolve the URL for the main/boot game window.
- * Platform overrides (local SWF / customUrl) win over the plugin primary.
+ * Platform-level primary-game overrides, applied on top of whatever the active plugin
+ * declares: a local SWF file (Settings → Custom SWF File) beats customUrl beats the plugin.
  */
-function getPrimaryUrl() {
+function getCustomOverrides() {
     const constant = constantApi || require('../const.js');
-    if (constant.isOldAqlite && constant.mainPath) return constant.mainPath;
-
     let customUrl = '';
     try {
         const keyb = require('../keybindings.js');
         if (keyb.keybinds && keyb.keybinds.customUrl) customUrl = keyb.keybinds.customUrl;
     } catch (e) { /* keybinds may not be ready */ }
-    if (customUrl) return customUrl;
+    return {
+        customSwfUrl: constant.customSwfUrl || '',
+        customSwfBasename: constant.activeCustomSwfPath
+            ? path.basename(constant.activeCustomSwfPath) : '',
+        customUrl: customUrl
+    };
+}
+
+/**
+ * Resolve the URL for the main/boot game window.
+ * Platform overrides (local SWF / customUrl) win over the plugin primary.
+ */
+function getPrimaryUrl() {
+    const overrides = getCustomOverrides();
+    if (overrides.customSwfUrl) return overrides.customSwfUrl;
+    if (overrides.customUrl) return overrides.customUrl;
 
     const primary = getPrimaryGame();
     if (primary && typeof primary.getUrl === 'function') return primary.getUrl();
-    return constant.mainPath;
+    return '';
 }
 
-function isGameUrl(url) {
-    if (typeof url !== 'string' || !url) return false;
-    const constant = constantApi || require('../const.js');
-    if (url === constant.mainPath) return true;
-    if (constant.isOldAqlite && constant.activeCustomSwfPath &&
-        url.indexOf(path.basename(constant.activeCustomSwfPath)) !== -1) {
-        return true;
-    }
+function launchMatchesUrl(entry, url) {
+    if (!entry || typeof entry.getUrl !== 'function') return false;
+    try {
+        const launchUrl = entry.getUrl();
+        if (url === launchUrl) return true;
+        // Prefix match for cache-busted URLs (e.g. a testing loader with a random ?ver=).
+        if (launchUrl && url.indexOf(launchUrl.split('?')[0]) === 0) return true;
+    } catch (e) { /* ignore */ }
+    return typeof entry.isGameUrl === 'function' && !!entry.isGameUrl(url);
+}
+
+/**
+ * The game entry (primary or launch) that owns a URL, or null. The platform uses it to
+ * decide how to open the window (wrap config, standalone) without knowing any game.
+ */
+function findGameEntry(url) {
+    if (typeof url !== 'string' || !url) return null;
     const primary = getPrimaryGame();
-    if (primary && typeof primary.isGameUrl === 'function' && primary.isGameUrl(url)) {
-        return true;
+    const overrides = getCustomOverrides();
+    if (primary) {
+        if (overrides.customSwfUrl && url === overrides.customSwfUrl) return primary;
+        if (overrides.customSwfBasename && url.indexOf(overrides.customSwfBasename) !== -1) return primary;
+        if (overrides.customUrl && url === overrides.customUrl) return primary;
+        if (typeof primary.isGameUrl === 'function' && primary.isGameUrl(url)) return primary;
+        try {
+            if (typeof primary.getUrl === 'function' && url === primary.getUrl()) return primary;
+        } catch (e) { /* ignore */ }
     }
     const launches = listLaunches();
     for (let i = 0; i < launches.length; i++) {
-        const entry = launches[i];
-        if (!entry || typeof entry.getUrl !== 'function') continue;
-        try {
-            const launchUrl = entry.getUrl();
-            if (url === launchUrl) return true;
-            // Prefix match for cache-busted testing URLs
-            if (launchUrl && url.indexOf(launchUrl.split('?')[0]) === 0) return true;
-        } catch (e) { /* ignore */ }
-        if (entry.isGameUrl && typeof entry.isGameUrl === 'function' && entry.isGameUrl(url)) {
-            return true;
-        }
+        if (launchMatchesUrl(launches[i], url)) return launches[i];
     }
-    return false;
+    return null;
+}
+
+function isGameUrl(url) {
+    return findGameEntry(url) !== null;
+}
+
+/** Wrap config ({ wmode, scale, preferDirectWmode, ruffleEligible }) of the entry owning url. */
+function getWrapForUrl(url) {
+    const entry = findGameEntry(url);
+    return (entry && entry.wrap) ? entry.wrap : null;
+}
+
+/**
+ * Standalone launches are separate game windows with their own wrapper/menu rules
+ * (LaunchEntry.standalone). They are skipped by considerDF=false style checks, e.g.
+ * the game command bar and the default direct-wmode wrapper.
+ */
+function isStandaloneUrl(url) {
+    const entry = findGameEntry(url);
+    return !!(entry && entry.standalone === true);
 }
 
 function getKeybindDefaults() {
@@ -348,6 +387,9 @@ module.exports = {
     getLaunch: getLaunch,
     listLaunches: listLaunches,
     isGameUrl: isGameUrl,
+    findGameEntry: findGameEntry,
+    getWrapForUrl: getWrapForUrl,
+    isStandaloneUrl: isStandaloneUrl,
     getKeybindDefaults: getKeybindDefaults,
     getKeybindAction: getKeybindAction,
     listKeybindBindings: listKeybindBindings,

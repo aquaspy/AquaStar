@@ -27,25 +27,30 @@ test('AQW adapter lists the legacy feature modules once', () => {
   assert.ok(src.indexOf('LEGACY_FEATURE_MODULES') !== -1);
 });
 
-test('main.js does not eagerly require AQW feature modules alongside plugin activate', () => {
+test('main.js has no AQW feature code: the plugin adapter owns it', () => {
   const src = fs.readFileSync(mainJsPath, 'utf8');
-  // Top-level requires must not include feature modules (only via loadLegacyFeatureModules
-  // or the plugin activate path).
   const beforeReady = src.split("app.on('ready'")[0];
   assert.ok(beforeReady.indexOf("require('./res/platform')") !== -1);
   assert.ok(beforeReady.indexOf("require('./res/ipc/recording.js')") !== -1);
-  assert.strictEqual(
-    /require\('\.\/plugins\/adventure-quest-worlds\/features\/reminders\/reminders\.js'\)/.test(beforeReady) &&
-      beforeReady.indexOf('function loadLegacyFeatureModules') === -1,
-    false
-  );
-  // Feature requires live only inside the legacy fallback helper.
-  const legacyFn = src.match(/function loadLegacyFeatureModules\([\s\S]*?\n\}/);
-  assert.ok(legacyFn, 'loadLegacyFeatureModules helper missing');
-  assert.ok(legacyFn[0].indexOf('plugins/adventure-quest-worlds/features/reminders/reminders.js') !== -1);
-  assert.ok(legacyFn[0].indexOf('wikiFetch.js') !== -1);
-  assert.ok(src.indexOf('activateBundledPluginsOrLegacy') !== -1);
+  // Feature modules, locales and wikiFetch are required by the plugin's activate(), never here.
+  assert.strictEqual(src.indexOf('features/reminders'), -1);
+  assert.strictEqual(src.indexOf('wikiFetch'), -1);
+  assert.strictEqual(src.indexOf('loadLegacyFeatureModules'), -1);
+  assert.strictEqual(src.indexOf('mergeAqwLocalesFromDisk'), -1);
+  assert.ok(src.indexOf('activatePlugins') !== -1);
   assert.ok(src.indexOf('activateSelected') !== -1);
+});
+
+test('main.js carries no AQW/Artix URLs or User-Agent policy', () => {
+  const src = fs.readFileSync(mainJsPath, 'utf8');
+  assert.strictEqual(src.indexOf('aq.com'), -1);
+  assert.strictEqual(src.indexOf('dragonfable'), -1);
+  assert.strictEqual(src.indexOf('artixmode'), -1);
+  assert.strictEqual(src.indexOf('spoofedUA'), -1);
+  assert.strictEqual(src.indexOf('launcherUserAgent'), -1);
+  assert.strictEqual(src.indexOf('constant.mainPath'), -1);
+  // Only the platform's own UA is handed to session rules.
+  assert.ok(src.indexOf('defaultUserAgent') !== -1);
 });
 
 test('legacy channel inventory covers expected AQW and platform channels', () => {

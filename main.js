@@ -1,4 +1,4 @@
-const {app, session, Menu, BrowserWindow}  = require('electron')
+const {app, session, Menu, BrowserWindow, dialog}  = require('electron')
 
 // PPAPI Flash only preserves LoaderInfo.parameters when the Studio owns the
 // default session. Keep that session in a dedicated AquaStar process.
@@ -31,7 +31,7 @@ const windowsMenu   = require('./res/windows/menu.js');
 const socketProxy   = require('./res/socketProxy.js');
 const ruffleUpdate  = require('./res/ruffleUpdate.js');
 const constant = require('./res/const.js');
-const locale   = require('./res/locale.js');
+const locale  = require('./res/locale.js');
 const platform = require('./res/platform');
 
 const bootPluginDisk = platform.readPluginFlagsFromDisk(
@@ -42,51 +42,40 @@ const bootFlags = bootPluginDisk.flags;
 
 let activePluginRuntime = null;
 
-function mergeAqwLocalesFromDisk() {
-    locale.mergePluginLocales({
-        'en-US': require('./plugins/adventure-quest-worlds/locales/en-US.js'),
-        'pt-BR': require('./plugins/adventure-quest-worlds/locales/pt-BR.js')
-    });
-}
+// pluginSystem:false / AQUASTAR_DISABLE_PLUGINS=1 is the emergency "safe mode": only the
+// bundled default plugin is activated (no local plugins, no plugin selector), so a broken
+// local plugin or a bad activePluginId can never keep the app from starting.
+const SAFE_MODE_PLUGIN_ID = 'adventure-quest-worlds';
 
-function loadLegacyFeatureModules() {
-    require('./plugins/adventure-quest-worlds/features/reminders/reminders.js');
-    require('./plugins/adventure-quest-worlds/features/todo/todo.js');
-    require('./plugins/adventure-quest-worlds/features/inventory/inventory.js');
-    require('./plugins/adventure-quest-worlds/features/strategy/strategy.js');
-    require('./plugins/adventure-quest-worlds/features/charpage/studio.js');
-    require('./res/ipc/wikiFetch.js');
-    mergeAqwLocalesFromDisk();
-}
-
-function activateBundledPluginsOrLegacy() {
+function activatePlugins() {
     platform.pluginRuntime.setDependencies({
         instances: inst,
         constant: constant,
         BrowserWindow: BrowserWindow
     });
 
-    if (!bootFlags.pluginSystem) {
-        platform.pluginRuntime.clear();
-        loadLegacyFeatureModules();
-        console.log('[AquaStar:plugins] pluginSystem disabled — using legacy main.js requires');
-        return Promise.resolve(null);
+    const safeMode = !bootFlags.pluginSystem;
+    if (safeMode) {
+        console.log('[AquaStar:plugins] pluginSystem disabled — safe mode: bundled "' +
+            SAFE_MODE_PLUGIN_ID + '" only');
     }
 
     return platform.activateSelected({
         bundledDir: path.join(__dirname, 'plugins'),
         localDir: path.join(constant.appDataDirectory, 'plugins'),
-        enableLocalPlugins: bootFlags.enableLocalPlugins,
-        allowLocalPluginOverride: bootFlags.allowLocalPluginOverride,
+        enableLocalPlugins: safeMode ? false : bootFlags.enableLocalPlugins,
+        allowLocalPluginOverride: safeMode ? false : bootFlags.allowLocalPluginOverride,
         appVersion: constant.appVersion || app.getVersion(),
         appRootPath: constant.appRootPath,
         appDataDirectory: constant.appDataDirectory,
-        platformSettings: Object.assign({}, bootFlags, {
-            activePluginId: bootFlags.activePluginId,
+        // Saved settings first so plugins can read their own options at activate();
+        // boot flags then win for the platform keys.
+        platformSettings: Object.assign({}, bootPluginDisk.settings, bootFlags, {
+            activePluginId: safeMode ? SAFE_MODE_PLUGIN_ID : bootFlags.activePluginId,
             trustedLocalPlugins: (bootPluginDisk.settings &&
                 bootPluginDisk.settings.trustedLocalPlugins) || {}
         }),
-        defaultPluginId: 'adventure-quest-worlds',
+        defaultPluginId: SAFE_MODE_PLUGIN_ID,
         legacyIpc: true,
         deps: platform.pluginRuntime.createHostWindowDeps()
     }).then(function (runtime) {
@@ -121,18 +110,17 @@ function activateBundledPluginsOrLegacy() {
         }
         return runtime;
     }).catch(function (err) {
-        console.log('[AquaStar:plugins] Activation failed, falling back to legacy requires: ' +
-            (err && err.message ? err.message : err));
+        console.log('[AquaStar:plugins] Activation failed: ' + (err && err.message ? err.message : err));
         platform.menuRegistry.clear();
         platform.settingsRegistry.clear();
         platform.pluginRuntime.clear();
-        loadLegacyFeatureModules();
         return null;
     });
 }
 
 // Flash stuff is isolated in flash.js
-flash.flashManager(app, __dirname, constant.mainPath, constant.appName);
+// No game URL is trusted yet: the plugin's trust list is applied right after activation.
+flash.flashManager(app, __dirname, null, constant.appName);
 
 function createWindow () {
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
@@ -180,6 +168,17 @@ function createWindow () {
 
     // Primary URL comes from the active plugin (platform custom SWF / customUrl still win).
     const bootGameUrl = platform.pluginRuntime.getPrimaryUrl();
+    if (!bootGameUrl) {
+        dialog.showErrorBox('AquaStar',
+            'No game plugin could be loaded, so there is nothing to open.\n\n' +
+            'Check the console output for "[AquaStar:plugins]" lines, or reinstall AquaStar.');
+        app.quit();
+        return;
+    }
+
+    // webRequest rules go in before the first window loads anything.
+    applySessionRules();
+
     let win = inst.newBrowserWindow(bootGameUrl, true);
     // Re-apply after setApplicationMenu so the first window keeps plugin menu entries.
     inst.applyWindowMenu(win, bootGameUrl);
@@ -192,17 +191,12 @@ function createWindow () {
         // when you should delete the corresponding element.
         win = null
     })
+}
 
-    // FIX for the "Save PX" Dialog!! Wiki is annoying to use w/o this!
-    session.defaultSession.webRequest.onBeforeRequest(
-        { urls: ['*://*.adsymptotic.com/*', '*://*.doubleclick.net/*', '*://*.onesignal.com/*',
-                 '*://*.nitropay.com/*', '*://translate.googleapis.com/*'] },
-        function(_details, callback) {
-            callback({ cancel: true });
-        });
-
-    // Match Artix Game Launcher UA / SWF logging — plugin session rules when active.
-    const spoofedUA = win.webContents.getUserAgent().replace(/Artix.*\s/, '');
+// Platform rules (ad blocking) and the active plugin's rules share one applicator: Electron
+// keeps a single listener per webRequest event, so separate registrations would replace
+// each other. The platform only supplies the browser's own UA; any UA policy is the plugin's.
+function applySessionRules() {
     let swfLogStream = null;
     if (constant.isSwfLogEnabled) {
         var t = new Date();
@@ -215,43 +209,21 @@ function createWindow () {
             { autoClose: true });
     }
 
-    const sessionRuleState = activePluginRuntime && activePluginRuntime.host
-        ? activePluginRuntime.host._getState().sessionRules
-        : null;
+    const pluginRules = activePluginRuntime && activePluginRuntime.host
+        ? (activePluginRuntime.host._getState().sessionRules || [])
+        : [];
 
-    if (sessionRuleState && sessionRuleState.length) {
-        platform.applySessionRules(session.defaultSession, sessionRuleState, {
-            spoofedUA: spoofedUA,
+    platform.applySessionRules(
+        session.defaultSession,
+        platform.createPlatformSessionRules().concat(pluginRules),
+        {
+            defaultUserAgent: session.defaultSession.getUserAgent(),
             settings: { swfLog: constant.isSwfLogEnabled },
             logLine: function (line) {
                 if (swfLogStream) swfLogStream.write(line + '\n');
             }
-        });
-    } else {
-        // Legacy fallback when pluginSystem is off.
-        const agentTagetFilter = {
-            urls: [
-                '*://*.aq.com/*',
-                '*://aq.com/*',
-                '*://game.aq.com/*',
-                '*://play.dragonfable.com/*'
-            ]
-        };
-        session.defaultSession.webRequest.onBeforeSendHeaders(agentTagetFilter, (details, callback) => {
-            details.requestHeaders['User-Agent'] = spoofedUA;
-            details.requestHeaders['artixmode'] = 'launcher';
-            callback({ requestHeaders: details.requestHeaders });
-        });
-        if (constant.isSwfLogEnabled && swfLogStream) {
-            session.defaultSession.webRequest.onBeforeRequest(
-                { urls: ['*://game.aq.com/game/*'] },
-                (details, callback) => {
-                    swfLogStream.write(details.url + '\n');
-                    callback({ cancel: false });
-                });
         }
-    }
-
+    );
 }
 
 // For anyone looking why we arent sandboxed and neither is AE...
@@ -269,7 +241,7 @@ app.on('second-instance', () => {
   }
 })
 app.on('ready', () => {
-  activateBundledPluginsOrLegacy().then(() => {
+  activatePlugins().then(() => {
     createWindow();
   });
 })

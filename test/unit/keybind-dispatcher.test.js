@@ -38,5 +38,8 @@ test('keybindings.js prefers pluginRuntime bindings when present', () => {
   const src = fs.readFileSync(path.join(__dirname, '../../res/keybindings.js'), 'utf8');
   assert.ok(src.indexOf('listKeybindBindings') !== -1);
   assert.ok(src.indexOf('activeDispatcher') !== -1);
-  assert.ok(src.indexOf('registerLegacyAqwKeybinds') !== -1);
+  // The platform no longer carries built-in AQW shortcuts: they are plugin bindings only.
+  assert.strictEqual(src.indexOf('registerLegacyAqwKeybinds'), -1);
+  assert.strictEqual(src.indexOf('constant.mainPath'), -1);
+  assert.strictEqual(src.indexOf('constant.df_url'), -1);
 });

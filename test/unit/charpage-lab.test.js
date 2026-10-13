@@ -87,7 +87,7 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   const config = fs.readFileSync(path.join(__dirname, '../../res/windows/config.js'), 'utf8');
   const instances = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
   const aqwMenus = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/menus.js'), 'utf8');
-  const main = fs.readFileSync(path.join(__dirname, '../../main.js'), 'utf8');
+  const main = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/main.js'), 'utf8');
   assert.ok(bridge.indexOf('charpage-studio-load-character') !== -1);
   assert.ok(bridge.indexOf('charpage-studio-capture') !== -1);
   assert.ok(bridge.indexOf('charpage-studio-open-devtools') !== -1);
@@ -104,7 +104,7 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   assert.ok(instances.indexOf('openCharPageStudioWindow') !== -1);
   assert.ok(aqwMenus.indexOf('menuCharPageStudio') !== -1);
   assert.ok(
-    main.indexOf("require('./plugins/adventure-quest-worlds/features/charpage/studio.js')") !== -1
+    main.indexOf("path.join(pluginFeaturesRoot, 'charpage', 'studio.js')") !== -1
   );
   const studioSwf = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/characterB-studio.swf'));
   assert.ok(

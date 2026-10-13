@@ -6,7 +6,7 @@ const session = require('../../plugins/adventure-quest-worlds/session.js');
 const { applySessionRules } = require('../../res/platform/session-rules.js');
 
 test('AQW url catalog exposes loader, DF, and testing helpers', () => {
-  assert.ok(urls.URLS.loader3.indexOf('Loader3.swf') !== -1);
+  assert.ok(urls.URLS.loader4.indexOf('Loader4.swf') !== -1);
   assert.ok(urls.URLS.dfLoader.indexOf('dragonfable.com') !== -1);
   const testing = urls.testingAQW();
   assert.ok(urls.isTestingAqwUrl(testing));
@@ -25,10 +25,10 @@ test('AQW session rules use Electron callback shapes', () => {
   let headersOut = null;
   artix.onBeforeSendHeaders(
     { requestHeaders: {} },
-    { spoofedUA: 'UA-TEST' },
+    { defaultUserAgent: 'Mozilla/5.0 (X11) AquaStar/1 Chrome/87 Electron/11 Safari/537.36' },
     function (result) { headersOut = result; }
   );
-  assert.strictEqual(headersOut.requestHeaders['User-Agent'], 'UA-TEST');
+  assert.strictEqual(headersOut.requestHeaders['User-Agent'], 'Mozilla/5.0 (X11) Safari/537.36');
   assert.strictEqual(headersOut.requestHeaders.artixmode, 'launcher');
 
   let cancelOut = null;
@@ -55,7 +55,7 @@ test('applySessionRules registers matching Electron webRequest handlers', () => 
     }
   };
   applySessionRules(fakeSession, session.createSessionRules(), {
-    spoofedUA: 'x',
+    defaultUserAgent: 'x',
     settings: { swfLog: true },
     logLine: function () {}
   });
@@ -66,6 +66,6 @@ test('applySessionRules registers matching Electron webRequest handlers', () => 
 test('flashTrustUrlList includes primary and known game hosts', () => {
   const list = session.flashTrustUrlList('file:///custom.swf');
   assert.ok(list.indexOf('file:///custom.swf') !== -1);
-  assert.ok(list.indexOf(urls.URLS.loader3) !== -1);
+  assert.ok(list.indexOf(urls.URLS.loader4) !== -1);
   assert.ok(list.indexOf(urls.URLS.dfLoader) !== -1);
 });

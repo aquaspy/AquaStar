@@ -22,7 +22,7 @@ test('plugin-runtime getPrimaryUrl prefers customUrl then primary getUrl', () =>
       }
     },
     constant: {
-      mainPath: 'https://fallback.example/game.swf',
+      customSwfUrl: '',
       isOldAqlite: false
     },
     BrowserWindow: { getFocusedWindow: function () { return null; } }
@@ -71,7 +71,7 @@ test('plugin-runtime openUrl in-place uses focused window loadURL', () => {
     instances: {
       newBrowserWindow: function () { throw new Error('should not open new window'); }
     },
-    constant: { mainPath: 'https://x', isOldAqlite: false },
+    constant: { customSwfUrl: '', isOldAqlite: false },
     BrowserWindow: {
       getFocusedWindow: function () {
         return {
@@ -112,23 +112,24 @@ test('main.js boots primary URL from pluginRuntime', () => {
   assert.ok(mainSrc.indexOf('applyFlashTrust') !== -1);
 });
 
-test('instances.js and const.js consult pluginRuntime.isGameUrl when primary adopted', () => {
+test('instances.js and const.js ask the active plugin about games and know no game themselves', () => {
   const fs = require('fs');
   const instancesSrc = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
   const constSrc = fs.readFileSync(path.join(__dirname, '../../res/const.js'), 'utf8');
   const mainSrc = fs.readFileSync(path.join(__dirname, '../../main.js'), 'utf8');
 
   assert.ok(instancesSrc.indexOf("require('./platform').pluginRuntime") !== -1);
-  assert.ok(instancesSrc.indexOf('getPrimaryGame()') !== -1);
-  assert.ok(instancesSrc.indexOf('isGameUrl(url)') !== -1);
-  assert.ok(instancesSrc.indexOf('_isTestingAqwUrl(url)') !== -1, 'legacy fallback kept');
+  assert.ok(instancesSrc.indexOf('runtime.findGameEntry(url)') !== -1);
+  assert.ok(constSrc.indexOf("require('./platform').pluginRuntime.findGameEntry(swfUrl)") !== -1);
 
-  assert.ok(constSrc.indexOf("require('./platform').pluginRuntime") !== -1);
-  assert.ok(constSrc.indexOf('getPrimaryGame()') !== -1);
-  assert.ok(constSrc.indexOf('runtime.isGameUrl(swfUrl)') !== -1);
-  assert.ok(constSrc.indexOf('aqwUrls.isTestingAqwUrl(swfUrl)') !== -1, 'legacy Ruffle checks kept');
+  // No AQW / DragonFable knowledge left in the platform.
+  assert.strictEqual(instancesSrc.indexOf('_isTestingAqwUrl'), -1);
+  assert.strictEqual(instancesSrc.indexOf('df_url'), -1);
+  assert.strictEqual(instancesSrc.indexOf('constant.mainPath'), -1);
+  assert.strictEqual(constSrc.indexOf('aqwUrls'), -1);
+  assert.strictEqual(constSrc.indexOf('plugins/adventure-quest-worlds'), -1);
 
-  // Permission handler still goes through isRuffleEligible (which delegates to runtime).
+  // Permission handler still goes through isRuffleEligible (which delegates to the runtime).
   assert.ok(mainSrc.indexOf('constant.isRuffleEligible(swfUrl)') !== -1);
 });
 
@@ -138,7 +139,7 @@ test('plugin-runtime isGameUrl drives eligibility for adopted primary and launch
   runtime.setDependencies({
     instances: { newBrowserWindow: function () { return {}; } },
     constant: {
-      mainPath: 'https://fallback.example/game.swf',
+      customSwfUrl: '',
       isOldAqlite: false
     }
   });
@@ -168,9 +169,10 @@ test('plugin-runtime isGameUrl drives eligibility for adopted primary and launch
 
   runtime.clear();
   assert.strictEqual(runtime.getPrimaryGame(), null);
-  // Without an adopted primary, only constant.mainPath (injected) still matches.
-  assert.strictEqual(runtime.isGameUrl('https://fallback.example/game.swf'), true);
+  // Without an adopted plugin nothing is a game: the platform has no built-in game.
+  assert.strictEqual(runtime.isGameUrl('https://fallback.example/game.swf'), false);
   assert.strictEqual(runtime.isGameUrl('https://plugin.example/game.swf'), false);
+  assert.strictEqual(runtime.getPrimaryUrl(), '');
 });
 
 test('openFeatureWindow path consults pluginRuntime.getFeatureWindow', () => {
@@ -206,7 +208,7 @@ test('plugin-runtime applyFlashTrust refreshes trust list', () => {
   let emptied = false;
   runtime.setDependencies({
     instances: { newBrowserWindow: function () { return {}; } },
-    constant: { mainPath: 'https://fallback', isOldAqlite: false }
+    constant: { customSwfUrl: '', isOldAqlite: false }
   });
   runtime.adopt(fakeHost({
     primaryGame: {
@@ -229,4 +231,59 @@ test('plugin-runtime applyFlashTrust refreshes trust list', () => {
   assert.strictEqual(emptied, true);
   assert.ok(added.indexOf('https://plugin.example/game.swf') !== -1);
   assert.ok(added.indexOf('https://plugin.example/extra.swf') !== -1);
+});
+
+test('findGameEntry resolves primary vs launch and exposes wrap/standalone', () => {
+  runtime.clear();
+  runtime.setDependencies({ constant: { customSwfUrl: '', isOldAqlite: false } });
+  const primary = {
+    id: 'main',
+    getUrl: function () { return 'https://plugin.example/Loader9.swf?ver=z'; },
+    isGameUrl: function (url) { return url.indexOf('https://plugin.example/Loader') === 0; },
+    wrap: { preferDirectWmode: true }
+  };
+  const side = {
+    id: 'side',
+    standalone: true,
+    getUrl: function () { return 'https://plugin.example/side.swf?ver=1'; },
+    wrap: { wmode: 'opaque', scale: 'showall' }
+  };
+  runtime.adopt(fakeHost({
+    primaryGame: primary, launches: [side], trustedFlashUrls: [],
+    keybinds: [], keybindDefaults: {}, featureWindows: []
+  }), { id: 'sample' });
+
+  assert.strictEqual(runtime.findGameEntry('https://plugin.example/Loader9.swf?ver=z'), primary);
+  // A cache-busted variant of a launch URL still resolves to that launch.
+  assert.strictEqual(runtime.findGameEntry('https://plugin.example/side.swf?ver=777'), side);
+  assert.strictEqual(runtime.findGameEntry('https://other.example/x.swf'), null);
+  assert.strictEqual(runtime.isStandaloneUrl('https://plugin.example/side.swf?ver=1'), true);
+  assert.strictEqual(runtime.isStandaloneUrl('https://plugin.example/Loader9.swf?ver=z'), false);
+  assert.deepStrictEqual(runtime.getWrapForUrl('https://plugin.example/side.swf?ver=1'),
+    { wmode: 'opaque', scale: 'showall' });
+  assert.strictEqual(runtime.getWrapForUrl('https://other.example/x.swf'), null);
+});
+
+test('local SWF override beats the plugin primary and is still recognised as the game', () => {
+  runtime.clear();
+  runtime.setDependencies({
+    constant: {
+      customSwfUrl: 'file:///C:/data/aqlite_old.swf',
+      activeCustomSwfPath: 'C:\\data\\aqlite_old.swf',
+      isOldAqlite: true
+    }
+  });
+  const primary = {
+    id: 'main',
+    getUrl: function () { return 'https://plugin.example/Loader9.swf'; },
+    isGameUrl: function () { return false; }
+  };
+  runtime.adopt(fakeHost({
+    primaryGame: primary, launches: [], trustedFlashUrls: [],
+    keybinds: [], keybindDefaults: {}, featureWindows: []
+  }), { id: 'sample' });
+
+  assert.strictEqual(runtime.getPrimaryUrl(), 'file:///C:/data/aqlite_old.swf');
+  assert.strictEqual(runtime.findGameEntry('file:///C:/data/aqlite_old.swf'), primary);
+  assert.strictEqual(runtime.isGameUrl('file:///C:/data/aqlite_old.swf'), true);
 });
