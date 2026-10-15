@@ -45,9 +45,15 @@
       "!lite/**",
       "!.ruffle-native-cache/**"
     ],
-    "appId": "aquastar",
+    "appId": "io.github.aquaspy.aquastar",
+    "afterPack": "./scripts/strip-mac-signature.js",
     "mac": {
-      "category": "Games",
+      "identity": null,
+      "category": "public.app-category.games",
+      "artifactName": "AquaStar-${version}-mac-x64.${ext}",
+      "extendInfo": {
+        "NSScreenCaptureUsageDescription": "AquaStar captures the game window for screenshots and recordings."
+      },
       "target": [
         {
           "target": "zip",

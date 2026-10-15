@@ -114,5 +114,14 @@ Native Ruffle screenshots and recordings capture the desktop player's window on 
 ### I need to reinstall it everytime i need to open the game?
 - On windows, we do have a setup and a portable version. If you just want to double click an .exe instead of having it on your search menu, prefer the Portable version of it.
 
+### macOS says the app is damaged, or the game will not open
+AquaStar is not signed with an Apple Developer ID. After you unzip or open the disk image, clear the quarantine flag in Terminal, then open the app again:
+
+```bash
+xattr -cr /path/to/AquaStar.app
+```
+
+The same command fixes AquaStar Lite (`AquaStar Lite.app`). PPAPI Flash on Mac is an Intel plugin. On Apple Silicon, start the x64 build under Rosetta (`arch -x86_64`) or play with Ruffle. The release zip is `AquaStar-<version>-mac-x64.zip`.
+
 ### I have another problem
 - Tell us the information that appears in F9 about OS and Arch, and open a issue on github saying what happened.
