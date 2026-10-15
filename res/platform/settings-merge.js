@@ -8,6 +8,7 @@ const PLATFORM_OPTION_KEYS = {
     renderMode: true,
     ruffleUpdateChannel: true,
     ruffleAutoUpdate: true,
+    ruffleQuality: true,
     ruffleAutoUpdateMigrated: true,
     showGameMenu: true,
     enableDevTools: true,

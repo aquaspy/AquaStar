@@ -120,6 +120,7 @@ exports.wrapSwfUrl = function(swfUrl, opts) {
 // see res/ruffle_wrapper.html. Covers the active plugin's Flash games when Settings →
 // renderMode is "ruffle".
 const ruffleWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_wrapper.html'));
+exports.ruffleNativePageUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_native.html'));
 exports.isRuffleEligible = function(swfUrl) {
     if (!swfUrl) return false;
     // HTML/stage pages are never Ruffle SWF targets.
@@ -132,13 +133,14 @@ exports.isRuffleEligible = function(swfUrl) {
     } catch (e) { return false; }
 }
 // ruffleOpts: the owning plugin's wrap.ruffle ({ socket: { serversApi, fallbackHosts, policyPort } }).
-exports.wrapRuffleUrl = function(swfUrl, ruffleOpts) {
+exports.wrapRuffleUrl = function(swfUrl, ruffleOpts, quality) {
     if (!swfUrl) return swfUrl;
     const cfg = ruffleOpts && ruffleOpts.socket ? { socket: ruffleOpts.socket } : {};
     return ruffleWrapperUrl + '?swf=' + encodeURIComponent(swfUrl) +
         '&cfg=' + encodeURIComponent(JSON.stringify(cfg)) +
         '&proxy=' + encodeURIComponent(socketProxy.proxyUrl) +
-        '&ruffle=' + encodeURIComponent(exports.rufflePlayerUrl);
+        '&ruffle=' + encodeURIComponent(exports.rufflePlayerUrl) +
+        '&quality=' + encodeURIComponent(exports.normalizeRuffleQuality(quality));
 }
 
 /// -------------------------------
@@ -198,7 +200,8 @@ exports.resolveRecordingFormat = function(id, hasAudio) {
 // is new and marked experimental - see isRuffleEligible()/wrapRuffleUrl() above.
 const renderModes = {
     'flash':  { label: 'Flash Player' },
-    'ruffle': { label: 'Ruffle (Experimental)' }
+    'ruffle': { label: 'Ruffle (Experimental)' },
+    'ruffle-native': { label: 'Ruffle desktop, native (Experimental)' }
 }
 exports.renderModes = renderModes;
 exports.defaultRenderMode = 'flash';
@@ -213,6 +216,20 @@ const ruffleUpdateChannels = {
 exports.ruffleUpdateChannelChoices = Object.keys(ruffleUpdateChannels).map((id) => (
     { id: id, label: ruffleUpdateChannels[id].label }
 ));
+
+// Ruffle render quality. "high" is Ruffle's default (4x MSAA on WebGL); lower levels
+// trade anti-aliasing for frame rate on weak or software-rendered GPUs.
+const ruffleQualities = {
+    high:   { label: 'High (default)' },
+    medium: { label: 'Medium' },
+    low:    { label: 'Low (fastest)' }
+};
+exports.ruffleQualityChoices = Object.keys(ruffleQualities).map((id) => (
+    { id: id, label: ruffleQualities[id].label }
+));
+exports.normalizeRuffleQuality = function (value) {
+    return Object.prototype.hasOwnProperty.call(ruffleQualities, value) ? value : 'high';
+};
 
 exports.appLanguageChoices = [
     { id: 'system', label: 'System default' },
@@ -233,6 +250,7 @@ const originalOptions = {
     renderMode:        exports.defaultRenderMode,
     ruffleUpdateChannel: 'latest',
     ruffleAutoUpdate:  true,
+    ruffleQuality:     'high',
     // Native menu bar on game windows (mirrors shortcuts). Default on.
     showGameMenu:      true,
     // Dev-only escape hatch, warned about on enable in the Settings screen.

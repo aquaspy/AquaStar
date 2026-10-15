@@ -192,6 +192,7 @@
     renderMode:        'select',
     ruffleUpdateChannel: 'select',
     ruffleAutoUpdate:  'boolean',
+    ruffleQuality:     'select',
     showGameMenu:      'boolean',
     enableDevTools:    'boolean'
   };
@@ -290,6 +291,7 @@
 
   let messages, defaults, current, options;
   let updateChannelChoices = [];
+  let ruffleQualityChoices = [];
   // key -> { comboEl, initial: string, value: string, recording: bool, type: 'keybind'|'option' }
   const rowState = {};
   let activeRecordingKey = null;
@@ -669,7 +671,8 @@
     // The selected channel controls this button. Keeping it beside the action
     // makes the stable release the normal path and nightly an explicit opt-in.
     const updateChannelRow = buildSelectOptionRow('ruffleUpdateChannel', updateChannelChoices);
-    return [heading, statusRow, updateChannelRow, updateRow, buildBooleanOptionRow('ruffleAutoUpdate'), restoreRow];
+    const qualityRow = buildSelectOptionRow('ruffleQuality', ruffleQualityChoices);
+    return [heading, statusRow, qualityRow, updateChannelRow, updateRow, buildBooleanOptionRow('ruffleAutoUpdate'), restoreRow];
   }
 
   async function refreshCustomSwfStatus() {
@@ -1120,6 +1123,7 @@
       renderMode:      kb.renderModeChoices || []
     };
     updateChannelChoices = kb.ruffleUpdateChannelChoices || [];
+    ruffleQualityChoices = kb.ruffleQualityChoices || [];
 
     // General: plugins meta first, then platform options, primary SWF override, Ruffle.
     appendNodes(generalEl, buildPluginsSection(pluginList, pluginSettings || layout.pluginSettings || {}));
@@ -1128,7 +1132,8 @@
       PLATFORM_OPTION_TYPES[key] &&
       !CUSTOM_SWF_SECTION_KEYS.has(key) &&
       key !== 'ruffleUpdateChannel' &&
-      key !== 'ruffleAutoUpdate'
+      key !== 'ruffleAutoUpdate' &&
+      key !== 'ruffleQuality'
     );
     if (platformOptionKeys.length) {
       const heading = document.createElement('div');
