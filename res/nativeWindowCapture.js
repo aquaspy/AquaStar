@@ -1,6 +1,9 @@
 const { execFile } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
-const REASONS = ['starting', 'closed', 'macos-denied', 'wayland', 'ambiguous', 'no-window', 'empty-frame'];
+const REASONS = ['starting', 'closed', 'macos-denied', 'macos-prompt', 'wayland', 'ambiguous', 'no-window', 'empty-frame'];
 const ATTEMPTS = 5;
 const PROBE_TIMEOUT_MS = 1000;
 const FRAME_TIMEOUT_MS = 4000;
@@ -117,7 +120,8 @@ function matchPlayer(listed, osList, player) {
 }
 
 function reasonForMiss(access, session) {
-    if (access === 'denied' || access === 'restricted' || access === 'not-determined') return 'macos-denied';
+    if (access === 'not-determined') return 'macos-prompt';
+    if (access === 'denied' || access === 'restricted') return 'macos-denied';
     if (session === 'wayland') return 'wayland';
     return 'no-window';
 }
@@ -316,12 +320,12 @@ function createCapture(deps) {
     };
 }
 
-function run(command, args, input) {
+function run(command, args, input, timeoutMs) {
     return new Promise(function (resolve) {
         let child;
         try {
             child = execFile(command, args, {
-                timeout: PROBE_TIMEOUT_MS,
+                timeout: timeoutMs || PROBE_TIMEOUT_MS,
                 windowsHide: true,
                 maxBuffer: 1024 * 1024
             }, function (error, stdout, stderr) {
@@ -442,10 +446,13 @@ function windowsForegroundScript() {
     );
 }
 
-const SWIFT_LIST = [
+// Compiled once. `swift -` on every probe is killed by the 1s timeout, and an empty
+// stdout used to look like a successful list, which skipped osascript and the title match.
+const SWIFT_HELPER = [
     'import CoreGraphics',
     'import Foundation',
-    'let want = Int32(WANTED_PID)',
+    'let args = CommandLine.arguments',
+    'guard args.count > 1, let want = Int32(args[1]) else { exit(2) }',
     'guard let info = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {',
     '  fputs("unreadable\\n", stderr)',
     '  exit(1)',
@@ -468,6 +475,47 @@ const SWIFT_LIST = [
     '}',
     ''
 ].join('\n');
+
+function swiftListSucceeded(parsed) {
+    return Array.isArray(parsed) && parsed.length > 0;
+}
+
+let swiftHelper = null;
+let swiftHelperTask = null;
+
+function compiledSwiftList() {
+    if (swiftHelper !== null) return Promise.resolve(swiftHelper);
+    if (swiftHelperTask) return swiftHelperTask;
+    swiftHelperTask = new Promise(function (resolve) {
+        if (process.platform !== 'darwin' || !fs.existsSync('/usr/bin/swiftc')) {
+            swiftHelper = false;
+            resolve(false);
+            return;
+        }
+        const dir = path.join(os.tmpdir(), 'aquastar-window-list');
+        const src = path.join(dir, 'list.swift');
+        const bin = path.join(dir, 'list');
+        try {
+            fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(src, SWIFT_HELPER);
+        } catch (_err) {
+            swiftHelper = false;
+            resolve(false);
+            return;
+        }
+        run('/usr/bin/swiftc', ['-O', '-o', bin, src], null, 20000).then(function (compiled) {
+            if (compiled.error || !fs.existsSync(bin)) {
+                swiftHelper = false;
+                resolve(false);
+                return;
+            }
+            try { fs.chmodSync(bin, 0o755); } catch (_err) { /* the compiler already set the bit */ }
+            swiftHelper = bin;
+            resolve(bin);
+        });
+    });
+    return swiftHelperTask;
+}
 
 function macWindowScript(pid) {
     return [
@@ -511,10 +559,11 @@ async function listWindowsWindows(pid) {
 }
 
 async function listWindowsMac(pid) {
-    const swift = await run('swift', ['-'], SWIFT_LIST.replace('WANTED_PID', String(pid)));
-    if (!swift.error) {
-        const parsed = parseTabLines(swift.stdout, pid);
-        if (parsed) return { ok: true, windows: parsed };
+    const helper = await compiledSwiftList();
+    if (helper) {
+        const swift = await run(helper, [String(pid)]);
+        const parsed = swift.error ? null : parseTabLines(swift.stdout, pid);
+        if (swiftListSucceeded(parsed)) return { ok: true, windows: parsed };
     }
     const osa = await run('osascript', [], macWindowScript(pid));
     if (osa.error) return { ok: false };
@@ -524,6 +573,8 @@ async function listWindowsMac(pid) {
         if (!lines[i]) continue;
         windows.push({ pid: pid, nativeId: '', title: lines[i].replace(/\r$/, '') });
     }
+    // An empty list is a failed probe. matchPlayer then uses the desktopCapturer title.
+    if (!windows.length) return { ok: false };
     return { ok: true, windows: windows };
 }
 
@@ -735,6 +786,7 @@ function singleton() {
 
 exports.REASONS = REASONS;
 exports.messageKey = messageKey;
+exports.swiftListSucceeded = swiftListSucceeded;
 exports.createCapture = createCapture;
 exports.open = function (win) { return singleton().open(win); };
 exports.captureStill = function (win) { return singleton().captureStill(win); };

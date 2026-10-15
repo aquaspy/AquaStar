@@ -10,6 +10,7 @@ exports.titleMessages = {
     nativeCaptureStarting: "",
     nativeCaptureClosed: "",
     nativeCaptureMacosDenied: "",
+    nativeCaptureMacosPrompt: "",
     nativeCaptureWayland: "",
     nativeCaptureAmbiguous: "",
     nativeCaptureNoWindow: "",

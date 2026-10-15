@@ -127,7 +127,8 @@ async function toggleRecording(focusedWin) {
                 false);
             recordingWinId = focusedWin.id;
 
-            ipcRecording.triggerRecording(focusedWin);
+            const sourceId = verdict && verdict.route === 'source' ? verdict.sourceId : null;
+            ipcRecording.triggerRecording(focusedWin, sourceId);
             focusedWin.setIcon(constant.nativeImageRedIcon)
         } finally {
             recordingArming = false;
@@ -265,11 +266,19 @@ const processKeybings = function (){
 }
 
 // Now, accepting Arrays as well...
+function isMacHideShortcut(keybind) {
+    if (process.platform !== 'darwin') return false;
+    return /^(cmdorctrl|command|cmd)\+h$/i.test(String(keybind || '').replace(/\s+/g, ''));
+}
+
 const addKeybind = function(keybind, func, onlyHTML = false, considerDF = false){
     if(Array.isArray(keybind)){
         keybind.forEach((value) => {
             addKeybind(value, func, onlyHTML, considerDF);
         })
+    }
+    else if (isMacHideShortcut(keybind)) {
+        // Cmd+H is Hide on macOS. Help keeps Alt+H and F1.
     }
     else {    
         electronLocalshortcut.register(keybind, () => {

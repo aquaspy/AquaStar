@@ -117,13 +117,17 @@ function releaseCaptureStream() {
 }
 
 (() => {
-  async function initRecorder() {
+  async function initRecorder(knownSourceId) {
     let matchedSource;
-    try {
-      matchedSource = await ipcRenderer.invoke('getDesktopCapturerSourceForWindow');
-    } catch (error) {
-      console.log("[AquaStar] desktopCapturer error:", error);
-      return false;
+    if (knownSourceId) {
+      matchedSource = { id: knownSourceId };
+    } else {
+      try {
+        matchedSource = await ipcRenderer.invoke('getDesktopCapturerSourceForWindow');
+      } catch (error) {
+        console.log("[AquaStar] desktopCapturer error:", error);
+        return false;
+      }
     }
 
     if (matchedSource && matchedSource.aborted) {
@@ -184,11 +188,12 @@ function releaseCaptureStream() {
     };
   }
 
-  async function triggerRecording(startRecording) {
+  async function triggerRecording(startRecording, knownSourceId) {
     if (!mediaRecorder) {
-      const ready = await initRecorder();
+      const ready = await initRecorder(knownSourceId);
       if (!ready || !mediaRecorder) {
         console.log("[AquaStar] mediaRecorder is not initialized yet — cannot record.");
+        ipcRenderer.send("recording-failed", "");
         return;
       }
     }
@@ -201,7 +206,8 @@ function releaseCaptureStream() {
   }
 
   ipcRenderer.on('record', (event, message) => {
-    triggerRecording(message);
+    if (message && typeof message === 'object') triggerRecording(!!message.start, message.sourceId || null);
+    else triggerRecording(!!message, null);
   });
 
   function saveVideo () {

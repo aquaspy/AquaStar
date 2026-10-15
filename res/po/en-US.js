@@ -6,7 +6,8 @@ exports.titleMessages = {
     alreadyRecording: "You are already recording another window!",
     nativeCaptureStarting: "The desktop player is still starting.",
     nativeCaptureClosed: "The desktop player is not running.",
-    nativeCaptureMacosDenied: "Screen recording permission is off. Allow AquaStar to record the screen in System Settings, then try again.",
+    nativeCaptureMacosDenied: "Screen recording permission is off, or Automation and Accessibility are blocked. Allow AquaStar to record the screen and to control System Events in System Settings, then try again.",
+    nativeCaptureMacosPrompt: "macOS has not asked for screen recording yet. Allow the prompt, then try the screenshot or recording again.",
     nativeCaptureWayland: "This Wayland session cannot capture another application's window. Use an X11 session to screenshot or record the desktop player.",
     nativeCaptureAmbiguous: "More than one desktop player window matches, so nothing was captured.",
     nativeCaptureNoWindow: "Could not find the desktop player window.",
@@ -112,7 +113,7 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "Latest uses Ruffle's most recent stable release. Nightly includes newer experimental changes. To apply a channel change, fully close AquaStar and open it again; do not use only the Restart button.",
         ruffleAutoUpdate: "Checks the selected channel in the background every time AquaStar opens. A download is applied after restart.",
         ruffleQuality: "Ruffle render quality. High is sharpest; Low turns off anti-aliasing and is much faster on weak or software-only GPUs. Applies to newly opened game windows.",
-        ruffleGraphics: "Graphics backend for Ruffle desktop (native mode). OpenGL is the most compatible. If another backend crashes right after launch, AquaStar reopens the game with OpenGL automatically. Applies to newly opened game windows.",
+        ruffleGraphics: "Graphics backend for Ruffle desktop (native mode). OpenGL is the default on Linux and Windows. Metal is the default on macOS. If another backend crashes right after launch, AquaStar reopens the game with that default. Applies to newly opened game windows.",
         showGameMenu: "Shows a menu bar above game windows with the same commands as the shortcuts. Turn it off for keyboard-only controls.",
         enableDevTools: "Opens the DevTools console automatically on startup."
     },

@@ -6,7 +6,8 @@ exports.titleMessages = {
     alreadyRecording: "Você já está gravando em alguma outra janela!",
     nativeCaptureStarting: "O player de desktop ainda está iniciando.",
     nativeCaptureClosed: "O player de desktop não está em execução.",
-    nativeCaptureMacosDenied: "A permissão de gravação de tela está desativada. Permita que o AquaStar grave a tela em Ajustes do Sistema e tente novamente.",
+    nativeCaptureMacosDenied: "A permissão de gravação de tela está desativada, ou Automação e Acessibilidade estão bloqueadas. Permita que o AquaStar grave a tela e controle os Eventos do Sistema em Ajustes do Sistema e tente novamente.",
+    nativeCaptureMacosPrompt: "O macOS ainda não pediu a permissão de gravação de tela. Aceite o aviso e tente o print ou a gravação de novo.",
     nativeCaptureWayland: "Esta sessão Wayland não consegue capturar a janela de outro aplicativo. Use uma sessão X11 para tirar um print ou gravar o player de desktop.",
     nativeCaptureAmbiguous: "Há mais de uma janela do player de desktop, então nada foi capturado.",
     nativeCaptureNoWindow: "Não foi possível encontrar a janela do player de desktop.",
@@ -112,7 +113,7 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "Latest usa a versão estável mais recente do Ruffle. Nightly inclui mudanças experimentais mais novas. Para aplicar uma troca de canal, feche o AquaStar completamente e abra-o novamente; não use somente o botão Reiniciar.",
         ruffleAutoUpdate: "Verifica o canal selecionado em segundo plano sempre que o AquaStar abre. O download é aplicado depois de reiniciar.",
         ruffleQuality: "Qualidade de renderização do Ruffle. Alta é a mais nítida; Baixa desliga o anti-aliasing e é bem mais rápida em GPUs fracas ou sem aceleração. Vale para janelas de jogo abertas depois da mudança.",
-        ruffleGraphics: "Backend gráfico do Ruffle desktop (modo nativo). OpenGL é o mais compatível. Se outro backend crashar logo ao abrir, o AquaStar reabre o jogo com OpenGL automaticamente. Vale para janelas de jogo abertas depois da mudança.",
+        ruffleGraphics: "Backend gráfico do Ruffle desktop (modo nativo). OpenGL é o padrão no Linux e no Windows. Metal é o padrão no macOS. Se outro backend crashar logo ao abrir, o AquaStar reabre o jogo com esse padrão. Vale para janelas de jogo abertas depois da mudança.",
         showGameMenu: "Mostra uma barra de menu acima das janelas de jogo com os mesmos comandos dos atalhos. Desative se preferir só teclado.",
         enableDevTools: "Abre o console de DevTools automaticamente ao iniciar."
     },

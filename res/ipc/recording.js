@@ -4,7 +4,7 @@
 // an app-wide constant.
 const fs = require('fs');
 const path = require('path');
-const { ipcMain, desktopCapturer, dialog, BrowserWindow } = require('electron');
+const { ipcMain, desktopCapturer, dialog, BrowserWindow, app } = require('electron');
 const nativeWindowCapture = require('../nativeWindowCapture.js');
 
 ipcMain.on('saveDialog', async function (event, arg) {
@@ -52,14 +52,23 @@ ipcMain.handle('getDesktopCapturerSourceForWindow', async (event) => {
 });
 
 var _wasRecording = false;
+
+function setRecordingBadge(text) {
+    if (process.platform !== 'darwin' || !app.dock || typeof app.dock.setBadge !== 'function') return;
+    try { app.dock.setBadge(text); }
+    catch (e) { /* dock badge is a hint; the title still changes */ }
+}
+
 exports.wasRecording = () => {return _wasRecording};
 exports.forceIdle = function () {
     _wasRecording = false;
+    setRecordingBadge('');
 };
-exports.triggerRecording = (win) => {
+exports.triggerRecording = (win, sourceId) => {
     _wasRecording = !_wasRecording;
+    setRecordingBadge(_wasRecording ? 'REC' : '');
     const target = win || BrowserWindow.getFocusedWindow();
-    if (target) target.webContents.send('record', _wasRecording);
+    if (target) target.webContents.send('record', { start: _wasRecording, sourceId: sourceId || null });
 }
 
 ipcMain.on('recording-failed', function (event, message) {

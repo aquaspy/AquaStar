@@ -586,7 +586,7 @@ test('denied or restricted screen access does not list windows', async () => {
   }
 });
 
-test('screen access that is still not determined after a miss is macos-denied', async () => {
+test('screen access that is still not determined after a miss asks for the prompt', async () => {
   const ctx = play(
     Object.assign(playerListed('7', 'Ruffle'), {
       getSources: async () => [],
@@ -594,9 +594,16 @@ test('screen access that is still not determined after a miss is macos-denied', 
     })
   );
   const verdict = await ctx.cap.recordingSource(ctx.win);
-  assert.strictEqual(verdict.reason, 'macos-denied');
+  assert.strictEqual(verdict.reason, 'macos-prompt');
+  assert.strictEqual(verdict.message, 'msg:macos-prompt');
   assert.strictEqual(ctx.seen.sources.length, 5);
   assert.strictEqual(ctx.seen.lists, 5);
+});
+
+test('an empty swift window list is not a successful probe', () => {
+  assert.strictEqual(capture.swiftListSucceeded([]), false);
+  assert.strictEqual(capture.swiftListSucceeded(null), false);
+  assert.strictEqual(capture.swiftListSucceeded([{ pid: 1, nativeId: '2', title: 'Ruffle' }]), true);
 });
 
 test('a wayland miss is the wayland message and not a screen source', async () => {
@@ -668,7 +675,9 @@ test('locale catalogs have a message for every capture reason', () => {
     nativeCaptureStarting: 'The desktop player is still starting.',
     nativeCaptureClosed: 'The desktop player is not running.',
     nativeCaptureMacosDenied:
-      'Screen recording permission is off. Allow AquaStar to record the screen in System Settings, then try again.',
+      'Screen recording permission is off, or Automation and Accessibility are blocked. Allow AquaStar to record the screen and to control System Events in System Settings, then try again.',
+    nativeCaptureMacosPrompt:
+      'macOS has not asked for screen recording yet. Allow the prompt, then try the screenshot or recording again.',
     nativeCaptureWayland:
       "This Wayland session cannot capture another application's window. Use an X11 session to screenshot or record the desktop player.",
     nativeCaptureAmbiguous: 'More than one desktop player window matches, so nothing was captured.',
