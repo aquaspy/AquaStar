@@ -59,9 +59,7 @@ const FLASH: Option<Artifact> = Some(Artifact {
     sha256: "883f7aa23301fc80de879501157533a4acdbfee0721ed7c57676dc032fdf96c3",
     exe: "flashplayer",
 });
-// Windows: the Clean Flash 34 standalone player has no standalone download; it ships
-// inside the Clean Flash installer. The PoC expects it bundled next to the app
-// (bundle resource) as flashplayer_sa.exe. macOS: Ruffle only.
+// Windows and macOS: no Flash player is shipped yet, so those builds are Ruffle only.
 #[cfg(not(all(target_os = "linux", target_arch = "x86_64")))]
 const FLASH: Option<Artifact> = None;
 
@@ -71,7 +69,7 @@ impl Engine {
     pub fn supported(&self) -> bool {
         match self {
             Engine::Ruffle => RUFFLE.is_some(),
-            Engine::Flash => FLASH.is_some() || cfg!(target_os = "windows"),
+            Engine::Flash => FLASH.is_some(),
         }
     }
 
@@ -93,11 +91,24 @@ pub struct Players {
     children: Arc<Mutex<Vec<Child>>>,
 }
 
+/// Set by the launcher when it installed a WebKit-only fontconfig.
+/// Player processes drop `FONTCONFIG_FILE` only when this is present, so a
+/// fontconfig the user set themselves still reaches Ruffle and Flash.
+pub const LIMITED_FONTS_MARKER: &str = "AQUASTAR_LITE_FONTCONFIG";
+
+fn without_launcher_fontconfig(cmd: &mut Command) {
+    if std::env::var_os(LIMITED_FONTS_MARKER).is_some() {
+        cmd.env_remove("FONTCONFIG_FILE");
+        cmd.env_remove(LIMITED_FONTS_MARKER);
+    }
+}
+
 impl Players {
     pub fn launch(&self, data: &Path, engine: Engine, swf: &str) -> Result<String, String> {
         let exe = resolve(data, engine)?;
         let mut cmd = Command::new(&exe);
         cmd.args(engine.args(swf));
+        without_launcher_fontconfig(&mut cmd);
         let mut child = cmd.spawn()
             .map_err(|e| format!("could not start {}: {e}", exe.display()))?;
         let pid = child.id();
@@ -126,12 +137,6 @@ fn resolve(data: &Path, engine: Engine) -> Result<PathBuf, String> {
     };
     if let Some(a) = artifact {
         return install(data, &a);
-    }
-    if engine == Engine::Flash && cfg!(target_os = "windows") {
-        let p = std::env::current_exe()
-            .map_err(|e| e.to_string())?
-            .with_file_name("flashplayer_sa.exe");
-        return if p.exists() { Ok(p) } else { Err("flashplayer_sa.exe is not bundled".into()) };
     }
     Err(format!("{engine:?} is not available on this platform"))
 }

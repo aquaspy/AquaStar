@@ -3,11 +3,11 @@
 A Tauri 2 launcher for AQW. The launcher UI is plain HTML/JS in the system webview. The game never runs in the webview. Rust starts it as a separate player process:
 
 - **Ruffle**: official Ruffle desktop 0.7.1, downloaded on first use and checked against a pinned SHA-256. Started with `--tcp-connections allow --storage disk --letterbox on --no-gui <Loader4.swf>`.
-- **Flash**: Linux uses Adobe's own standalone projector 32.0.0.465 (`fpdownload.macromedia.com`, SHA-256 pinned). Projectors never had the 2021 time bomb, and it opens the AQW login in 2026. On Windows the PoC expects the Clean Flash 34 standalone player (`flashplayer_sa.exe`) bundled next to the exe. macOS is Ruffle only.
+- **Flash**: Linux uses Adobe's own standalone projector 32.0.0.465 (`fpdownload.macromedia.com`, SHA-256 pinned). Projectors never had the 2021 time bomb, and it opens the AQW login in 2026. Windows and macOS are Ruffle only for now: no Flash player is bundled there, so the Flash button is disabled.
 
 Site buttons (wiki, account, news) open allow-listed HTTPS sites in their own Tauri webview window. Closing the main window kills every player process.
 
-This is throwaway. Nothing in the Electron app depends on it.
+Nothing in the Electron app depends on it.
 
 ## Build and run (Linux)
 
@@ -18,7 +18,7 @@ cargo build --release          # needs a current stable Rust (1.85 is too old)
 ./target/release/aquastar-lite
 ```
 
-Windows and macOS builds have their config in place (`nsis`, `dmg` targets, per-platform pinned Ruffle builds) but have not been built yet. Use `cargo tauri build` on the target OS.
+Windows (`nsis`) and macOS (`dmg`, universal) bundles are built by `.github/workflows/lite-release.yml`. A `lite-v*` tag publishes a pre-release; a manual run (workflow_dispatch) only uploads the bundles as workflow artifacts so they can be tested before tagging. `lite-check.yml` runs `cargo test` on pull requests that touch `lite/`.
 
 ## Pinned players
 
@@ -28,10 +28,10 @@ Windows and macOS builds have their config in place (`nsis`, `dmg` targets, per-
 | ruffle-0.7.1-windows-x86_64.zip | a5f6df98…a94e | 0 detections |
 | ruffle-0.7.1-macos-universal.tar.gz | 7a86a09b…a4e | 0 detections |
 | flash_player_sa_linux.x86_64.tar.gz (32.0.0.465) | 883f7aa2…96c3 | 0/74 |
-| Clean Flash 34.0.0.330 flashplayer_sa.exe | 7d492db8…e979 | 0/75 |
 
 ## WebKitGTK notes
 
-- The app sets `WEBKIT_DISABLE_DMABUF_RENDERER=1` unless you set it yourself. Under Xvfb this took the launcher from 399 to 273 MB PSS, and the DMA-BUF renderer is a known cause of blank windows on NVIDIA. It still needs a check on a real GPU.
+- The app sets `WEBKIT_DISABLE_DMABUF_RENDERER=1` unless you set it yourself. Under Xvfb this took the launcher from 399 to 273 MB PSS, and the DMA-BUF renderer is a known cause of blank windows on NVIDIA. It does not fix the blank window below.
+- On Linux, unless `FONTCONFIG_FILE` is already set, the app builds a small fontconfig under `~/.cache/aquastar-lite/` (or a private `aquastar-lite-<uid>` dir in the temp dir when there is no home) and points WebKit at it. WebKitGTK scans every system font on the web-process main thread before the first paint. With a large Noto install that scan pegs a core and the window stays on the GTK background (`about:blank` never commits). The config lists one directory of symlinks to an allow-list of files (DejaVu, Liberation, Noto Sans/Serif, Noto Sans CJK, Noto Sans Thai, Noto Color Emoji, regular and bold only, at most 48) found in the usual Debian/Ubuntu, Fedora and Arch paths, plus the system alias rules from `/etc/fonts/conf.d` that add no font directories. `50-user.conf` is skipped because it adds the user font dirs. The launcher logs which config it used. Ruffle and Flash do not inherit the limit. Set `FONTCONFIG_FILE` yourself to opt out.
 - Opening a webview window from a *sync* Tauri command made the app exit silently on Linux. `open_site` is `async`.
 - The Linux Flash projector is a GTK2 app, so it needs `libgtk2.0-0`.
