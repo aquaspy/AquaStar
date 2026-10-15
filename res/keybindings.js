@@ -87,7 +87,26 @@ function customKeybinds() {
         topLevel: topLevel,
         plugins: pluginsBlock
     });
+    _migrateRuffleAutoUpdateDefault(topLevel);
     return finalKeybinds;
+}
+
+// One-time migration: Ruffle auto-update used to default to off and the Settings
+// screen saves every option, so most existing files carry an explicit `false` that
+// the user never chose. Flip it on once and record a marker; afterwards an explicit
+// `false` is respected.
+function _migrateRuffleAutoUpdateDefault(topLevel) {
+    if (topLevel.ruffleAutoUpdateMigrated === true) return;
+    finalKeybinds.ruffleAutoUpdate = true;
+    finalKeybinds.ruffleAutoUpdateMigrated = true;
+    const target = _keybindSaveTarget();
+    if (!fs.existsSync(target)) return;
+    try {
+        const json = JSON.parse(fs.readFileSync(target));
+        json.ruffleAutoUpdate = true;
+        json.ruffleAutoUpdateMigrated = true;
+        fs.writeFileSync(target, JSON.stringify(json, null, 4));
+    } catch (e) { console.log('[AquaStar] Could not migrate ruffleAutoUpdate: ' + e.message); }
 }
 
 function toggleRecording(focusedWin) {

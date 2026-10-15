@@ -145,7 +145,12 @@ exports.downloadLatest = async function (dataDirectory, channel, bundledPlayerPa
     channel = channel === 'nightly' ? 'nightly' : 'latest';
     const release = await getRelease(channel);
     if (channel === 'latest' && ('v' + bundledVersion(bundledPlayerPath).split(' ')[0]) === release.tag) {
-        return { tag: release.tag, bundledAlreadyCurrent: true, restartRequired: false };
+        // A previously downloaded (older) copy in ruffle-current would otherwise keep
+        // shadowing the newer bundled player forever: drop it on the next launch.
+        const staleDownload = fs.existsSync(path.join(dataDirectory, 'ruffle-current', 'ruffle.js')) ||
+            fs.existsSync(path.join(dataDirectory, 'ruffle-next', 'ruffle.js'));
+        if (staleDownload) exports.restoreBundled(dataDirectory);
+        return { tag: release.tag, bundledAlreadyCurrent: true, restartRequired: staleDownload };
     }
     const installedVersionPath = path.join(dataDirectory, 'ruffle-current', 'ruffle-version.json');
     if (fs.existsSync(installedVersionPath)) {

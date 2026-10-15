@@ -232,7 +232,7 @@ const originalOptions = {
     recordingFormat:   exports.defaultRecordingFormat,
     renderMode:        exports.defaultRenderMode,
     ruffleUpdateChannel: 'latest',
-    ruffleAutoUpdate:  false,
+    ruffleAutoUpdate:  true,
     // Native menu bar on game windows (mirrors shortcuts). Default on.
     showGameMenu:      true,
     // Dev-only escape hatch, warned about on enable in the Settings screen.
