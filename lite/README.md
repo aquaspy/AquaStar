@@ -20,6 +20,8 @@ cargo build --release          # needs a current stable Rust (1.85 is too old)
 
 Windows (`nsis`) and macOS (`dmg`, universal) bundles are built by `.github/workflows/lite-release.yml`. A `lite-v*` tag publishes a pre-release; a manual run (workflow_dispatch) only uploads the bundles as workflow artifacts so they can be tested before tagging. `lite-check.yml` runs `cargo test` on pull requests that touch `lite/`.
 
+The same workflow also publishes `AquaStar.Lite_<ver>_x64-portable.zip` for Windows. `<ver>` is the `version` in `lite/src-tauri/tauri.conf.json`. Unzip the archive. Run `aquastar-lite.exe`. The archive contains `aquastar-lite.exe` and `portable.txt`. When `portable.txt` is a file beside the executable, AquaStar Lite keeps its data in the `data` folder next to the executable. Windows 10 and Windows 11 use the system WebView2 runtime. The zip does not run the NSIS installer. If WebView2 is missing, the app shows "Could not find the WebView2 Runtime".
+
 ## Pinned players
 
 | Player | SHA-256 | VirusTotal |
