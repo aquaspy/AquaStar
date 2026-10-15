@@ -12,6 +12,8 @@ global.test = function (name, fn) {
   './unit/focus-style.test.js',
   './unit/ruffle-update-ui.test.js',
   './unit/ruffle-native.test.js',
+  './unit/custom-swf.test.js',
+  './unit/flash-arch.test.js',
   './unit/native-window-capture.test.js',
   './unit/wikiview-injection.test.js',
   './unit/charpage-lab.test.js',

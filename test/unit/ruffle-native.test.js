@@ -71,13 +71,23 @@ test('a locked old version is left for a later launch instead of failing', () =>
   fs.rmSync(data, { recursive: true, force: true });
 });
 
-test('Ruffle desktop uses OpenGL by default and passes a chosen backend', () => {
-  const args = native.buildArgs('x.swf', {});
+test('Ruffle desktop uses the platform default and passes a chosen backend', () => {
+  const args = native.buildArgs('x.swf', { platform: 'linux' });
   assert.strictEqual(args[args.indexOf('--graphics') + 1], 'gl');
-  const vk = native.buildArgs('x.swf', { graphics: 'vulkan' });
+  const mac = native.buildArgs('x.swf', { platform: 'darwin' });
+  assert.strictEqual(mac[mac.indexOf('--graphics') + 1], 'metal');
+  const vk = native.buildArgs('x.swf', { graphics: 'vulkan', platform: 'linux' });
   assert.strictEqual(vk[vk.indexOf('--graphics') + 1], 'vulkan');
-  const bad = native.buildArgs('x.swf', { graphics: 'vulkan --evil' });
+  const foreign = native.buildArgs('x.swf', { graphics: 'vulkan', platform: 'darwin' });
+  assert.strictEqual(foreign[foreign.indexOf('--graphics') + 1], 'metal');
+  const bad = native.buildArgs('x.swf', { graphics: 'vulkan --evil', platform: 'linux' });
   assert.strictEqual(bad[bad.indexOf('--graphics') + 1], 'gl');
+});
+
+test('quarantine is cleared on the app that contains the executable', () => {
+  const path = require('path');
+  const exe = path.join('AquaStar.app', 'Contents', 'Resources', 'Ruffle.app', 'Contents', 'MacOS', 'ruffle');
+  assert.strictEqual(path.basename(native.containingApp(exe)), 'Ruffle.app');
 });
 
 test('a crashing non-GL backend falls back to OpenGL, other exits do not', () => {
@@ -91,7 +101,9 @@ test('a crashing non-GL backend falls back to OpenGL, other exits do not', () =>
     f({ graphics: 'vulkan', code: null, signal: 'SIGTERM', elapsedMs: 1000, killedByUs: true }),
     false
   );
-  assert.strictEqual(f({ graphics: 'gl', code: 101, elapsedMs: 1000, panicked: true }), false);
+  assert.strictEqual(f({ graphics: 'gl', code: 101, elapsedMs: 1000, panicked: true }, 'linux'), false);
+  assert.strictEqual(f({ graphics: 'gl', code: 101, elapsedMs: 1000, panicked: true }, 'darwin'), true);
+  assert.strictEqual(f({ graphics: 'metal', code: 101, elapsedMs: 1000, panicked: true }, 'darwin'), false);
   assert.ok(native.looksLikePanic("thread 'main' panicked at wgpu-core: Out of Memory"));
   assert.ok(!native.looksLikePanic('INFO loaded movie'));
 });
@@ -99,8 +111,12 @@ test('a crashing non-GL backend falls back to OpenGL, other exits do not', () =>
 test('graphics choices default to OpenGL and are filtered per platform', () => {
   const graphics = require('../../res/ruffleGraphics.js');
   const constSrc = require('fs').readFileSync(require('path').join(__dirname, '../../res/const.js'), 'utf8');
-  assert.ok(/ruffleGraphics:\s*'gl'/.test(constSrc));
-  assert.strictEqual(graphics.normalize('nope'), 'gl');
+  assert.ok(/ruffleGraphics:\s*process\.platform === 'darwin' \? 'metal' : 'gl'/.test(constSrc));
+  assert.strictEqual(graphics.normalize('nope', 'linux'), 'gl');
+  assert.strictEqual(graphics.normalize('nope', 'darwin'), 'metal');
+  assert.strictEqual(graphics.normalize('dx12', 'darwin'), 'metal');
+  assert.strictEqual(graphics.safeId('darwin'), 'metal');
+  assert.strictEqual(graphics.safeId('linux'), 'gl');
   const ids = (p) => graphics.choicesFor(p).map((c) => c.id);
   assert.deepStrictEqual(ids('linux'), ['gl', 'vulkan', 'default']);
   assert.deepStrictEqual(ids('darwin'), ['gl', 'metal', 'default']);

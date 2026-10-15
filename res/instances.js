@@ -193,11 +193,12 @@ function _startNativeRuffle(win, swfUrl) {
                     killedByUs: !!launched.aquaStarKilledByUs || win.isDestroyed()
                 };
                 if (ruffleNative.shouldFallbackToGl(info)) {
+                    const safe = constant.safeRuffleGraphics();
                     console.log('[AquaStar] Ruffle desktop (' + graphics + ') exited abnormally (code ' + code +
                         ', signal ' + signal + ', ' + info.elapsedMs + ' ms' + (info.panicked ? ', panic' : '') +
-                        '); relaunching with OpenGL. stderr tail: ' + launched.aquaStarStderrTail().slice(-1000));
-                    setStatus('Ruffle desktop crashed with ' + graphics + '; reopening with OpenGL…', false);
-                    start('gl');
+                        '); relaunching with ' + safe + '. stderr tail: ' + launched.aquaStarStderrTail().slice(-1000));
+                    setStatus('Ruffle desktop crashed with ' + graphics + '; reopening with ' + safe + '…', false);
+                    start(safe);
                     return;
                 }
                 setStatus('Ruffle desktop was closed.', true);

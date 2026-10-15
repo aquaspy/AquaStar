@@ -52,6 +52,7 @@ function createWindows(deps) {
         height: 2160,
         useContentSize: true,
         show: false,
+        paintWhenInitiallyHidden: true,
         resizable: false,
         webPreferences: {
             nodeIntegration: false,

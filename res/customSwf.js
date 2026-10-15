@@ -4,8 +4,8 @@
 // files users already placed keep working.
 //
 // Lookup order: the managed AppData file first, then its aliases, then the same names next to
-// the app (old portable installs). Installed builds may live under Program Files, where the
-// working directory is not reliably writable, hence the AppData target for new files.
+// the app (old portable installs), then the directory that contains the .app. Finder launches
+// with a working directory of /, so a SWF dropped beside AquaStar.app is invisible to cwd.
 
 const fs = require('fs');
 const path = require('path');
@@ -15,6 +15,7 @@ const GENERIC_NAME = 'custom-game.swf';
 function createCustomSwf(opts) {
     const appDataDirectory = opts.appDataDirectory;
     const appCurrentDirectory = opts.appCurrentDirectory;
+    const bundleDirectory = opts.bundleDirectory;
     const toFileUrl = opts.toFileUrl;
     let aliases = [];
 
@@ -24,6 +25,9 @@ function createCustomSwf(opts) {
         const list = [];
         names().forEach(function (name) { list.push(path.join(appDataDirectory, name)); });
         names().forEach(function (name) { list.push(path.join(appCurrentDirectory, name)); });
+        if (bundleDirectory) {
+            names().forEach(function (name) { list.push(path.join(bundleDirectory, name)); });
+        }
         return list;
     }
 

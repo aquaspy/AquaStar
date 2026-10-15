@@ -301,5 +301,26 @@ function showAboutMessage(win) {
     });
 }
 
+// macOS uses one application menu. Game actions stay on keybinds. Cmd+H stays Hide.
+function darwinApplicationMenu() {
+    const { Menu } = require('electron');
+    return Menu.buildFromTemplate([
+        { role: 'appMenu' },
+        { role: 'editMenu' },
+        { role: 'windowMenu' },
+        {
+            label: 'Help',
+            submenu: [
+                {
+                    label: 'AquaStar Help',
+                    accelerator: 'F1',
+                    click: function (_item, win) { showHelpMessage(win); }
+                }
+            ]
+        }
+    ]);
+}
+
+exports.darwinApplicationMenu = darwinApplicationMenu;
 exports.showHelpMessage = showHelpMessage;
 exports.showAboutMessage = showAboutMessage;

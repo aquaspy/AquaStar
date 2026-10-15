@@ -94,6 +94,7 @@ app.whenReady().then(async () => {
             height: logicalHeight,
             useContentSize: true,
             show: false,
+            paintWhenInitiallyHidden: true,
             frame: false,
             webPreferences: {
                 nodeIntegration: false,
@@ -107,6 +108,11 @@ app.whenReady().then(async () => {
         await captureWindow.loadFile(path.join(charpageDir, 'lab', 'capture.html'), {
             query: { swfUrl: request.swfUrl, flashVars: request.flashVars, width: '715', height: '455' }
         });
+        // A hidden window's GPU surface stays blank. Park it off-screen and let it paint.
+        try {
+            captureWindow.setPosition(-20000, -20000);
+            captureWindow.showInactive();
+        } catch (e) { /* paintWhenInitiallyHidden still covers Electron 11 */ }
         const probe = await captureWindow.webContents.capturePage();
         const probeSize = probe.getSize();
         const contentSize = captureWindow.getContentSize();

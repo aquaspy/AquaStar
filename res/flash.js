@@ -39,6 +39,15 @@ function appendPerformanceSwitches(app) {
     }
 }
 
+// PepperFlashPlayer.plugin is i386+x86_64. An arm64 Electron cannot dlopen it, and there
+// is no Rosetta prompt for a plugin loaded in-process. Play with Ruffle, or start the
+// x64 build under `arch -x86_64`.
+function ppapiFlashSupported(platform, arch) {
+    platform = platform || process.platform;
+    arch = arch || process.arch;
+    return !(platform === 'darwin' && arch === 'arm64');
+}
+
 function getPluginName() {
     let pluginName
     switch (process.platform) {
@@ -93,12 +102,16 @@ const flashTrustManager = (app, appRootPath, trustedPath, appName) =>{
     // Required for PPAPI Flash on Linux (the PPAPI plugin cannot load inside the sandbox)
     app.commandLine.appendSwitch('no-sandbox');
 
-    const flashPluginPath = path.resolve(appRootPath, 'FlashPlayer', getPluginName());
-    if (!fs.existsSync(flashPluginPath)) {
-        console.error('[AquaStar] PPAPI Flash plugin not found:', flashPluginPath);
+    if (!ppapiFlashSupported()) {
+        console.error('[AquaStar] PPAPI Flash is Intel-only. On Apple Silicon use Ruffle, or start the x64 build with: arch -x86_64');
+    } else {
+        const flashPluginPath = path.resolve(appRootPath, 'FlashPlayer', getPluginName());
+        if (!fs.existsSync(flashPluginPath)) {
+            console.error('[AquaStar] PPAPI Flash plugin not found:', flashPluginPath);
+        }
+        app.commandLine.appendSwitch('ppapi-flash-path', flashPluginPath);
+        app.commandLine.appendSwitch('ppapi-flash-version', getPluginVersion());
     }
-    app.commandLine.appendSwitch('ppapi-flash-path', flashPluginPath);
-    app.commandLine.appendSwitch('ppapi-flash-version', getPluginVersion());
 
     const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot');
     activeTrustManager = flashTrust.initSync(appName, flashPath);
@@ -135,6 +148,7 @@ function _setTrustManagerForTests(manager) {
     activeTrustManager = manager;
 }
 
+exports.ppapiFlashSupported = ppapiFlashSupported;
 exports.flashManager = flashTrustManager;
 exports.refreshTrust = refreshTrust;
 exports._setTrustManagerForTests = _setTrustManagerForTests;

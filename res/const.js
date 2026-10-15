@@ -61,8 +61,7 @@ exports.appDataDirectory = appDataDirectory;
 exports.sshotPath        = sshotPath;
 
 /// Icon Stuff
-const nativeImage = require('electron').nativeImage.createFromPath(iconPath)
-    nativeImage.setTemplateImage(true);
+const nativeImage = require('electron').nativeImage.createFromPath(iconPath);
 exports.iconPath = iconPath;
 exports.nativeImageIcon    = nativeImage;
 exports.nativeImageRedIcon = require('electron').nativeImage.createFromPath(iconRedPath);
@@ -98,8 +97,9 @@ exports.enableDevTools = () => {
     exports.isDevToolsEnabled = true;
 }
 
-// Performance: wmode=direct via HTML wrapper (enabled by default)
-exports.useDirectWmode = true;
+// wmode=direct draws the SWF on the GPU, so F2's capturePage bitmap is empty on macOS.
+// Darwin defaults this off. An explicit aquastar.json value still overrides it.
+exports.useDirectWmode = process.platform !== 'darwin';
 exports.setUseDirectWmode = (val) => {
     exports.useDirectWmode = val !== false;
 }
@@ -231,11 +231,12 @@ exports.normalizeRuffleQuality = function (value) {
     return Object.prototype.hasOwnProperty.call(ruffleQualities, value) ? value : 'high';
 };
 
-// Ruffle desktop graphics backend choices (OpenGL default); see res/ruffleGraphics.js.
+// Ruffle desktop graphics backend. OpenGL on Linux and Windows, Metal on macOS.
 const ruffleGraphics = require('./ruffleGraphics.js');
 exports.ruffleGraphicsChoicesFor = ruffleGraphics.choicesFor;
 exports.ruffleGraphicsChoices = ruffleGraphics.choicesFor(process.platform);
 exports.normalizeRuffleGraphics = ruffleGraphics.normalize;
+exports.safeRuffleGraphics = ruffleGraphics.safeId;
 
 exports.appLanguageChoices = [
     { id: 'system', label: 'System default' },
@@ -257,7 +258,7 @@ const originalOptions = {
     ruffleUpdateChannel: 'latest',
     ruffleAutoUpdate:  true,
     ruffleQuality:     'high',
-    ruffleGraphics:    'gl',
+    ruffleGraphics:    process.platform === 'darwin' ? 'metal' : 'gl',
     // Native menu bar on game windows (mirrors shortcuts). Default on.
     showGameMenu:      true,
     // Dev-only escape hatch, warned about on enable in the Settings screen.
@@ -300,9 +301,21 @@ exports.ruffleDirectory = appDataDirectory;
 
 // Local SWF override (Settings → Custom SWF File). The lookup lives in customSwf.js; the
 // active plugin's manifest may add older file names via setCustomSwfAliases().
+function directoryBesideApp(execPath) {
+    var dir = path.dirname(path.resolve(execPath || ''));
+    for (var i = 0; i < 8; i++) {
+        if (path.basename(dir).slice(-4).toLowerCase() === '.app') return path.dirname(dir);
+        var parent = path.dirname(dir);
+        if (parent === dir) return null;
+        dir = parent;
+    }
+    return null;
+}
+
 const customSwf = require('./customSwf.js').createCustomSwf({
     appDataDirectory: appDataDirectory,
     appCurrentDirectory: appCurrentDirectory,
+    bundleDirectory: directoryBesideApp(process.execPath),
     toFileUrl: _getFileUrl
 });
 exports.setCustomSwfAliases = function (aliases) { customSwf.setAliases(aliases); };

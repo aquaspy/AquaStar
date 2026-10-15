@@ -162,7 +162,7 @@ function createWindow () {
     // Setting ApplicationMenu *after* the first setMenu left the initial window on the
     // stub menu only — order matters.
     if (process.platform === 'darwin') {
-        Menu.setApplicationMenu(null);
+        Menu.setApplicationMenu(windowsMenu.darwinApplicationMenu());
     } else {
         Menu.setApplicationMenu(Menu.buildFromTemplate([
             { label: 'AquaStar', submenu: [{ role: 'quit' }] }

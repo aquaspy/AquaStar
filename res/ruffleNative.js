@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
 const updater = require('./ruffleUpdate.js');
+const ruffleGraphics = require('./ruffleGraphics.js');
 
 const LATEST_URL = 'https://api.github.com/repos/ruffle-rs/ruffle/releases/latest';
 
@@ -63,13 +64,54 @@ function compareTags(a, b) {
     return 0;
 }
 
-// Gatekeeper may refuse to run the nested Ruffle.app when the AquaStar zip was quarantined.
-// Ruffle.app is signed and notarized upstream; clearing the inherited flag is best-effort.
+// The .app that contains the executable. indexOf('.app') hits an outer AquaStar.app first
+// and leaves the nested Ruffle.app quarantined.
+function containingApp(exe) {
+    let dir = path.dirname(String(exe || ''));
+    while (dir && dir !== path.dirname(dir)) {
+        if (path.extname(dir) === '.app') return dir;
+        dir = path.dirname(dir);
+    }
+    return null;
+}
+
 function clearMacQuarantine(exe) {
-    if (process.platform !== 'darwin') return;
-    const app = exe.slice(0, exe.indexOf('.app') + 4);
-    try { execFileSync('xattr', ['-dr', 'com.apple.quarantine', app], { stdio: 'ignore' }); }
-    catch (e) { /* read-only location or no flag: launching may still work */ }
+    if (process.platform !== 'darwin') return true;
+    const app = containingApp(exe);
+    if (!app) return true;
+    try {
+        execFileSync('xattr', ['-dr', 'com.apple.quarantine', app], { stdio: 'ignore' });
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+// A translocated copy is read-only, so xattr cannot clear it. Copy that .app somewhere
+// writable and clear the flag there. Called for the bundled copy and for downloads.
+function copyUnquarantined(exe, dataDirectory) {
+    const app = containingApp(exe);
+    if (!app) return exe;
+    const dest = path.join(dataDirectory, 'ruffle-native', 'unquarantined', path.basename(app));
+    fs.rmSync(dest, { recursive: true, force: true });
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.cpSync(app, dest, { recursive: true });
+    try { execFileSync('xattr', ['-dr', 'com.apple.quarantine', dest], { stdio: 'ignore' }); }
+    catch (e) { /* the copy is outside the translocation mount */ }
+    const copied = path.join(dest, path.relative(app, exe));
+    if (process.platform !== 'win32') {
+        try { fs.chmodSync(copied, 0o755); } catch (e) { /* launch reports a missing bit */ }
+    }
+    return copied;
+}
+
+function preparePlayer(exe, dataDirectory) {
+    if (clearMacQuarantine(exe)) return exe;
+    try { return copyUnquarantined(exe, dataDirectory); }
+    catch (e) {
+        console.log('[AquaStar] Could not copy ' + exe + ' out of quarantine: ' + e.message);
+        return exe;
+    }
 }
 
 function rootDir(dataDirectory) { return path.join(dataDirectory, 'ruffle-native'); }
@@ -160,7 +202,7 @@ exports.ensureInstalled = async function (dataDirectory, autoUpdate, appRoot) {
     // Leftovers from earlier updates (only under userData; the bundled copy is never pruned).
     if (downloaded) pruneOldVersions(dataDirectory, current === downloaded ? downloaded.tag : null, runningExes());
     if (current) {
-        if (current.bundled) clearMacQuarantine(current.exe);
+        current = { tag: current.tag, exe: preparePlayer(current.exe, dataDirectory), bundled: current.bundled };
         if (autoUpdate) {
             latestRelease(target)
                 .then((release) => compareTags(release.tag, current.tag) <= 0 ? null : install(dataDirectory, release, target)
@@ -170,7 +212,8 @@ exports.ensureInstalled = async function (dataDirectory, autoUpdate, appRoot) {
         }
         return current;
     }
-    return install(dataDirectory, await latestRelease(target), target);
+    const installed = await install(dataDirectory, await latestRelease(target), target);
+    return { tag: installed.tag, exe: preparePlayer(installed.exe, dataDirectory) };
 };
 
 // Command-line arguments for one game. Kept pure so it can be unit-tested.
@@ -179,8 +222,8 @@ exports.buildArgs = function (swfUrl, opts) {
     const args = ['--tcp-connections', 'allow', '--storage', 'disk', '--letterbox', 'on'];
     if (opts.width && opts.height) args.push('--width', String(opts.width), '--height', String(opts.height));
     if (/^(low|medium|high)$/.test(opts.quality || '')) args.push('--quality', opts.quality);
-    // OpenGL unless another known backend is chosen (see const.js ruffleGraphicsBackends).
-    args.push('--graphics', /^(default|vulkan|metal|dx12|gl)$/.test(opts.graphics || '') ? opts.graphics : 'gl');
+    const platform = opts.platform || process.platform;
+    args.push('--graphics', ruffleGraphics.normalize(opts.graphics, platform));
     if (opts.saveDirectory) args.push('--save-directory', opts.saveDirectory);
     // AquaStar's own window and menus stay the control surface; hide Ruffle's menu bar.
     args.push('--no-gui');
@@ -190,13 +233,14 @@ exports.buildArgs = function (swfUrl, opts) {
 
 const running = new Set();
 
-// A non-GL backend that dies right after launch, or with a Rust panic (e.g. wgpu
-// "Out of Memory" on Vulkan with Intel Mesa, ruffle-rs/ruffle#24920), is retried with
-// OpenGL. A clean exit (code 0, the user closed the window) never triggers it.
+// A backend other than the platform default that dies right after launch, or with a
+// Rust panic (e.g. wgpu "Out of Memory" on Vulkan with Intel Mesa, ruffle-rs/ruffle#24920),
+// is retried with that default (OpenGL, or Metal on macOS). A clean exit never triggers it.
 const EARLY_EXIT_MS = 15000;
 exports.EARLY_EXIT_MS = EARLY_EXIT_MS;
-exports.shouldFallbackToGl = function (info) {
-    if (!info || info.graphics === 'gl') return false;
+exports.shouldFallbackToGl = function (info, platform) {
+    platform = platform || (info && info.platform) || process.platform;
+    if (!info || info.graphics === ruffleGraphics.safeId(platform)) return false;
     const abnormal = (info.code !== 0 && info.code !== null && info.code !== undefined) || !!info.signal;
     if (!abnormal || info.killedByUs) return false;
     return !!info.panicked || (info.elapsedMs >= 0 && info.elapsedMs < EARLY_EXIT_MS);
@@ -238,3 +282,4 @@ exports.readInstalled = readInstalled;
 exports.readBundled = readBundled;
 exports.bundledExePath = bundledExePath;
 exports.compareTags = compareTags;
+exports.containingApp = containingApp;
