@@ -1,0 +1,31 @@
+name: Lite Check
+
+# Compiles and unit-tests the Tauri app in lite/ on pull requests that touch it.
+# lite-release.yml only runs on lite-v* tags or by hand, so without this job a
+# broken lite/ change is first noticed when a release is cut.
+on:
+  pull_request:
+    paths:
+      - 'lite/**'
+      - '.github/workflows/lite-*.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'lite/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: lite/src-tauri -> target
+      - name: Linux deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
+      - name: cargo test
+        working-directory: lite/src-tauri
+        run: cargo test --locked
