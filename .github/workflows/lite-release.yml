@@ -40,7 +40,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-      - uses: tauri-apps/tauri-action@v0
+      - name: Build and publish release (tag push)
+        if: startsWith(github.ref, 'refs/tags/lite-v')
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -51,3 +53,23 @@ jobs:
           releaseDraft: false
           prerelease: true
           args: ${{ matrix.args }}
+      # Manual runs only build and upload workflow artifacts, so the bundles can be
+      # tested before tagging. They never create or touch a release.
+      - name: Build only (manual run)
+        if: "!startsWith(github.ref, 'refs/tags/lite-v')"
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: lite
+          tauriScript: npx -y @tauri-apps/cli@2
+          args: ${{ matrix.args }}
+      - name: Upload bundles (manual run)
+        if: "!startsWith(github.ref, 'refs/tags/lite-v')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: aquastar-lite-${{ matrix.platform }}
+          path: |
+            lite/src-tauri/target/**/release/bundle/appimage/*.AppImage
+            lite/src-tauri/target/**/release/bundle/deb/*.deb
+            lite/src-tauri/target/**/release/bundle/nsis/*.exe
+            lite/src-tauri/target/**/release/bundle/dmg/*.dmg
+          if-no-files-found: error

@@ -46,8 +46,22 @@ fn main() {
     // WebKitGTK's DMA-BUF renderer costs ~125 MB PSS here (measured under Xvfb) and is a
     // known source of blank windows on NVIDIA/older Mesa. Users can still opt back in.
     #[cfg(target_os = "linux")]
-    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
-        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    {
+        if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
+        // The AppImage bundles WebKitGTK and some libwayland-* libraries from the CI image
+        // (Ubuntu 22.04) but uses the host's Mesa/EGL and libwayland-client. On newer distros
+        // that mix breaks WebKit's GPU-accelerated compositing and the window stays blank
+        // (only the GTK background is painted). The launcher UI is a static page, so render it
+        // without accelerated compositing; it needs no GPU. Users can opt back in with
+        // WEBKIT_DISABLE_COMPOSITING_MODE=0.
+        if std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        }
+        if std::env::var("WEBKIT_DISABLE_COMPOSITING_MODE").as_deref() == Ok("0") {
+            std::env::remove_var("WEBKIT_DISABLE_COMPOSITING_MODE");
+        }
     }
     let app = tauri::Builder::default()
         .manage(Players::default())
