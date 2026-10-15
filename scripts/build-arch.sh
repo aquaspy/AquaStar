@@ -57,6 +57,7 @@ rm -rf "$WORKDIR"
 mkdir -p "$WORKDIR/FlashPlayer"
 cp -r \
     "${ROOT}/Icon" \
+    "${ROOT}/build" \
     "${ROOT}/LICENSE.md" \
     "${ROOT}/res" \
     "${ROOT}/plugins" \
