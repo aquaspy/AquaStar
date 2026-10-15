@@ -93,11 +93,24 @@ pub struct Players {
     children: Arc<Mutex<Vec<Child>>>,
 }
 
+/// Set by the launcher when it installed a WebKit-only fontconfig.
+/// Player processes drop `FONTCONFIG_FILE` only when this is present, so a
+/// fontconfig the user set themselves still reaches Ruffle and Flash.
+pub const LIMITED_FONTS_MARKER: &str = "AQUASTAR_LITE_FONTCONFIG";
+
+fn without_launcher_fontconfig(cmd: &mut Command) {
+    if std::env::var_os(LIMITED_FONTS_MARKER).is_some() {
+        cmd.env_remove("FONTCONFIG_FILE");
+        cmd.env_remove(LIMITED_FONTS_MARKER);
+    }
+}
+
 impl Players {
     pub fn launch(&self, data: &Path, engine: Engine, swf: &str) -> Result<String, String> {
         let exe = resolve(data, engine)?;
         let mut cmd = Command::new(&exe);
         cmd.args(engine.args(swf));
+        without_launcher_fontconfig(&mut cmd);
         let mut child = cmd.spawn()
             .map_err(|e| format!("could not start {}: {e}", exe.display()))?;
         let pid = child.id();
