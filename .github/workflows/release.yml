@@ -106,9 +106,38 @@ jobs:
         with:
           name: aquastar-macos-x64
           path: release/mac
+      # A '-' after the version (v2.1.1-rc.1, -beta, -alpha, ...) is a prerelease:
+      # publish it as a prerelease and never as Latest. Stable tags leave both
+      # outputs empty. action-gh-release treats an empty prerelease input as
+      # unset, so a new stable release stays a full release and a release that
+      # already exists as a prerelease keeps that flag. Passing prerelease: false
+      # would republish that existing prerelease as a full release.
+      - name: Classify release
+        id: release-kind
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$TAG_NAME" == *-* ]]; then
+            echo "Tag ${TAG_NAME} has a prerelease suffix."
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "make_latest=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          existing="$(gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease 2>/dev/null || true)"
+          if [[ "$existing" == "true" ]]; then
+            echo "Release ${TAG_NAME} already exists as a prerelease; keeping it a prerelease and not Latest."
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "make_latest=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag ${TAG_NAME} is stable; leaving prerelease and make_latest unset."
+          fi
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          prerelease: ${{ steps.release-kind.outputs.prerelease }}
+          make_latest: ${{ steps.release-kind.outputs.make_latest }}
           files: |
             release/linux/**
             release/windows/**
