@@ -21,6 +21,18 @@ test('release staging includes the auxiliary Char Page Studio processes', () => 
   ['Icon', 'res', 'plugins', 'main.js', 'package.json', 'node_modules'].forEach((entry) => {
     assert.ok(staged.indexOf('"${ROOT}/' + entry + '"') !== -1, 'release staging must copy ' + entry);
   });
+  // linux.icon is build/icons. The app does not read that directory at runtime, but
+  // electron-builder does, and a missing directory installs Icon/Icon.png as hicolor/0x0.
+  assert.ok(
+    staged.indexOf('"${ROOT}/build"') !== -1,
+    'release staging must copy build so the hicolor icon set is packaged'
+  );
+  [16, 32, 48, 64, 128, 256, 512].forEach((size) => {
+    const file = path.join(__dirname, '../../build/icons', size + 'x' + size + '.png');
+    const buf = fs.readFileSync(file);
+    assert.strictEqual(buf.readUInt32BE(16), size, file + ' width');
+    assert.strictEqual(buf.readUInt32BE(20), size, file + ' height');
+  });
   assert.ok(buildScript.indexOf('verify-staging.js') !== -1, 'release staging must verify what it staged');
   assert.ok(buildScript.indexOf('FlashPlayer/') !== -1);
   ['charpage-studio-process.js', 'charpage-studio-capture-process.js'].forEach((fileName) => {
