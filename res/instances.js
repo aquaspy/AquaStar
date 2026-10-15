@@ -166,7 +166,8 @@ function _startNativeRuffle(win, swfUrl) {
             'Ruffle desktop status');
     };
     let child = null;
-    const start = () => {
+    const start = (graphicsOverride) => {
+        const graphics = graphicsOverride || constant.normalizeRuffleGraphics(kb.ruffleGraphics);
         setStatus('Preparing Ruffle desktop (first use downloads it from github.com/ruffle-rs)…', false);
         ruffleNative.ensureInstalled(constant.appDataDirectory, kb.ruffleAutoUpdate === true).then((installed) => {
             if (win.isDestroyed()) return;
@@ -174,19 +175,37 @@ function _startNativeRuffle(win, swfUrl) {
             child = ruffleNative.launch(installed.exe, swfUrl, {
                 width: size[0], height: size[1],
                 quality: kb.ruffleQuality,
+                graphics: graphics,
                 saveDirectory: path.join(constant.appDataDirectory, 'ruffle-native-saves')
             });
             setStatus('The game is running in the Ruffle desktop window (' + installed.tag + '). ' +
                 'Closing this window also closes the game.', false);
-            child.on('exit', () => setStatus('Ruffle desktop was closed.', true));
+            const launched = child;
+            launched.on('exit', (code, signal) => {
+                const info = {
+                    graphics: graphics, code: code, signal: signal,
+                    elapsedMs: Date.now() - launched.aquaStarStartedAt,
+                    panicked: launched.aquaStarPanicked,
+                    killedByUs: !!launched.aquaStarKilledByUs || win.isDestroyed()
+                };
+                if (ruffleNative.shouldFallbackToGl(info)) {
+                    console.log('[AquaStar] Ruffle desktop (' + graphics + ') exited abnormally (code ' + code +
+                        ', signal ' + signal + ', ' + info.elapsedMs + ' ms' + (info.panicked ? ', panic' : '') +
+                        '); relaunching with OpenGL. stderr tail: ' + launched.aquaStarStderrTail().slice(-1000));
+                    setStatus('Ruffle desktop crashed with ' + graphics + '; reopening with OpenGL…', false);
+                    start('gl');
+                    return;
+                }
+                setStatus('Ruffle desktop was closed.', true);
+            });
             child.on('error', (e) => setStatus('Could not start Ruffle desktop: ' + e.message, true));
         }).catch((e) => setStatus('Could not prepare Ruffle desktop: ' + e.message, true));
     };
-    win.webContents.once('did-finish-load', start);
+    win.webContents.once('did-finish-load', () => start());
     win.webContents.on('did-navigate-in-page', (event, url) => {
         if (/#relaunch-/.test(url) && (!child || child.exitCode !== null)) start();
     });
-    win.on('closed', () => { if (child && child.exitCode === null) child.kill(); });
+    win.on('closed', () => { if (child && child.exitCode === null) { child.aquaStarKilledByUs = true; child.kill(); } });
 }
 
 /**

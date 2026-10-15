@@ -231,6 +231,12 @@ exports.normalizeRuffleQuality = function (value) {
     return Object.prototype.hasOwnProperty.call(ruffleQualities, value) ? value : 'high';
 };
 
+// Ruffle desktop graphics backend choices (OpenGL default); see res/ruffleGraphics.js.
+const ruffleGraphics = require('./ruffleGraphics.js');
+exports.ruffleGraphicsChoicesFor = ruffleGraphics.choicesFor;
+exports.ruffleGraphicsChoices = ruffleGraphics.choicesFor(process.platform);
+exports.normalizeRuffleGraphics = ruffleGraphics.normalize;
+
 exports.appLanguageChoices = [
     { id: 'system', label: 'System default' },
     { id: 'en-US', label: 'English' },
@@ -251,6 +257,7 @@ const originalOptions = {
     ruffleUpdateChannel: 'latest',
     ruffleAutoUpdate:  true,
     ruffleQuality:     'high',
+    ruffleGraphics:    'gl',
     // Native menu bar on game windows (mirrors shortcuts). Default on.
     showGameMenu:      true,
     // Dev-only escape hatch, warned about on enable in the Settings screen.

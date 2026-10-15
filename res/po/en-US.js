@@ -93,6 +93,7 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "Ruffle Update Channel",
         ruffleAutoUpdate: "Automatically download updates",
         ruffleQuality: "Ruffle Quality",
+        ruffleGraphics: "Ruffle Desktop Graphics",
         showGameMenu: "Show menu above game windows",
         enableDevTools: "Enable DevTools"
     },
@@ -104,6 +105,7 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "Latest uses Ruffle's most recent stable release. Nightly includes newer experimental changes. To apply a channel change, fully close AquaStar and open it again; do not use only the Restart button.",
         ruffleAutoUpdate: "Checks the selected channel in the background every time AquaStar opens. A download is applied after restart.",
         ruffleQuality: "Ruffle render quality. High is sharpest; Low turns off anti-aliasing and is much faster on weak or software-only GPUs. Applies to newly opened game windows.",
+        ruffleGraphics: "Graphics backend for Ruffle desktop (native mode). OpenGL is the most compatible. If another backend crashes right after launch, AquaStar reopens the game with OpenGL automatically. Applies to newly opened game windows.",
         showGameMenu: "Shows a menu bar above game windows with the same commands as the shortcuts. Turn it off for keyboard-only controls.",
         enableDevTools: "Opens the DevTools console automatically on startup."
     },
