@@ -73,7 +73,8 @@ const FLASH: Option<Artifact> = Some(Artifact {
     sha256: "a4b333ac1da12026989549015303d82231982838bccfb544ba5fd188746066f0",
     exe: "flashplayer_32_sa.exe",
 });
-#[cfg(target_os = "macos")]
+// The official projector is x86_64 only. Apple Silicon gets Ruffle.
+#[cfg(all(target_os = "macos", target_arch = "x86_64"))]
 const FLASH: Option<Artifact> = Some(Artifact {
     dir: "flashplayer-32.0.0.465",
     url: "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.dmg",
@@ -83,19 +84,23 @@ const FLASH: Option<Artifact> = Some(Artifact {
 #[cfg(not(any(
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "windows", target_arch = "x86_64"),
-    target_os = "macos"
+    all(target_os = "macos", target_arch = "x86_64"),
 )))]
 const FLASH: Option<Artifact> = None;
 
 impl Engine {
     pub const ALL: [Engine; 2] = [Engine::Flash, Engine::Ruffle];
 
-    /// Flash when this OS has a projector, otherwise Ruffle.
+    /// Flash where a projector exists, except on macOS, where Ruffle is the default.
     pub fn preferred() -> Engine {
-        if Engine::Flash.supported() {
-            Engine::Flash
-        } else {
+        Self::preferred_on(std::env::consts::OS, Engine::Flash.supported())
+    }
+
+    pub fn preferred_on(os: &str, flash_supported: bool) -> Engine {
+        if os == "macos" || !flash_supported {
             Engine::Ruffle
+        } else {
+            Engine::Flash
         }
     }
 
@@ -293,7 +298,7 @@ impl Players {
         }
         let settings = RuffleSettings {
             quality,
-            graphics: RuffleGraphics::Gl,
+            graphics: ruffle::safe_graphics(std::env::consts::OS),
         };
         let mut child = spawn_player(
             exe,
@@ -306,15 +311,16 @@ impl Players {
             let _ = child.wait();
             return Err("AquaStar Lite is closing".into());
         }
+        let backend = safe_backend_name();
         if let Ok(Some(status)) = child.try_wait() {
             return Err(format!(
-                "Ruffle exited immediately with OpenGL ({status}); see the terminal log"
+                "Ruffle exited immediately with {backend} ({status}); see the terminal log"
             ));
         }
         let pid = child.id();
         self.adopt(Engine::Ruffle, child, Arc::new(AtomicBool::new(false)))?;
         Ok(format!(
-            "Ruffle ({}) crashed; relaunched with OpenGL (pid {pid})",
+            "Ruffle ({}) crashed; relaunched with {backend} (pid {pid})",
             from.as_str()
         ))
     }
@@ -387,15 +393,47 @@ impl Players {
     }
 }
 
+/// Nearest `Something.app` that contains this executable. That is `Ruffle.app` or
+/// `Flash Player.app`, not an outer launcher that also ends in `.app`.
+fn containing_app(exe: &Path) -> Option<&Path> {
+    exe.ancestors()
+        .find(|path| path.extension().and_then(|ext| ext.to_str()) == Some("app"))
+}
+
+fn clear_quarantine(exe: &Path) {
+    #[cfg(target_os = "macos")]
+    if let Some(app) = containing_app(exe) {
+        let _ = Command::new("xattr")
+            .args(["-dr", "com.apple.quarantine"])
+            .arg(app)
+            .status();
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = exe;
+    }
+}
+
+fn spawn_failure(exe: &Path, err: std::io::Error) -> String {
+    // errno 86 is EBADARCH. The Intel projector dies this way under arm64 without Rosetta.
+    if err.raw_os_error() == Some(86) {
+        return format!(
+            "could not start {}: bad CPU type (errno 86). The Flash projector is Intel-only. Use Ruffle, or install Rosetta and the x64 app.",
+            exe.display()
+        );
+    }
+    format!("could not start {}: {err}", exe.display())
+}
+
 fn spawn_player(exe: &Path, args: &[String], capture_stderr: bool) -> Result<Child, String> {
+    clear_quarantine(exe);
     let mut cmd = Command::new(exe);
     cmd.args(args);
     if capture_stderr {
         cmd.stderr(Stdio::piped());
     }
     without_launcher_fontconfig(&mut cmd);
-    cmd.spawn()
-        .map_err(|e| format!("could not start {}: {e}", exe.display()))
+    cmd.spawn().map_err(|err| spawn_failure(exe, err))
 }
 
 fn watch_stderr(
@@ -470,12 +508,20 @@ fn log_fallback(report: &ExitReport, tail: &str) {
         .map(|s| s.to_string())
         .unwrap_or_else(|| "null".into());
     eprintln!(
-        "aquastar-lite: Ruffle desktop ({}) exited abnormally (code {code}, signal {signal}, {} ms{}); relaunching with OpenGL. stderr tail: {}",
+        "aquastar-lite: Ruffle desktop ({}) exited abnormally (code {code}, signal {signal}, {} ms{}); relaunching with {}. stderr tail: {}",
         report.graphics.as_str(),
         report.elapsed.as_millis(),
         if report.panicked { ", panic" } else { "" },
+        safe_backend_name(),
         ruffle::log_tail(tail),
     );
+}
+
+fn safe_backend_name() -> &'static str {
+    match ruffle::safe_graphics(std::env::consts::OS) {
+        ruffle::RuffleGraphics::Metal => "Metal",
+        _ => "OpenGL",
+    }
 }
 
 fn resolve(data: &Path, engine: Engine) -> Result<PathBuf, String> {
@@ -547,10 +593,19 @@ fn unpack(url: &str, bytes: &[u8], tmp: &Path) -> Result<(), String> {
 }
 
 #[cfg(target_os = "macos")]
+fn detach_dmg(mount: &Path) {
+    let _ = Command::new("hdiutil")
+        .args(["detach", "-force"])
+        .arg(mount)
+        .status();
+}
+
+#[cfg(target_os = "macos")]
 fn unpack_dmg(bytes: &[u8], tmp: &Path) -> Result<(), String> {
     let dmg = tmp.join("projector.dmg");
     fs::write(&dmg, bytes).map_err(|e| e.to_string())?;
     let mount = tmp.join("mnt");
+    detach_dmg(&mount);
     fs::create_dir_all(&mount).map_err(|e| e.to_string())?;
     let attached = Command::new("hdiutil")
         .args(["attach", "-nobrowse", "-readonly", "-mountpoint"])
@@ -559,13 +614,14 @@ fn unpack_dmg(bytes: &[u8], tmp: &Path) -> Result<(), String> {
         .status()
         .map_err(|e| format!("hdiutil attach failed: {e}"))?;
     if !attached.success() {
+        detach_dmg(&mount);
         return Err(format!("hdiutil attach exited {attached}"));
     }
     let copied = Command::new("ditto")
         .arg(mount.join("Flash Player.app"))
         .arg(tmp.join("Flash Player.app"))
         .status();
-    let _ = Command::new("hdiutil").arg("detach").arg(&mount).status();
+    detach_dmg(&mount);
     let _ = fs::remove_file(&dmg);
     match copied {
         Ok(status) if status.success() => Ok(()),
@@ -630,8 +686,24 @@ mod pin_tests {
             .unwrap_or_else(|| panic!("no pin row for {}", pin.url));
         assert_eq!(row.2, pin.sha256);
         assert_eq!(row.3, pin.exe);
-        assert_eq!(Engine::preferred(), Engine::Flash);
+        assert_eq!(
+            Engine::preferred(),
+            Engine::preferred_on(std::env::consts::OS, true)
+        );
+        if std::env::consts::OS == "macos" {
+            assert_eq!(Engine::preferred(), Engine::Ruffle);
+        } else {
+            assert_eq!(Engine::preferred(), Engine::Flash);
+        }
         assert!(Engine::Flash.supported());
+    }
+
+    #[test]
+    fn mac_prefers_ruffle_even_when_the_intel_projector_exists() {
+        assert_eq!(Engine::preferred_on("macos", true), Engine::Ruffle);
+        assert_eq!(Engine::preferred_on("macos", false), Engine::Ruffle);
+        assert_eq!(Engine::preferred_on("linux", true), Engine::Flash);
+        assert_eq!(Engine::preferred_on("windows", false), Engine::Ruffle);
     }
 }
 

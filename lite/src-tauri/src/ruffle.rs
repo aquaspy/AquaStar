@@ -5,9 +5,10 @@
 //! - `--quality low|medium|high` (high is Ruffle's own default: 4x MSAA; low is no anti-aliasing)
 //! - `--graphics default|vulkan|metal|dx12|gl`
 //!
-//! OpenGL is AquaStar's default. The other backends match the Electron app
-//! (`res/ruffleGraphics.js`): Vulkan on Linux and Windows, DirectX 12 on Windows,
-//! Metal on macOS, and Automatic (`default`, Ruffle picks) everywhere.
+//! The safe backend is OpenGL on Linux and Windows, and Metal on macOS. The other
+//! backends match the Electron app (`res/ruffleGraphics.js`): Vulkan on Linux and
+//! Windows, DirectX 12 on Windows, Metal on macOS, and Automatic (`default`,
+//! Ruffle picks) everywhere.
 
 use serde::Serialize;
 use std::fs;
@@ -16,7 +17,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 pub const SETTINGS_FILE: &str = "settings.json";
-/// A non-OpenGL backend that dies before this, or dies later with a graphics panic, is retried once.
+/// A backend other than the platform default that dies before this, or dies later with a graphics panic, is retried once.
 pub const EARLY_EXIT: Duration = Duration::from_millis(15_000);
 pub const STDERR_TAIL: usize = 8192;
 const LOG_TAIL: usize = 1000;
@@ -66,11 +67,20 @@ pub struct RuffleSettings {
     pub graphics: RuffleGraphics,
 }
 
+/// OpenGL on Linux and Windows. Metal on macOS. The v0.7.1 Mac binary links Metal and does not link OpenGL.
+pub fn safe_graphics(platform: &str) -> RuffleGraphics {
+    if platform == "macos" {
+        RuffleGraphics::Metal
+    } else {
+        RuffleGraphics::Gl
+    }
+}
+
 impl Default for RuffleSettings {
     fn default() -> Self {
         Self {
             quality: RuffleQuality::High,
-            graphics: RuffleGraphics::Gl,
+            graphics: safe_graphics(std::env::consts::OS),
         }
     }
 }
@@ -150,7 +160,7 @@ pub fn normalize_graphics(value: &str, platform: &str) -> RuffleGraphics {
         "metal" => RuffleGraphics::Metal,
         "dx12" => RuffleGraphics::Dx12,
         "default" => RuffleGraphics::Automatic,
-        _ => return RuffleGraphics::Gl,
+        _ => return safe_graphics(platform),
     };
     if graphics_choices(platform)
         .iter()
@@ -158,7 +168,7 @@ pub fn normalize_graphics(value: &str, platform: &str) -> RuffleGraphics {
     {
         graphics
     } else {
-        RuffleGraphics::Gl
+        safe_graphics(platform)
     }
 }
 
@@ -189,7 +199,7 @@ impl RuffleSettings {
         let graphics = raw
             .get("ruffleGraphics")
             .and_then(|v| v.as_str())
-            .unwrap_or("gl");
+            .unwrap_or(safe_graphics(platform).as_str());
         Self {
             quality: normalize_quality(quality),
             graphics: normalize_graphics(graphics, platform),
@@ -247,12 +257,16 @@ pub fn ruffle_args(swf: &str, settings: &RuffleSettings, platform: &str) -> Vec<
     .collect()
 }
 
-/// A non-GL backend that exits abnormally within [`EARLY_EXIT`], or exits abnormally
-/// after printing a panic / wgpu graphics error, is relaunched with OpenGL.
-/// A clean exit, a process we killed, and OpenGL itself never qualify, so the
-/// relaunch cannot loop.
+/// A backend other than [`safe_graphics`] that exits abnormally within [`EARLY_EXIT`],
+/// or exits abnormally after printing a panic / wgpu graphics error, is relaunched
+/// with the platform default. A clean exit, a process we killed, and the safe backend
+/// itself never qualify, so the relaunch cannot loop.
 pub fn should_fallback(info: &ExitReport) -> bool {
-    if info.graphics == RuffleGraphics::Gl || info.killed_by_us {
+    should_fallback_on(info, std::env::consts::OS)
+}
+
+pub fn should_fallback_on(info: &ExitReport, platform: &str) -> bool {
+    if info.graphics == safe_graphics(platform) || info.killed_by_us {
         return false;
     }
     let abnormal = info.signal.is_some() || matches!(info.code, Some(code) if code != 0);
@@ -371,10 +385,10 @@ mod tests {
 
         assert_eq!(normalize_graphics("dx12", "windows"), RuffleGraphics::Dx12);
         assert_eq!(normalize_graphics("dx12", "linux"), RuffleGraphics::Gl);
-        assert_eq!(normalize_graphics("dx12", "macos"), RuffleGraphics::Gl);
+        assert_eq!(normalize_graphics("dx12", "macos"), RuffleGraphics::Metal);
         assert_eq!(normalize_graphics("metal", "macos"), RuffleGraphics::Metal);
         assert_eq!(normalize_graphics("metal", "linux"), RuffleGraphics::Gl);
-        assert_eq!(normalize_graphics("vulkan", "macos"), RuffleGraphics::Gl);
+        assert_eq!(normalize_graphics("vulkan", "macos"), RuffleGraphics::Metal);
         assert_eq!(
             normalize_graphics("vulkan", "linux"),
             RuffleGraphics::Vulkan
@@ -466,6 +480,34 @@ mod tests {
         ));
         assert!(looks_like_panic("Validation Error"));
         assert!(!looks_like_panic("INFO loaded movie"));
+    }
+
+    #[test]
+    fn metal_is_the_mac_default_and_opengl_falls_back_to_it() {
+        assert_eq!(safe_graphics("macos"), RuffleGraphics::Metal);
+        assert_eq!(safe_graphics("linux"), RuffleGraphics::Gl);
+        assert_eq!(safe_graphics("windows"), RuffleGraphics::Gl);
+        let crashed = |graphics| report(graphics, Some(101), None, 1000, true, false);
+        assert!(should_fallback_on(&crashed(RuffleGraphics::Gl), "macos"));
+        assert!(!should_fallback_on(
+            &crashed(RuffleGraphics::Metal),
+            "macos"
+        ));
+        assert!(!should_fallback_on(&crashed(RuffleGraphics::Gl), "linux"));
+        assert!(should_fallback_on(&crashed(RuffleGraphics::Metal), "linux"));
+        assert_eq!(
+            RuffleSettings::parse(r#"{"ruffleQuality":"high"}"#, "macos").graphics,
+            RuffleGraphics::Metal
+        );
+        let mac = ruffle_args(
+            "x.swf",
+            &RuffleSettings {
+                quality: RuffleQuality::High,
+                graphics: safe_graphics("macos"),
+            },
+            "macos",
+        );
+        assert!(mac.windows(2).any(|w| w == ["--graphics", "metal"]));
     }
 
     #[test]

@@ -17,6 +17,11 @@
     "active": true,
     "targets": ["deb", "appimage", "nsis", "dmg"],
     "category": "Game",
+    "macOS": {
+      "signingIdentity": "-",
+      "hardenedRuntime": false,
+      "minimumSystemVersion": "11.0"
+    },
     "icon": [
       "icons/16x16.png",
       "icons/32x32.png",
