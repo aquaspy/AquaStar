@@ -70,6 +70,17 @@ function getPluginName() {
     return pluginName;
 }
 
+// Must match the bundled binaries in FlashPlayer/ (Clean Flash / darktohka patched builds;
+// ARM stays on Google's last ChromeOS build).
+function getPluginVersion() {
+    switch (process.platform) {
+    case 'win32':  return '34.0.0.376';
+    case 'darwin': return '34.0.0.372';
+    case 'linux':  return process.arch == 'arm' ? '32.0.0.445' : '34.0.0.137';
+    default:       return '32.0.0.465';
+    }
+}
+
 let activeTrustManager = null;
 
 const flashTrustManager = (app, appRootPath, trustedPath, appName) =>{
@@ -83,7 +94,7 @@ const flashTrustManager = (app, appRootPath, trustedPath, appName) =>{
         console.error('[AquaStar] PPAPI Flash plugin not found:', flashPluginPath);
     }
     app.commandLine.appendSwitch('ppapi-flash-path', flashPluginPath);
-    app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.465');
+    app.commandLine.appendSwitch('ppapi-flash-version', getPluginVersion());
 
     const flashPath = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot');
     activeTrustManager = flashTrust.initSync(appName, flashPath);
