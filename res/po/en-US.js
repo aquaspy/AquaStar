@@ -3,7 +3,14 @@ function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else ret
 exports.titleMessages = {
     doneSavedAs: "Done! Saved as ",
     recording: "RECORDING",
-    alreadyRecording: "You are already recording another window!"
+    alreadyRecording: "You are already recording another window!",
+    nativeCaptureStarting: "The desktop player is still starting.",
+    nativeCaptureClosed: "The desktop player is not running.",
+    nativeCaptureMacosDenied: "Screen recording permission is off. Allow AquaStar to record the screen in System Settings, then try again.",
+    nativeCaptureWayland: "This Wayland session cannot capture another application's window. Use an X11 session to screenshot or record the desktop player.",
+    nativeCaptureAmbiguous: "More than one desktop player window matches, so nothing was captured.",
+    nativeCaptureNoWindow: "Could not find the desktop player window.",
+    nativeCaptureEmptyFrame: "The capture came back empty."
 }
 
 exports.dialogMessages = {
