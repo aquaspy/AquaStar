@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Build AquaStar for a single platform/arch with the matching PPAPI Flash binary.
-# Usage: bash scripts/build-arch.sh <linux|win> <x64|ia32|armv7l>
+# Usage: bash scripts/build-arch.sh <linux|win|mac> <x64|ia32|armv7l>
 set -euo pipefail
 
 PLATFORM="${1:-}"
 ARCH="${2:-}"
 
 if [ -z "$PLATFORM" ] || [ -z "$ARCH" ]; then
-    echo "Usage: $0 <linux|win> <x64|ia32|armv7l>" >&2
+    echo "Usage: $0 <linux|win|mac> <x64|ia32|armv7l>" >&2
     exit 1
 fi
 
@@ -32,6 +32,10 @@ case "${PLATFORM}:${ARCH}" in
         FLASH="pepflashplayer32bits.dll"
         BUILD_ARGS=(npx electron-builder --win nsis --ia32 --publish never)
         ;;
+    mac:x64)
+        FLASH="PepperFlashPlayer.plugin"
+        BUILD_ARGS=(npx electron-builder --mac zip --x64 --publish never)
+        ;;
     *)
         echo "Unsupported platform/arch: ${PLATFORM} ${ARCH}" >&2
         exit 1
@@ -41,7 +45,7 @@ esac
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORKDIR="${ROOT}/work-${PLATFORM}-${ARCH}"
 
-if [ ! -f "${ROOT}/FlashPlayer/${FLASH}" ]; then
+if [ ! -e "${ROOT}/FlashPlayer/${FLASH}" ]; then
     echo "Flash plugin not found: ${ROOT}/FlashPlayer/${FLASH}" >&2
     exit 1
 fi
@@ -67,11 +71,19 @@ cp -r \
     "${ROOT}/package-lock.json" \
     "${ROOT}/node_modules" \
     "$WORKDIR/"
-cp "${ROOT}/FlashPlayer/${FLASH}" "$WORKDIR/FlashPlayer/"
+if [ -d "${ROOT}/FlashPlayer/${FLASH}" ]; then
+    cp -R "${ROOT}/FlashPlayer/${FLASH}" "$WORKDIR/FlashPlayer/"
+else
+    cp "${ROOT}/FlashPlayer/${FLASH}" "$WORKDIR/FlashPlayer/"
+fi
 
 # Pinned Ruffle desktop (SHA-256 checked) next to the Flash plugin; skipped for targets
 # without an official build (armv7l), which keep the on-demand download.
-case "$PLATFORM" in win) RUFFLE_PLATFORM=win32 ;; *) RUFFLE_PLATFORM="$PLATFORM" ;; esac
+case "$PLATFORM" in
+    win) RUFFLE_PLATFORM=win32 ;;
+    mac) RUFFLE_PLATFORM=darwin ;;
+    *) RUFFLE_PLATFORM="$PLATFORM" ;;
+esac
 node "${ROOT}/scripts/fetch-ruffle-native.js" "$RUFFLE_PLATFORM" "$ARCH" "$WORKDIR"
 
 # The staging list above is kept by hand, so check the result with the staged copy of the

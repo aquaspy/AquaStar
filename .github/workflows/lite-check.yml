@@ -12,6 +12,7 @@ on:
     branches: [main, dev]
     paths:
       - 'lite/**'
+      - '.github/workflows/lite-*.yml'
 
 jobs:
   test:
@@ -29,3 +30,15 @@ jobs:
       - name: cargo test
         working-directory: lite/src-tauri
         run: cargo test --locked
+
+  macos-check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: lite/src-tauri -> target
+      - name: cargo check
+        working-directory: lite/src-tauri
+        run: cargo check --locked

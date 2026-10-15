@@ -50,7 +50,7 @@ Mark items with `[x]` when verified. Leave `[ ]` if not run yet.
 
 ## Local plugins (optional)
 
-- [ ] Drop a copy of `plugins/_template` (renamed id) under `%AppData%/AquaStar/plugins/`
+- [ ] Drop a copy of `plugins/_template` (renamed id) under `%AppData%/AquaStar/plugins/` (macOS: `~/Library/Application Support/AquaStar/plugins/`)
 - [ ] Settings → enable local plugins → trust the plugin → select it → restart
 - [ ] App loads that plugin’s primary URL; bundled AQW is not required for that session
 - [ ] Disable / untrust and confirm it no longer activates
