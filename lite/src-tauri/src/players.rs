@@ -106,9 +106,23 @@ impl Engine {
         }
     }
 
-    fn args(&self, swf: &str, settings: &RuffleSettings) -> Vec<String> {
+    fn args(
+        &self,
+        swf: &str,
+        settings: &RuffleSettings,
+        save_directory: Option<&Path>,
+    ) -> Vec<String> {
         match self {
-            Engine::Ruffle => ruffle::ruffle_args(swf, settings, std::env::consts::OS),
+            Engine::Ruffle => {
+                let mut args = ruffle::ruffle_args(swf, settings, std::env::consts::OS);
+                if let Some(dir) = save_directory {
+                    let swf_arg = args.pop().expect("ruffle args end with the swf");
+                    args.push("--save-directory".to_string());
+                    args.push(dir.to_string_lossy().into_owned());
+                    args.push(swf_arg);
+                }
+                args
+            }
             Engine::Flash => vec![swf.to_string()],
         }
     }
@@ -146,9 +160,10 @@ impl Players {
         engine: Engine,
         swf: &str,
         settings: &RuffleSettings,
+        save_directory: Option<&Path>,
     ) -> Result<String, String> {
         let exe = resolve(data, engine)?;
-        self.launch_at(&exe, engine, swf, settings)
+        self.launch_at(&exe, engine, swf, settings, save_directory)
     }
 
     fn launch_at(
@@ -157,17 +172,23 @@ impl Players {
         engine: Engine,
         swf: &str,
         settings: &RuffleSettings,
+        save_directory: Option<&Path>,
     ) -> Result<String, String> {
         let _gate = self.launch_gate.lock().unwrap();
         if let Some(msg) = self.prepare(engine) {
             return Ok(msg);
         }
+        let save_directory = save_directory.map(Path::to_path_buf);
         let settings = settings.for_platform(std::env::consts::OS);
         let graphics = settings.graphics;
         // Only a non-OpenGL Ruffle is watched. The relaunch is always OpenGL and is not watched,
         // so a second crash cannot start another copy.
         let capture = engine == Engine::Ruffle && graphics != RuffleGraphics::Gl;
-        let mut child = spawn_player(exe, &engine.args(swf, &settings), capture)?;
+        let mut child = spawn_player(
+            exe,
+            &engine.args(swf, &settings, save_directory.as_deref()),
+            capture,
+        )?;
         let started = Instant::now();
         let panicked = Arc::new(AtomicBool::new(false));
         let killed = Arc::new(AtomicBool::new(false));
@@ -184,7 +205,13 @@ impl Players {
                 // be relaunched just because the saved graphics backend is not OpenGL.
                 if capture && ruffle::should_fallback(&report) {
                     log_fallback(&report, &tail.lock().unwrap());
-                    return self.relaunch_gl(exe, swf, settings.quality, graphics);
+                    return self.relaunch_gl(
+                        exe,
+                        swf,
+                        settings.quality,
+                        graphics,
+                        save_directory.as_deref(),
+                    );
                 }
                 Err(format!(
                     "{engine:?} exited immediately ({status}); see the terminal log"
@@ -205,6 +232,7 @@ impl Players {
                         exe.to_path_buf(),
                         swf.to_string(),
                         settings.quality,
+                        save_directory,
                     );
                 }
                 Ok(format!("{engine:?} started (pid {pid})"))
@@ -258,6 +286,7 @@ impl Players {
         swf: &str,
         quality: RuffleQuality,
         from: RuffleGraphics,
+        save_directory: Option<&Path>,
     ) -> Result<String, String> {
         if self.shutting_down.load(Ordering::SeqCst) {
             return Err("AquaStar Lite is closing".into());
@@ -266,7 +295,11 @@ impl Players {
             quality,
             graphics: RuffleGraphics::Gl,
         };
-        let mut child = spawn_player(exe, &Engine::Ruffle.args(swf, &settings), false)?;
+        let mut child = spawn_player(
+            exe,
+            &Engine::Ruffle.args(swf, &settings, save_directory),
+            false,
+        )?;
         std::thread::sleep(Duration::from_millis(800));
         if self.shutting_down.load(Ordering::SeqCst) {
             let _ = child.kill();
@@ -298,6 +331,7 @@ impl Players {
         exe: PathBuf,
         swf: String,
         quality: RuffleQuality,
+        save_directory: Option<PathBuf>,
     ) {
         let players = self.clone();
         std::thread::spawn(move || loop {
@@ -334,7 +368,9 @@ impl Players {
                     return;
                 }
             }
-            if let Err(e) = players.relaunch_gl(&exe, &swf, quality, graphics) {
+            if let Err(e) =
+                players.relaunch_gl(&exe, &swf, quality, graphics, save_directory.as_deref())
+            {
                 eprintln!("aquastar-lite: OpenGL relaunch failed: {e}");
             }
             return;
@@ -660,7 +696,7 @@ mod tests {
         let players = Players::default();
         let _stop = Stop(players.clone());
         let msg = players
-            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low())
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap();
         assert!(msg.contains("relaunched with OpenGL"), "{msg}");
         let lines = log_lines(&log);
@@ -692,7 +728,7 @@ mod tests {
         );
         let players = Players::default();
         let err = players
-            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low())
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap_err();
         assert!(err.contains("OpenGL"), "{err}");
         let lines = log_lines(&log);
@@ -712,7 +748,7 @@ mod tests {
         );
         let players = Players::default();
         let err = players
-            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low())
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap_err();
         assert!(err.contains("exited immediately"), "{err}");
         assert!(!err.contains("OpenGL"), "{err}");
@@ -738,7 +774,7 @@ mod tests {
         let players = Players::default();
         let _stop = Stop(players.clone());
         let msg = players
-            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low())
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap();
         assert!(msg.contains("started"), "{msg}");
         let ready = wait_until(|| {
@@ -773,7 +809,7 @@ mod tests {
         );
         let players = Players::default();
         let err = players
-            .launch_at(&exe, Engine::Flash, "movie.swf", &automatic_low())
+            .launch_at(&exe, Engine::Flash, "movie.swf", &automatic_low(), None)
             .unwrap_err();
         assert!(err.contains("Flash"), "{err}");
         assert!(!err.contains("OpenGL"), "{err}");
@@ -791,7 +827,7 @@ mod tests {
         );
         let players = Players::default();
         players
-            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low())
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap();
         players.kill_all();
         std::thread::sleep(Duration::from_millis(500));
@@ -811,10 +847,22 @@ mod tests {
         let players = Players::default();
         let _stop = Stop(players.clone());
         players
-            .launch_at(&exe, Engine::Flash, "movie.swf", &RuffleSettings::default())
+            .launch_at(
+                &exe,
+                Engine::Flash,
+                "movie.swf",
+                &RuffleSettings::default(),
+                None,
+            )
             .unwrap();
         let msg = players
-            .launch_at(&exe, Engine::Flash, "again.swf", &RuffleSettings::default())
+            .launch_at(
+                &exe,
+                Engine::Flash,
+                "again.swf",
+                &RuffleSettings::default(),
+                None,
+            )
             .unwrap();
         assert!(msg.contains("already"), "{msg}");
         assert_eq!(log_lines(&log), ["movie.swf"]);
@@ -839,10 +887,17 @@ mod tests {
                 Engine::Ruffle,
                 "ruffle.swf",
                 &RuffleSettings::default(),
+                None,
             )
             .unwrap();
         let msg = players
-            .launch_at(&exe, Engine::Flash, "flash.swf", &RuffleSettings::default())
+            .launch_at(
+                &exe,
+                Engine::Flash,
+                "flash.swf",
+                &RuffleSettings::default(),
+                None,
+            )
             .unwrap();
         assert!(msg.contains("Flash"), "{msg}");
         assert!(!msg.contains("already"), "{msg}");
@@ -861,6 +916,47 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
+    #[test]
+    fn opengl_relaunch_keeps_the_portable_save_directory() {
+        let dir = scratch("saves");
+        let log = dir.join("args");
+        let saves = dir.join("ruffle-saves");
+        let exe = write_script(
+            &dir,
+            &format!(
+                "printf '%s\\n' \"$*\" >> '{}'\n\
+             case \" $* \" in\n\
+               *' --graphics gl '*) sleep 60 ;;\n\
+               *) echo \"thread 'main' panicked at wgpu error: Out of Memory\" >&2; exit 101 ;;\n\
+             esac",
+                log.display()
+            ),
+        );
+        let players = Players::default();
+        let _stop = Stop(players.clone());
+        let msg = players
+            .launch_at(
+                &exe,
+                Engine::Ruffle,
+                "movie.swf",
+                &automatic_low(),
+                Some(&saves),
+            )
+            .unwrap();
+        assert!(msg.contains("relaunched with OpenGL"), "{msg}");
+        let lines = log_lines(&log);
+        assert_eq!(lines.len(), 2, "{lines:?}");
+        let save = saves.to_string_lossy();
+        for line in &lines {
+            assert!(line.contains("--save-directory"), "{line}");
+            assert!(line.contains(save.as_ref()), "{line}");
+            assert!(line.ends_with("movie.swf"), "{line}");
+        }
+        assert!(lines[1].contains("--graphics gl"), "{lines:?}");
+        drop(_stop);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     fn wait_until(mut pred: impl FnMut() -> bool) -> bool {
         let start = Instant::now();
         while start.elapsed() < Duration::from_secs(8) {
@@ -870,5 +966,75 @@ mod tests {
             std::thread::sleep(Duration::from_millis(50));
         }
         pred()
+    }
+}
+
+#[cfg(test)]
+mod save_directory_tests {
+    use super::*;
+    use crate::ruffle::{RuffleGraphics, RuffleQuality, RuffleSettings};
+
+    const SWF: &str = "https://game.aq.com/game/gamefiles/Loader4.swf?ver=b";
+    const SAVE: &str = r"C:\Games\AquaStar\data\ruffle-saves";
+
+    fn low_automatic() -> RuffleSettings {
+        RuffleSettings {
+            quality: RuffleQuality::Low,
+            graphics: RuffleGraphics::Automatic,
+        }
+    }
+
+    #[test]
+    fn ruffle_adds_save_directory_before_the_swf_only_when_set() {
+        let settings = low_automatic();
+        assert_eq!(
+            Engine::Ruffle.args(SWF, &settings, None),
+            vec![
+                "--tcp-connections".to_string(),
+                "allow".to_string(),
+                "--storage".to_string(),
+                "disk".to_string(),
+                "--letterbox".to_string(),
+                "on".to_string(),
+                "--quality".to_string(),
+                "low".to_string(),
+                "--graphics".to_string(),
+                "default".to_string(),
+                "--no-gui".to_string(),
+                SWF.to_string(),
+            ]
+        );
+        assert_eq!(
+            Engine::Ruffle.args(SWF, &settings, Some(Path::new(SAVE))),
+            vec![
+                "--tcp-connections".to_string(),
+                "allow".to_string(),
+                "--storage".to_string(),
+                "disk".to_string(),
+                "--letterbox".to_string(),
+                "on".to_string(),
+                "--quality".to_string(),
+                "low".to_string(),
+                "--graphics".to_string(),
+                "default".to_string(),
+                "--no-gui".to_string(),
+                "--save-directory".to_string(),
+                SAVE.to_string(),
+                SWF.to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn flash_args_ignore_the_save_directory() {
+        let settings = RuffleSettings::default();
+        assert_eq!(
+            Engine::Flash.args(SWF, &settings, None),
+            vec![SWF.to_string()]
+        );
+        assert_eq!(
+            Engine::Flash.args(SWF, &settings, Some(Path::new(SAVE))),
+            vec![SWF.to_string()]
+        );
     }
 }
