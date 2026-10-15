@@ -93,6 +93,7 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "",
         ruffleAutoUpdate: "",
         ruffleQuality: "",
+        ruffleGraphics: "",
         showGameMenu: "",
         enableDevTools: ""
     },
@@ -104,6 +105,7 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "",
         ruffleAutoUpdate: "",
         ruffleQuality: "",
+        ruffleGraphics: "",
         showGameMenu: "",
         enableDevTools: ""
     },

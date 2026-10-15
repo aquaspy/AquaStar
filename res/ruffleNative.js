@@ -128,6 +128,8 @@ exports.buildArgs = function (swfUrl, opts) {
     const args = ['--tcp-connections', 'allow', '--storage', 'disk', '--letterbox', 'on'];
     if (opts.width && opts.height) args.push('--width', String(opts.width), '--height', String(opts.height));
     if (/^(low|medium|high)$/.test(opts.quality || '')) args.push('--quality', opts.quality);
+    // OpenGL unless another known backend is chosen (see const.js ruffleGraphicsBackends).
+    args.push('--graphics', /^(default|vulkan|metal|dx12|gl)$/.test(opts.graphics || '') ? opts.graphics : 'gl');
     if (opts.saveDirectory) args.push('--save-directory', opts.saveDirectory);
     // AquaStar's own window and menus stay the control surface; hide Ruffle's menu bar.
     args.push('--no-gui');
@@ -137,9 +139,36 @@ exports.buildArgs = function (swfUrl, opts) {
 
 const running = new Set();
 
+// A non-GL backend that dies right after launch, or with a Rust panic (e.g. wgpu
+// "Out of Memory" on Vulkan with Intel Mesa, ruffle-rs/ruffle#24920), is retried with
+// OpenGL. A clean exit (code 0, the user closed the window) never triggers it.
+const EARLY_EXIT_MS = 15000;
+exports.EARLY_EXIT_MS = EARLY_EXIT_MS;
+exports.shouldFallbackToGl = function (info) {
+    if (!info || info.graphics === 'gl') return false;
+    const abnormal = (info.code !== 0 && info.code !== null && info.code !== undefined) || !!info.signal;
+    if (!abnormal || info.killedByUs) return false;
+    return !!info.panicked || (info.elapsedMs >= 0 && info.elapsedMs < EARLY_EXIT_MS);
+};
+exports.looksLikePanic = function (text) {
+    return /panicked at|Out of Memory|wgpu error|Validation Error/i.test(text || '');
+};
+
 exports.launch = function (exe, swfUrl, opts) {
-    const child = spawn(exe, exports.buildArgs(swfUrl, opts), { stdio: 'ignore', windowsHide: false });
+    const child = spawn(exe, exports.buildArgs(swfUrl, opts), { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: false });
     child.aquaStarExe = exe;
+    child.aquaStarStartedAt = Date.now();
+    child.aquaStarPanicked = false;
+    // Keep only the tail of stderr: enough to spot a panic without growing unbounded.
+    let tail = '';
+    if (child.stderr) {
+        child.stderr.setEncoding('utf8');
+        child.stderr.on('data', (chunk) => {
+            tail = (tail + chunk).slice(-8192);
+            if (exports.looksLikePanic(tail)) child.aquaStarPanicked = true;
+        });
+    }
+    child.aquaStarStderrTail = () => tail;
     running.add(child);
     child.on('exit', () => running.delete(child));
     child.on('error', (e) => { running.delete(child); console.log('[AquaStar] Ruffle desktop failed: ' + e.message); });
@@ -148,7 +177,7 @@ exports.launch = function (exe, swfUrl, opts) {
 
 // Native players are children of AquaStar: close them with it.
 exports.killAll = function () {
-    running.forEach((child) => { try { child.kill(); } catch (e) { /* already gone */ } });
+    running.forEach((child) => { try { child.aquaStarKilledByUs = true; child.kill(); } catch (e) { /* already gone */ } });
     running.clear();
 };
 

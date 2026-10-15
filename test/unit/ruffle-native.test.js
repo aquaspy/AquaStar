@@ -70,3 +70,39 @@ test('a locked old version is left for a later launch instead of failing', () =>
   assert.ok(fs.existsSync(path.join(data, 'ruffle-native', 'v0.7.0')));
   fs.rmSync(data, { recursive: true, force: true });
 });
+
+test('Ruffle desktop uses OpenGL by default and passes a chosen backend', () => {
+  const args = native.buildArgs('x.swf', {});
+  assert.strictEqual(args[args.indexOf('--graphics') + 1], 'gl');
+  const vk = native.buildArgs('x.swf', { graphics: 'vulkan' });
+  assert.strictEqual(vk[vk.indexOf('--graphics') + 1], 'vulkan');
+  const bad = native.buildArgs('x.swf', { graphics: 'vulkan --evil' });
+  assert.strictEqual(bad[bad.indexOf('--graphics') + 1], 'gl');
+});
+
+test('a crashing non-GL backend falls back to OpenGL, other exits do not', () => {
+  const f = native.shouldFallbackToGl;
+  assert.strictEqual(f({ graphics: 'vulkan', code: 101, elapsedMs: 2000 }), true);
+  assert.strictEqual(f({ graphics: 'vulkan', code: null, signal: 'SIGABRT', elapsedMs: 3000 }), true);
+  assert.strictEqual(f({ graphics: 'default', code: 101, elapsedMs: 600000, panicked: true }), true);
+  assert.strictEqual(f({ graphics: 'vulkan', code: 1, elapsedMs: 600000 }), false);
+  assert.strictEqual(f({ graphics: 'vulkan', code: 0, elapsedMs: 1000 }), false);
+  assert.strictEqual(
+    f({ graphics: 'vulkan', code: null, signal: 'SIGTERM', elapsedMs: 1000, killedByUs: true }),
+    false
+  );
+  assert.strictEqual(f({ graphics: 'gl', code: 101, elapsedMs: 1000, panicked: true }), false);
+  assert.ok(native.looksLikePanic("thread 'main' panicked at wgpu-core: Out of Memory"));
+  assert.ok(!native.looksLikePanic('INFO loaded movie'));
+});
+
+test('graphics choices default to OpenGL and are filtered per platform', () => {
+  const graphics = require('../../res/ruffleGraphics.js');
+  const constSrc = require('fs').readFileSync(require('path').join(__dirname, '../../res/const.js'), 'utf8');
+  assert.ok(/ruffleGraphics:\s*'gl'/.test(constSrc));
+  assert.strictEqual(graphics.normalize('nope'), 'gl');
+  const ids = (p) => graphics.choicesFor(p).map((c) => c.id);
+  assert.deepStrictEqual(ids('linux'), ['gl', 'vulkan', 'default']);
+  assert.deepStrictEqual(ids('darwin'), ['gl', 'metal', 'default']);
+  assert.deepStrictEqual(ids('win32'), ['gl', 'vulkan', 'dx12', 'default']);
+});
