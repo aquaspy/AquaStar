@@ -120,6 +120,7 @@ exports.wrapSwfUrl = function(swfUrl, opts) {
 // see res/ruffle_wrapper.html. Covers the active plugin's Flash games when Settings →
 // renderMode is "ruffle".
 const ruffleWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_wrapper.html'));
+exports.ruffleNativePageUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_native.html'));
 exports.isRuffleEligible = function(swfUrl) {
     if (!swfUrl) return false;
     // HTML/stage pages are never Ruffle SWF targets.
@@ -198,7 +199,8 @@ exports.resolveRecordingFormat = function(id, hasAudio) {
 // is new and marked experimental - see isRuffleEligible()/wrapRuffleUrl() above.
 const renderModes = {
     'flash':  { label: 'Flash Player' },
-    'ruffle': { label: 'Ruffle (Experimental)' }
+    'ruffle': { label: 'Ruffle (Experimental)' },
+    'ruffle-native': { label: 'Ruffle desktop, native (Experimental)' }
 }
 exports.renderModes = renderModes;
 exports.defaultRenderMode = 'flash';
