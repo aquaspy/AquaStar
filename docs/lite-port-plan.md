@@ -1,12 +1,12 @@
 # Port the companion onto AquaStar Lite
 
-Lite stays a Tauri 2 launcher, and the game stays an external process. Ruffle desktop or the Linux Flash projector draws the game. The shell webview never hosts Flash. This plan copies the Electron features that still make sense under that rule, postpones the HTML companion tools, and leaves PPAPI, in-page Ruffle, and the plugin host on the Electron app. Landing order is L1 through L12. L1, L2, and L3 are the playable launcher. L4 through L12 are the companion tools. The never list is Appendix G, not a pull request.
+Electron stays the main AquaStar app permanently. Lite is the light alternative. The game stays an external process, and the shell webview never hosts Flash. Flash standalone is the default player on Linux, Windows, and macOS. Ruffle stays available. This program is L1, then L2, then L3. Inventory sync, recording, and a second game process are out. Appendix H lists what is deferred.
 
 ## How to read this
 
 One box is one unit of work. Every box names the evidence that checks it. A nested box is a sub-step of the box above it. Check a box only when its evidence exists, a file, a log line, a screenshot, a test run, or a SHA. The body is a how-to. The appendices explain and record.
 
-The program runs `pstack/skills/poteto-mode/playbooks/autopilot-stack.md`. The operator lands the stack. Every pull request stops at stack-ready. None of L1 through L12 is an operator-owned build. The operator's items are the open questions in Appendix A.
+The program runs `pstack/skills/poteto-mode/playbooks/autopilot-stack.md`. The operator lands the stack. L1, L2, and L3 stop at stack-ready. The owner does not merge them. The operator's remaining questions are in Appendix A.
 
 Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
@@ -35,9 +35,9 @@ Feature facts are Appendix F. The include, later, and drop calls are Appendix G.
 - [ ] Spawn one owner per PR with the full lifecycle the execution playbook names.
 - [ ] Follow this dependency graph. Start dependent work only after its parent merges, or base it on the parent branch when the execution playbook stacks.
   - [ ] L1 branches from `main`.
-  - [ ] L2 after L1. L3 after L2. L4 after L3. L5 after L4. L6 after L5. L7 after L6. L8 after L7. L9 after L8. L10 after L9. L11 after L10. L12 after L11.
+  - [ ] L2 after L1. L3 after L2.
 - [ ] Hold the file boundaries. Every owner edits only `lite/**` and the Lite workflows under `.github/workflows/lite-*.yml`. No owner edits `main.js`, `res/`, or `plugins/`.
-- [ ] Hold the review gate. L1 through L12 change an interaction. They wait for the operator's review in chat with screenshots and a video before merge.
+- [ ] Hold the review gate. L1, L2, and L3 change an interaction. They wait for the operator's review in chat with screenshots and a video before merge.
 
 ### PR mechanics, for every PR
 
@@ -72,20 +72,22 @@ Each live lane runs on its own cloud VM at the PR head. `control-ui` is not in t
 - [ ] Edit `lite/src-tauri/src/players.rs`.
 - [ ] Edit `lite/src-tauri/src/main.rs`.
 - [ ] Edit `lite/ui/index.html`, `lite/ui/main.js`, and `lite/ui/style.css`.
-- [ ] Create `lite/src-tauri/src/settings.rs` for `ruffleQuality` and `ruffleGraphics` if pull request 47 is still unmerged.
+- [ ] Carry `lite/src-tauri/src/ruffle.rs` from pull request 47. That pull request is still open.
 
 **Build.**
 
-- [ ] A second Play click reuses the live child instead of spawning another one in `Players::launch`.
+- [ ] A second Play click reuses the live child instead of spawning another one in `Players::launch`. Switching engines replaces that child so only one game runs.
 - [ ] Closing the `main` window still calls `Players::kill_all`.
 - [ ] A second process start focuses the existing launcher. Add the Tauri single-instance hook in `main.rs`.
 - [ ] Pass `--quality` and `--graphics` from saved settings. Default graphics is `gl`. After a non-`gl` child exits in the early window, relaunch once with `--graphics gl`, matching `shouldFallbackToGl` in `res/ruffleNative.js`.
-- [ ] If pull request 47 has merged, rebase onto it and do not rewrite `ruffle.rs`.
+- [ ] Pin Adobe's official projector 32.0.0.465 on Windows and macOS, next to the Linux pin that is already 32.0.0.465. Adobe's CDN has no standalone projector for 32.0.0.344. The Artix PPAPI build of that version is not a projector, so it is not downloaded.
+- [ ] Windows pin is `https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.exe` with SHA-256 `a4b333ac1da12026989549015303d82231982838bccfb544ba5fd188746066f0`. The file is a 32-bit PE. macOS pin is `https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.dmg` with SHA-256 `236ecef54a7d6c3eed739c74b7e14946b07b6156cbcedda3bbbf444f1d17023a`.
+- [ ] When Flash is supported, the Flash button is the default. Do not start a player until the user clicks.
 
 **You see.**
 
-- [ ] One Ruffle window after two Play clicks, and no Ruffle process after the launcher closes.
-- [ ] The quality and graphics controls survive a restart, and the player command line contains those flags.
+- [ ] One Flash window after two Play clicks, and no player process after the launcher closes.
+- [ ] The quality and graphics controls survive a restart, and a Ruffle command line contains those flags.
 
 **Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
@@ -93,8 +95,8 @@ Each live lane runs on its own cloud VM at the PR head. `control-ui` is not in t
 
 **Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.7-high` at the PR head, per the boot recipe.
 
-- [ ] Lane 1. Regression lane against trunk. Click Play once for Ruffle at trunk and at head. Save `/tmp/swarm-l1/worker-1/regression.png`. Pass when both sides show the launcher and exactly one ruffle process.
-- [ ] Lane 2. Click Play twice. Save `/tmp/swarm-l1/worker-2/second-click.png`. Pass when the process list still has one ruffle child.
+- [ ] Lane 1. Regression lane against trunk. Click Play (Flash) once at trunk and at head. Save `/tmp/swarm-l1/worker-1/regression.png`. Pass when both sides show the launcher and exactly one flashplayer process, and the head button order starts with Flash.
+- [ ] Lane 2. Click Play (Flash) twice. Save `/tmp/swarm-l1/worker-2/second-click.png`. Pass when the process list still has one flashplayer child.
 - [ ] Lane 3. Close the main window. Save `/tmp/swarm-l1/worker-3/quit.png`. Pass when no ruffle or flashplayer child remains.
 - [ ] Lane 4. Start the app twice. Save `/tmp/swarm-l1/worker-4/single-instance.png`. Pass when only one launcher window exists.
 - [ ] Lane 5. Set quality to low and graphics to gl, then Play. Save `/tmp/swarm-l1/worker-5/args.png`. Pass when the child command line contains `--quality low` and `--graphics gl`.
@@ -193,14 +195,14 @@ Each live lane runs on its own cloud VM at the PR head. `control-ui` is not in t
 
 **Build.**
 
-- [ ] Add buttons for every in-place Useful Page in `plugins/adventure-quest-worlds/urls.js`. That set is Design Notes, balance patch notes, the character lookup, Daily Gifts, the Calendar, Forge, Heromart, Battleon Portal, Twitter, and Reddit. Keep the existing wiki, account, and news buttons.
-- [ ] On `account.aq.com`, `www.aq.com`, `game.aq.com`, and `play.dragonfable.com`, set the user agent from `plugins/adventure-quest-worlds/user-agent.js` and send `artixmode` with value `launcher`.
+- [ ] Add one character-lookup button. Keep the existing wiki, account, and news buttons. Do not add Twitter, Reddit, Heromart, or the rest of the Useful Pages list.
+- [ ] On `account.aq.com`, `www.aq.com`, and `game.aq.com`, set the user agent from `plugins/adventure-quest-worlds/user-agent.js` and send `artixmode` with value `launcher`.
 - [ ] After a wiki page loads, hide the known Wikidot ad nodes the way `plugins/adventure-quest-worlds/injections/navigation.js` does.
 - [ ] Add About and Help. About opens `https://github.com/aquaspy/AquaStar/releases`. Help lists the Play buttons and the player shutdown rule.
 
 **You see.**
 
-- [ ] Design Notes opens in a Lite window on `www.aq.com`. A second click focuses that window.
+- [ ] The character lookup opens in a Lite window. A second click focuses that window.
 - [ ] A host outside the allow-list does not open, and the status line names the rejection.
 
 **Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
@@ -211,7 +213,7 @@ Each live lane runs on its own cloud VM at the PR head. `control-ui` is not in t
 
 - [ ] Lane 1. Regression lane against trunk. Click AQW Wiki at trunk and at head. Save `/tmp/swarm-l3/worker-1/regression.png`. Pass when both sides show a window whose host is `aqwwiki.wikidot.com`.
 - [ ] Lane 2. Click Account. Save `/tmp/swarm-l3/worker-2/account.png`. Pass when the window host is `account.aq.com`.
-- [ ] Lane 3. Click Design Notes. Save `/tmp/swarm-l3/worker-3/design.png`. Pass when the window host is `www.aq.com` and the path contains `gamedesignnotes`.
+- [ ] Lane 3. Click the character lookup with no saved name. Save `/tmp/swarm-l3/worker-3/charpage.png`. Pass when the window host is `www.aq.com` and the path contains `CharPage`.
 - [ ] Lane 4. Save a character name and click the character page. Save `/tmp/swarm-l3/worker-4/charpage.png`. Pass when the URL contains `CharPage?id=` and the saved name.
 - [ ] Lane 5. Ask the launcher to open `https://example.com`. Save `/tmp/swarm-l3/worker-5/denied.png`. Pass when no new window appears and the status text contains `example.com`.
 - [ ] Lane 6. Click AQW Wiki twice. Save `/tmp/swarm-l3/worker-6/focus.png`. Pass when only one wiki window exists.
@@ -229,7 +231,7 @@ Each live lane runs on its own cloud VM at the PR head. `control-ui` is not in t
 
 **Review gate.** The operator reviews before merge.
 
-- [ ] Copy lane 3 and lane 7 screenshots into `/tmp/lite-port-review/l3-review-design.png` and `/tmp/lite-port-review/l3-review-ua.png`.
+- [ ] Copy lane 3 and lane 7 screenshots into `/tmp/lite-port-review/l3-review-charpage.png` and `/tmp/lite-port-review/l3-review-ua.png`.
 - [ ] Record a 30 to 60 second video of the change on a lane VM. Save it as `/tmp/lite-port-review/l3-review.mp4`.
 - [ ] Post the screenshots and the video in chat. Stop at merge-ready. Wait for the operator.
 
@@ -240,516 +242,6 @@ Each live lane runs on its own cloud VM at the PR head. `control-ui` is not in t
 - [ ] Rebased onto L2 after the verdict, patch-id unchanged.
 - [ ] The root appends L3 onto the L2 branch. The operator lands it. The owner does not merge.
 
-## Add reminders (L4)
-
-**Depends on.** L3.
-
-**Files.**
-
-- [ ] Create `lite/ui/reminders.html` and `lite/ui/reminders.js` from the behavior in `plugins/adventure-quest-worlds/features/reminders/`.
-- [ ] Create `lite/src-tauri/src/reminders.rs` to read and write `aquastar_reminders.json`.
-- [ ] Edit `lite/ui/index.html` to add the Reminders button.
-
-**Build.**
-
-- [ ] Port `createResetTime` from `plugins/adventure-quest-worlds/core/reset-time.js` and `createListState` from `core/list-state.js` into Rust or a small page script. Daily reset stays midnight in `America/New_York`. Weekly reset stays the following Friday midnight.
-- [ ] First run seeds `reminders_default.json`. Copy a legacy `aquastar_reminders.json` once when it exists beside the Lite data dir.
-
-**You see.**
-
-- [ ] Reminders opens one window, lists seeded quests, and a copied `/join` line is on the clipboard.
-- [ ] A hidden quest stays hidden after restart.
-
-**Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] Add reset-time and hide-map tests that match `test/unit/reset-time.test.js` and `test/unit/list-state.test.js`. Run `cargo test --locked` in `lite/src-tauri`.
-
-**Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.7-high` at the PR head, per the boot recipe.
-
-- [ ] Lane 1. Regression lane against trunk. Open the launcher at trunk and at head. Trunk has no Reminders control. Save `/tmp/swarm-l4/worker-1/regression.png`. Pass when head shows Reminders and trunk does not, and both still show Play.
-- [ ] Lane 2. Open Reminders on a fresh data dir. Save `/tmp/swarm-l4/worker-2/seed.png`. Pass when at least one seeded quest title is visible.
-- [ ] Lane 3. Read the daily countdown beside a daily quest. Save `/tmp/swarm-l4/worker-3/daily.png`. Pass when the label matches the New York midnight rule for the lane clock.
-- [ ] Lane 4. Hide one quest, restart, and reopen. Save `/tmp/swarm-l4/worker-4/hide.png`. Pass when that quest stays hidden.
-- [ ] Lane 5. Copy a join command. Save `/tmp/swarm-l4/worker-5/join.png`. Pass when the clipboard starts with `/join`.
-- [ ] Lane 6. Add a character tab. Save `/tmp/swarm-l4/worker-6/character.png`. Pass when the new name is a tab and survives restart.
-- [ ] Lane 7. Turn on a seasonal filter that excludes the visible seasonal quest. Save `/tmp/swarm-l4/worker-7/season.png`. Pass when that quest is not in the list.
-- [ ] Lane 8. Open Reminders twice. Save `/tmp/swarm-l4/worker-8/focus.png`. Pass when only one reminders window exists.
-- [ ] Lane 9. Start Ruffle, then close Reminders. Save `/tmp/swarm-l4/worker-9/player.png`. Pass when the ruffle process is still running.
-- [ ] Lane 10. Point the data dir at an Electron `aquastar_reminders.json` and open Reminders. Save `/tmp/swarm-l4/worker-10/legacy.png`. Pass when a quest title from that file is visible.
-
-**Verify, perf.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] Metric. Delay from process start until Play is enabled, in milliseconds, at trunk and at head. Reminders is extra. Also time from the Reminders click until the first quest row is visible.
-- [ ] Probe. Interleave five launcher starts on trunk and five on head. Then five Reminders opens at head on the seeded file.
-- [ ] Baseline. Record the trunk start median first.
-- [ ] Rule. Fail when the head start median exceeds the trunk median by more than 500 ms. Fail Reminders when the first row takes more than 1500 ms.
-
-**Review gate.** The operator reviews before merge.
-
-- [ ] Copy lane 2 and lane 4 screenshots into `/tmp/lite-port-review/l4-review-seed.png` and `/tmp/lite-port-review/l4-review-hide.png`.
-- [ ] Record a 30 to 60 second video of the change on a lane VM. Save it as `/tmp/lite-port-review/l4-review.mp4`.
-- [ ] Post the screenshots and the video in chat. Stop at merge-ready. Wait for the operator.
-
-**Merge.**
-
-- [ ] Root's clean verdict at the exact head SHA.
-- [ ] Bugbot triage done.
-- [ ] Rebased onto L3 after the verdict, patch-id unchanged.
-- [ ] The root appends L4 onto the L3 branch. The operator lands it. The owner does not merge.
-
-## Add the to-do list (L5)
-
-**Depends on.** L4.
-
-**Files.**
-
-- [ ] Create `lite/ui/todo.html` and `lite/ui/todo.js` from `plugins/adventure-quest-worlds/features/todo/`.
-- [ ] Create `lite/src-tauri/src/todo.rs` for `aquastar_todo.json`.
-- [ ] Edit `lite/ui/index.html` to add the To-Do button.
-
-**Build.**
-
-- [ ] Reuse the L4 list kit for ids, seasonal tags, and hide maps. A hidden task means done. Do not add a reset clock.
-- [ ] Open http and https links from a task in a Lite page window. Reject every other scheme.
-
-**You see.**
-
-- [ ] A new task with a wiki link survives restart, and Done hides it.
-- [ ] An empty first run shows an empty list, not the reminders seed.
-
-**Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] `todo.rs` gains tests for empty create, hide-as-done, and link scheme checks. Run `cargo test --locked` in `lite/src-tauri`.
-
-**Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.7-high` at the PR head, per the boot recipe.
-
-- [ ] Lane 1. Regression lane against trunk. Open the launcher at trunk and at head. Save `/tmp/swarm-l5/worker-1/regression.png`. Pass when head shows To-Do, trunk does not, and Reminders from L4 still opens.
-- [ ] Lane 2. Open To-Do on a fresh data dir. Save `/tmp/swarm-l5/worker-2/empty.png`. Pass when the list has no seeded reminder titles.
-- [ ] Lane 3. Add a task and restart. Save `/tmp/swarm-l5/worker-3/save.png`. Pass when the task title is still there.
-- [ ] Lane 4. Mark that task done and restart. Save `/tmp/swarm-l5/worker-4/done.png`. Pass when it stays hidden.
-- [ ] Lane 5. Attach `https://aqwwiki.wikidot.com/` and open it. Save `/tmp/swarm-l5/worker-5/link.png`. Pass when a wiki window opens.
-- [ ] Lane 6. Attach `file:///etc/passwd`. Save `/tmp/swarm-l5/worker-6/bad-link.png`. Pass when no new window opens.
-- [ ] Lane 7. Copy a join command. Save `/tmp/swarm-l5/worker-7/join.png`. Pass when the clipboard starts with `/join`.
-- [ ] Lane 8. Open To-Do twice. Save `/tmp/swarm-l5/worker-8/focus.png`. Pass when only one to-do window exists.
-- [ ] Lane 9. Add a second character and a task on that tab. Save `/tmp/swarm-l5/worker-9/character.png`. Pass when the other character tab does not show that task.
-- [ ] Lane 10. Start Ruffle, close To-Do, then close the launcher. Save `/tmp/swarm-l5/worker-10/player.png`. Pass when the player dies only after the launcher closes.
-
-**Verify, perf.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] Metric. Delay from process start until Play is enabled, at trunk of L4 and at head. Also time from the To-Do click until the empty state or the first row is visible.
-- [ ] Probe. Interleave five starts on the L4 base and five on head. Then five To-Do opens at head.
-- [ ] Baseline. Record the L4 start median first. L4 is the parent, and trunk of the stack link is that parent.
-- [ ] Rule. Fail when the head start median exceeds the L4 median by more than 500 ms. Fail To-Do when the empty state takes more than 1500 ms.
-
-**Review gate.** The operator reviews before merge.
-
-- [ ] Copy lane 2 and lane 3 screenshots into `/tmp/lite-port-review/l5-review-empty.png` and `/tmp/lite-port-review/l5-review-save.png`.
-- [ ] Record a 30 to 60 second video of the change on a lane VM. Save it as `/tmp/lite-port-review/l5-review.mp4`.
-- [ ] Post the screenshots and the video in chat. Stop at merge-ready. Wait for the operator.
-
-**Merge.**
-
-- [ ] Root's clean verdict at the exact head SHA.
-- [ ] Bugbot triage done.
-- [ ] Rebased onto L4 after the verdict, patch-id unchanged.
-- [ ] The root appends L5 onto the L4 branch. The operator lands it. The owner does not merge.
-
-## Add the strategy timer (L6)
-
-**Depends on.** L5.
-
-**Files.**
-
-- [ ] Create `lite/ui/strategy.html` and `lite/ui/strategy.js` from `plugins/adventure-quest-worlds/features/strategy/`.
-- [ ] Create `lite/src-tauri/src/strategy.rs` for `aquastar_strategy.json` and the global timer shortcut.
-- [ ] Edit `lite/ui/index.html` to add the Strategy button.
-
-**Build.**
-
-- [ ] Seed bosses and potions from `strategy_default.json`. Add new default potions without deleting custom ones.
-- [ ] Register one global shortcut, default `Alt+Shift+U`, that toggles the countdown only while the strategy window is open. Use a Tauri global-shortcut plugin. Do not steal the key when the window is closed.
-
-**You see.**
-
-- [ ] Strategy opens, a boss plan is visible, and the shortcut starts and stops the countdown.
-- [ ] The shortcut does nothing when Strategy is closed, including while Ruffle is focused.
-
-**Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] `strategy.rs` gains tests for the seed merge and for ignoring the shortcut when the window id is absent. Run `cargo test --locked` in `lite/src-tauri`.
-
-**Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.7-high` at the PR head, per the boot recipe.
-
-- [ ] Lane 1. Regression lane against trunk. Open the launcher on the L5 base and at head. Save `/tmp/swarm-l6/worker-1/regression.png`. Pass when head shows Strategy, the L5 base does not, and To-Do still opens.
-- [ ] Lane 2. Open Strategy on a fresh data dir. Save `/tmp/swarm-l6/worker-2/seed.png`. Pass when a seeded boss name is visible.
-- [ ] Lane 3. Press the timer shortcut with Strategy open. Save `/tmp/swarm-l6/worker-3/timer-on.png`. Pass when the countdown label is moving.
-- [ ] Lane 4. Press the shortcut again. Save `/tmp/swarm-l6/worker-4/timer-off.png`. Pass when the countdown label is stopped.
-- [ ] Lane 5. Close Strategy and press the shortcut while Ruffle is focused. Save `/tmp/swarm-l6/worker-5/ignored.png`. Pass when no strategy window appears and the ruffle process is still one.
-- [ ] Lane 6. Change the shortcut, restart, and press the new chord. Save `/tmp/swarm-l6/worker-6/rebind.png`. Pass when the countdown toggles and the old chord does nothing.
-- [ ] Lane 7. Add a custom potion, restart, and reopen. Save `/tmp/swarm-l6/worker-7/potion.png`. Pass when the custom potion remains and a seeded potion remains.
-- [ ] Lane 8. Open Strategy twice. Save `/tmp/swarm-l6/worker-8/focus.png`. Pass when only one strategy window exists.
-- [ ] Lane 9. Edit a role note and restart. Save `/tmp/swarm-l6/worker-9/note.png`. Pass when the note text is still there.
-- [ ] Lane 10. Close the launcher. Save `/tmp/swarm-l6/worker-10/quit.png`. Pass when the global shortcut no longer toggles anything and the player process is gone.
-
-**Verify, perf.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] Metric. Delay from process start until Play is enabled, at the L5 base and at head. Also time from the shortcut press until the countdown label changes, while Strategy is open.
-- [ ] Probe. Interleave five starts on the L5 base and five on head. Then five shortcut presses at head with Strategy already open.
-- [ ] Baseline. Record the L5 start median first.
-- [ ] Rule. Fail when the head start median exceeds the L5 median by more than 500 ms. Fail the shortcut when the label takes more than 200 ms.
-
-**Review gate.** The operator reviews before merge.
-
-- [ ] Copy lane 3 and lane 5 screenshots into `/tmp/lite-port-review/l6-review-timer.png` and `/tmp/lite-port-review/l6-review-ignored.png`.
-- [ ] Record a 30 to 60 second video of the change on a lane VM. Save it as `/tmp/lite-port-review/l6-review.mp4`.
-- [ ] Post the screenshots and the video in chat. Stop at merge-ready. Wait for the operator.
-
-**Merge.**
-
-- [ ] Root's clean verdict at the exact head SHA.
-- [ ] Bugbot triage done.
-- [ ] Rebased onto L5 after the verdict, patch-id unchanged.
-- [ ] The root appends L6 onto the L5 branch. The operator lands it. The owner does not merge.
-
-## Sync inventory and wiki hover (L7)
-
-**Depends on.** L6.
-
-**Files.**
-
-- [ ] Create `lite/src-tauri/src/inventory.rs` for `aquastar_inventory.json` and the account HTTP sync.
-- [ ] Create `lite/ui/inventory.html` and `lite/ui/inventory.js`.
-- [ ] Edit the account webview init script so the Sync Now button from `accountSyncButton.js` appears, and so WikiView from `features/wikiview/` runs on wiki and account pages.
-
-**Build.**
-
-- [ ] Sync reads the account webview cookie jar. It does not store a password. Endpoints stay `https://account.aq.com/` Home, CharPage, InventoryData, and BuyBackData.
-- [ ] `autoSync` runs about 30 seconds after launch when the last sync is older than two hours, then every two hours.
-- [ ] Hover previews call a Rust fetch of `https://aqwwiki.wikidot.com/` only, with a 5 MB cap and a 15 second timeout, matching `wikiFetch.js`.
-
-**You see.**
-
-- [ ] After a manual login in the account window, Sync Now fills the inventory window.
-- [ ] Hovering a wiki link shows an image, and a logged-out sync shows an error instead of an empty success.
-
-**Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] `inventory.rs` gains tests for the host allow-list, the two-hour gate, and label save. Run `cargo test --locked` in `lite/src-tauri`.
-
-**Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.7-high` at the PR head, per the boot recipe.
-
-- [ ] Lane 1. Regression lane against trunk. Open Account on the L6 base and at head. Save `/tmp/swarm-l7/worker-1/regression.png`. Pass when both show `account.aq.com`, and only head shows an Inventory button.
-- [ ] Lane 2. Open Inventory before any login. Save `/tmp/swarm-l7/worker-2/logged-out.png`. Pass when the window says sync needs a login and the item table is empty.
-- [ ] Lane 3. Log in with the lane's test account and click Sync Now. Save `/tmp/swarm-l7/worker-3/sync.png`. Pass when at least one item name is visible. Skip the lane with a recorded blocker when no test account exists.
-- [ ] Lane 4. Restart and reopen Inventory. Save `/tmp/swarm-l7/worker-4/persist.png`. Pass when the Lane 3 item is still listed without a new sync.
-- [ ] Lane 5. Set a label and restart. Save `/tmp/swarm-l7/worker-5/label.png`. Pass when the label text remains.
-- [ ] Lane 6. Open a wiki item page and hover a link. Save `/tmp/swarm-l7/worker-6/hover.png`. Pass when a preview image is visible.
-- [ ] Lane 7. On the account inventory page, confirm the Sync Now button. Save `/tmp/swarm-l7/worker-7/button.png`. Pass when the button text contains Sync Now.
-- [ ] Lane 8. Open an item's wiki page from the inventory row. Save `/tmp/swarm-l7/worker-8/row-wiki.png`. Pass when the wiki window path matches that item.
-- [ ] Lane 9. Turn on auto-sync, set the last sync to three hours ago, and wait. Save `/tmp/swarm-l7/worker-9/auto.png`. Pass when a sync log line appears without a second click.
-- [ ] Lane 10. Point wiki fetch at a non-wikidot host. Save `/tmp/swarm-l7/worker-10/wiki-deny.png`. Pass when the preview stays empty and the log contains the rejection.
-
-**Verify, perf.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] Metric. Delay from process start until Play is enabled, at the L6 base and at head. Also time a logged-out Inventory open until the login message is visible.
-- [ ] Probe. Interleave five starts on the L6 base and five on head. Then five logged-out Inventory opens at head.
-- [ ] Baseline. Record the L6 start median first.
-- [ ] Rule. Fail when the head start median exceeds the L6 median by more than 500 ms. Fail Inventory when the login message takes more than 1500 ms.
-
-**Review gate.** The operator reviews before merge.
-
-- [ ] Copy lane 2 and lane 6 screenshots into `/tmp/lite-port-review/l7-review-logged-out.png` and `/tmp/lite-port-review/l7-review-hover.png`.
-- [ ] Record a 30 to 60 second video of the change on a lane VM. Save it as `/tmp/lite-port-review/l7-review.mp4`.
-- [ ] Post the screenshots and the video in chat. Stop at merge-ready. Wait for the operator.
-
-**Merge.**
-
-- [ ] Root's clean verdict at the exact head SHA.
-- [ ] Bugbot triage done.
-- [ ] Rebased onto L6 after the verdict, patch-id unchanged.
-- [ ] The root appends L7 onto the L6 branch. The operator lands it. The owner does not merge.
-
-## Ship Portuguese and editable shortcuts (L8)
-
-**Depends on.** L7.
-
-**Files.**
-
-- [ ] Create `lite/ui/locales/en-US.js` and `lite/ui/locales/pt-BR.js` from `res/po/` and `plugins/adventure-quest-worlds/locales/`.
-- [ ] Edit `lite/ui/index.html` for the language select and the shortcut editor.
-- [ ] Edit `lite/src-tauri/src/settings.rs` for `appLanguage` and the shortcut map.
-
-**Build.**
-
-- [ ] Language choices are system, `en-US`, and `pt-BR`. Map `pt` to `pt-BR` and `en` to `en-US`.
-- [ ] The editor rebinds Reminders, To-Do, Strategy, Inventory, and the page buttons. It refuses the player keys the external process needs for gameplay. Platform defaults from Electron stay documented in Help, not registered globally, except the strategy timer from L6.
-
-**You see.**
-
-- [ ] Choosing `pt-BR` translates the launcher and Reminders, and the choice survives restart.
-- [ ] A rebound Reminders shortcut opens Reminders, and the old chord does not.
-
-**Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] Add catalog key-parity tests and a test that an unknown language id falls back to `en-US`. Run `cargo test --locked` in `lite/src-tauri`.
-
-**Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.7-high` at the PR head, per the boot recipe.
-
-- [ ] Lane 1. Regression lane against trunk. Open the launcher on the L7 base and at head in the default language. Save `/tmp/swarm-l8/worker-1/regression.png`. Pass when both show Play and the head language control exists.
-- [ ] Lane 2. Choose `pt-BR` and restart. Save `/tmp/swarm-l8/worker-2/pt.png`. Pass when the Play heading is the Portuguese string from `pt-BR.js`.
-- [ ] Lane 3. Open Reminders in `pt-BR`. Save `/tmp/swarm-l8/worker-3/reminders-pt.png`. Pass when the window title is the Portuguese reminders title.
-- [ ] Lane 4. Switch back to `en-US`. Save `/tmp/swarm-l8/worker-4/en.png`. Pass when the Play heading is English again.
-- [ ] Lane 5. Set language to system on an `en` locale. Save `/tmp/swarm-l8/worker-5/system.png`. Pass when the UI is English.
-- [ ] Lane 6. Rebind Reminders and press the new chord. Save `/tmp/swarm-l8/worker-6/rebind.png`. Pass when Reminders opens.
-- [ ] Lane 7. Press the old Reminders chord. Save `/tmp/swarm-l8/worker-7/old-chord.png`. Pass when no second reminders window appears.
-- [ ] Lane 8. Restart after Lane 6. Save `/tmp/swarm-l8/worker-8/persist.png`. Pass when the new chord still opens Reminders.
-- [ ] Lane 9. Try to bind an empty chord. Save `/tmp/swarm-l8/worker-9/empty.png`. Pass when the editor shows an error and the previous chord remains.
-- [ ] Lane 10. Open Help. Save `/tmp/swarm-l8/worker-10/help.png`. Pass when Help lists the rebound chord.
-
-**Verify, perf.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] Metric. Delay from process start until Play is enabled, at the L7 base and at head, in `en-US`. Also time a switch to `pt-BR` until the heading updates.
-- [ ] Probe. Interleave five starts on the L7 base and five on head. Then five language switches at head.
-- [ ] Baseline. Record the L7 start median first.
-- [ ] Rule. Fail when the head start median exceeds the L7 median by more than 500 ms. Fail the switch when the heading takes more than 300 ms.
-
-**Review gate.** The operator reviews before merge.
-
-- [ ] Copy lane 2 and lane 6 screenshots into `/tmp/lite-port-review/l8-review-pt.png` and `/tmp/lite-port-review/l8-review-rebind.png`.
-- [ ] Record a 30 to 60 second video of the change on a lane VM. Save it as `/tmp/lite-port-review/l8-review.mp4`.
-- [ ] Post the screenshots and the video in chat. Stop at merge-ready. Wait for the operator.
-
-**Merge.**
-
-- [ ] Root's clean verdict at the exact head SHA.
-- [ ] Bugbot triage done.
-- [ ] Rebased onto L7 after the verdict, patch-id unchanged.
-- [ ] The root appends L8 onto the L7 branch. The operator lands it. The owner does not merge.
-
-## Screenshot the player window (L9)
-
-**Depends on.** L8.
-
-**Files.**
-
-- [ ] Create `lite/src-tauri/src/capture.rs`.
-- [ ] Edit `lite/ui/index.html` to add a Screenshot button.
-
-**Build.**
-
-- [ ] Find the external player window by process id, not by the launcher webview. Write a PNG under the Pictures directory using the same file name pattern as `res/instances.js` `takeSS`.
-- [ ] If no player is running, show an error in the status line and write nothing.
-
-**You see.**
-
-- [ ] With Ruffle visible, Screenshot writes a PNG whose dimensions match the player window, and the status line shows the path.
-- [ ] With no player, Screenshot writes no file.
-
-**Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] `capture.rs` gains tests for the file name, the missing-process error, and refusing to capture the launcher window id. Run `cargo test --locked` in `lite/src-tauri`.
-
-**Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.7-high` at the PR head, per the boot recipe.
-
-- [ ] Lane 1. Regression lane against trunk. Click Play at the L8 base and at head. Save `/tmp/swarm-l9/worker-1/regression.png`. Pass when both start one ruffle process. Head also shows Screenshot. The L8 base does not.
-- [ ] Lane 2. Click Screenshot while Ruffle is open. Save `/tmp/swarm-l9/worker-2/shot.png`. Pass when a new PNG exists and the status line contains its path.
-- [ ] Lane 3. Open that PNG. Save `/tmp/swarm-l9/worker-3/png.png`. Pass when the image width and height are both greater than 50.
-- [ ] Lane 4. Click Screenshot with no player. Save `/tmp/swarm-l9/worker-4/none.png`. Pass when the status line reports no player and the PNG count is unchanged.
-- [ ] Lane 5. Click Screenshot twice. Save `/tmp/swarm-l9/worker-5/two.png`. Pass when two PNGs exist with different names.
-- [ ] Lane 6. Click Play Flash on Linux and Screenshot. Save `/tmp/swarm-l9/worker-6/flash-shot.png`. Pass when the PNG exists and the captured window is not the launcher.
-- [ ] Lane 7. Cover the player with another window and Screenshot. Save `/tmp/swarm-l9/worker-7/occluded.png`. Pass when a PNG is still written. Record whether the pixels are the player or the cover, and do not fail on occlusion.
-- [ ] Lane 8. Close the player, then Screenshot. Save `/tmp/swarm-l9/worker-8/closed.png`. Pass when no new PNG appears.
-- [ ] Lane 9. Restart the launcher and Screenshot an already running player from the previous process. Save `/tmp/swarm-l9/worker-9/orphan.png`. Pass when the status line reports no tracked player. L1 owns the child list, and a new launcher does not adopt an orphan.
-- [ ] Lane 10. Fill the screenshot directory until the write fails. Save `/tmp/swarm-l9/worker-10/disk.png`. Pass when the status line shows the write error and the launcher stays open.
-
-**Verify, perf.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] Metric. Delay from process start until Play is enabled, at the L8 base and at head. Also time from the Screenshot click until the PNG file exists.
-- [ ] Probe. Interleave five starts on the L8 base and five on head. Then five screenshots at head with Ruffle already open.
-- [ ] Baseline. Record the L8 start median first.
-- [ ] Rule. Fail when the head start median exceeds the L8 median by more than 500 ms. Fail a screenshot when the file takes more than 2000 ms.
-
-**Review gate.** The operator reviews before merge.
-
-- [ ] Copy lane 2 and lane 3 screenshots into `/tmp/lite-port-review/l9-review-shot.png` and `/tmp/lite-port-review/l9-review-png.png`.
-- [ ] Record a 30 to 60 second video of the change on a lane VM. Save it as `/tmp/lite-port-review/l9-review.mp4`.
-- [ ] Post the screenshots and the video in chat. Stop at merge-ready. Wait for the operator.
-
-**Merge.**
-
-- [ ] Root's clean verdict at the exact head SHA.
-- [ ] Bugbot triage done.
-- [ ] Rebased onto L8 after the verdict, patch-id unchanged.
-- [ ] The root appends L9 onto the L8 branch. The operator lands it. The owner does not merge.
-
-## Record the player window (L10)
-
-**Depends on.** L9.
-
-**Files.**
-
-- [ ] Edit `lite/src-tauri/src/capture.rs`.
-- [ ] Edit `lite/ui/index.html` and `lite/ui/main.js` for a Record button.
-
-**Build.**
-
-- [ ] Record the same player window L9 found. Write a file the user picks. One recording at a time.
-- [ ] Do not use the Electron `desktopCapturer` path. If the platform API cannot see the external window, stop and report that, and do not fall back to recording the launcher webview.
-
-**You see.**
-
-- [ ] Record starts, the button shows a stop state, and stop writes a playable file.
-- [ ] A second record click while one is active does not start another file.
-
-**Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] `capture.rs` gains tests for the single-recording flag and for refusing a launcher window id. Run `cargo test --locked` in `lite/src-tauri`.
-
-**Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.7-high` at the PR head, per the boot recipe.
-
-- [ ] Lane 1. Regression lane against trunk. Click Screenshot on the L9 base and at head. Save `/tmp/swarm-l10/worker-1/regression.png`. Pass when both write a PNG. Head also shows Record.
-- [ ] Lane 2. Start Record with Ruffle open, wait two seconds, and stop. Save `/tmp/swarm-l10/worker-2/record.png`. Pass when the chosen file exists and its size is greater than 1 KB.
-- [ ] Lane 3. Play the file. Save `/tmp/swarm-l10/worker-3/playback.png`. Pass when a frame from the player is visible in the recording.
-- [ ] Lane 4. Click Record twice before stop. Save `/tmp/swarm-l10/worker-4/twice.png`. Pass when only one output file grows.
-- [ ] Lane 5. Click Record with no player. Save `/tmp/swarm-l10/worker-5/none.png`. Pass when the status line reports no player and no file is created.
-- [ ] Lane 6. Close the player during a recording. Save `/tmp/swarm-l10/worker-6/died.png`. Pass when recording stops and the partial file is kept or the status line explains the stop.
-- [ ] Lane 7. Cancel the save dialog. Save `/tmp/swarm-l10/worker-7/cancel.png`. Pass when no file is written and the button returns to idle.
-- [ ] Lane 8. Record the Flash projector on Linux. Save `/tmp/swarm-l10/worker-8/flash.png`. Pass when the file exists and playback is not the launcher window.
-- [ ] Lane 9. Start Ruffle after Record was refused, then Record. Save `/tmp/swarm-l10/worker-9/retry.png`. Pass when the second attempt writes a file.
-- [ ] Lane 10. Close the launcher during a recording. Save `/tmp/swarm-l10/worker-10/quit.png`. Pass when the player process is gone and the recording file is closed.
-
-**Verify, perf.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] Metric. Screenshot delay from L9, repeated at the L9 base and at head, so both sides produce the same metric. Also time a two-second recording until the file is closed, which trunk lacks.
-- [ ] Probe. Interleave five screenshots on the L9 base and five on head. Then one two-second recording at head.
-- [ ] Baseline. Record the L9 screenshot median first.
-- [ ] Rule. Fail when the head screenshot median exceeds the L9 median by more than 500 ms. Fail the recording when the file is not closed within 5000 ms of stop.
-
-**Review gate.** The operator reviews before merge.
-
-- [ ] Copy lane 2 and lane 3 screenshots into `/tmp/lite-port-review/l10-review-record.png` and `/tmp/lite-port-review/l10-review-playback.png`.
-- [ ] Record a 30 to 60 second video of the change on a lane VM. Save it as `/tmp/lite-port-review/l10-review.mp4`.
-- [ ] Post the screenshots and the video in chat. Stop at merge-ready. Wait for the operator.
-
-**Merge.**
-
-- [ ] Root's clean verdict at the exact head SHA.
-- [ ] Bugbot triage done.
-- [ ] Rebased onto L9 after the verdict, patch-id unchanged.
-- [ ] The root appends L10 onto the L9 branch. The operator lands it. The owner does not merge.
-
-## Add DragonFable and a second AQW player (L11)
-
-**Depends on.** L10.
-
-**Files.**
-
-- [ ] Edit `lite/src-tauri/src/game_url.rs` and `lite/src-tauri/src/players.rs`.
-- [ ] Edit `lite/ui/index.html` for DragonFable and New AQW buttons.
-
-**Build.**
-
-- [ ] DragonFable launches `https://play.dragonfable.com/game/DFLoader.swf?ver=668201` as its own child. It does not replace the AQW child.
-- [ ] New AQW starts a second AQW child with the resolved L2 URL. Cap live children at two AQW processes plus one DragonFable process. A further click focuses an existing child of that kind.
-
-**You see.**
-
-- [ ] AQW and DragonFable can be open together, and closing the launcher kills both.
-- [ ] A third AQW click does not create a third AQW process.
-
-**Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] `players.rs` gains tests for the per-kind cap and for kill-all covering mixed children. Run `cargo test --locked` in `lite/src-tauri`.
-
-**Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.7-high` at the PR head, per the boot recipe.
-
-- [ ] Lane 1. Regression lane against trunk. Click Play once on the L10 base and at head. Save `/tmp/swarm-l11/worker-1/regression.png`. Pass when both keep a single AQW child after one click.
-- [ ] Lane 2. Click DragonFable. Save `/tmp/swarm-l11/worker-2/df.png`. Pass when a child exists whose last argument contains `DFLoader.swf`.
-- [ ] Lane 3. Click Play and DragonFable. Save `/tmp/swarm-l11/worker-3/both.png`. Pass when both children exist.
-- [ ] Lane 4. Click New AQW. Save `/tmp/swarm-l11/worker-4/second.png`. Pass when two AQW children exist.
-- [ ] Lane 5. Click New AQW again. Save `/tmp/swarm-l11/worker-5/cap.png`. Pass when the AQW child count stays at two.
-- [ ] Lane 6. Click DragonFable again. Save `/tmp/swarm-l11/worker-6/df-cap.png`. Pass when the DragonFable child count stays at one.
-- [ ] Lane 7. Close the launcher. Save `/tmp/swarm-l11/worker-7/quit.png`. Pass when no ruffle or flashplayer child remains.
-- [ ] Lane 8. Use a custom SWF and click New AQW. Save `/tmp/swarm-l11/worker-8/custom.png`. Pass when both AQW children receive that SWF path.
-- [ ] Lane 9. Turn the live loader off and click DragonFable. Save `/tmp/swarm-l11/worker-9/df-stable.png`. Pass when DragonFable still uses `DFLoader.swf` and AQW uses Loader4.
-- [ ] Lane 10. Screenshot from L9 while two AQW children exist. Save `/tmp/swarm-l11/worker-10/which.png`. Pass when the status line names which child was captured.
-
-**Verify, perf.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] Metric. Warm Play delay until the first ruffle process exists, at the L10 base and at head. Also time until the second AQW child exists, which the base lacks.
-- [ ] Probe. Interleave five warm Plays on the L10 base and five on head. Then five New AQW clicks at head with one child already running.
-- [ ] Baseline. Record the L10 Play median first.
-- [ ] Rule. Fail when the head Play median exceeds the L10 median by more than 2000 ms. Fail the second child when it takes more than 3000 ms.
-
-**Review gate.** The operator reviews before merge.
-
-- [ ] Copy lane 3 and lane 5 screenshots into `/tmp/lite-port-review/l11-review-both.png` and `/tmp/lite-port-review/l11-review-cap.png`.
-- [ ] Record a 30 to 60 second video of the change on a lane VM. Save it as `/tmp/lite-port-review/l11-review.mp4`.
-- [ ] Post the screenshots and the video in chat. Stop at merge-ready. Wait for the operator.
-
-**Merge.**
-
-- [ ] Root's clean verdict at the exact head SHA.
-- [ ] Bugbot triage done.
-- [ ] Rebased onto L10 after the verdict, patch-id unchanged.
-- [ ] The root appends L11 onto the L10 branch. The operator lands it. The owner does not merge.
-
-## Update Ruffle on request (L12)
-
-**Depends on.** L11.
-
-**Files.**
-
-- [ ] Create `lite/src-tauri/src/ruffle_update.rs`.
-- [ ] Edit `lite/ui/index.html` for a channel select and an Update button.
-
-**Build.**
-
-- [ ] Default stays the pinned 0.7.1 archive and its SHA-256 from `players.rs`. Update runs only after an explicit click.
-- [ ] Channels are `latest` and `nightly`, using the same GitHub release URLs as `res/ruffleNative.js`. Reject a download whose SHA-256 is absent. Keep the previous binary if the new one fails the hash or fails to start.
-
-**You see.**
-
-- [ ] Without a click, Play still runs 0.7.1.
-- [ ] After a successful update, Play runs the new tag, and a failed hash leaves 0.7.1 in place.
-
-**Verify, unit.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] `ruffle_update.rs` gains tests for hash reject, channel URL choice, and keeping the previous directory. Run `cargo test --locked` in `lite/src-tauri`.
-
-**Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `grok-4.7-high` at the PR head, per the boot recipe.
-
-- [ ] Lane 1. Regression lane against trunk. Click Play on the L11 base and at head with no update click. Save `/tmp/swarm-l12/worker-1/regression.png`. Pass when both child paths contain `ruffle-0.7.1`.
-- [ ] Lane 2. Open the update control and do not click it. Save `/tmp/swarm-l12/worker-2/idle.png`. Pass when the status line does not say a download started.
-- [ ] Lane 3. Click Update against a local fake release with a matching hash. Save `/tmp/swarm-l12/worker-3/updated.png`. Pass when the next Play path contains the fake tag.
-- [ ] Lane 4. Click Update against a fake release with a bad hash. Save `/tmp/swarm-l12/worker-4/bad-hash.png`. Pass when Play still uses the previous tag.
-- [ ] Lane 5. Choose nightly and click Update on the fake server. Save `/tmp/swarm-l12/worker-5/nightly.png`. Pass when the requested URL contains the nightly query the unit test locks.
-- [ ] Lane 6. Kill the network during a download. Save `/tmp/swarm-l12/worker-6/offline.png`. Pass when Play still starts the previous binary.
-- [ ] Lane 7. Restart after Lane 3. Save `/tmp/swarm-l12/worker-7/persist.png`. Pass when Play still uses the new tag.
-- [ ] Lane 8. Click Restore bundled. Save `/tmp/swarm-l12/worker-8/restore.png`. Pass when the next Play path contains `ruffle-0.7.1`.
-- [ ] Lane 9. Start Play during a download. Save `/tmp/swarm-l12/worker-9/during.png`. Pass when the running child stays the old binary until the launcher is restarted.
-- [ ] Lane 10. Point Update at a non-GitHub host. Save `/tmp/swarm-l12/worker-10/host.png`. Pass when the status line rejects the host and no new directory appears.
-
-**Verify, perf.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
-
-- [ ] Metric. Warm Play delay until the ruffle process exists, at the L11 base and at head, with no update clicked. Also time a hash reject until the status line shows the error.
-- [ ] Probe. Interleave five warm Plays on the L11 base and five on head. Then five bad-hash updates at head against the local fake server.
-- [ ] Baseline. Record the L11 Play median first.
-- [ ] Rule. Fail when the head Play median exceeds the L11 median by more than 2000 ms. Fail the hash reject when the error takes more than 1000 ms.
-
-**Review gate.** The operator reviews before merge.
-
-- [ ] Copy lane 1 and lane 4 screenshots into `/tmp/lite-port-review/l12-review-pin.png` and `/tmp/lite-port-review/l12-review-hash.png`.
-- [ ] Record a 30 to 60 second video of the change on a lane VM. Save it as `/tmp/lite-port-review/l12-review.mp4`.
-- [ ] Post the screenshots and the video in chat. Stop at merge-ready. Wait for the operator.
-
-**Merge.**
-
-- [ ] Root's clean verdict at the exact head SHA.
-- [ ] Bugbot triage done.
-- [ ] Rebased onto L11 after the verdict, patch-id unchanged.
-- [ ] The root appends L12 onto the L11 branch. The operator lands it. The owner does not merge.
-
 ## Close the program
 
 - [ ] Every box above is checked with its evidence.
@@ -757,21 +249,25 @@ Each live lane runs on its own cloud VM at the PR head. `control-ui` is not in t
 
 ## Appendix A. Prototype evidence
 
-No prototype was built. The open product questions are preference calls, and a throwaway build of PPAPI inside Tauri would be the port itself. Repo facts came from the tree at `4d9b53a` and from `gh pr view` for pull requests 31, 44, 47, and 48.
+No prototype was built. The calls below are settled. Repo facts came from the tree at `4d9b53a`, from `gh pr view` for pull requests 31, 44, 47, and 48, and from Adobe's CDN.
+
+Settled.
+
+- Electron stays the main AquaStar app permanently. Lite is the light alternative and does not edit `main.js`.
+- Flash is the default player on Linux, Windows, and macOS when the projector is present. Ruffle stays the fallback button.
+- Adobe's CDN does not serve a standalone projector for 32.0.0.344. Those versioned URLs redirect to the Flash end-of-life page. The Artix-official 32.0.0.344 files in `FlashPlayer/` are PPAPI plugins, not projectors. The official projector still hosted at the updater path is 32.0.0.465 on all three systems. L1 pins that file. The Windows binary is a 32-bit PE.
+- VirusTotal's public file API returned `RecaptchaRequiredError` for all three hashes, so this session did not read a fresh detection count and did not upload the files. The Windows hash matches the December 2020 projector published from Adobe's debug-downloads page. The Linux hash matches the pin already in `lite/README.md`.
+- Inventory sync is out. Wiki hover does not need those counts for the image preview, and it is deferred in Appendix H because the script is large. Ownership badges need the counts, so they are out.
+- Pull request 47 is still open. L1 carries its Ruffle settings and OpenGL fallback.
 
 Unproven, with the default already used in this plan.
 
 - Whether account pages reject a webview that does not send the Artix user agent. L3 sends it anyway, because the Electron plugin does and the cost is one header. Say to drop the header if a logged-in account window works without it.
-- Whether Windows or macOS should download a Flash projector. The default is no. Those systems stay Ruffle only, which is what `players.rs` does now.
-- Whether pull request 47 should merge before L1. The default is that L1 implements the same flags and rebases if 47 lands first. Say to merge 47 first if you want that review to finish on its own branch.
-- Whether Lite should replace the Electron app. The default is no. Electron keeps PPAPI and the plugin host. Lite does not edit `main.js`.
-- Whether a real AQW session completes on Ruffle desktop 0.7.1 with `--tcp-connections allow`. The Electron native path uses that flag and does not start `res/socketProxy.js`. This plan did not play a session. Say to block L1 if a manual session fails.
-- Whether the Linux projector still reaches the AQW login. `lite/README.md` says it does. No test in the tree runs the projector. Say to disable the Flash button if a manual login fails.
-- A test account for L7 sync does not exist in this repo. Lane 3 of L7 records a blocker instead of inventing a login.
+- Whether a real AQW session completes on the 32.0.0.465 projector and on Ruffle desktop 0.7.1 with `--tcp-connections allow`. This plan did not play a session. Say to block a later lane if a manual login fails.
 
 ## Appendix B. Alternatives rejected
 
-A Tauri port of the plugin host lost. The host API returns Electron windows and `ipcMain` channels. Lite would grow a second shell beside Electron, and AQW is the only game the launcher needs. DragonFable is one URL button in L11, not a plugin.
+A Tauri port of the plugin host lost. The host API returns Electron windows and `ipcMain` channels. Lite would grow a second shell beside Electron, and AQW is the only game the launcher needs.
 
 In-page Ruffle plus `res/socketProxy.js` lost. Native Ruffle already opens TCP. The proxy exists because the webview build cannot. Keeping both players in Lite doubles the network stack for one game.
 
@@ -779,9 +275,9 @@ Porting Char Page Studio lost. The lab and the GIF capture are a second Electron
 
 An in-app updater for AquaStar itself lost. The Electron app has none. Releases stay on GitHub via `v*` and `lite-v*` tags.
 
-Building the companion tools before the single-player session lost. A reminders window does not help if Play starts two games or the wrong loader. L1 and L2 are first for that reason.
+Building companion windows before the single-player session lost. A reminders window does not help if Play starts two games or the wrong loader. L1 and L2 are first for that reason. The companion windows then lost again on weight, so they are deferred in Appendix H rather than scheduled as L4.
 
-Merging screenshot and recording into one pull request lost. Recording needs a window id that screenshot has already proven. L10 stops if L9 cannot see the external window.
+Pinning the 32.0.0.344 PPAPI plugin as if it were a projector lost. It will not launch a SWF by itself. The official standalone projector is 32.0.0.465.
 
 ## Appendix C. Risks
 
@@ -791,17 +287,13 @@ Merging screenshot and recording into one pull request lost. Recording needs a w
 
 L3 user-agent behavior is unproven against a live account login. The owner watches Lane 7 and a manual login note.
 
-L7 needs a real account session. Without one, Lane 3 stays blocked and the pull request does not become stack-ready.
+The Windows projector is 32-bit. A 64-bit Windows machine can run it, and L1 does not claim a 64-bit projector exists. The macOS pin is a disk image. Linux CI cannot launch that image. The unit test checks the hash and the path. A Mac review still has to mount it once.
 
-L9 and L10 depend on the operating system exposing the player window. If Lane 2 of L9 cannot see it, L10 does not start. The owner reports that instead of recording the launcher.
-
-L11 raises the child cap. A bug there can leak players after quit. Lane 7 is the guard.
-
-L12 downloads and runs a new native binary. The hash check and the host allow-list are the guards. A missing hash is a reject, not a warning.
+L1 downloads official projectors and checks SHA-256 before unpacking. A mismatch is a reject, not a warning. Nothing downloads a new Ruffle at startup.
 
 The font limit in `lite/src-tauri/src/fonts.rs` is already on this branch and is easy to undo by setting `FONTCONFIG_FILE` on the player. L1 must keep `without_launcher_fontconfig`. The owner watches a player start on a machine with a large font set.
 
-Pull request 47 may merge during the program. L1 rebases onto it. A conflict in `players.rs` is expected and is not a reason to rewrite the settings twice.
+Pull request 47 is still open. L1 carries that commit. If it merges first, rebase and do not rewrite `ruffle.rs`.
 
 ## Appendix D. Links and reading list
 
@@ -812,7 +304,7 @@ Read these before editing.
 - `docs/FLASH_CHECKLIST.md` for the manual Electron pass. Lite does not tick those PPAPI boxes.
 - `res/ruffleNative.js`, `res/socketProxy.js`, `res/flash.js`, and `plugins/adventure-quest-worlds/launcher-config.js`.
 
-L1 and L2 get `pstack/skills/how/SKILL.md` because the player arguments and the URL resolver are the load-bearing design. L7 and L10 get `pstack/skills/interrogate/SKILL.md` because cookie sync and window capture are the two designs most likely to be wrong.
+L1 and L2 get `pstack/skills/how/SKILL.md` because the player arguments and the URL resolver are the load-bearing design.
 
 The execution program keeps a decision trail at `docs/lite-port-trail.tsv` per `pstack/skills/show-me-your-work/SKILL.md`. One row per fork, verdict, and operator default. This plan file is the trail for the choices already made.
 
@@ -1055,7 +547,10 @@ The player is outside the webview. A feature that draws the SWF inside Electron,
 
 **ruffle-native.** In, L1, effort M. Lite already spawns this process. The gap is one child, quality, graphics, and the OpenGL retry that `res/ruffleNative.js` already has. Pull request 47 is the same gap and is not merged.
 
-**play-flash.** In, L1, effort S. Keep the Linux projector button. Do not add Windows or macOS projectors unless you override Appendix A.
+**play-flash.** In, L1, effort M. Flash is the default button on Linux, Windows, and macOS. The pin is Adobe's official standalone projector 32.0.0.465, because 32.0.0.344 has no projector on Adobe's CDN.
+
+**aqw-account-and-character.** In, L3 for the character-page URL, effort S. The name is a query string. Inventory sync is out, so there is no auto-sync.
+
 
 **aqw-live-loader.** In, L2, effort M. The built-in Loader4 URL already went stale once, which is why pull request 31 added the lookup. The result is a string the external player can open.
 
@@ -1067,7 +562,7 @@ The player is outside the webview. A feature that draws the SWF inside Electron,
 
 **aqw-testing-game.** In, L2, effort S. One more URL on the same player path.
 
-**open-site.** In, L3, effort S. Wiki, account, and news already work. Design notes, gifts, calendar, and the character lookup are more allow-listed HTTPS pages.
+**open-site.** In, L3, effort S. Wiki, account, and news already work. L3 adds the character lookup and nothing else from the Useful Pages list.
 
 **aqw-navigation.** In, L3, effort M. Wiki ad removal is page script in a Tauri webview. It never touches the game window.
 
@@ -1075,67 +570,10 @@ The player is outside the webview. A feature that draws the SWF inside Electron,
 
 **help-about.** In, L3, effort S. Version and the releases link are how people notice a bad build. No Flash involved.
 
-**aqw-account-and-character.** In, L3 for the character-page URL, effort S. The name is a query string. Auto-sync waits for L7.
 
-### Later, L4 through L12
+### Deferred or cut
 
-**aqw-reminders.** Later, L4, effort M. Local HTML and a JSON file. The reset clock is pure date math in `reset-time.js`.
-
-**aqw-reset-time.** Later, L4, effort S. It has no UI of its own. It ships with reminders.
-
-**aqw-list-kit.** Later, L4, effort M. Port it once and let to-do reuse it.
-
-**aqw-workspace-ui.** Later, L4, effort M. Character tabs are part of the reminders window.
-
-**aqw-todo.** Later, L5, effort M. Same kit, different file, no clock.
-
-**aqw-strategy.** Later, L6, effort M. The window is HTML. The timer chord is a global shortcut, which Tauri does not have in this tree yet, so this is the first plugin dependency.
-
-**shortcuts.** Later, L6 for the strategy chord and L8 for the editor, effort M. F2 and Ctrl+J do not move until capture exists, because those chords exist to hit a focused Flash window. An external player does not deliver them to the shell.
-
-**namespaced-store.** Later, with L4, effort S. Lite can write the same JSON filenames. It should not grow the full `getStore` host.
-
-**settings-persistence.** Later, L1 starts it for Ruffle flags, effort M. Do not copy the dual-write merge. One Lite settings file is enough. Electron `aquastar.json` stays the Electron file, except L4 may read a legacy reminders file once.
-
-**settings-ui.** Later, split across L1, L2, and L8, effort M. Port the rows Lite uses. Do not port the plugin picker.
-
-**aqw-inventory.** Later, L7, effort L. Sync is HTTP plus the account cookie jar. It does not need the SWF. It does need a logged-in webview, which is the hard part.
-
-**aqw-account-sync.** Later, L7, effort M. The button is injected into the account page, which Lite can still open.
-
-**aqw-wiki-fetch.** Later, L7, effort S. A server-side GET of a public wiki URL. The CORS reason is unchanged.
-
-**aqw-wikiview.** Later, L7, effort M. Hover and badges run on wiki and account HTML, not on the game. Badges need inventory counts, so they ship together.
-
-**i18n.** Later, L8, effort M. en-US and pt-BR already exist as data.
-
-**aqw-locales.** Later, L8, effort M. Same catalogs, new windows.
-
-**screenshots.** Later, L9, effort L. `capturePage` sees the Electron webview only. Lite has to capture the other process. That is a different feature, not a port of the call.
-
-**screen-recording.** Later, L10, effort L. Same window id as L9. If L9 cannot see the window, drop recording instead of filming the launcher. The vp8 limit is an Electron 11 limit and does not apply to a native capture.
-
-**aqw-dragonfable.** Later, L11, effort S. One more external URL. It does not need the plugin host.
-
-**multi-window.** Later, L11, effort M. Two AQW children plus one DragonFable child is the cap. Electron's unbounded window list is not the goal.
-
-**ruffle-native update.** Later, L12, effort M. The pin stays the default so a bad release cannot start itself. Update is a button.
-
-**aqw-window-title.** Later, L11, effort S. Set the launcher title from the character name. The player window is `--no-gui` and is not retitled.
-
-**aqw-menus.** Later, as buttons on the launcher from L3 through L11, effort M. Do not rebuild the Electron menu template. The launcher is a small window, and buttons match what Lite already uses.
-
-**aqw-keybinds.** Later, L8, effort M. Rebind the companion actions. Do not register a global chord for every Electron default.
-
-**session-rules.** Later, only the wiki cleanup in L3, effort S. The ad-domain cancel list does not see the external player's traffic. Do not pretend it does.
-
-**child-windows.** Later, L3, effort S. `open_site` already focuses an existing label. Keep that, and do not implement Electron `new-window`.
-
-**feature-windows.** Later, L4 through L7, effort M. One window per tool, focus on second open. Same rule as the Electron controller, without `BrowserWindow`.
-
-**logging.** Later, a status line only, effort S. The SWF request log cannot see an external player. Drop `swfLog`.
-
-**crash-and-errors.** Later, L1 for the OpenGL retry, effort S. Do not port crashpad. It is already off.
+Appendix H is the list. Do not reopen those as pull requests in this program.
 
 ### Out
 
@@ -1155,7 +593,7 @@ The player is outside the webview. A feature that draws the SWF inside Electron,
 
 **ruffle-web.** Out. That mode is the SWF inside the webview. Lite's Ruffle is the desktop binary.
 
-**ruffle-web-update.** Out. It replaces `ruffle.js` for the webview mode. L12 updates the desktop binary instead.
+**ruffle-web-update.** Out. It replaces `ruffle.js` for the webview mode. Lite does not download a new Ruffle at startup.
 
 **socket-proxy.** Out. Native Ruffle opens TCP with `--tcp-connections allow`. The proxy is only for the webview build.
 
@@ -1163,7 +601,7 @@ The player is outside the webview. A feature that draws the SWF inside Electron,
 
 **aqw-server-list.** Out. Fallback hosts for that proxy. It is not a picker, so there is nothing to show.
 
-**aqw-render-modes.** Out as a three-way setting. Lite's choice is the Play button, Ruffle or Flash, and Flash only where the projector exists.
+**aqw-render-modes.** Out as a three-way setting. Lite's choice is the Play button. Flash is the default on Linux, Windows, and macOS. Ruffle is the other button.
 
 **media-permission.** Out. It gates `getUserMedia` on the game webview for the in-window recorder.
 
@@ -1244,3 +682,21 @@ The player is outside the webview. A feature that draws the SWF inside Electron,
 **window-title-notify.** Out. The status line already reports player errors. Flashing the Electron title does not reach the player window.
 
 **accounts.** Out as a password store. Neither app should gain one. Login stays on `account.aq.com`.
+
+## Appendix H. Deferred and cut
+
+Deferred. Each one is a window or a download the user opens on purpose, and none is required to play. Build one only after L3, and only if the idle launcher stays small.
+
+- Reminders, the to-do list, and the strategy timer. Each is another webview plus a JSON file.
+- Wiki hover on wiki pages. The image preview does not read inventory. The script is large, so it waits. Ownership badges need inventory counts, so those badges stay out.
+- Portuguese catalogs and the shortcut editor.
+- A screenshot of the external player window.
+- One DragonFable button.
+- An opt-in Ruffle update. The pinned desktop build stays the default.
+
+Cut.
+
+- Inventory sync, the account Sync Now button, auto-sync, and wiki badges that need those counts.
+- Recording the player. Encoding video is a standing CPU cost, and Electron already records.
+- A second AQW process. Two game runtimes fights the point of a light launcher.
+- The long Useful Pages list. Wiki, account, news, and the character lookup are enough.
