@@ -16,6 +16,7 @@ ureq = "2"
 sha2 = "0.10"
 flate2 = "1"
 tar = "0.4"
+tauri-plugin-single-instance = "2.4.5"
 [dependencies.zip]
 version = "2"
 default-features = false

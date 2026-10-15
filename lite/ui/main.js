@@ -6,6 +6,14 @@ invoke('engines').then((list) => {
     const b = document.querySelector(`[data-engine="${engine}"]`);
     if (b && !ok) { b.disabled = true; b.title = 'Not available on this system'; }
   }
+  return invoke('preferred_engine');
+}).then((engine) => {
+  const b = document.querySelector(`[data-engine="${engine}"]`);
+  if (!b || b.disabled) return;
+  b.classList.add('primary');
+  if (engine === 'flash') {
+    status.textContent = 'Flash is the default player. The game opens in its own window. Closing AquaStar Lite closes it too.';
+  }
 });
 
 document.querySelectorAll('[data-engine]').forEach((b) => b.addEventListener('click', async () => {

@@ -57,7 +57,8 @@ const RUFFLE: Option<Artifact> = Some(Artifact {
 )))]
 const RUFFLE: Option<Artifact> = None;
 
-// Adobe's own Linux standalone projector 32.0.0.465 (still served by Adobe's CDN).
+// Adobe's official standalone projector is 32.0.0.465. The Artix PPAPI build
+// 32.0.0.344 is not a projector, and Adobe's CDN does not serve one for that version.
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 const FLASH: Option<Artifact> = Some(Artifact {
     dir: "flashplayer-32.0.0.465",
@@ -65,12 +66,38 @@ const FLASH: Option<Artifact> = Some(Artifact {
     sha256: "883f7aa23301fc80de879501157533a4acdbfee0721ed7c57676dc032fdf96c3",
     exe: "flashplayer",
 });
-// Windows and macOS: no Flash player is shipped yet, so those builds are Ruffle only.
-#[cfg(not(all(target_os = "linux", target_arch = "x86_64")))]
+#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+const FLASH: Option<Artifact> = Some(Artifact {
+    dir: "flashplayer-32.0.0.465",
+    url: "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.exe",
+    sha256: "a4b333ac1da12026989549015303d82231982838bccfb544ba5fd188746066f0",
+    exe: "flashplayer_32_sa.exe",
+});
+#[cfg(target_os = "macos")]
+const FLASH: Option<Artifact> = Some(Artifact {
+    dir: "flashplayer-32.0.0.465",
+    url: "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.dmg",
+    sha256: "236ecef54a7d6c3eed739c74b7e14946b07b6156cbcedda3bbbf444f1d17023a",
+    exe: "Flash Player.app/Contents/MacOS/Flash Player",
+});
+#[cfg(not(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "windows", target_arch = "x86_64"),
+    target_os = "macos"
+)))]
 const FLASH: Option<Artifact> = None;
 
 impl Engine {
-    pub const ALL: [Engine; 2] = [Engine::Ruffle, Engine::Flash];
+    pub const ALL: [Engine; 2] = [Engine::Flash, Engine::Ruffle];
+
+    /// Flash when this OS has a projector, otherwise Ruffle.
+    pub fn preferred() -> Engine {
+        if Engine::Flash.supported() {
+            Engine::Flash
+        } else {
+            Engine::Ruffle
+        }
+    }
 
     pub fn supported(&self) -> bool {
         match self {
@@ -88,6 +115,7 @@ impl Engine {
 }
 
 struct Tracked {
+    engine: Engine,
     child: Child,
     killed: Arc<AtomicBool>,
 }
@@ -96,6 +124,7 @@ struct Tracked {
 pub struct Players {
     children: Arc<Mutex<Vec<Tracked>>>,
     shutting_down: Arc<AtomicBool>,
+    launch_gate: Arc<Mutex<()>>,
 }
 
 /// Set by the launcher when it installed a WebKit-only fontconfig.
@@ -129,6 +158,10 @@ impl Players {
         swf: &str,
         settings: &RuffleSettings,
     ) -> Result<String, String> {
+        let _gate = self.launch_gate.lock().unwrap();
+        if let Some(msg) = self.prepare(engine) {
+            return Ok(msg);
+        }
         let settings = settings.for_platform(std::env::consts::OS);
         let graphics = settings.graphics;
         // Only a non-OpenGL Ruffle is watched. The relaunch is always OpenGL and is not watched,
@@ -159,7 +192,7 @@ impl Players {
             }
             Ok(None) => {
                 let pid = child.id();
-                self.adopt(child, killed.clone())?;
+                self.adopt(engine, child, killed.clone())?;
                 if capture {
                     self.arm_fallback(
                         pid,
@@ -180,7 +213,29 @@ impl Players {
         }
     }
 
-    fn adopt(&self, mut child: Child, killed: Arc<AtomicBool>) -> Result<(), String> {
+    /// Drop exited children. If this engine is already up, say so. Otherwise stop
+    /// the other engine so the launcher never keeps two game processes.
+    fn prepare(&self, engine: Engine) -> Option<String> {
+        let mut list = self.children.lock().unwrap();
+        list.retain_mut(|t| matches!(t.child.try_wait(), Ok(None)));
+        if list.iter().any(|t| t.engine == engine) {
+            return Some(format!("{engine:?} is already running"));
+        }
+        for tracked in list.drain(..) {
+            tracked.killed.store(true, Ordering::SeqCst);
+            let mut child = tracked.child;
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+        None
+    }
+
+    fn adopt(
+        &self,
+        engine: Engine,
+        mut child: Child,
+        killed: Arc<AtomicBool>,
+    ) -> Result<(), String> {
         let mut list = self.children.lock().unwrap();
         list.retain_mut(|t| matches!(t.child.try_wait(), Ok(None)));
         if self.shutting_down.load(Ordering::SeqCst) {
@@ -189,7 +244,11 @@ impl Players {
             let _ = child.wait();
             return Err("AquaStar Lite is closing".into());
         }
-        list.push(Tracked { child, killed });
+        list.push(Tracked {
+            engine,
+            child,
+            killed,
+        });
         Ok(())
     }
 
@@ -220,7 +279,7 @@ impl Players {
             ));
         }
         let pid = child.id();
-        self.adopt(child, Arc::new(AtomicBool::new(false)))?;
+        self.adopt(Engine::Ruffle, child, Arc::new(AtomicBool::new(false)))?;
         Ok(format!(
             "Ruffle ({}) crashed; relaunched with OpenGL (pid {pid})",
             from.as_str()
@@ -267,6 +326,14 @@ impl Players {
             }
             let tail_text = tail.lock().map(|t| t.clone()).unwrap_or_default();
             log_fallback(&report, &tail_text);
+            let _gate = players.launch_gate.lock().unwrap();
+            {
+                let mut list = players.children.lock().unwrap();
+                list.retain_mut(|t| matches!(t.child.try_wait(), Ok(None)));
+                if !list.is_empty() {
+                    return;
+                }
+            }
             if let Err(e) = players.relaunch_gl(&exe, &swf, quality, graphics) {
                 eprintln!("aquastar-lite: OpenGL relaunch failed: {e}");
             }
@@ -407,14 +474,14 @@ fn install(data: &Path, a: &Artifact) -> Result<PathBuf, String> {
     let tmp = dir.with_extension("partial");
     let _ = fs::remove_dir_all(&tmp);
     fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
-    if a.url.ends_with(".zip") {
-        zip::ZipArchive::new(std::io::Cursor::new(bytes))
-            .and_then(|mut z| z.extract(&tmp))
-            .map_err(|e| e.to_string())?;
+    if a.url.ends_with(".zip")
+        || a.url.ends_with(".exe")
+        || a.url.ends_with(".dmg")
+        || a.url.ends_with(".tar.gz")
+    {
+        unpack(a.url, &bytes, &tmp)?;
     } else {
-        tar::Archive::new(flate2::read::GzDecoder::new(&bytes[..]))
-            .unpack(&tmp)
-            .map_err(|e| e.to_string())?;
+        return Err(format!("unsupported player archive: {}", a.url));
     }
     let _ = fs::remove_dir_all(&dir);
     fs::rename(&tmp, &dir).map_err(|e| e.to_string())?;
@@ -424,6 +491,112 @@ fn install(data: &Path, a: &Artifact) -> Result<PathBuf, String> {
         let _ = fs::set_permissions(&exe, fs::Permissions::from_mode(0o755));
     }
     Ok(exe)
+}
+
+fn unpack(url: &str, bytes: &[u8], tmp: &Path) -> Result<(), String> {
+    if url.ends_with(".exe") {
+        let name = url.rsplit('/').next().unwrap_or("player.exe");
+        fs::write(tmp.join(name), bytes).map_err(|e| e.to_string())
+    } else if url.ends_with(".dmg") {
+        unpack_dmg(bytes, tmp)
+    } else if url.ends_with(".zip") {
+        zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec()))
+            .and_then(|mut z| z.extract(tmp))
+            .map_err(|e| e.to_string())
+    } else {
+        tar::Archive::new(flate2::read::GzDecoder::new(bytes))
+            .unpack(tmp)
+            .map_err(|e| e.to_string())
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn unpack_dmg(bytes: &[u8], tmp: &Path) -> Result<(), String> {
+    let dmg = tmp.join("projector.dmg");
+    fs::write(&dmg, bytes).map_err(|e| e.to_string())?;
+    let mount = tmp.join("mnt");
+    fs::create_dir_all(&mount).map_err(|e| e.to_string())?;
+    let attached = Command::new("hdiutil")
+        .args(["attach", "-nobrowse", "-readonly", "-mountpoint"])
+        .arg(&mount)
+        .arg(&dmg)
+        .status()
+        .map_err(|e| format!("hdiutil attach failed: {e}"))?;
+    if !attached.success() {
+        return Err(format!("hdiutil attach exited {attached}"));
+    }
+    let copied = Command::new("ditto")
+        .arg(mount.join("Flash Player.app"))
+        .arg(tmp.join("Flash Player.app"))
+        .status();
+    let _ = Command::new("hdiutil").arg("detach").arg(&mount).status();
+    let _ = fs::remove_file(&dmg);
+    match copied {
+        Ok(status) if status.success() => Ok(()),
+        Ok(status) => Err(format!("ditto exited {status}")),
+        Err(e) => Err(format!("ditto failed: {e}")),
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn unpack_dmg(_bytes: &[u8], _tmp: &Path) -> Result<(), String> {
+    Err("the macOS projector is a disk image and is unpacked on macOS".into())
+}
+
+#[cfg(test)]
+mod pin_tests {
+    use super::*;
+
+    /// `(os, url, sha256, exe)` for the official 32.0.0.465 projector.
+    const FLASH_PINS: &[(&str, &str, &str, &str)] = &[
+        (
+            "linux",
+            "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flash_player_sa_linux.x86_64.tar.gz",
+            "883f7aa23301fc80de879501157533a4acdbfee0721ed7c57676dc032fdf96c3",
+            "flashplayer",
+        ),
+        (
+            "windows",
+            "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.exe",
+            "a4b333ac1da12026989549015303d82231982838bccfb544ba5fd188746066f0",
+            "flashplayer_32_sa.exe",
+        ),
+        (
+            "macos",
+            "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.dmg",
+            "236ecef54a7d6c3eed739c74b7e14946b07b6156cbcedda3bbbf444f1d17023a",
+            "Flash Player.app/Contents/MacOS/Flash Player",
+        ),
+    ];
+
+    #[test]
+    fn every_official_projector_pin_is_a_sha256() {
+        for (os, url, sha, exe) in FLASH_PINS {
+            assert_eq!(sha.len(), 64, "{os}");
+            assert!(
+                url.starts_with("https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/"),
+                "{url}"
+            );
+            assert!(!url.contains("32.0.0.344"), "{url}");
+            assert!(!exe.is_empty());
+        }
+    }
+
+    #[test]
+    fn this_os_pins_the_official_projector_and_prefers_flash() {
+        let Some(pin) = FLASH else {
+            assert_eq!(Engine::preferred(), Engine::Ruffle);
+            return;
+        };
+        let row = FLASH_PINS
+            .iter()
+            .find(|(_, url, _, _)| *url == pin.url)
+            .unwrap_or_else(|| panic!("no pin row for {}", pin.url));
+        assert_eq!(row.2, pin.sha256);
+        assert_eq!(row.3, pin.exe);
+        assert_eq!(Engine::preferred(), Engine::Flash);
+        assert!(Engine::Flash.supported());
+    }
 }
 
 #[cfg(all(test, unix))]
@@ -624,6 +797,67 @@ mod tests {
         std::thread::sleep(Duration::from_millis(500));
         assert_eq!(log_lines(&log).len(), 1, "{:?}", log_lines(&log));
         assert!(players.children.lock().unwrap().is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_second_click_does_not_start_another_player() {
+        let dir = scratch("once");
+        let log = dir.join("args");
+        let exe = write_script(
+            &dir,
+            &format!("printf '%s\\n' \"$*\" >> '{}'\nsleep 60", log.display()),
+        );
+        let players = Players::default();
+        let _stop = Stop(players.clone());
+        players
+            .launch_at(&exe, Engine::Flash, "movie.swf", &RuffleSettings::default())
+            .unwrap();
+        let msg = players
+            .launch_at(&exe, Engine::Flash, "again.swf", &RuffleSettings::default())
+            .unwrap();
+        assert!(msg.contains("already"), "{msg}");
+        assert_eq!(log_lines(&log), ["movie.swf"]);
+        assert_eq!(players.children.lock().unwrap().len(), 1);
+        drop(_stop);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn switching_engines_replaces_the_running_player() {
+        let dir = scratch("switch");
+        let log = dir.join("args");
+        let exe = write_script(
+            &dir,
+            &format!("printf '%s\\n' \"$*\" >> '{}'\nsleep 60", log.display()),
+        );
+        let players = Players::default();
+        let _stop = Stop(players.clone());
+        players
+            .launch_at(
+                &exe,
+                Engine::Ruffle,
+                "ruffle.swf",
+                &RuffleSettings::default(),
+            )
+            .unwrap();
+        let msg = players
+            .launch_at(&exe, Engine::Flash, "flash.swf", &RuffleSettings::default())
+            .unwrap();
+        assert!(msg.contains("Flash"), "{msg}");
+        assert!(!msg.contains("already"), "{msg}");
+        let kids = players.children.lock().unwrap();
+        assert_eq!(kids.len(), 1);
+        assert_eq!(kids[0].engine, Engine::Flash);
+        drop(kids);
+        assert_eq!(log_lines(&log).len(), 2);
+        assert!(
+            log_lines(&log)[0].contains("ruffle.swf"),
+            "{:?}",
+            log_lines(&log)
+        );
+        assert_eq!(log_lines(&log)[1], "flash.swf");
+        drop(_stop);
         let _ = fs::remove_dir_all(&dir);
     }
 

@@ -62,6 +62,11 @@ fn engines() -> Vec<(Engine, bool)> {
 }
 
 #[tauri::command]
+fn preferred_engine() -> Engine {
+    Engine::preferred()
+}
+
+#[tauri::command]
 async fn open_site(app: tauri::AppHandle, label: String, url: String) -> Result<(), String> {
     let parsed: tauri::Url = url.parse().map_err(|_| "bad url".to_string())?;
     let host = parsed.host_str().unwrap_or("");
@@ -122,10 +127,18 @@ fn main() {
     #[cfg(target_os = "linux")]
     limit_webkit_fonts();
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .manage(Players::default())
         .invoke_handler(tauri::generate_handler![
             play,
             engines,
+            preferred_engine,
             open_site,
             ruffle_settings,
             set_ruffle_settings
