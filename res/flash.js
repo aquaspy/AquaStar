@@ -70,14 +70,18 @@ function getPluginName() {
     return pluginName;
 }
 
-// Must match the bundled binaries in FlashPlayer/ (Clean Flash / darktohka patched builds;
-// ARM stays on Google's last ChromeOS build).
+// Must match the bundled binaries in FlashPlayer/. Windows, macOS and Linux x64 are the
+// exact builds shipped by the game publisher's official desktop launcher (32.0.0.344). It ships no
+// Linux 32-bit or ARM build, so those keep their previous binaries.
 function getPluginVersion() {
     switch (process.platform) {
-    case 'win32':  return '34.0.0.376';
-    case 'darwin': return '34.0.0.372';
-    case 'linux':  return process.arch == 'arm' ? '32.0.0.445' : '34.0.0.137';
-    default:       return '32.0.0.465';
+    case 'win32':  return '32.0.0.344';
+    case 'darwin': return '32.0.0.344';
+    case 'linux':
+        if (process.arch == 'arm') return '32.0.0.445';
+        if (process.arch == 'x86' || process.arch == 'ia32') return '34.0.0.137';
+        return '32.0.0.344';
+    default:       return '32.0.0.344';
     }
 }
 
