@@ -2,10 +2,12 @@
 
 #[cfg(target_os = "linux")]
 mod fonts;
+mod placement;
 mod players;
 
+use std::path::Path;
 #[cfg(target_os = "linux")]
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use players::Engine;
 #[cfg(target_os = "linux")]
@@ -18,10 +20,14 @@ const AQW_LOADER: &str = "https://game.aq.com/game/gamefiles/Loader4.swf?ver=b";
 #[tauri::command]
 async fn play(app: tauri::AppHandle, engine: Engine) -> Result<String, String> {
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let placement = app.state::<placement::Placement>().inner().clone();
+    let saves = placement.ruffle_save_directory().map(Path::to_path_buf);
     let players = app.state::<Players>().inner().clone();
-    tauri::async_runtime::spawn_blocking(move || players.launch(&dir, engine, AQW_LOADER))
-        .await
-        .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(move || {
+        players.launch(&dir, engine, AQW_LOADER, saves.as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -74,6 +80,41 @@ fn limit_webkit_fonts() {
     }
 }
 
+#[cfg(target_os = "windows")]
+fn tell_user(message: &str) {
+    use std::os::windows::ffi::OsStrExt;
+
+    const MB_ICONERROR: u32 = 0x10;
+
+    #[link(name = "user32")]
+    extern "system" {
+        fn MessageBoxW(
+            hwnd: *mut std::ffi::c_void,
+            text: *const u16,
+            caption: *const u16,
+            utype: u32,
+        ) -> i32;
+    }
+
+    fn wide(text: &str) -> Vec<u16> {
+        std::ffi::OsStr::new(text)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect()
+    }
+
+    let text = wide(message);
+    let caption = wide("AquaStar Lite");
+    unsafe {
+        MessageBoxW(
+            std::ptr::null_mut(),
+            text.as_ptr(),
+            caption.as_ptr(),
+            MB_ICONERROR,
+        );
+    }
+}
+
 fn main() {
     // WebKitGTK's DMA-BUF renderer costs ~125 MB PSS here (measured under Xvfb) and is a
     // known source of blank windows on NVIDIA/older Mesa. Users can still opt back in.
@@ -84,10 +125,25 @@ fn main() {
     }
     #[cfg(target_os = "linux")]
     limit_webkit_fonts();
+    let mut context = tauri::generate_context!();
+    let placement = match placement::apply(&mut context) {
+        Ok(placement) => placement,
+        Err(err) => {
+            let message = format!(
+                "AquaStar Lite could not create its data folder next to the executable.\n\n{err}\n\nportable.txt is present, so data was not stored in AppData."
+            );
+            #[cfg(target_os = "windows")]
+            tell_user(&message);
+            #[cfg(not(target_os = "windows"))]
+            eprintln!("aquastar-lite: {message}");
+            std::process::exit(1);
+        }
+    };
     let app = tauri::Builder::default()
+        .manage(placement)
         .manage(Players::default())
         .invoke_handler(tauri::generate_handler![play, engines, open_site])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("failed to build AquaStar Lite");
     app.run(|app, event| {
         let main_gone = matches!(

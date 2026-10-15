@@ -73,14 +73,28 @@ impl Engine {
         }
     }
 
-    fn args(&self, swf: &str) -> Vec<String> {
+    fn args(&self, swf: &str, save_directory: Option<&Path>) -> Vec<String> {
         match self {
-            Engine::Ruffle => [
-                "--tcp-connections", "allow", "--storage", "disk", "--letterbox", "on", "--no-gui", swf,
-            ]
-            .iter()
-            .map(|s| s.to_string())
-            .collect(),
+            Engine::Ruffle => {
+                let mut args: Vec<String> = [
+                    "--tcp-connections",
+                    "allow",
+                    "--storage",
+                    "disk",
+                    "--letterbox",
+                    "on",
+                    "--no-gui",
+                ]
+                .iter()
+                .map(|s| s.to_string())
+                .collect();
+                if let Some(dir) = save_directory {
+                    args.push("--save-directory".to_string());
+                    args.push(dir.to_string_lossy().into_owned());
+                }
+                args.push(swf.to_string());
+                args
+            }
             Engine::Flash => vec![swf.to_string()],
         }
     }
@@ -104,10 +118,16 @@ fn without_launcher_fontconfig(cmd: &mut Command) {
 }
 
 impl Players {
-    pub fn launch(&self, data: &Path, engine: Engine, swf: &str) -> Result<String, String> {
+    pub fn launch(
+        &self,
+        data: &Path,
+        engine: Engine,
+        swf: &str,
+        save_directory: Option<&Path>,
+    ) -> Result<String, String> {
         let exe = resolve(data, engine)?;
         let mut cmd = Command::new(&exe);
-        cmd.args(engine.args(swf));
+        cmd.args(engine.args(swf, save_directory));
         without_launcher_fontconfig(&mut cmd);
         let mut child = cmd.spawn()
             .map_err(|e| format!("could not start {}: {e}", exe.display()))?;
@@ -179,4 +199,53 @@ fn install(data: &Path, a: &Artifact) -> Result<PathBuf, String> {
         let _ = fs::set_permissions(&exe, fs::Permissions::from_mode(0o755));
     }
     Ok(exe)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SWF: &str = "https://game.aq.com/game/gamefiles/Loader4.swf?ver=b";
+    const SAVE: &str = r"C:\Games\AquaStar\data\ruffle-saves";
+
+    #[test]
+    fn ruffle_adds_save_directory_before_the_swf_only_when_set() {
+        assert_eq!(
+            Engine::Ruffle.args(SWF, None),
+            vec![
+                "--tcp-connections".to_string(),
+                "allow".to_string(),
+                "--storage".to_string(),
+                "disk".to_string(),
+                "--letterbox".to_string(),
+                "on".to_string(),
+                "--no-gui".to_string(),
+                SWF.to_string(),
+            ]
+        );
+        assert_eq!(
+            Engine::Ruffle.args(SWF, Some(Path::new(SAVE))),
+            vec![
+                "--tcp-connections".to_string(),
+                "allow".to_string(),
+                "--storage".to_string(),
+                "disk".to_string(),
+                "--letterbox".to_string(),
+                "on".to_string(),
+                "--no-gui".to_string(),
+                "--save-directory".to_string(),
+                SAVE.to_string(),
+                SWF.to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn flash_args_stay_the_swf() {
+        assert_eq!(Engine::Flash.args(SWF, None), vec![SWF.to_string()]);
+        assert_eq!(
+            Engine::Flash.args(SWF, Some(Path::new(SAVE))),
+            vec![SWF.to_string()]
+        );
+    }
 }
