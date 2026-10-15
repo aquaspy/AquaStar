@@ -26,3 +26,47 @@ test('Ruffle desktop maps each supported platform to its release asset', () => {
   assert.ok(/MacOS/.test(native.platformTarget('darwin', 'arm64').exe));
   assert.strictEqual(native.platformTarget('linux', 'arm'), null);
 });
+
+test('old Ruffle desktop versions are pruned, keeping the active and running ones', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aq-native-'));
+  const root = path.join(data, 'ruffle-native');
+  ['v0.6.0', 'v0.7.0', 'v0.7.1'].forEach((tag) => {
+    fs.mkdirSync(path.join(root, tag), { recursive: true });
+    fs.writeFileSync(path.join(root, tag, 'ruffle'), 'bin');
+  });
+  fs.writeFileSync(path.join(root, 'current.json'), '{}');
+
+  const removed = native.pruneOldVersions(data, 'v0.7.1', [path.join(root, 'v0.7.0', 'ruffle')]);
+  assert.deepStrictEqual(removed, ['v0.6.0']);
+  assert.deepStrictEqual(fs.readdirSync(root).sort(), ['current.json', 'v0.7.0', 'v0.7.1']);
+
+  // Next launch: nothing running any more, so the previous version goes too.
+  assert.deepStrictEqual(native.pruneOldVersions(data, 'v0.7.1', []), ['v0.7.0']);
+  // Idempotent and harmless when the folder is already clean or missing.
+  assert.deepStrictEqual(native.pruneOldVersions(data, 'v0.7.1', []), []);
+  assert.deepStrictEqual(native.pruneOldVersions(path.join(data, 'nope'), 'v0.7.1', []), []);
+  fs.rmSync(data, { recursive: true, force: true });
+});
+
+test('a locked old version is left for a later launch instead of failing', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const updater = require('../../res/ruffleUpdate.js');
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aq-native-'));
+  fs.mkdirSync(path.join(data, 'ruffle-native', 'v0.7.0'), { recursive: true });
+  const original = updater._removeIfPresent;
+  updater._removeIfPresent = () => {
+    throw new Error('EBUSY: resource busy or locked');
+  };
+  try {
+    assert.deepStrictEqual(native.pruneOldVersions(data, 'v0.7.1', []), []);
+  } finally {
+    updater._removeIfPresent = original;
+  }
+  assert.ok(fs.existsSync(path.join(data, 'ruffle-native', 'v0.7.0')));
+  fs.rmSync(data, { recursive: true, force: true });
+});

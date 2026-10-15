@@ -73,16 +73,48 @@ async function install(dataDirectory, release, target) {
     }
 }
 
+// Delete every downloaded version except `keepTag` and any whose binary a running player
+// still uses. Each removal is best-effort: a folder that cannot be deleted now (for example
+// a locked .exe on Windows) is simply retried on the next launch, so this is idempotent.
+function pruneOldVersions(dataDirectory, keepTag, inUseExes) {
+    const root = rootDir(dataDirectory);
+    let entries;
+    try { entries = fs.readdirSync(root, { withFileTypes: true }); }
+    catch (e) { return []; }
+    const busyDirs = (inUseExes || []).map((exe) => path.relative(root, exe).split(path.sep)[0]);
+    const removed = [];
+    entries.forEach((entry) => {
+        if (!entry.isDirectory() || entry.name === keepTag || busyDirs.indexOf(entry.name) !== -1) return;
+        try {
+            updater._removeIfPresent(path.join(root, entry.name));
+            removed.push(entry.name);
+        } catch (e) {
+            console.log('[AquaStar] Old Ruffle desktop ' + entry.name + ' not removed yet: ' + e.message);
+        }
+    });
+    return removed;
+}
+
+function runningExes() {
+    const exes = [];
+    running.forEach((child) => { if (child.aquaStarExe) exes.push(child.aquaStarExe); });
+    return exes;
+}
+
 // Returns the installed binary, downloading it when missing. With autoUpdate, an
 // installed copy is used immediately and a newer release is fetched for next time.
 exports.ensureInstalled = async function (dataDirectory, autoUpdate) {
     const target = platformTarget();
     if (!target) throw new Error('Ruffle desktop is not available for ' + process.platform + '/' + process.arch);
     const installed = readInstalled(dataDirectory);
+    // Leftovers from earlier updates; the active version and running players are kept.
+    if (installed) pruneOldVersions(dataDirectory, installed.tag, runningExes());
     if (installed) {
         if (autoUpdate) {
             latestRelease(target)
-                .then((release) => release.tag === installed.tag ? null : install(dataDirectory, release, target))
+                .then((release) => release.tag === installed.tag ? null : install(dataDirectory, release, target)
+                    // The version that is running now stays until the next launch prunes it.
+                    .then(() => pruneOldVersions(dataDirectory, release.tag, runningExes())))
                 .catch((e) => console.log('[AquaStar] Ruffle desktop update check failed: ' + e.message));
         }
         return installed;
@@ -107,6 +139,7 @@ const running = new Set();
 
 exports.launch = function (exe, swfUrl, opts) {
     const child = spawn(exe, exports.buildArgs(swfUrl, opts), { stdio: 'ignore', windowsHide: false });
+    child.aquaStarExe = exe;
     running.add(child);
     child.on('exit', () => running.delete(child));
     child.on('error', (e) => { running.delete(child); console.log('[AquaStar] Ruffle desktop failed: ' + e.message); });
@@ -120,4 +153,5 @@ exports.killAll = function () {
 };
 
 exports.platformTarget = platformTarget;
+exports.pruneOldVersions = pruneOldVersions;
 exports.readInstalled = readInstalled;
