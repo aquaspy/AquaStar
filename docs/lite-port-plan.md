@@ -1,6 +1,6 @@
 # Port the companion onto AquaStar Lite
 
-Electron stays the main AquaStar app permanently. Lite is the light alternative. The game stays an external process, and the shell webview never hosts Flash. Flash standalone is the default player on Linux, Windows, and macOS. Ruffle stays available. This program is L1, then L2, then L3. Inventory sync, recording, and a second game process are out. Appendix H lists what is deferred.
+Electron stays the main AquaStar app permanently. Lite is the light alternative. The game stays an external process, and the shell webview never hosts Flash. Flash standalone is the default player only where Adobe still serves a 32.0.0.465 projector. Ruffle is the player on ARM and on every other target with no projector. Appendix I is that matrix. This program is L1, then L2, then L3. Inventory sync, recording, and a second game process are out. Appendix H lists what is deferred.
 
 ## How to read this
 
@@ -81,7 +81,8 @@ Each live lane runs on its own cloud VM at the PR head. `control-ui` is not in t
 - [ ] A second process start focuses the existing launcher. Add the Tauri single-instance hook in `main.rs`.
 - [ ] Pass `--quality` and `--graphics` from saved settings. Default graphics is `gl`. After a non-`gl` child exits in the early window, relaunch once with `--graphics gl`, matching `shouldFallbackToGl` in `res/ruffleNative.js`.
 - [ ] Pin Adobe's official projector 32.0.0.465 on Windows and macOS, next to the Linux pin that is already 32.0.0.465. Adobe's CDN has no standalone projector for 32.0.0.344. The Artix PPAPI build of that version is not a projector, so it is not downloaded.
-- [ ] Windows pin is `https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.exe` with SHA-256 `a4b333ac1da12026989549015303d82231982838bccfb544ba5fd188746066f0`. The file is a 32-bit PE. macOS pin is `https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.dmg` with SHA-256 `236ecef54a7d6c3eed739c74b7e14946b07b6156cbcedda3bbbf444f1d17023a`.
+- [ ] Windows pin is `https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.exe` with SHA-256 `a4b333ac1da12026989549015303d82231982838bccfb544ba5fd188746066f0`. The file is a 32-bit PE and it is also the player on 64-bit Windows. macOS pin is `https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.dmg` with SHA-256 `236ecef54a7d6c3eed739c74b7e14946b07b6156cbcedda3bbbf444f1d17023a`. That disk image is a thin x86_64 binary.
+- [ ] On Apple Silicon, Linux i686, Linux ARM, and Windows ARM, do not download a projector. Ruffle is the player. Appendix I names the Ruffle 0.7.1 asset for each of those targets.
 - [ ] When Flash is supported, the Flash button is the default. Do not start a player until the user clicks.
 
 **You see.**
@@ -254,8 +255,8 @@ No prototype was built. The calls below are settled. Repo facts came from the tr
 Settled.
 
 - Electron stays the main AquaStar app permanently. Lite is the light alternative and does not edit `main.js`.
-- Flash is the default player on Linux, Windows, and macOS when the projector is present. Ruffle stays the fallback button.
-- Adobe's CDN does not serve a standalone projector for 32.0.0.344. Those versioned URLs redirect to the Flash end-of-life page. The Artix-official 32.0.0.344 files in `FlashPlayer/` are PPAPI plugins, not projectors. The official projector still hosted at the updater path is 32.0.0.465 on all three systems. L1 pins that file. The Windows binary is a 32-bit PE.
+- Flash is the default player where Appendix I shows a projector. Ruffle is the player everywhere else, including ARM.
+- Adobe's CDN does not serve a standalone projector for 32.0.0.344. Those versioned URLs redirect to the Flash end-of-life page. The Artix-official 32.0.0.344 files in `FlashPlayer/` are PPAPI plugins, not projectors. The official projector still hosted at the updater path is 32.0.0.465, and only for the architectures in Appendix I. L1 pins those files. The Windows binary is a 32-bit PE. The Mac disk image is Intel x86_64 only.
 - VirusTotal's public file API returned `RecaptchaRequiredError` for all three hashes, so this session did not read a fresh detection count and did not upload the files. The Windows hash matches the December 2020 projector published from Adobe's debug-downloads page. The Linux hash matches the pin already in `lite/README.md`.
 - Inventory sync is out. Wiki hover does not need those counts for the image preview, and it is deferred in Appendix H because the script is large. Ownership badges need the counts, so they are out.
 - Pull request 47 is still open. L1 carries its Ruffle settings and OpenGL fallback.
@@ -289,7 +290,7 @@ Pinning Clean Flash 34.0.0.376 lost. GitHub release `v1.54` of `darktohka/clean-
 
 L3 user-agent behavior is unproven against a live account login. The owner watches Lane 7 and a manual login note.
 
-The Windows projector is 32-bit. A 64-bit Windows machine can run it, and L1 does not claim a 64-bit projector exists. The macOS pin is a disk image. Linux CI cannot launch that image. The unit test checks the hash and the path. A Mac review still has to mount it once.
+The Windows projector is 32-bit. A 64-bit Windows machine can run it, and L1 does not claim a 64-bit projector exists. The macOS pin is an Intel disk image, so an Apple Silicon review uses Ruffle unless Rosetta is installed, and the plan does not require Rosetta. Linux CI cannot launch the Mac image. The unit test checks the hash and the path. A Mac review still has to mount it once.
 
 L1 downloads official projectors and checks SHA-256 before unpacking. A mismatch is a reject, not a warning. Nothing downloads a new Ruffle at startup.
 
@@ -549,7 +550,7 @@ The player is outside the webview. A feature that draws the SWF inside Electron,
 
 **ruffle-native.** In, L1, effort M. Lite already spawns this process. The gap is one child, quality, graphics, and the OpenGL retry that `res/ruffleNative.js` already has. Pull request 47 is the same gap and is not merged.
 
-**play-flash.** In, L1, effort M. Flash is the default button on Linux, Windows, and macOS. The pin is Adobe's official standalone projector 32.0.0.465, because 32.0.0.344 has no projector on Adobe's CDN.
+**play-flash.** In, L1, effort M. Flash is the default button only on the architectures in Appendix I. The pin is Adobe's official standalone projector 32.0.0.465, because 32.0.0.344 has no projector on Adobe's CDN. Ruffle is the player on ARM and on every other target with no projector.
 
 **aqw-account-and-character.** In, L3 for the character-page URL, effort S. The name is a query string. Inventory sync is out, so there is no auto-sync.
 
@@ -702,3 +703,18 @@ Cut.
 - Recording the player. Encoding video is a standing CPU cost, and Electron already records.
 - A second AQW process. Two game runtimes fights the point of a light launcher.
 - The long Useful Pages list. Wiki, account, news, and the character lookup are enough.
+
+## Appendix I. Projector architectures
+
+Checked against `fpdownload.macromedia.com` on 15 October 2026. A missing name answers with the Flash end-of-life page, not a binary. Version strings below were read from the files Adobe still serves. Ruffle asset names are from the `v0.7.1` GitHub release. Lite does not pin the debugger builds.
+
+| Target | Projector on the Adobe CDN | Player in Lite |
+| --- | --- | --- |
+| Windows x86 | `flashplayer_32_sa.exe`, PE32, version 32.0.0.465, SHA-256 `a4b333ac1da12026989549015303d82231982838bccfb544ba5fd188746066f0` | Flash |
+| Windows x64 | No x64 projector. The same x86 file runs on 64-bit Windows | Flash, that x86 file |
+| Windows ARM64 | No projector. `flashplayer_32_sa_win_arm64.exe` and `flashplayer_32_sa_arm.exe` redirect to the end-of-life page | Ruffle, but the 0.7.1 release has no Windows ARM asset, so this target has no pinned player yet |
+| Linux x86_64 | `flash_player_sa_linux.x86_64.tar.gz`, ELF 64-bit, version 32.0.0.465, SHA-256 `883f7aa23301fc80de879501157533a4acdbfee0721ed7c57676dc032fdf96c3` | Flash |
+| Linux x86 | No projector. `flash_player_sa_linux.i386.tar.gz` redirects to the end-of-life page. Adobe's projector page listed Linux 64-bit only | Ruffle `ruffle-0.7.1-linux-i686.tar.gz` |
+| Linux ARM | No projector. The `armv7l` and `aarch64` names redirect to the end-of-life page | Ruffle `ruffle-0.7.1-linux-aarch64.tar.gz` on aarch64. The 0.7.1 release has no armv7 desktop asset |
+| macOS Intel | `flashplayer_32_sa.dmg`, thin Mach-O x86_64, version 32.0.0.465, SHA-256 `236ecef54a7d6c3eed739c74b7e14946b07b6156cbcedda3bbbf444f1d17023a` | Flash |
+| macOS Apple Silicon | No arm64 slice in that disk image | Ruffle `ruffle-0.7.1-macos-universal.tar.gz` |
