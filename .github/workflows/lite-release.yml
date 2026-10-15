@@ -62,6 +62,38 @@ jobs:
           projectPath: lite
           tauriScript: npx -y @tauri-apps/cli@2
           args: ${{ matrix.args }}
+      - name: Package Windows portable
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $ver = (Get-Content -Raw lite/src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          if ($ver -notmatch '^[0-9A-Za-z][0-9A-Za-z._+-]*$') { throw "tauri.conf.json version is not a single path segment: $ver" }
+          $exe = "lite/src-tauri/target/release/aquastar-lite.exe"
+          if (-not (Test-Path $exe)) { throw "missing $exe" }
+          $stage = Join-Path $env:RUNNER_TEMP "aquastar-lite-portable"
+          if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
+          New-Item -ItemType Directory -Path $stage | Out-Null
+          Copy-Item $exe (Join-Path $stage "aquastar-lite.exe")
+          Set-Content -Encoding ascii -Path (Join-Path $stage "portable.txt") -Value "AquaStar Lite stores its data in the data folder next to this file.`r`n"
+          $zip = "lite/src-tauri/target/release/AquaStar.Lite_${ver}_x64-portable.zip"
+          if (Test-Path $zip) { Remove-Item -Force $zip }
+          tar.exe -a -cf $zip -C $stage aquastar-lite.exe portable.txt
+      - name: Attach portable zip to the pre-release
+        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/lite-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $ver = (Get-Content -Raw lite/src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          gh release upload "$env:GITHUB_REF_NAME" --repo "$env:GITHUB_REPOSITORY" --clobber `
+            "lite/src-tauri/target/release/AquaStar.Lite_${ver}_x64-portable.zip"
+      - name: Upload portable zip (manual run)
+        if: matrix.platform == 'windows-latest' && !startsWith(github.ref, 'refs/tags/lite-v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: aquastar-lite-windows-portable
+          path: lite/src-tauri/target/release/AquaStar.Lite_*_x64-portable.zip
+          if-no-files-found: error
       - name: Upload bundles (manual run)
         if: "!startsWith(github.ref, 'refs/tags/lite-v')"
         uses: actions/upload-artifact@v4

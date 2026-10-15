@@ -234,4 +234,25 @@ mod tests {
         assert!(dir.join("portable.txt").is_file());
         assert!(!dir.join("data").exists());
     }
+
+    #[test]
+    fn release_workflow_publishes_the_portable_zip() {
+        let yml = include_str!("../../../.github/workflows/lite-release.yml");
+        assert!(yml.contains("portable.txt"));
+        assert!(yml.contains("AquaStar.Lite_"));
+        assert!(yml.contains("_x64-portable.zip"));
+        assert!(yml.contains("gh release upload"));
+        assert!(yml.contains("prerelease: true"));
+        assert!(yml.contains("aquastar-lite-windows-portable"));
+        assert!(yml.contains("lite/src-tauri/target/release/AquaStar.Lite_"));
+        assert!(!yml
+            .lines()
+            .any(|line| line.contains("bundle/nsis") && line.contains("portable")));
+        for line in yml.lines() {
+            if line.contains("gh release edit") {
+                assert!(line.contains("--prerelease"), "{line}");
+                assert!(line.contains("--latest=false"), "{line}");
+            }
+        }
+    }
 }
