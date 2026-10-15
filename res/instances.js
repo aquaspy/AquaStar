@@ -394,9 +394,7 @@ function _writeScreenshot(focusedWin, pngBuffer, destroyWindow) {
     return savePath;
 }
 
-// Take a screenshot of the screen.
-// Optional rect / destroyWindow let callers (e.g. plugins) screenshot a specific window area.
-function takeSS(focusedWin, ret = null, destroyWindow = false){
+function takeSS(focusedWin, rect = null, destroyWindow = false){
     if (!focusedWin) return null;
     return nativeWindowCapture.captureStill(focusedWin)
         .then((still) => {
@@ -407,16 +405,14 @@ function takeSS(focusedWin, ret = null, destroyWindow = false){
             if (still.route === 'png') {
                 return _writeScreenshot(focusedWin, still.png, destroyWindow);
             }
-            var rect = null;
-            if (ret == null || ret == undefined){
+            if (rect == null) {
                 rect = {
                     x: 0,
                     y: 0,
-                    width:  focusedWin.getContentSize()[0],
+                    width: focusedWin.getContentSize()[0],
                     height: focusedWin.getContentSize()[1]
-                }
+                };
             }
-            else { rect = ret;}
             return focusedWin.webContents.capturePage(rect)
                 .then((sshot) => _writeScreenshot(focusedWin, sshot.toPNG(), destroyWindow));
         })

@@ -1,5 +1,3 @@
-// Native desktop-player capture. Flash and in-page playback stay on capturePage.
-// One slot per companion window. Callers never see a pid or a cached source id.
 const { execFile } = require('child_process');
 
 const REASONS = ['starting', 'closed', 'macos-denied', 'wayland', 'ambiguous', 'no-window', 'empty-frame'];
@@ -116,6 +114,12 @@ function matchPlayer(listed, osList, player) {
 
     if (owned.length > 0) return { kind: 'unlisted' };
     return { kind: 'none' };
+}
+
+function reasonForMiss(access, session) {
+    if (access === 'denied' || access === 'restricted' || access === 'not-determined') return 'macos-denied';
+    if (session === 'wayland') return 'wayland';
+    return 'no-window';
 }
 
 function createCapture(deps) {
@@ -255,14 +259,9 @@ function createCapture(deps) {
 
         let accessAgain = 'unknown';
         try { accessAgain = deps.screenAccess(); } catch (_err) { accessAgain = 'unknown'; }
-        if (accessAgain === 'denied' || accessAgain === 'restricted' || accessAgain === 'not-determined') {
-            return blocked('macos-denied');
-        }
         let session = 'other';
         try { session = deps.session(); } catch (_err) { session = 'other'; }
-        // A unique window already returned above. Wayland only explains a miss.
-        if (session === 'wayland') return blocked('wayland');
-        return blocked('no-window');
+        return blocked(reasonForMiss(accessAgain, session));
     }
 
     async function captureStill(win) {
