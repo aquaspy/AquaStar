@@ -67,6 +67,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: node scripts/fetch-ruffle-native.js darwin x64 .
       - run: npx electron-builder --mac zip --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false

@@ -42,7 +42,8 @@
     "files": [
       "**/*",
       "!squashfs-root/**",
-      "!lite/**"
+      "!lite/**",
+      "!.ruffle-native-cache/**"
     ],
     "appId": "aquastar",
     "mac": {
