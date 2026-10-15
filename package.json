@@ -41,7 +41,8 @@
     "asar": false,
     "files": [
       "**/*",
-      "!squashfs-root/**"
+      "!squashfs-root/**",
+      "!lite/**"
     ],
     "appId": "aquastar",
     "mac": {

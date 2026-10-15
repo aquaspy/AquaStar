@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AquaStar Lite</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><img src="logo.png" alt=""><h1>AquaStar <span>Lite</span></h1></header>
+<main>
+  <section class="play">
+    <h2>Play AdventureQuest Worlds</h2>
+    <div class="buttons">
+      <button data-engine="ruffle">Play (Ruffle)</button>
+      <button data-engine="flash">Play (Flash)</button>
+    </div>
+    <p id="status">The game opens in its own window. Closing AquaStar Lite closes it too.</p>
+  </section>
+  <section class="sites">
+    <h2>Sites</h2>
+    <button data-site="wiki" data-url="https://aqwwiki.wikidot.com/">AQW Wiki</button>
+    <button data-site="account" data-url="https://account.aq.com/">Account</button>
+    <button data-site="news" data-url="https://www.aq.com/">AQ.com news</button>
+    <form id="wiki-search">
+      <input name="q" placeholder="Search the wiki…" autocomplete="off">
+    </form>
+  </section>
+</main>
+<script src="main.js"></script>
+</body>
+</html>
