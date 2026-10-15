@@ -132,13 +132,14 @@ exports.isRuffleEligible = function(swfUrl) {
     } catch (e) { return false; }
 }
 // ruffleOpts: the owning plugin's wrap.ruffle ({ socket: { serversApi, fallbackHosts, policyPort } }).
-exports.wrapRuffleUrl = function(swfUrl, ruffleOpts) {
+exports.wrapRuffleUrl = function(swfUrl, ruffleOpts, quality) {
     if (!swfUrl) return swfUrl;
     const cfg = ruffleOpts && ruffleOpts.socket ? { socket: ruffleOpts.socket } : {};
     return ruffleWrapperUrl + '?swf=' + encodeURIComponent(swfUrl) +
         '&cfg=' + encodeURIComponent(JSON.stringify(cfg)) +
         '&proxy=' + encodeURIComponent(socketProxy.proxyUrl) +
-        '&ruffle=' + encodeURIComponent(exports.rufflePlayerUrl);
+        '&ruffle=' + encodeURIComponent(exports.rufflePlayerUrl) +
+        '&quality=' + encodeURIComponent(exports.normalizeRuffleQuality(quality));
 }
 
 /// -------------------------------
@@ -214,6 +215,20 @@ exports.ruffleUpdateChannelChoices = Object.keys(ruffleUpdateChannels).map((id) 
     { id: id, label: ruffleUpdateChannels[id].label }
 ));
 
+// Ruffle render quality. "high" is Ruffle's default (4x MSAA on WebGL); lower levels
+// trade anti-aliasing for frame rate on weak or software-rendered GPUs.
+const ruffleQualities = {
+    high:   { label: 'High (default)' },
+    medium: { label: 'Medium' },
+    low:    { label: 'Low (fastest)' }
+};
+exports.ruffleQualityChoices = Object.keys(ruffleQualities).map((id) => (
+    { id: id, label: ruffleQualities[id].label }
+));
+exports.normalizeRuffleQuality = function (value) {
+    return Object.prototype.hasOwnProperty.call(ruffleQualities, value) ? value : 'high';
+};
+
 exports.appLanguageChoices = [
     { id: 'system', label: 'System default' },
     { id: 'en-US', label: 'English' },
@@ -233,6 +248,7 @@ const originalOptions = {
     renderMode:        exports.defaultRenderMode,
     ruffleUpdateChannel: 'latest',
     ruffleAutoUpdate:  true,
+    ruffleQuality:     'high',
     // Native menu bar on game windows (mirrors shortcuts). Default on.
     showGameMenu:      true,
     // Dev-only escape hatch, warned about on enable in the Settings screen.
