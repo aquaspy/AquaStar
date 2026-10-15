@@ -3,9 +3,12 @@
 // with wgpu (Vulkan/DX12/Metal) instead of WebGL inside Chromium 87, and opens TCP sockets
 // itself, so no WebSocket relay is needed.
 //
-// The binary is not bundled: it is downloaded on first use from the official GitHub
-// release, the same feed res/ruffleUpdate.js uses for the web build, and refreshed in the
-// background when Ruffle auto-update is on. A new version is used from the next launch.
+// Packaged builds ship a pinned Ruffle desktop in <app>/RuffleNative (see
+// res/ruffleNativeBundle.json and scripts/fetch-ruffle-native.js), so it works offline from
+// the first launch. With Ruffle auto-update on, newer official releases are downloaded to
+// userData/ruffle-native/<tag>/ and the newest of bundled vs downloaded is used from the next
+// launch. Targets without a bundled build (e.g. Linux armv7l) still download on first use.
+// The bundled copy lives in the app folder and is never touched by pruning.
 const fs = require('fs');
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
@@ -24,6 +27,49 @@ function platformTarget(platform, arch) {
     if (platform === 'win32' && arch === 'ia32') return { asset: '-windows-x86_32.zip', exe: 'ruffle.exe' };
     if (platform === 'darwin') return { asset: '-macos-universal.tar.gz', exe: path.join('Ruffle.app', 'Contents', 'MacOS', 'ruffle') };
     return null;
+}
+
+const BUNDLE = require('./ruffleNativeBundle.json');
+const DEFAULT_APP_ROOT = path.join(__dirname, '..');
+
+// Executable of the bundled copy for a target, relative to the app root.
+function bundledExePath(appRoot, platform, arch) {
+    const target = platformTarget(platform, arch);
+    return target ? path.join(appRoot || DEFAULT_APP_ROOT, BUNDLE.dir, target.exe) : null;
+}
+
+function isExecutable(file) {
+    try { fs.accessSync(file, process.platform === 'win32' ? fs.constants.F_OK : fs.constants.X_OK); return true; }
+    catch (e) { return false; }
+}
+
+// The copy shipped inside the package, or null (dev checkout, unsupported target).
+function readBundled(appRoot, platform, arch) {
+    const exe = bundledExePath(appRoot, platform, arch);
+    if (!exe || !isExecutable(exe)) return null;
+    let tag = BUNDLE.tag;
+    try { tag = JSON.parse(fs.readFileSync(path.join(appRoot || DEFAULT_APP_ROOT, BUNDLE.dir, 'ruffle-native-version.json'), 'utf8')).tag || tag; }
+    catch (e) { /* the pinned manifest tag is enough */ }
+    return { tag: tag, exe: exe, bundled: true };
+}
+
+// Compare release tags such as "v0.7.1". Returns >0 when a is newer. Unparseable tags
+// (e.g. nightlies) count as newer than a stable bundle only when they differ from it.
+function compareTags(a, b) {
+    const parse = (t) => { const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(t || ''); return m ? m.slice(1).map(Number) : null; };
+    const pa = parse(a), pb = parse(b);
+    if (!pa || !pb) return a === b ? 0 : (pa ? -1 : 1);
+    for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pa[i] - pb[i];
+    return 0;
+}
+
+// Gatekeeper may refuse to run the nested Ruffle.app when the AquaStar zip was quarantined.
+// Ruffle.app is signed and notarized upstream; clearing the inherited flag is best-effort.
+function clearMacQuarantine(exe) {
+    if (process.platform !== 'darwin') return;
+    const app = exe.slice(0, exe.indexOf('.app') + 4);
+    try { execFileSync('xattr', ['-dr', 'com.apple.quarantine', app], { stdio: 'ignore' }); }
+    catch (e) { /* read-only location or no flag: launching may still work */ }
 }
 
 function rootDir(dataDirectory) { return path.join(dataDirectory, 'ruffle-native'); }
@@ -101,23 +147,28 @@ function runningExes() {
     return exes;
 }
 
-// Returns the installed binary, downloading it when missing. With autoUpdate, an
-// installed copy is used immediately and a newer release is fetched for next time.
-exports.ensureInstalled = async function (dataDirectory, autoUpdate) {
+// Returns the binary to use: the newest of the bundled copy and a downloaded one. Without
+// either, the latest release is downloaded. With autoUpdate, a release newer than what is
+// used now is fetched in the background for the next launch.
+exports.ensureInstalled = async function (dataDirectory, autoUpdate, appRoot) {
     const target = platformTarget();
     if (!target) throw new Error('Ruffle desktop is not available for ' + process.platform + '/' + process.arch);
-    const installed = readInstalled(dataDirectory);
-    // Leftovers from earlier updates; the active version and running players are kept.
-    if (installed) pruneOldVersions(dataDirectory, installed.tag, runningExes());
-    if (installed) {
+    const bundled = readBundled(appRoot);
+    const downloaded = readInstalled(dataDirectory);
+    let current = downloaded;
+    if (bundled && (!downloaded || compareTags(downloaded.tag, bundled.tag) <= 0)) current = bundled;
+    // Leftovers from earlier updates (only under userData; the bundled copy is never pruned).
+    if (downloaded) pruneOldVersions(dataDirectory, current === downloaded ? downloaded.tag : null, runningExes());
+    if (current) {
+        if (current.bundled) clearMacQuarantine(current.exe);
         if (autoUpdate) {
             latestRelease(target)
-                .then((release) => release.tag === installed.tag ? null : install(dataDirectory, release, target)
+                .then((release) => compareTags(release.tag, current.tag) <= 0 ? null : install(dataDirectory, release, target)
                     // The version that is running now stays until the next launch prunes it.
                     .then(() => pruneOldVersions(dataDirectory, release.tag, runningExes())))
                 .catch((e) => console.log('[AquaStar] Ruffle desktop update check failed: ' + e.message));
         }
-        return installed;
+        return current;
     }
     return install(dataDirectory, await latestRelease(target), target);
 };
@@ -184,3 +235,6 @@ exports.killAll = function () {
 exports.platformTarget = platformTarget;
 exports.pruneOldVersions = pruneOldVersions;
 exports.readInstalled = readInstalled;
+exports.readBundled = readBundled;
+exports.bundledExePath = bundledExePath;
+exports.compareTags = compareTags;

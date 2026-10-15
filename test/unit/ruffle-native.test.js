@@ -106,3 +106,78 @@ test('graphics choices default to OpenGL and are filtered per platform', () => {
   assert.deepStrictEqual(ids('darwin'), ['gl', 'metal', 'default']);
   assert.deepStrictEqual(ids('win32'), ['gl', 'vulkan', 'dx12', 'default']);
 });
+
+function makeBundle(appRoot, tag) {
+  const fs = require('fs');
+  const path = require('path');
+  const exe = native.bundledExePath(appRoot);
+  fs.mkdirSync(path.dirname(exe), { recursive: true });
+  fs.writeFileSync(exe, 'bin');
+  fs.chmodSync(exe, 0o755);
+  if (tag)
+    fs.writeFileSync(path.join(appRoot, 'RuffleNative', 'ruffle-native-version.json'), JSON.stringify({ tag: tag }));
+  return exe;
+}
+
+test('Ruffle desktop release tags compare by version', () => {
+  assert.ok(native.compareTags('v0.7.2', 'v0.7.1') > 0);
+  assert.ok(native.compareTags('v0.7.1', 'v0.10.0') < 0);
+  assert.strictEqual(native.compareTags('v0.7.1', 'v0.7.1'), 0);
+  assert.ok(native.compareTags('nightly-2026-10-20', 'v0.7.1') > 0);
+});
+
+test('every bundled Ruffle desktop pin matches its platform asset and has a SHA-256', () => {
+  const manifest = require('../../res/ruffleNativeBundle.json');
+  Object.keys(manifest.targets).forEach((key) => {
+    const [platform, arch] = key.split('-');
+    const target = manifest.targets[key];
+    assert.ok(/^[0-9a-f]{64}$/.test(target.sha256), key);
+    assert.ok(target.url.indexOf('/' + manifest.tag + '/') !== -1, key);
+    assert.ok(target.url.endsWith(native.platformTarget(platform, arch).asset), key);
+  });
+  assert.ok(manifest.unsupported['linux-armv7l']);
+});
+
+test('the bundled Ruffle desktop is used offline and a newer download wins over it', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aq-app-'));
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aq-native-'));
+  const exe = makeBundle(appRoot, 'v0.7.1');
+
+  // Nothing downloaded and no auto-update: no network, the bundle is used.
+  let used = await native.ensureInstalled(data, false, appRoot);
+  assert.strictEqual(used.exe, exe);
+  assert.strictEqual(used.bundled, true);
+
+  // An older download (e.g. left over from before bundling) loses to the bundle and is pruned.
+  const root = path.join(data, 'ruffle-native');
+  const writeDownload = (tag) => {
+    fs.mkdirSync(path.join(root, tag), { recursive: true });
+    const bin = path.join(root, tag, path.basename(exe));
+    fs.writeFileSync(bin, 'bin');
+    fs.chmodSync(bin, 0o755);
+    fs.writeFileSync(path.join(root, 'current.json'), JSON.stringify({ tag: tag, exe: bin }));
+    return bin;
+  };
+  writeDownload('v0.7.0');
+  used = await native.ensureInstalled(data, false, appRoot);
+  assert.strictEqual(used.exe, exe);
+  assert.ok(!fs.existsSync(path.join(root, 'v0.7.0')));
+
+  // A newer auto-updated download is preferred; the bundle stays on disk untouched.
+  const newer = writeDownload('v0.8.0');
+  used = await native.ensureInstalled(data, false, appRoot);
+  assert.strictEqual(used.exe, newer);
+  native.pruneOldVersions(data, 'v0.8.0', []);
+  assert.ok(fs.existsSync(exe));
+
+  fs.rmSync(appRoot, { recursive: true, force: true });
+  fs.rmSync(data, { recursive: true, force: true });
+});
+
+test('a package without a bundle (dev checkout, armv7l) reports no bundled copy', () => {
+  const os = require('os');
+  assert.strictEqual(native.readBundled(os.tmpdir() + '/aq-no-such-app'), null);
+});

@@ -168,8 +168,8 @@ function _startNativeRuffle(win, swfUrl) {
     let child = null;
     const start = (graphicsOverride) => {
         const graphics = graphicsOverride || constant.normalizeRuffleGraphics(kb.ruffleGraphics);
-        setStatus('Preparing Ruffle desktop (first use downloads it from github.com/ruffle-rs)…', false);
-        ruffleNative.ensureInstalled(constant.appDataDirectory, kb.ruffleAutoUpdate === true).then((installed) => {
+        setStatus('Preparing Ruffle desktop…', false);
+        ruffleNative.ensureInstalled(constant.appDataDirectory, kb.ruffleAutoUpdate === true, constant.appRootPath).then((installed) => {
             if (win.isDestroyed()) return;
             const size = win.getContentSize();
             child = ruffleNative.launch(installed.exe, swfUrl, {

@@ -1,0 +1,33 @@
+{
+  "tag": "v0.7.1",
+  "dir": "RuffleNative",
+  "targets": {
+    "linux-x64": {
+      "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-x86_64.tar.gz",
+      "sha256": "67950dfdde643f9087ae478eb3637fe52e0deefc79bdb55fe43cd69dab9fdd99"
+    },
+    "linux-ia32": {
+      "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-i686.tar.gz",
+      "sha256": "b2228c49fb1164deac58233b81ba53eac50522472c10a092f63c039f650ee572"
+    },
+    "win32-x64": {
+      "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-windows-x86_64.zip",
+      "sha256": "a5f6df9881771226e330e08a1fa7666f4caff50ddf9f2f993cdd95293edca627"
+    },
+    "win32-ia32": {
+      "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-windows-x86_32.zip",
+      "sha256": "40bafa16ade6e449a4d5405f9ec81afea6246868cefd544534a6856e2d2fddfc"
+    },
+    "darwin-x64": {
+      "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-macos-universal.tar.gz",
+      "sha256": "7a86a09b0ca1d5756abcbb093108265019d77edad79e91c98689126c940bea4e"
+    },
+    "darwin-arm64": {
+      "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-macos-universal.tar.gz",
+      "sha256": "7a86a09b0ca1d5756abcbb093108265019d77edad79e91c98689126c940bea4e"
+    }
+  },
+  "unsupported": {
+    "linux-armv7l": "Ruffle publishes no 32-bit ARM desktop build; Ruffle desktop mode is unavailable there (Ruffle web and Flash still work)."
+  }
+}

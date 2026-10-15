@@ -16,3 +16,7 @@ web-dist/
 launch.sh
 TEMP-*.txt
 swf2png-master
+
+# Ruffle desktop fetched at build time (scripts/fetch-ruffle-native.js)
+RuffleNative/
+.ruffle-native-cache/
