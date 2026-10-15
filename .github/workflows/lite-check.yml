@@ -9,7 +9,7 @@ on:
       - 'lite/**'
       - '.github/workflows/lite-*.yml'
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - 'lite/**'
 
