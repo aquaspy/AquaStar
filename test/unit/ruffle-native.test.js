@@ -2,8 +2,12 @@ const assert = require('assert');
 const native = require('../../res/ruffleNative.js');
 
 test('Ruffle desktop gets sockets, saves and quality, and the SWF last', () => {
-  const args = native.buildArgs('https://game.aq.com/game/gamefiles/Loader4.swf?ver=b',
-    { width: 960, height: 550, quality: 'low', saveDirectory: '/tmp/saves' });
+  const args = native.buildArgs('https://game.aq.com/game/gamefiles/Loader4.swf?ver=b', {
+    width: 960,
+    height: 550,
+    quality: 'low',
+    saveDirectory: '/tmp/saves'
+  });
   assert.deepStrictEqual(args.slice(0, 2), ['--tcp-connections', 'allow']);
   assert.ok(args.join(' ').indexOf('--width 960 --height 550') !== -1);
   assert.ok(args.join(' ').indexOf('--quality low') !== -1);
