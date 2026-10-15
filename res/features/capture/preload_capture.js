@@ -1,5 +1,80 @@
 const { ipcRenderer } = require("electron");
 
+function desktopVideoConstraint(sourceId) {
+  return {
+    mandatory: {
+      chromeMediaSource: "desktop",
+      chromeMediaSourceId: sourceId
+    }
+  };
+}
+
+function stopStreamTracks(stream) {
+  if (!stream || typeof stream.getTracks !== "function") return;
+  stream.getTracks().forEach((track) => track.stop());
+}
+
+function grabOnePng(sourceId) {
+  return navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: desktopVideoConstraint(sourceId)
+  }).then((stream) => new Promise((resolve) => {
+    const video = document.createElement("video");
+    let settled = false;
+    const timer = setTimeout(() => finish(null), 4000);
+    function finish(png) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      stopStreamTracks(stream);
+      resolve(png);
+    }
+    video.muted = true;
+    video.srcObject = stream;
+    video.onerror = () => finish(null);
+    function drawWhenReady() {
+      if (settled) return;
+      if (!video.videoWidth || !video.videoHeight) {
+        requestAnimationFrame(drawWhenReady);
+        return;
+      }
+      requestAnimationFrame(() => {
+        if (settled) return;
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext("2d").drawImage(video, 0, 0);
+          canvas.toBlob((blob) => {
+            if (!blob) { finish(null); return; }
+            const reader = new FileReader();
+            reader.onload = function () { finish(Buffer.from(this.result)); };
+            reader.onerror = () => finish(null);
+            reader.readAsArrayBuffer(blob);
+          }, "image/png");
+        } catch (_e) {
+          finish(null);
+        }
+      });
+    }
+    video.onloadedmetadata = () => {
+      const play = video.play();
+      if (play && play.catch) play.catch(() => {});
+      drawWhenReady();
+    };
+  })).catch(() => null);
+}
+
+ipcRenderer.on("capture-native-frame", (_event, payload) => {
+  const token = payload && payload.token;
+  const sourceId = payload && payload.sourceId;
+  grabOnePng(sourceId).then((png) => {
+    ipcRenderer.send("capture-native-frame-result", { token: token, png: png });
+  }, () => {
+    ipcRenderer.send("capture-native-frame-result", { token: token, png: null });
+  });
+});
+
 let mediaRecorder;
 let captureStream;
 let currentExtension = 'webm';
@@ -51,17 +126,17 @@ function releaseCaptureStream() {
       return false;
     }
 
+    if (matchedSource && matchedSource.aborted) {
+      ipcRenderer.send("recording-failed", matchedSource.message || "");
+      return false;
+    }
+
     if (!matchedSource) {
       console.log("[AquaStar] Could not find desktopCapturer source for this window.");
       return false;
     }
 
-    const videoConstraint = {
-      mandatory: {
-        chromeMediaSourceId: matchedSource.id,
-        chromeMediaSource: 'desktop'
-      }
-    };
+    const videoConstraint = desktopVideoConstraint(matchedSource.id);
     // Desktop audio loopback via chromeMediaSource: 'desktop' - Chromium can't isolate
     // audio to a single window, so this picks up the whole system's audio output, not
     // just Flash's. Only reliably supported on Windows; falls back to video-only elsewhere.

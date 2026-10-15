@@ -9,9 +9,11 @@ const path          = require('path');
 const { globalShortcut, BrowserWindow, ipcMain, app, dialog } = require('electron');
 const electronLocalshortcut = require('electron-localshortcut');
 const ruffleUpdate    = require('./ruffleUpdate.js');
+const nativeWindowCapture = require('./nativeWindowCapture.js');
 
 var finalKeybinds = {};
 var recordingWinId = 0;
+var recordingArming = false;
 // null = show every originalKeybinds row (legacy / filter unknown).
 var visibleKeybindIds = null;
 var activeDispatcher = null;
@@ -109,16 +111,28 @@ function _migrateRuffleAutoUpdateDefault(topLevel) {
     } catch (e) { console.log('[AquaStar] Could not migrate ruffleAutoUpdate: ' + e.message); }
 }
 
-function toggleRecording(focusedWin) {
+async function toggleRecording(focusedWin) {
     if (!focusedWin) return;
-    if(!ipcRecording.wasRecording()){
-        inst.notifyWin(focusedWin,
-            constant.titleMessages.recording + "! " + focusedWin.getTitle(),
-            false);
-        recordingWinId = focusedWin.id;
+    if (!ipcRecording.wasRecording()) {
+        if (recordingArming) return;
+        recordingArming = true;
+        try {
+            const verdict = await nativeWindowCapture.recordingSource(focusedWin);
+            if (verdict.route === 'blocked') {
+                inst.notifyWin(focusedWin, verdict.message);
+                return;
+            }
+            inst.notifyWin(focusedWin,
+                constant.titleMessages.recording + "! " + focusedWin.getTitle(),
+                false);
+            recordingWinId = focusedWin.id;
 
-        ipcRecording.triggerRecording(focusedWin);
-        focusedWin.setIcon(constant.nativeImageRedIcon)
+            ipcRecording.triggerRecording(focusedWin);
+            focusedWin.setIcon(constant.nativeImageRedIcon)
+        } finally {
+            recordingArming = false;
+        }
+        return;
     }
     else {
         if (recordingWinId != focusedWin.id) {
@@ -212,8 +226,16 @@ const processKeybings = function (){
     addKeybind(k.about, function (focusedWin) { activeDispatcher.run('about', focusedWin); });
     addKeybind(k.settings, function () { activeDispatcher.run('settings'); });
     addKeybind(k.fullscreen, function (focusedWin) { activeDispatcher.run('fullscreen', focusedWin); });
-    addGlobalKeybind(k.sshot, function (focusedWin) { activeDispatcher.run('sshot', focusedWin); }, false, true);
-    addGlobalKeybind(k.record, function (focusedWin) { activeDispatcher.run('record', focusedWin); });
+    addGlobalKeybind(k.sshot, function (focusedWin) {
+        nativeWindowCapture.retarget(focusedWin).then(function (aimed) {
+            activeDispatcher.run('sshot', aimed || focusedWin);
+        });
+    }, false, true);
+    addGlobalKeybind(k.record, function (focusedWin) {
+        nativeWindowCapture.retarget(focusedWin).then(function (aimed) {
+            activeDispatcher.run('record', aimed || focusedWin);
+        });
+    });
     addKeybind(k.reload, function (focusedWin) { activeDispatcher.run('reload', focusedWin); });
     addGlobalKeybind(k.reloadCache, function (focusedWin) { activeDispatcher.run('reloadCache', focusedWin); }, false, true);
 

@@ -4,6 +4,7 @@ const windowsMenu            = require('./windows/menu.js');
 const keybinds               = require('./keybindings.js');
 const socketProxy            = require('./socketProxy.js');
 const ruffleNative           = require('./ruffleNative.js');
+const nativeWindowCapture    = require('./nativeWindowCapture.js');
 const createFeatureWindowController = require('./windows/feature-window-controller.js');
 const {BrowserWindow, Menu}  = require('electron');
 
@@ -158,6 +159,7 @@ function newBrowserWindow(new_path, isMainWin=false){
 // Ruffle desktop mode: the window keeps AquaStar's menus and shows a status page while
 // the native player runs in its own process. Closing the window closes the player.
 function _startNativeRuffle(win, swfUrl) {
+    const player = nativeWindowCapture.open(win);
     const kb = keybinds.keybinds || {};
     const setStatus = (text, canRelaunch) => {
         if (win.isDestroyed()) return;
@@ -167,6 +169,7 @@ function _startNativeRuffle(win, swfUrl) {
     };
     let child = null;
     const start = (graphicsOverride) => {
+        player.starting();
         const graphics = graphicsOverride || constant.normalizeRuffleGraphics(kb.ruffleGraphics);
         setStatus('Preparing Ruffle desktop…', false);
         ruffleNative.ensureInstalled(constant.appDataDirectory, kb.ruffleAutoUpdate === true, constant.appRootPath).then((installed) => {
@@ -178,6 +181,7 @@ function _startNativeRuffle(win, swfUrl) {
                 graphics: graphics,
                 saveDirectory: path.join(constant.appDataDirectory, 'ruffle-native-saves')
             });
+            player.spawned(child, swfUrl);
             setStatus('The game is running in the Ruffle desktop window (' + installed.tag + '). ' +
                 'Closing this window also closes the game.', false);
             const launched = child;
@@ -356,54 +360,65 @@ function _isGameWindow(target, considerDF = true){
     return true;
 }
 
-// Take a screenshot of the screen. 
+function _writeScreenshot(focusedWin, pngBuffer, destroyWindow) {
+    console.log("Screenshotting it...");
+    var ssfolder = constant.sshotPath;
+    if (!_mkdir(ssfolder)) return null;
+
+    var today = new Date();
+    var pre_name = "Screenshot-" +
+        today.getFullYear() + "-" +
+        (today.getMonth() + 1) + "-" +
+        today.getDate() + "_";
+
+    var extraNumberName = 1;
+    for (;;extraNumberName++){
+        if (fs.existsSync(path.join(ssfolder, pre_name + extraNumberName + ".png"))){
+            if (extraNumberName === 10000) {
+                console.log("10000 prints per day...? wow! Thats a lot!");
+            }
+            continue;
+        }
+        else break;
+    }
+    var sshotFileName = pre_name + extraNumberName + ".png";
+    var savePath = path.join(ssfolder, sshotFileName);
+    fs.writeFileSync(savePath, pngBuffer);
+    console.log(constant.titleMessages.doneSavedAs + savePath);
+    if (!destroyWindow){
+        _notifyWindow(focusedWin, constant.titleMessages.doneSavedAs + savePath);
+    }
+    else {
+        focusedWin.close();
+    }
+    return savePath;
+}
+
+// Take a screenshot of the screen.
 // Optional rect / destroyWindow let callers (e.g. plugins) screenshot a specific window area.
 function takeSS(focusedWin, ret = null, destroyWindow = false){
-    // If ret is passed, we figure how to take the SS.
-    // Format is the rectangle one;
-    var rect = null;
-    if (ret == null || ret == undefined){
-        rect = {
-            x: 0,
-            y: 0,
-            width:  focusedWin.getContentSize()[0],
-            height: focusedWin.getContentSize()[1]
-        }
-    }
-    else { rect = ret;}
-    return focusedWin.webContents.capturePage(rect)
-        .then((sshot) => {
-            console.log("Screenshotting it...");
-            var ssfolder = constant.sshotPath;
-            if (!_mkdir(ssfolder)) return null;
-
-            var today = new Date();
-            var pre_name = "Screenshot-" +
-                today.getFullYear() + "-" +
-                (today.getMonth() + 1) + "-" +
-                today.getDate() + "_";
-
-            var extraNumberName = 1;
-            for (;;extraNumberName++){
-                if (fs.existsSync(path.join(ssfolder, pre_name + extraNumberName + ".png"))){
-                    if (extraNumberName === 10000) {
-                        console.log("10000 prints per day...? wow! Thats a lot!");
-                    }
-                    continue;
+    if (!focusedWin) return null;
+    return nativeWindowCapture.captureStill(focusedWin)
+        .then((still) => {
+            if (still.route === 'blocked') {
+                _notifyWindow(focusedWin, still.message);
+                return null;
+            }
+            if (still.route === 'png') {
+                return _writeScreenshot(focusedWin, still.png, destroyWindow);
+            }
+            var rect = null;
+            if (ret == null || ret == undefined){
+                rect = {
+                    x: 0,
+                    y: 0,
+                    width:  focusedWin.getContentSize()[0],
+                    height: focusedWin.getContentSize()[1]
                 }
-                else break;
             }
-            var sshotFileName = pre_name + extraNumberName + ".png";
-            var savePath = path.join(ssfolder, sshotFileName);
-            fs.writeFileSync(savePath, sshot.toPNG());
-            console.log(constant.titleMessages.doneSavedAs + savePath);
-            if (!destroyWindow){
-                _notifyWindow(focusedWin, constant.titleMessages.doneSavedAs + savePath);
-            }
-            else {
-                focusedWin.close();
-            }
-            return savePath;
+            else { rect = ret;}
+            return focusedWin.webContents.capturePage(rect)
+                .then((sshot) => _writeScreenshot(focusedWin, sshot.toPNG(), destroyWindow));
         })
         .catch((err) => {
             console.log("[AquaStar] Screenshot error:", err);
