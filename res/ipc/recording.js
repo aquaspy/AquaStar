@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { ipcMain, desktopCapturer, dialog, BrowserWindow } = require('electron');
+const nativeWindowCapture = require('../nativeWindowCapture.js');
 
 ipcMain.on('saveDialog', async function (event, arg) {
     const extension = path.extname(typeof arg === 'string' ? arg : '').slice(1).toLowerCase();
@@ -27,6 +28,10 @@ ipcMain.handle('getDesktopCapturerSourceForWindow', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return null;
 
+    const verdict = await nativeWindowCapture.recordingSource(win);
+    if (verdict.route === 'blocked') return { aborted: true, message: verdict.message };
+    if (verdict.route === 'source') return { id: verdict.sourceId, name: verdict.title };
+
     const sources = await desktopCapturer.getSources({ types: ['window'] });
     const title = win.getTitle();
 
@@ -48,8 +53,24 @@ ipcMain.handle('getDesktopCapturerSourceForWindow', async (event) => {
 
 var _wasRecording = false;
 exports.wasRecording = () => {return _wasRecording};
+exports.forceIdle = function () {
+    _wasRecording = false;
+};
 exports.triggerRecording = (win) => {
     _wasRecording = !_wasRecording;
     const target = win || BrowserWindow.getFocusedWindow();
     if (target) target.webContents.send('record', _wasRecording);
 }
+
+ipcMain.on('recording-failed', function (event, message) {
+    if (!_wasRecording) return;
+    exports.forceIdle();
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed()) return;
+    const inst = require('../instances.js');
+    const constant = require('../const.js');
+    const saved = inst.getSavedTitle(win);
+    win.setTitle(saved);
+    win.setIcon(constant.nativeImageIcon);
+    if (message) inst.notifyWin(win, message);
+});

@@ -6,7 +6,14 @@ function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else ret
 exports.titleMessages = {
     doneSavedAs: "",
     recording: "",
-    alreadyRecording: ""
+    alreadyRecording: "",
+    nativeCaptureStarting: "",
+    nativeCaptureClosed: "",
+    nativeCaptureMacosDenied: "",
+    nativeCaptureWayland: "",
+    nativeCaptureAmbiguous: "",
+    nativeCaptureNoWindow: "",
+    nativeCaptureEmptyFrame: ""
 };
 
 exports.dialogMessages = {

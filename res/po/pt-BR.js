@@ -3,7 +3,14 @@ function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else ret
 exports.titleMessages = {
     doneSavedAs: "Pronto! Salvo como ",
     recording: "GRAVANDO",
-    alreadyRecording: "Você já está gravando em alguma outra janela!"
+    alreadyRecording: "Você já está gravando em alguma outra janela!",
+    nativeCaptureStarting: "O player de desktop ainda está iniciando.",
+    nativeCaptureClosed: "O player de desktop não está em execução.",
+    nativeCaptureMacosDenied: "A permissão de gravação de tela está desativada. Permita que o AquaStar grave a tela em Ajustes do Sistema e tente novamente.",
+    nativeCaptureWayland: "Esta sessão Wayland não consegue capturar a janela de outro aplicativo. Use uma sessão X11 para tirar um print ou gravar o player de desktop.",
+    nativeCaptureAmbiguous: "Há mais de uma janela do player de desktop, então nada foi capturado.",
+    nativeCaptureNoWindow: "Não foi possível encontrar a janela do player de desktop.",
+    nativeCaptureEmptyFrame: "A captura voltou vazia."
 }
 
 exports.dialogMessages = {
