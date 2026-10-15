@@ -3,25 +3,57 @@
 #[cfg(target_os = "linux")]
 mod fonts;
 mod players;
+mod ruffle;
 
 #[cfg(target_os = "linux")]
 use std::path::{Path, PathBuf};
 
 use players::Engine;
+use players::Players;
 #[cfg(target_os = "linux")]
 use players::LIMITED_FONTS_MARKER;
-use players::Players;
 use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
 const AQW_LOADER: &str = "https://game.aq.com/game/gamefiles/Loader4.swf?ver=b";
 
+fn load_ruffle_settings(app: &tauri::AppHandle) -> ruffle::RuffleSettings {
+    match app.path().app_config_dir() {
+        Ok(dir) => ruffle::RuffleSettings::load(&dir),
+        Err(e) => {
+            eprintln!("aquastar-lite: no config dir ({e}); using default Ruffle settings");
+            ruffle::RuffleSettings::default()
+        }
+    }
+}
+
 #[tauri::command]
 async fn play(app: tauri::AppHandle, engine: Engine) -> Result<String, String> {
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let settings = load_ruffle_settings(&app);
     let players = app.state::<Players>().inner().clone();
-    tauri::async_runtime::spawn_blocking(move || players.launch(&dir, engine, AQW_LOADER))
-        .await
-        .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(move || {
+        players.launch(&dir, engine, AQW_LOADER, &settings)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+fn ruffle_settings(app: tauri::AppHandle) -> Result<ruffle::SettingsView, String> {
+    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    Ok(ruffle::RuffleSettings::load(&dir).view())
+}
+
+#[tauri::command]
+fn set_ruffle_settings(
+    app: tauri::AppHandle,
+    quality: String,
+    graphics: String,
+) -> Result<ruffle::SettingsView, String> {
+    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    let settings = ruffle::RuffleSettings::from_choice(&quality, &graphics);
+    settings.save(&dir)?;
+    Ok(settings.view())
 }
 
 #[tauri::command]
@@ -33,7 +65,12 @@ fn engines() -> Vec<(Engine, bool)> {
 async fn open_site(app: tauri::AppHandle, label: String, url: String) -> Result<(), String> {
     let parsed: tauri::Url = url.parse().map_err(|_| "bad url".to_string())?;
     let host = parsed.host_str().unwrap_or("");
-    let allowed = ["aqwwiki.wikidot.com", "account.aq.com", "www.aq.com", "www.artix.com"];
+    let allowed = [
+        "aqwwiki.wikidot.com",
+        "account.aq.com",
+        "www.aq.com",
+        "www.artix.com",
+    ];
     if parsed.scheme() != "https" || !allowed.contains(&host) {
         return Err(format!("{host} is not an allowed site"));
     }
@@ -86,7 +123,13 @@ fn main() {
     limit_webkit_fonts();
     let app = tauri::Builder::default()
         .manage(Players::default())
-        .invoke_handler(tauri::generate_handler![play, engines, open_site])
+        .invoke_handler(tauri::generate_handler![
+            play,
+            engines,
+            open_site,
+            ruffle_settings,
+            set_ruffle_settings
+        ])
         .build(tauri::generate_context!())
         .expect("failed to build AquaStar Lite");
     app.run(|app, event| {
