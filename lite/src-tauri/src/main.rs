@@ -1,8 +1,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(target_os = "linux")]
+mod fonts;
 mod players;
 
-use players::{Engine, Players};
+#[cfg(target_os = "linux")]
+use std::path::{Path, PathBuf};
+
+use players::Engine;
+#[cfg(target_os = "linux")]
+use players::LIMITED_FONTS_MARKER;
+use players::Players;
 use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
 const AQW_LOADER: &str = "https://game.aq.com/game/gamefiles/Loader4.swf?ver=b";
@@ -42,13 +50,40 @@ async fn open_site(app: tauri::AppHandle, label: String, url: String) -> Result<
         .map_err(|e| e.to_string())
 }
 
+/// Point WebKit at a small curated fontconfig unless the user already chose one.
+/// See `fonts.rs` for why. The marker tells player launches to drop the limit so
+/// Ruffle and Flash keep the full system fonts.
+#[cfg(target_os = "linux")]
+fn limit_webkit_fonts() {
+    if std::env::var_os("FONTCONFIG_FILE").is_some() {
+        eprintln!("aquastar-lite: FONTCONFIG_FILE is set, leaving WebKit fonts alone");
+        return;
+    }
+    let dirs: Vec<PathBuf> = fonts::SEARCH_DIRS.iter().map(PathBuf::from).collect();
+    let installed = fonts::base_dir()
+        .and_then(|base| fonts::install(&base, &dirs, Path::new("/etc/fonts/conf.d")));
+    match installed {
+        Ok((conf, count)) => {
+            eprintln!("aquastar-lite: WebKit uses {} ({count} font files)", conf.display());
+            std::env::set_var("FONTCONFIG_FILE", &conf);
+            std::env::set_var(LIMITED_FONTS_MARKER, "1");
+        }
+        Err(e) => eprintln!(
+            "aquastar-lite: could not write the WebKit fontconfig ({e}); using system fonts, the window may stay blank"
+        ),
+    }
+}
+
 fn main() {
     // WebKitGTK's DMA-BUF renderer costs ~125 MB PSS here (measured under Xvfb) and is a
     // known source of blank windows on NVIDIA/older Mesa. Users can still opt back in.
+    // It does not fix the blank window caused by the font scan below.
     #[cfg(target_os = "linux")]
     if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     }
+    #[cfg(target_os = "linux")]
+    limit_webkit_fonts();
     let app = tauri::Builder::default()
         .manage(Players::default())
         .invoke_handler(tauri::generate_handler![play, engines, open_site])

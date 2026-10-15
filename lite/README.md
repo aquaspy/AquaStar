@@ -31,6 +31,7 @@ Windows (`nsis`) and macOS (`dmg`, universal) bundles are built by `.github/work
 
 ## WebKitGTK notes
 
-- The app sets `WEBKIT_DISABLE_DMABUF_RENDERER=1` unless you set it yourself. Under Xvfb this took the launcher from 399 to 273 MB PSS, and the DMA-BUF renderer is a known cause of blank windows on NVIDIA. It still needs a check on a real GPU.
+- The app sets `WEBKIT_DISABLE_DMABUF_RENDERER=1` unless you set it yourself. Under Xvfb this took the launcher from 399 to 273 MB PSS, and the DMA-BUF renderer is a known cause of blank windows on NVIDIA. It does not fix the blank window below.
+- On Linux, unless `FONTCONFIG_FILE` is already set, the app builds a small fontconfig under `~/.cache/aquastar-lite/` (or a private `aquastar-lite-<uid>` dir in the temp dir when there is no home) and points WebKit at it. WebKitGTK scans every system font on the web-process main thread before the first paint. With a large Noto install that scan pegs a core and the window stays on the GTK background (`about:blank` never commits). The config lists one directory of symlinks to an allow-list of files (DejaVu, Liberation, Noto Sans/Serif, Noto Sans CJK, Noto Sans Thai, Noto Color Emoji, regular and bold only, at most 48) found in the usual Debian/Ubuntu, Fedora and Arch paths, plus the system alias rules from `/etc/fonts/conf.d` that add no font directories. `50-user.conf` is skipped because it adds the user font dirs. The launcher logs which config it used. Ruffle and Flash do not inherit the limit. Set `FONTCONFIG_FILE` yourself to opt out.
 - Opening a webview window from a *sync* Tauri command made the app exit silently on Linux. `open_site` is `async`.
 - The Linux Flash projector is a GTK2 app, so it needs `libgtk2.0-0`.
