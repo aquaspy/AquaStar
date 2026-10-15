@@ -183,3 +183,9 @@ exports.downloadLatest = async function (dataDirectory, channel, bundledPlayerPa
         removeIfPresent(extractDirectory);
     }
 };
+
+// Shared with ruffleNative.js (desktop builds use the same GitHub release feed).
+exports._request = request;
+exports._download = download;
+exports._extractArchive = extractArchive;
+exports._removeIfPresent = removeIfPresent;
