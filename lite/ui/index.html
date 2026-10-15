@@ -25,6 +25,18 @@
       <input name="q" placeholder="Search the wiki…" autocomplete="off">
     </form>
   </section>
+  <section class="settings">
+    <h2>Ruffle</h2>
+    <div class="fields">
+      <label>Quality
+        <select id="ruffle-quality"></select>
+      </label>
+      <label>Graphics
+        <select id="ruffle-graphics"></select>
+      </label>
+    </div>
+    <p class="hint">High is sharpest; Low turns off anti-aliasing and is faster on weak GPUs. OpenGL is the most compatible. If another backend crashes right after launch, the game reopens with OpenGL. Applies the next time you press Play (Ruffle).</p>
+  </section>
 </main>
 <script src="main.js"></script>
 </body>

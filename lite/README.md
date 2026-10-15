@@ -2,7 +2,7 @@
 
 A Tauri 2 launcher for AQW. The launcher UI is plain HTML/JS in the system webview. The game never runs in the webview. Rust starts it as a separate player process:
 
-- **Ruffle**: official Ruffle desktop 0.7.1, downloaded on first use and checked against a pinned SHA-256. Started with `--tcp-connections allow --storage disk --letterbox on --no-gui <Loader4.swf>`.
+- **Ruffle**: official Ruffle desktop 0.7.1, downloaded on first use and checked against a pinned SHA-256. Started with `--tcp-connections allow --storage disk --letterbox on --quality <low|medium|high> --graphics <gl|vulkan|metal|dx12|default> --no-gui <Loader4.swf>`. Quality and graphics are chosen in the launcher and stored as `settings.json` in the app config directory (`ruffleQuality` / `ruffleGraphics`, same values as the Electron app). OpenGL is the default. Vulkan is offered on Linux and Windows, DirectX 12 on Windows, and Metal on macOS. Automatic passes `--graphics default` so Ruffle picks. If a non-OpenGL backend exits abnormally within 15 seconds, or exits after printing a panic or graphics error, Lite relaunches that game once with OpenGL and logs it.
 - **Flash**: Linux uses Adobe's own standalone projector 32.0.0.465 (`fpdownload.macromedia.com`, SHA-256 pinned). Projectors never had the 2021 time bomb, and it opens the AQW login in 2026. Windows and macOS are Ruffle only for now: no Flash player is bundled there, so the Flash button is disabled.
 
 Site buttons (wiki, account, news) open allow-listed HTTPS sites in their own Tauri webview window. Closing the main window kills every player process.
