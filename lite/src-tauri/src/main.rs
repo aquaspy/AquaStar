@@ -1,9 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(target_os = "linux")]
+mod fonts;
 mod players;
 
 #[cfg(target_os = "linux")]
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use players::Engine;
 #[cfg(target_os = "linux")]
@@ -48,66 +50,28 @@ async fn open_site(app: tauri::AppHandle, label: String, url: String) -> Result<
         .map_err(|e| e.to_string())
 }
 
-/// Fontconfig handed to WebKitGTK. Only small families: the web process walks
-/// every file under each `<dir>` on its main thread before the first commit.
-#[cfg(any(target_os = "linux", test))]
-fn webkit_fonts_conf(cache_dir: &str) -> String {
-    format!(
-        r#"<?xml version="1.0"?>
-<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
-<fontconfig>
-  <dir>/usr/share/fonts/truetype/dejavu</dir>
-  <dir>/usr/share/fonts/dejavu</dir>
-  <cachedir>{cache_dir}</cachedir>
-</fontconfig>
-"#
-    )
-}
-
-#[cfg(any(target_os = "linux", test))]
-fn xml_text(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
-}
-
-/// Point WebKit at a DejaVu-only fontconfig unless the user already chose one.
-///
-/// On a desktop with ~3200 fonts (2380 of them Noto), WebKitGTK 2.50 and 2.52
-/// keep `WebKitWebProcess` at 100% CPU and never leave `about:blank`. The GTK
-/// window is allocated correctly and just shows its own background, which looks
-/// like a blank white window. `fc-list` itself is instant; this is WebKit's
-/// startup scan, not a broken fontconfig cache. A config that does not include
-/// `/usr/share/fonts` lets the page commit within about a second.
-///
-/// A `FONTCONFIG_FILE` already set in the environment is left alone. The marker
-/// tells player launches to drop the limit so Ruffle and Flash keep system fonts.
+/// Point WebKit at a small curated fontconfig unless the user already chose one.
+/// See `fonts.rs` for why. The marker tells player launches to drop the limit so
+/// Ruffle and Flash keep the full system fonts.
 #[cfg(target_os = "linux")]
 fn limit_webkit_fonts() {
     if std::env::var_os("FONTCONFIG_FILE").is_some() {
+        eprintln!("aquastar-lite: FONTCONFIG_FILE is set, leaving WebKit fonts alone");
         return;
     }
-    let dir = fontconfig_dir();
-    let cache = dir.join("fontconfig-cache");
-    if std::fs::create_dir_all(&cache).is_err() {
-        return;
+    let dirs: Vec<PathBuf> = fonts::SEARCH_DIRS.iter().map(PathBuf::from).collect();
+    let installed = fonts::base_dir()
+        .and_then(|base| fonts::install(&base, &dirs, Path::new("/etc/fonts/conf.d")));
+    match installed {
+        Ok((conf, count)) => {
+            eprintln!("aquastar-lite: WebKit uses {} ({count} font files)", conf.display());
+            std::env::set_var("FONTCONFIG_FILE", &conf);
+            std::env::set_var(LIMITED_FONTS_MARKER, "1");
+        }
+        Err(e) => eprintln!(
+            "aquastar-lite: could not write the WebKit fontconfig ({e}); using system fonts, the window may stay blank"
+        ),
     }
-    let conf_path = dir.join("fonts.conf");
-    let conf = webkit_fonts_conf(&xml_text(&cache.to_string_lossy()));
-    let unchanged = std::fs::read_to_string(&conf_path).ok().as_deref() == Some(conf.as_str());
-    if !unchanged && std::fs::write(&conf_path, &conf).is_err() {
-        return;
-    }
-    std::env::set_var("FONTCONFIG_FILE", &conf_path);
-    std::env::set_var(LIMITED_FONTS_MARKER, "1");
-}
-
-#[cfg(target_os = "linux")]
-fn fontconfig_dir() -> PathBuf {
-    std::env::var_os("XDG_CACHE_HOME")
-        .map(PathBuf::from)
-        .filter(|p| !p.as_os_str().is_empty())
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")))
-        .unwrap_or_else(|| PathBuf::from("/tmp"))
-        .join("aquastar-lite")
 }
 
 fn main() {
@@ -137,17 +101,4 @@ fn main() {
             }
         }
     });
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn webkit_fontconfig_does_not_scan_the_system_font_root() {
-        let conf = super::webkit_fonts_conf("/tmp/aquastar-lite & cache");
-        assert!(conf.contains("<dir>/usr/share/fonts/truetype/dejavu</dir>"));
-        assert!(conf.contains("<dir>/usr/share/fonts/dejavu</dir>"));
-        assert!(conf.contains("<cachedir>/tmp/aquastar-lite &amp; cache</cachedir>"));
-        assert!(!conf.contains("<dir>/usr/share/fonts</dir>"));
-        assert!(!conf.contains("noto"));
-    }
 }
