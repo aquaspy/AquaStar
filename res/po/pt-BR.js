@@ -92,6 +92,7 @@ exports.settingsMessages = {
         renderMode: "Renderizador de Flash",
         ruffleUpdateChannel: "Canal de Atualização do Ruffle",
         ruffleAutoUpdate: "Baixar atualizações automaticamente",
+        ruffleQuality: "Qualidade do Ruffle",
         showGameMenu: "Mostrar menu acima das janelas do jogo",
         enableDevTools: "Ativar DevTools"
     },
@@ -102,6 +103,7 @@ exports.settingsMessages = {
         renderMode: "Qual runtime Flash carrega as janelas de jogo do plugin ativo. Ao trocar para Ruffle, reinicie para aplicar. Ruffle desktop (nativo) roda o app oficial do Ruffle numa janela própria (baixado no primeiro uso); o AquaStar mantém a janela de menus.",
         ruffleUpdateChannel: "Latest usa a versão estável mais recente do Ruffle. Nightly inclui mudanças experimentais mais novas. Para aplicar uma troca de canal, feche o AquaStar completamente e abra-o novamente; não use somente o botão Reiniciar.",
         ruffleAutoUpdate: "Verifica o canal selecionado em segundo plano sempre que o AquaStar abre. O download é aplicado depois de reiniciar.",
+        ruffleQuality: "Qualidade de renderização do Ruffle. Alta é a mais nítida; Baixa desliga o anti-aliasing e é bem mais rápida em GPUs fracas ou sem aceleração. Vale para janelas de jogo abertas depois da mudança.",
         showGameMenu: "Mostra uma barra de menu acima das janelas de jogo com os mesmos comandos dos atalhos. Desative se preferir só teclado.",
         enableDevTools: "Abre o console de DevTools automaticamente ao iniciar."
     },

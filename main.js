@@ -244,6 +244,12 @@ app.on('second-instance', () => {
   }
 })
 app.on('ready', () => {
+  // No AquaStar window needs Chromium's spellchecker (Flash/Ruffle text fields never use
+  // it, and our own inputs set spellcheck=false). With it enabled, every launch fetched a
+  // Hunspell dictionary from Google into userData/Dictionaries and loaded it in the
+  // browser process. An empty language list turns that off for the default session.
+  try { session.defaultSession.setSpellCheckerLanguages([]); }
+  catch (e) { console.log('[AquaStar] Could not disable spellchecker: ' + e.message); }
   activatePlugins().then(() => {
     createWindow();
   });

@@ -16,6 +16,7 @@
   var swfUrl = params.get('swf');
   var proxyUrl = params.get('proxy');
   var ruffleUrl = params.get('ruffle') || 'ruffle/ruffle.js';
+  var quality = /^(high|medium|low)$/.test(params.get('quality') || '') ? params.get('quality') : 'high';
   if (!swfUrl) return;
 
   // Some Flash games talk to their servers over raw TCP, which Ruffle (sandboxed, no raw
@@ -90,7 +91,8 @@
       preloader: false,
       // Match Flash scale=showall: letterbox (black bars) instead of stretching.
       letterbox: 'on',
-      socketProxy: socketProxy
+      socketProxy: socketProxy,
+      quality: quality
     };
     if (swfBase) loadOpts.base = swfBase;
 

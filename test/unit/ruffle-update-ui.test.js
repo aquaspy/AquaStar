@@ -18,3 +18,13 @@ test('Ruffle updater exposes stable and nightly channels without labelling every
     english.indexOf("Downloads Ruffle's self-hosted web build from its official GitHub nightly release") === -1
   );
 });
+
+test('Ruffle quality setting reaches the player with a safe default', () => {
+  const root = path.join(__dirname, '../..');
+  const wrapper = fs.readFileSync(path.join(root, 'res/ruffle_wrapper.html'), 'utf8');
+  const constSrc = fs.readFileSync(path.join(root, 'res/const.js'), 'utf8');
+  assert.ok(/quality: quality/.test(wrapper));
+  assert.ok(wrapper.indexOf('/^(high|medium|low)$/') !== -1);
+  assert.ok(/ruffleQuality:\s*'high'/.test(constSrc));
+  assert.ok(constSrc.indexOf("'&quality=' + encodeURIComponent(exports.normalizeRuffleQuality(quality))") !== -1);
+});

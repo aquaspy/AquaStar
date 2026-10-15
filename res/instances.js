@@ -85,7 +85,8 @@ function newBrowserWindow(new_path, isMainWin=false){
             socketProxy.allowHosts(ruffleOpts.socket.allowedHosts);
             socketProxy.start();
         }
-        new_path = constant.wrapRuffleUrl(new_path, ruffleOpts);
+        new_path = constant.wrapRuffleUrl(new_path, ruffleOpts,
+            keybinds.keybinds && keybinds.keybinds.ruffleQuality);
     }
     // Explicit wrap options (e.g. wmode=opaque + scale=showall for a game whose relative
     // loads break under wmode=direct from file://). Applies even with useDirectWmode off.
