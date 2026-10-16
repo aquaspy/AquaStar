@@ -4,7 +4,6 @@
 mod catalog;
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -14,6 +13,7 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use crate::placement::PlayerRoots;
 use crate::ruffle::{self, ExitReport, RuffleGraphics, RuffleQuality, RuffleSettings};
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -99,13 +99,19 @@ fn without_launcher_fontconfig(cmd: &mut Command) {
 impl Players {
     pub fn launch(
         &self,
-        data: &Path,
+        roots: &PlayerRoots,
         engine: Engine,
         swf: &str,
         settings: &RuffleSettings,
         save_directory: Option<&Path>,
     ) -> Result<String, String> {
-        let exe = resolve(data, engine)?;
+        let pin = catalog::Catalog::pinned()
+            .select(engine, std::env::consts::OS, std::env::consts::ARCH)
+            .ok_or_else(|| format!("{engine:?} is not available on this platform"))?;
+        let exe = match locate(&pin, roots) {
+            Some(source) => source.path().to_path_buf(),
+            None => catalog::publish(&pin, roots.app_data())?,
+        };
         self.launch_at(&exe, engine, swf, settings, save_directory)
     }
 
@@ -464,107 +470,21 @@ fn safe_backend_name() -> &'static str {
     }
 }
 
-fn resolve(data: &Path, engine: Engine) -> Result<PathBuf, String> {
-    let pin = catalog::Catalog::pinned()
-        .select(engine, std::env::consts::OS, std::env::consts::ARCH)
-        .ok_or_else(|| format!("{engine:?} is not available on this platform"))?;
-    install(data, &pin)
-}
-
-fn install(data: &Path, pin: &catalog::Pinned) -> Result<PathBuf, String> {
-    let dir = data.join("players").join(&pin.dir);
-    let exe = dir.join(&pin.exe);
-    if exe.exists() {
-        return Ok(exe);
+fn locate(pin: &catalog::Pinned, roots: &PlayerRoots) -> Option<catalog::Source> {
+    let updated = roots.app_data().join(&pin.dir);
+    if catalog::judge(&updated, pin) == catalog::TreeJudge::Match {
+        return Some(catalog::Source::Updated(updated.join(&pin.exe)));
     }
-    let mut bytes = Vec::new();
-    ureq::get(&pin.url)
-        .call()
-        .map_err(|e| format!("download failed: {e}"))?
-        .into_reader()
-        .read_to_end(&mut bytes)
-        .map_err(|e| e.to_string())?;
-    let got = format!("{:x}", Sha256::digest(&bytes));
-    if got != pin.sha256 {
-        return Err(format!("checksum mismatch for {}: {got}", pin.url));
-    }
-    let tmp = dir.with_extension("partial");
-    let _ = fs::remove_dir_all(&tmp);
-    fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
-    unpack(pin, &bytes, &tmp)?;
-    let _ = fs::remove_dir_all(&dir);
-    fs::rename(&tmp, &dir).map_err(|e| e.to_string())?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = fs::set_permissions(&exe, fs::Permissions::from_mode(0o755));
-    }
-    Ok(exe)
-}
-
-fn unpack(pin: &catalog::Pinned, bytes: &[u8], tmp: &Path) -> Result<(), String> {
-    match pin.kind {
-        catalog::ArchiveKind::Exe => {
-            let name = pin
-                .url
-                .rsplit('/')
-                .next()
-                .and_then(|part| part.split('?').next())
-                .filter(|part| !part.is_empty())
-                .unwrap_or("player.exe");
-            fs::write(tmp.join(name), bytes).map_err(|e| e.to_string())
+    if let Some(bundled) = roots.bundled() {
+        let exe = bundled.join(&pin.dir).join(&pin.exe);
+        if exe.is_file() {
+            return Some(catalog::Source::Bundled(exe));
         }
-        catalog::ArchiveKind::Dmg => unpack_dmg(bytes, tmp),
-        catalog::ArchiveKind::Zip => zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec()))
-            .and_then(|mut archive| archive.extract(tmp))
-            .map_err(|e| e.to_string()),
-        catalog::ArchiveKind::TarGz => tar::Archive::new(flate2::read::GzDecoder::new(bytes))
-            .unpack(tmp)
-            .map_err(|e| e.to_string()),
     }
-}
-
-#[cfg(target_os = "macos")]
-fn detach_dmg(mount: &Path) {
-    let _ = Command::new("hdiutil")
-        .args(["detach", "-force"])
-        .arg(mount)
-        .status();
-}
-
-#[cfg(target_os = "macos")]
-fn unpack_dmg(bytes: &[u8], tmp: &Path) -> Result<(), String> {
-    let dmg = tmp.join("projector.dmg");
-    fs::write(&dmg, bytes).map_err(|e| e.to_string())?;
-    let mount = tmp.join("mnt");
-    detach_dmg(&mount);
-    fs::create_dir_all(&mount).map_err(|e| e.to_string())?;
-    let attached = Command::new("hdiutil")
-        .args(["attach", "-nobrowse", "-readonly", "-mountpoint"])
-        .arg(&mount)
-        .arg(&dmg)
-        .status()
-        .map_err(|e| format!("hdiutil attach failed: {e}"))?;
-    if !attached.success() {
-        detach_dmg(&mount);
-        return Err(format!("hdiutil attach exited {attached}"));
+    if catalog::judge(&updated, pin) == catalog::TreeJudge::Legacy {
+        return Some(catalog::Source::Cached(updated.join(&pin.exe)));
     }
-    let copied = Command::new("ditto")
-        .arg(mount.join("Flash Player.app"))
-        .arg(tmp.join("Flash Player.app"))
-        .status();
-    detach_dmg(&mount);
-    let _ = fs::remove_file(&dmg);
-    match copied {
-        Ok(status) if status.success() => Ok(()),
-        Ok(status) => Err(format!("ditto exited {status}")),
-        Err(e) => Err(format!("ditto failed: {e}")),
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-fn unpack_dmg(_bytes: &[u8], _tmp: &Path) -> Result<(), String> {
-    Err("the macOS projector is a disk image and is unpacked on macOS".into())
+    None
 }
 
 #[cfg(test)]
@@ -587,6 +507,119 @@ mod pin_tests {
             Engine::preferred(),
             Engine::preferred_for(std::env::consts::OS, std::env::consts::ARCH)
         );
+    }
+}
+
+#[cfg(test)]
+mod locate_tests {
+    use super::*;
+    use crate::placement::placement_for;
+
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "aquastar-lite-locate-{name}-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn host_pin() -> catalog::Pinned {
+        catalog::Catalog::pinned()
+            .select(Engine::Ruffle, std::env::consts::OS, std::env::consts::ARCH)
+            .expect("ruffle pin")
+    }
+
+    fn touch_exe(path: &Path) {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, b"player").unwrap();
+    }
+
+    fn roots(app_data_dir: &Path, resource: Option<&Path>) -> PlayerRoots {
+        placement_for(false, app_data_dir).player_roots(app_data_dir, resource, None)
+    }
+
+    #[test]
+    fn a_matching_stamp_beats_a_bundled_exe() {
+        let pin = host_pin();
+        let base = scratch("stamp");
+        let app_data_dir = base.join("app");
+        let resource = base.join("resource");
+        let live = app_data_dir.join("players").join(&pin.dir);
+        touch_exe(&live.join(&pin.exe));
+        fs::write(live.join(catalog::STAMP_NAME), format!("{}\n", pin.sha256)).unwrap();
+        let bundled = resource.join("players").join(&pin.dir).join(&pin.exe);
+        touch_exe(&bundled);
+        let source = locate(&pin, &roots(&app_data_dir, Some(&resource))).unwrap();
+        assert!(matches!(source, catalog::Source::Updated(_)));
+        assert_eq!(source.path(), live.join(&pin.exe));
+    }
+
+    #[test]
+    fn a_bundled_exe_beats_a_stamp_less_copy_and_is_not_copied() {
+        let pin = host_pin();
+        let base = scratch("bundled");
+        let app_data_dir = base.join("app");
+        let resource = base.join("resource");
+        let cached = app_data_dir.join("players").join(&pin.dir).join(&pin.exe);
+        touch_exe(&cached);
+        let bundled = resource.join("players").join(&pin.dir).join(&pin.exe);
+        touch_exe(&bundled);
+        let source = locate(&pin, &roots(&app_data_dir, Some(&resource))).unwrap();
+        assert!(matches!(source, catalog::Source::Bundled(_)));
+        assert_eq!(source.path(), bundled.as_path());
+    }
+
+    #[test]
+    fn a_foreign_stamp_loses_to_a_bundled_exe_and_is_not_cached() {
+        let pin = host_pin();
+        let base = scratch("foreign");
+        let app_data_dir = base.join("app");
+        let resource = base.join("resource");
+        let live = app_data_dir.join("players").join(&pin.dir);
+        touch_exe(&live.join(&pin.exe));
+        fs::write(live.join(catalog::STAMP_NAME), "not-this-pin\n").unwrap();
+        let bundled = resource.join("players").join(&pin.dir).join(&pin.exe);
+        touch_exe(&bundled);
+        let source = locate(&pin, &roots(&app_data_dir, Some(&resource))).unwrap();
+        assert!(matches!(source, catalog::Source::Bundled(_)));
+        assert_eq!(source.path(), bundled.as_path());
+    }
+
+    #[test]
+    fn a_foreign_stamp_with_no_bundle_is_not_a_source() {
+        let pin = host_pin();
+        let base = scratch("foreign-only");
+        let app_data_dir = base.join("app");
+        let live = app_data_dir.join("players").join(&pin.dir);
+        touch_exe(&live.join(&pin.exe));
+        fs::write(live.join(catalog::STAMP_NAME), "not-this-pin\n").unwrap();
+        assert!(locate(&pin, &roots(&app_data_dir, None)).is_none());
+    }
+
+    #[test]
+    fn a_stamp_less_exe_is_cached_only_when_nothing_is_bundled() {
+        let pin = host_pin();
+        let base = scratch("cached");
+        let app_data_dir = base.join("app");
+        let cached = app_data_dir.join("players").join(&pin.dir).join(&pin.exe);
+        touch_exe(&cached);
+        let source = locate(&pin, &roots(&app_data_dir, None)).unwrap();
+        assert!(matches!(source, catalog::Source::Cached(_)));
+        assert_eq!(source.path(), cached.as_path());
+    }
+
+    #[test]
+    fn nothing_matching_returns_none_and_keeps_the_parents_distinct() {
+        let pin = host_pin();
+        let base = scratch("none");
+        let app_data_dir = base.join("app");
+        let resource = base.join("resource");
+        fs::create_dir_all(resource.join("players")).unwrap();
+        let built = roots(&app_data_dir, Some(&resource));
+        assert!(locate(&pin, &built).is_none());
+        assert_ne!(built.app_data(), built.bundled().unwrap());
     }
 }
 
@@ -631,6 +664,50 @@ mod tests {
             quality: RuffleQuality::Low,
             graphics: RuffleGraphics::Automatic,
         }
+    }
+
+    #[test]
+    fn a_bundled_player_runs_in_place() {
+        let pin = catalog::Catalog::pinned()
+            .select(Engine::Ruffle, std::env::consts::OS, std::env::consts::ARCH)
+            .expect("ruffle pin");
+        let base = scratch("in-place");
+        let resource = base.join("resource");
+        let bundled = resource.join("players").join(&pin.dir).join(&pin.exe);
+        fs::create_dir_all(bundled.parent().unwrap()).unwrap();
+        let log = base.join("ran");
+        fs::write(
+            &bundled,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$0\" >> '{}'\nsleep 60\n",
+                log.display()
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&bundled, fs::Permissions::from_mode(0o755)).unwrap();
+        let app_data = base.join("app");
+        let roots = crate::placement::placement_for(false, &base).player_roots(
+            &app_data,
+            Some(&resource),
+            None,
+        );
+        let players = Players::default();
+        let _stop = Stop(players.clone());
+        let settings = RuffleSettings {
+            quality: RuffleQuality::Low,
+            graphics: RuffleGraphics::Gl,
+        };
+        let msg = players
+            .launch(&roots, Engine::Ruffle, "movie.swf", &settings, None)
+            .unwrap();
+        assert!(msg.contains("started"), "{msg}");
+        assert_eq!(
+            log_lines(&log),
+            vec![bundled.to_string_lossy().into_owned()]
+        );
+        assert!(!app_data.join("players").join(&pin.dir).exists());
+        drop(_stop);
+        let _ = fs::remove_dir_all(&base);
     }
 
     #[test]

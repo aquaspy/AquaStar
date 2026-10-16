@@ -1,5 +1,8 @@
+use sha2::{Digest, Sha256};
 use std::collections::HashSet;
-use std::path::{Component, Path};
+use std::fs;
+use std::io::Read;
+use std::path::{Component, Path, PathBuf};
 use std::sync::OnceLock;
 
 use super::Engine;
@@ -18,6 +21,30 @@ pub(super) struct Pinned {
     pub exe: String,
     pub url: String,
     pub kind: ArchiveKind,
+}
+
+pub(super) const STAMP_NAME: &str = ".aquastar-pin";
+
+pub(super) enum Source {
+    Updated(PathBuf),
+    Bundled(PathBuf),
+    Cached(PathBuf),
+}
+
+impl Source {
+    pub(super) fn path(&self) -> &Path {
+        match self {
+            Self::Updated(path) | Self::Bundled(path) | Self::Cached(path) => path,
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum TreeJudge {
+    Match,
+    Legacy,
+    Other,
+    Absent,
 }
 
 struct Row {
@@ -190,6 +217,169 @@ fn sha_ok(sha: &str) -> bool {
         && sha
             .bytes()
             .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+}
+
+pub(super) fn judge(dir: &Path, pin: &Pinned) -> TreeJudge {
+    if !dir.join(&pin.exe).is_file() {
+        return TreeJudge::Absent;
+    }
+    match fs::read_to_string(dir.join(STAMP_NAME)) {
+        Err(_) => TreeJudge::Legacy,
+        Ok(text) if text.trim() == pin.sha256 => TreeJudge::Match,
+        Ok(_) => TreeJudge::Other,
+    }
+}
+
+pub(super) fn publish(pin: &Pinned, players_parent: &Path) -> Result<PathBuf, String> {
+    fs::create_dir_all(players_parent).map_err(|e| e.to_string())?;
+    let incoming = players_parent.join(format!(".{}.incoming", pin.dir));
+    let trash = players_parent.join(format!(".{}.trash", pin.dir));
+    let live = players_parent.join(&pin.dir);
+    let exe = live.join(&pin.exe);
+
+    if judge(&incoming, pin) == TreeJudge::Match {
+        swap_in(&incoming, &live, &trash)?;
+        return Ok(exe);
+    }
+    remove_path(&incoming)?;
+    if judge(&live, pin) == TreeJudge::Match {
+        remove_path(&trash)?;
+        return Ok(exe);
+    }
+
+    let temp = players_parent.join(format!(".{}.download", pin.dir));
+    let published = publish_downloaded(pin, &temp, &incoming, &live, &trash);
+    if published.is_err() {
+        let _ = remove_path(&incoming);
+        let _ = remove_path(&temp);
+    }
+    published
+}
+
+fn publish_downloaded(
+    pin: &Pinned,
+    temp: &Path,
+    incoming: &Path,
+    live: &Path,
+    trash: &Path,
+) -> Result<PathBuf, String> {
+    let bytes = download(pin, temp)?;
+    fs::create_dir_all(incoming).map_err(|e| e.to_string())?;
+    unpack(pin, &bytes, incoming)?;
+    fs::write(incoming.join(STAMP_NAME), format!("{}\n", pin.sha256)).map_err(|e| e.to_string())?;
+    if judge(incoming, pin) != TreeJudge::Match {
+        return Err(format!("unpacked {} is missing {}", pin.url, pin.exe));
+    }
+    swap_in(incoming, live, trash)?;
+    remove_path(temp)?;
+    Ok(live.join(&pin.exe))
+}
+
+fn download(pin: &Pinned, temp: &Path) -> Result<Vec<u8>, String> {
+    let mut bytes = Vec::new();
+    ureq::get(&pin.url)
+        .call()
+        .map_err(|e| format!("download failed: {e}"))?
+        .into_reader()
+        .read_to_end(&mut bytes)
+        .map_err(|e| e.to_string())?;
+    fs::write(temp, &bytes).map_err(|e| e.to_string())?;
+    let got = format!("{:x}", Sha256::digest(&bytes));
+    if got != pin.sha256 {
+        remove_path(temp)?;
+        return Err(format!("checksum mismatch for {}: {got}", pin.url));
+    }
+    Ok(bytes)
+}
+
+fn swap_in(incoming: &Path, live: &Path, trash: &Path) -> Result<(), String> {
+    if live.exists() {
+        remove_path(trash)?;
+        fs::rename(live, trash).map_err(|e| e.to_string())?;
+    }
+    fs::rename(incoming, live).map_err(|e| e.to_string())?;
+    remove_path(trash)?;
+    Ok(())
+}
+
+fn remove_path(path: &Path) -> Result<(), String> {
+    if !path.exists() && !path.is_symlink() {
+        return Ok(());
+    }
+    if path.is_dir() && !path.is_symlink() {
+        fs::remove_dir_all(path).map_err(|e| e.to_string())
+    } else {
+        fs::remove_file(path).map_err(|e| e.to_string())
+    }
+}
+
+fn unpack(pin: &Pinned, bytes: &[u8], dest: &Path) -> Result<(), String> {
+    match pin.kind {
+        ArchiveKind::Exe => {
+            let name = pin
+                .url
+                .rsplit('/')
+                .next()
+                .and_then(|part| part.split('?').next())
+                .filter(|part| !part.is_empty())
+                .unwrap_or("player.exe");
+            fs::write(dest.join(name), bytes).map_err(|e| e.to_string())
+        }
+        ArchiveKind::Dmg => unpack_dmg(bytes, dest),
+        ArchiveKind::Zip => unpack_zip(bytes, dest),
+        ArchiveKind::TarGz => tar::Archive::new(flate2::read::GzDecoder::new(bytes))
+            .unpack(dest)
+            .map_err(|e| e.to_string()),
+    }
+}
+
+fn unpack_zip(bytes: &[u8], dest: &Path) -> Result<(), String> {
+    zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec()))
+        .and_then(|mut archive| archive.extract(dest))
+        .map_err(|e| e.to_string())
+}
+
+#[cfg(target_os = "macos")]
+fn detach_dmg(mount: &Path) {
+    let _ = std::process::Command::new("hdiutil")
+        .args(["detach", "-force"])
+        .arg(mount)
+        .status();
+}
+
+#[cfg(target_os = "macos")]
+fn unpack_dmg(bytes: &[u8], dest: &Path) -> Result<(), String> {
+    let dmg = dest.join("projector.dmg");
+    fs::write(&dmg, bytes).map_err(|e| e.to_string())?;
+    let mount = dest.join("mnt");
+    detach_dmg(&mount);
+    fs::create_dir_all(&mount).map_err(|e| e.to_string())?;
+    let attached = std::process::Command::new("hdiutil")
+        .args(["attach", "-nobrowse", "-readonly", "-mountpoint"])
+        .arg(&mount)
+        .arg(&dmg)
+        .status()
+        .map_err(|e| format!("hdiutil attach failed: {e}"))?;
+    if !attached.success() {
+        detach_dmg(&mount);
+        return Err(format!("hdiutil attach exited {attached}"));
+    }
+    let copied = std::process::Command::new("ditto")
+        .arg(mount.join("Flash Player.app"))
+        .arg(dest.join("Flash Player.app"))
+        .status();
+    detach_dmg(&mount);
+    let _ = fs::remove_file(&dmg);
+    match copied {
+        Ok(status) if status.success() => Ok(()),
+        Ok(status) => Err(format!("ditto exited {status}")),
+        Err(e) => Err(format!("ditto failed: {e}")),
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn unpack_dmg(_bytes: &[u8], _dest: &Path) -> Result<(), String> {
+    Err("the macOS projector is a disk image and is unpacked on macOS".into())
 }
 
 fn suffix_ok(kind: &ArchiveKind, url: &str) -> bool {
@@ -390,5 +580,58 @@ mod tests {
         );
         assert!(Catalog::parse(&dup).is_err());
         assert!(Catalog::parse("{").is_err());
+    }
+
+    fn scratch(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "aquastar-lite-publish-{name}-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn fixture() -> Pinned {
+        Pinned {
+            dir: "player-under-test".into(),
+            sha256: sha(0x44),
+            exe: "player".into(),
+            url: "https://example.invalid/player.tar.gz".into(),
+            kind: ArchiveKind::TarGz,
+        }
+    }
+
+    fn touch(path: &Path) {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, b"player").unwrap();
+    }
+
+    #[test]
+    fn publish_adopts_a_matching_incoming_tree_without_downloading() {
+        let pin = fixture();
+        let parent = scratch("incoming");
+        let incoming = parent.join(format!(".{}.incoming", pin.dir));
+        touch(&incoming.join(&pin.exe));
+        fs::write(incoming.join(STAMP_NAME), format!("{}\n", pin.sha256)).unwrap();
+        let trash = parent.join(format!(".{}.trash", pin.dir));
+        touch(&trash.join("old"));
+        let exe = publish(&pin, &parent).unwrap();
+        assert_eq!(exe, parent.join(&pin.dir).join(&pin.exe));
+        assert_eq!(fs::read(&exe).unwrap(), b"player");
+        assert!(!incoming.exists());
+        assert!(!trash.exists());
+    }
+
+    #[test]
+    fn publish_leaves_a_matching_live_tree_in_place() {
+        let pin = fixture();
+        let parent = scratch("live");
+        let live = parent.join(&pin.dir);
+        touch(&live.join(&pin.exe));
+        fs::write(live.join(STAMP_NAME), format!("{}\n", pin.sha256)).unwrap();
+        let exe = publish(&pin, &parent).unwrap();
+        assert_eq!(fs::read(&exe).unwrap(), b"player");
+        assert!(!parent.join(format!(".{}.incoming", pin.dir)).exists());
     }
 }

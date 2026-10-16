@@ -16,6 +16,26 @@ pub struct PortableRoot {
     ruffle_saves: PathBuf,
 }
 
+pub struct PlayerRoots {
+    app_data: PathBuf,
+    bundled: Option<PathBuf>,
+}
+
+impl PlayerRoots {
+    pub fn app_data(&self) -> &Path {
+        &self.app_data
+    }
+
+    pub fn bundled(&self) -> Option<&Path> {
+        self.bundled.as_deref()
+    }
+}
+
+fn players_dir(base: Option<&Path>) -> Option<PathBuf> {
+    let dir = base?.join("players");
+    dir.is_dir().then_some(dir)
+}
+
 pub fn placement_for(os_is_windows: bool, exe_dir: &Path) -> Placement {
     if os_is_windows && exe_dir.join(MARKER).is_file() {
         Placement::Portable(PortableRoot {
@@ -44,6 +64,24 @@ impl Placement {
         match self {
             Self::Installed => None,
             Self::Portable(root) => Some(&root.ruffle_saves),
+        }
+    }
+
+    pub fn player_roots(
+        &self,
+        app_data_dir: &Path,
+        resource_dir: Option<&Path>,
+        exe_dir: Option<&Path>,
+    ) -> PlayerRoots {
+        let resource_players = players_dir(resource_dir);
+        let exe_players = players_dir(exe_dir);
+        let bundled = match self {
+            Self::Portable(_) => exe_players.or(resource_players),
+            Self::Installed => resource_players,
+        };
+        PlayerRoots {
+            app_data: app_data_dir.join("players"),
+            bundled,
         }
     }
 
@@ -254,5 +292,58 @@ mod tests {
                 assert!(line.contains("--latest=false"), "{line}");
             }
         }
+    }
+
+    #[test]
+    fn installed_roots_use_an_existing_resource_players_dir() {
+        let base = scratch("roots-installed");
+        let app_data = base.join("app");
+        let resource = base.join("resource");
+        let exe = base.join("exe");
+        std::fs::create_dir_all(resource.join("players")).unwrap();
+        std::fs::create_dir_all(exe.join("players")).unwrap();
+        let roots = placement_for(false, &exe).player_roots(&app_data, Some(&resource), Some(&exe));
+        assert_eq!(roots.app_data(), app_data.join("players"));
+        assert_eq!(roots.bundled(), Some(resource.join("players").as_path()));
+        assert!(!app_data.exists());
+    }
+
+    #[test]
+    fn missing_players_directories_are_not_bundled() {
+        let base = scratch("roots-missing");
+        let app_data = base.join("app");
+        let resource = base.join("resource");
+        std::fs::create_dir_all(&resource).unwrap();
+        let roots = placement_for(false, &resource).player_roots(
+            &app_data,
+            Some(&resource),
+            Some(&resource),
+        );
+        assert_eq!(roots.bundled(), None);
+        assert_eq!(roots.app_data(), app_data.join("players"));
+    }
+
+    #[test]
+    fn portable_roots_prefer_players_beside_the_exe() {
+        let exe = scratch("roots-portable");
+        marker(&exe);
+        std::fs::create_dir_all(exe.join("players")).unwrap();
+        let resource = exe.join("resource");
+        std::fs::create_dir_all(resource.join("players")).unwrap();
+        let app_data = exe.join("data");
+        let roots = placement_for(true, &exe).player_roots(&app_data, Some(&resource), Some(&exe));
+        assert_eq!(roots.bundled(), Some(exe.join("players").as_path()));
+        assert_eq!(roots.app_data(), app_data.join("players"));
+    }
+
+    #[test]
+    fn portable_roots_fall_back_to_resource_players() {
+        let exe = scratch("roots-portable-resource");
+        marker(&exe);
+        let resource = exe.join("resource");
+        std::fs::create_dir_all(resource.join("players")).unwrap();
+        let roots =
+            placement_for(true, &exe).player_roots(&exe.join("data"), Some(&resource), Some(&exe));
+        assert_eq!(roots.bundled(), Some(resource.join("players").as_path()));
     }
 }

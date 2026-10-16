@@ -30,13 +30,18 @@ fn load_ruffle_settings(app: &tauri::AppHandle) -> ruffle::RuffleSettings {
 
 #[tauri::command]
 async fn play(app: tauri::AppHandle, engine: Engine) -> Result<String, String> {
-    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    let settings = load_ruffle_settings(&app);
+    let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let resource_dir = app.path().resource_dir().ok();
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(Path::to_path_buf));
     let placement = app.state::<placement::Placement>().inner().clone();
+    let roots = placement.player_roots(&app_data, resource_dir.as_deref(), exe_dir.as_deref());
+    let settings = load_ruffle_settings(&app);
     let saves = placement.ruffle_save_directory().map(Path::to_path_buf);
     let players = app.state::<Players>().inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        players.launch(&dir, engine, AQW_LOADER, &settings, saves.as_deref())
+        players.launch(&roots, engine, AQW_LOADER, &settings, saves.as_deref())
     })
     .await
     .map_err(|e| e.to_string())?
