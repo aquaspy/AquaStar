@@ -1,0 +1,144 @@
+name: AquaStar Lite Smoke
+
+# Launches the real Lite release artifacts and checks that Play starts a
+# player. Screenshots are for a person. A Cloudflare block or a blank login
+# is not a failure.
+#
+# An empty tag is the newest lite-v* release, prerelease or final.
+# workflow_dispatch and workflow_run only fire once this file is on the
+# default branch. A push of this file to dev runs the same jobs before that.
+# macos-13 was retired on 2025-12-04. Intel Macs use macos-15-intel.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Lite release tag (lite-v*). Empty uses the newest lite-v* release, prerelease or final.
+        required: false
+        default: ""
+        type: string
+  workflow_run:
+    workflows: ["AquaStar Lite Release"]
+    types: [completed]
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/lite-smoke.yml
+      - lite/scripts/smoke/**
+
+concurrency:
+  group: lite-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  resolve:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'lite-v'))
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Choose the Lite release
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: bash lite/scripts/smoke/resolve-tag.sh
+
+  smoke:
+    needs: resolve
+    if: needs.resolve.result == 'success'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            package: appimage
+            flash_arch: ""
+          - os: ubuntu-latest
+            package: deb
+            flash_arch: ""
+          - os: windows-latest
+            package: nsis
+            flash_arch: ""
+          - os: windows-latest
+            package: portable
+            flash_arch: ""
+          - os: macos-15-intel
+            package: dmg
+            flash_arch: ""
+          - os: macos-latest
+            package: dmg
+            flash_arch: x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Pillow
+        run: python -m pip install pillow
+      - name: Button finder test
+        run: python lite/scripts/smoke/test_buttons.py
+      - name: Download the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          PACKAGE: ${{ matrix.package }}
+        shell: bash
+        run: bash lite/scripts/smoke/download.sh
+      - name: Install on Linux or macOS
+        if: runner.os != 'Windows'
+        env:
+          PACKAGE: ${{ matrix.package }}
+        run: bash lite/scripts/smoke/install-unix.sh
+      - name: Install on Windows
+        if: runner.os == 'Windows'
+        env:
+          PACKAGE: ${{ matrix.package }}
+        shell: pwsh
+        run: ./lite/scripts/smoke/install-windows.ps1
+      - name: How this job is judged
+        shell: bash
+        run: |
+          {
+            echo "### ${{ matrix.package }} on ${{ matrix.os }}"
+            echo "Release \`${{ needs.resolve.outputs.tag }}\`."
+            echo "Pass or fail is whether the launcher stayed up and the player process was still alive after the wait, with no crash and no exit 127."
+            echo "A Cloudflare block or a blank login screen is not a failure. The screenshots are for a person to review."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Play Flash
+        env:
+          AQUASTAR_LITE_SMOKE: flash
+          SMOKE_ARCH: ${{ matrix.flash_arch }}
+        shell: bash
+        run: python -u lite/scripts/smoke/drive.py --engine flash --binary "$AQUASTAR_LITE_BIN" --out smoke-out/flash --arch "${SMOKE_ARCH:-}"
+      - name: Play Ruffle
+        if: always()
+        env:
+          AQUASTAR_LITE_SMOKE: ruffle
+        shell: bash
+        run: python -u lite/scripts/smoke/drive.py --engine ruffle --binary "$AQUASTAR_LITE_BIN" --out smoke-out/ruffle --arch ""
+      - name: Upload Flash screenshot and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.os }}-${{ matrix.package }}-flash
+          path: smoke-out/flash/
+          if-no-files-found: warn
+      - name: Upload Ruffle screenshot and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.os }}-${{ matrix.package }}-ruffle
+          path: smoke-out/ruffle/
+          if-no-files-found: warn

@@ -155,3 +155,28 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false
+
+  # workflow_run only starts lite-smoke.yml once that file is on the default
+  # branch. Until then a dispatch is a no-op, so a release is not failed by a
+  # workflow GitHub cannot see yet. A push of the smoke file to dev runs it.
+  smoke:
+    needs: [build, keep-prerelease]
+    if: startsWith(github.ref, 'refs/tags/lite-v')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Start the Lite smoke test
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api --silent "repos/${GITHUB_REPOSITORY}/contents/.github/workflows/lite-smoke.yml?ref=main" >/dev/null 2>&1; then
+            echo "main has lite-smoke.yml, so workflow_run starts the smoke test"
+            exit 0
+          fi
+          if gh workflow run lite-smoke.yml --repo "$GITHUB_REPOSITORY" --ref dev -f tag="$GITHUB_REF_NAME"; then
+            echo "dispatched lite-smoke.yml for $GITHUB_REF_NAME"
+            exit 0
+          fi
+          echo "lite-smoke.yml is not dispatchable until it is on the default branch. A push of that file to dev runs the same test."

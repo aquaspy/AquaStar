@@ -312,6 +312,38 @@ mod tests {
     }
 
     #[test]
+    fn smoke_workflow_launches_the_release_artifacts() {
+        let yml = include_str!("../../../.github/workflows/lite-smoke.yml");
+        assert!(yml.contains("workflow_dispatch"));
+        assert!(yml.contains("workflow_run"));
+        assert!(yml.contains("AquaStar Lite Release"));
+        assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'lite-v')"));
+        for os in [
+            "ubuntu-latest",
+            "windows-latest",
+            "macos-latest",
+            "macos-15-intel",
+        ] {
+            assert!(yml.contains(os), "{os}");
+        }
+        for package in ["appimage", "deb", "nsis", "portable", "dmg"] {
+            assert!(yml.contains(package), "{package}");
+        }
+        assert!(yml.contains("actions/upload-artifact@v4"));
+        assert!(yml.contains("AQUASTAR_LITE_SMOKE"));
+        let unix = include_str!("../../scripts/smoke/install-unix.sh");
+        assert!(unix.contains("xattr -cr"));
+        assert!(unix.contains("hdiutil attach"));
+        assert!(unix.contains("APPIMAGE_EXTRACT_AND_RUN"));
+        let windows = include_str!("../../scripts/smoke/install-windows.ps1");
+        assert!(windows.contains("/S"));
+        assert!(windows.contains("portable.zip"));
+        let release = include_str!("../../../.github/workflows/lite-release.yml");
+        assert!(release.contains("lite-smoke.yml"));
+        assert!(release.contains("gh workflow run"));
+    }
+
+    #[test]
     fn check_workflow_fetches_players_after_cargo() {
         let yml = include_str!("../../../.github/workflows/lite-check.yml");
         let mut steps = Vec::new();
