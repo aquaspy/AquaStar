@@ -14,10 +14,10 @@ on:
       tag:
         description: Lite release tag (lite-v*). Empty uses the newest lite-v* release, prerelease or final.
         required: false
-        default: ""
+        default: ''
         type: string
   workflow_run:
-    workflows: ["AquaStar Lite Release"]
+    workflows: ['AquaStar Lite Release']
     types: [completed]
   push:
     branches: [dev]
@@ -64,19 +64,19 @@ jobs:
         include:
           - os: ubuntu-latest
             package: appimage
-            flash_arch: ""
+            flash_arch: ''
           - os: ubuntu-latest
             package: deb
-            flash_arch: ""
+            flash_arch: ''
           - os: windows-latest
             package: nsis
-            flash_arch: ""
+            flash_arch: ''
           - os: windows-latest
             package: portable
-            flash_arch: ""
+            flash_arch: ''
           - os: macos-15-intel
             package: dmg
-            flash_arch: ""
+            flash_arch: ''
           - os: macos-latest
             package: dmg
             flash_arch: x86_64
@@ -84,7 +84,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
       - name: Install Pillow
         run: python -m pip install pillow
       - name: Button finder test
