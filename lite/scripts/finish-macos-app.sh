@@ -13,12 +13,27 @@ while IFS= read -r candidate; do
   if [[ -z "$app" ]]; then
     app="$candidate"
   fi
-done < <(find "$target" -type d -name "AquaStar Lite.app")
+done < <(find "$target" -type d -name "aquastar-lite.app")
 
 if [[ -z "$app" ]]; then
-  echo "AquaStar Lite.app not found under $target" >&2
+  echo "aquastar-lite.app not found under $target" >&2
   exit 1
 fi
+
+# productName names the bundle aquastar-lite.app and is copied into
+# CFBundleDisplayName. Finder and the menu bar should still say AquaStar Lite.
+plist="$app/Contents/Info.plist"
+python3 - "$plist" <<'PY'
+import plistlib
+import sys
+path = sys.argv[1]
+with open(path, "rb") as handle:
+    info = plistlib.load(handle)
+info["CFBundleDisplayName"] = "AquaStar Lite"
+info["CFBundleName"] = "AquaStar Lite"
+with open(path, "wb") as handle:
+    plistlib.dump(info, handle, fmt=plistlib.FMT_XML)
+PY
 
 players="$app/Contents/Resources/players"
 if [[ -d "$players" ]]; then

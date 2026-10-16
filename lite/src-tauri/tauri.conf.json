@@ -21,7 +21,9 @@
     "macOS": {
       "signingIdentity": "-",
       "hardenedRuntime": false,
-      "minimumSystemVersion": "11.0"
+      "minimumSystemVersion": "11.0",
+      "bundleName": "AquaStar Lite",
+      "infoPlist": "Info.plist"
     },
     "icon": [
       "icons/16x16.png",

@@ -25,7 +25,7 @@ cargo build --release          # needs a current stable Rust (1.85 is too old)
 Windows (`nsis`) and macOS (universal app) bundles are built by `.github/workflows/lite-release.yml`. A `lite-v*` tag publishes a pre-release. A manual run (workflow_dispatch) only uploads the bundles as workflow artifacts so they can be tested before tagging. The Mac bundle is ad-hoc signed (`signingIdentity` `-`, hardened runtime off, minimum system 11.0). There is no Apple Developer ID certificate. `lite/scripts/finish-macos-app.sh` signs nested player apps inside the built app, then writes the disk image. After you open the disk image, clear quarantine and then launch:
 
 ```sh
-xattr -cr "/path/to/AquaStar Lite.app"
+xattr -cr "/path/to/aquastar-lite.app"
 ```
 
 The same workflow also publishes `AquaStar.Lite_<ver>_x64-portable.zip` for Windows. `<ver>` is the `version` in `lite/src-tauri/tauri.conf.json`. Unzip the archive. Run `aquastar-lite.exe`. The archive contains `aquastar-lite.exe`, `portable.txt`, and `players/` next to the executable. When `portable.txt` is a file beside the executable, AquaStar Lite keeps its data in the `data` folder next to the executable, and Ruffle is started with `--save-directory` pointing at `data/ruffle-saves`. An installed copy leaves that flag unset. The OpenGL relaunch keeps the same save directory. Windows 10 and Windows 11 use the system WebView2 runtime. The zip does not run the NSIS installer. If WebView2 is missing, the app shows "Could not find the WebView2 Runtime".

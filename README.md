@@ -118,7 +118,7 @@ AquaStar is not signed with an Apple Developer ID. After you unzip or open the d
 xattr -cr /path/to/AquaStar.app
 ```
 
-The same command fixes AquaStar Lite (`AquaStar Lite.app`). PPAPI Flash on Mac is an Intel plugin. On Apple Silicon, start the x64 build under Rosetta (`arch -x86_64`) or play with Ruffle. The release zip is `AquaStar-<version>-mac-x64.zip`.
+The same command fixes AquaStar Lite (`aquastar-lite.app`; Finder shows AquaStar Lite). PPAPI Flash on Mac is an Intel plugin. On Apple Silicon, start the x64 build under Rosetta (`arch -x86_64`) or play with Ruffle. The release zip is `AquaStar-<version>-mac-x64.zip`.
 
 ### I have another problem
 - Tell us the information that appears in F9 about OS and Arch, and open a issue on github saying what happened.
