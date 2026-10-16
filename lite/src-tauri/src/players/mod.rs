@@ -308,27 +308,25 @@ impl Players {
         let save_directory = save_directory.map(Path::to_path_buf);
         let settings = settings.for_platform(std::env::consts::OS);
         let graphics = settings.graphics;
-        let capture = engine == Engine::Ruffle && graphics != RuffleGraphics::Gl;
+        let ruffle_may_fallback = engine == Engine::Ruffle && graphics != RuffleGraphics::Gl;
         let mut args = engine.args(swf, &settings, save_directory.as_deref());
         if engine == Engine::Flash && projector::is_embedded(exe) {
             args.clear();
         }
-        let mut child = spawn_player(exe, engine, &args, capture)?;
+        let mut child = spawn_player(exe, engine, &args, ruffle_may_fallback)?;
         let started = Instant::now();
         let panicked = Arc::new(AtomicBool::new(false));
         let killed = Arc::new(AtomicBool::new(false));
         let tail = Arc::new(Mutex::new(String::new()));
-        let stderr_done =
-            capture.then(|| watch_stderr(child.stderr.take(), panicked.clone(), tail.clone()));
+        let stderr_done = ruffle_may_fallback
+            .then(|| watch_stderr(child.stderr.take(), panicked.clone(), tail.clone()));
 
         std::thread::sleep(Duration::from_millis(800));
         match child.try_wait() {
             Ok(Some(status)) => {
                 finish_stderr(stderr_done);
                 let report = exit_report(graphics, status, started, &panicked, &killed);
-                // `capture` is only set for a non-OpenGL Ruffle. Flash (and OpenGL) must not
-                // be relaunched just because the saved graphics backend is not OpenGL.
-                if capture && ruffle::should_fallback(&report) {
+                if ruffle_may_fallback && ruffle::should_fallback(&report) {
                     log_fallback(&report, &tail.lock().unwrap());
                     return self.relaunch_gl(
                         exe,
@@ -344,7 +342,7 @@ impl Players {
             }
             Ok(None) => {
                 let pid = child.id();
-                let watch = capture.then(|| FallbackWatch {
+                let watch = ruffle_may_fallback.then(|| FallbackWatch {
                     graphics,
                     started,
                     panicked,
