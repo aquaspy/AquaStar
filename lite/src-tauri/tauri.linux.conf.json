@@ -10,7 +10,8 @@
       "deb": {
         "depends": [
           "libgtk2.0-0t64 | libgtk2.0-0",
-          "libnss3"
+          "libnss3",
+          "libxkbcommon-x11-0"
         ],
         "conflicts": ["aqua-star-lite"],
         "replaces": ["aqua-star-lite"],

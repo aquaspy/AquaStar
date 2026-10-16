@@ -104,7 +104,7 @@ sudo apt install ./AquaStar_<version>_amd64.deb
 sudo apt install ./aquastar-lite_<version>_amd64.deb
 ```
 
-The Lite deb depends on GTK 2, `libgtk2.0-0t64` or `libgtk2.0-0`, and on `libnss3`. Apt installs those with the package. If the Flash projector still cannot start, Lite names the missing library and exits with code 127. Ruffle does not need those libraries.
+The Lite deb depends on GTK 2, `libgtk2.0-0t64` or `libgtk2.0-0`, on `libnss3`, and on `libxkbcommon-x11-0`. Apt installs those with the package. GTK 2 and NSS are for the Flash projector. If the projector still cannot start, Lite names the missing library and exits with code 127. Ruffle loads `libxkbcommon-x11` when it opens an X11 window.
 
 ## Build from source
 
