@@ -22,7 +22,7 @@ jobs:
           - platform: windows-latest
             args: ''
           - platform: macos-latest
-            args: '--target universal-apple-darwin'
+            args: '--target universal-apple-darwin --bundles app'
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +40,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Unpack pinned players
+        if: matrix.platform != 'windows-latest'
+        run: bash lite/scripts/fetch-players.sh
+      - name: Unpack pinned players
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: ./lite/scripts/fetch-players.ps1
       - name: Build and publish release (tag push)
         if: startsWith(github.ref, 'refs/tags/lite-v')
         uses: tauri-apps/tauri-action@v0
@@ -64,6 +71,20 @@ jobs:
           projectPath: lite
           tauriScript: npx -y @tauri-apps/cli@2
           args: ${{ matrix.args }}
+      - name: Sign nested apps and seal the DMG
+        if: matrix.platform == 'macos-latest'
+        run: bash lite/scripts/finish-macos-app.sh
+      - name: Attach macOS disk image to the pre-release
+        if: matrix.platform == 'macos-latest' && startsWith(github.ref, 'refs/tags/lite-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          dmg=$(find lite/src-tauri/target -path '*/release/bundle/dmg/*.dmg' -type f | head -n 1)
+          if [[ -z "$dmg" ]]; then
+            echo "no disk image under lite/src-tauri/target" >&2
+            exit 1
+          fi
+          gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber "$dmg"
       - name: Package Windows portable
         if: matrix.platform == 'windows-latest'
         shell: pwsh
@@ -77,9 +98,12 @@ jobs:
           New-Item -ItemType Directory -Path $stage | Out-Null
           Copy-Item $exe (Join-Path $stage "aquastar-lite.exe")
           Set-Content -Encoding ascii -Path (Join-Path $stage "portable.txt") -Value "AquaStar Lite stores its data in the data folder next to this file.`r`n"
+          $players = "lite/src-tauri/players"
+          if (-not (Test-Path $players)) { throw "missing $players" }
+          Copy-Item -Recurse $players (Join-Path $stage "players")
           $zip = "lite/src-tauri/target/release/AquaStar.Lite_${ver}_x64-portable.zip"
           if (Test-Path $zip) { Remove-Item -Force $zip }
-          tar.exe -a -cf $zip -C $stage aquastar-lite.exe portable.txt
+          tar.exe -a -cf $zip -C $stage aquastar-lite.exe portable.txt players
       - name: Attach portable zip to the pre-release
         if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/lite-v')
         env:

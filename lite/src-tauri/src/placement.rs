@@ -292,6 +292,50 @@ mod tests {
                 assert!(line.contains("--latest=false"), "{line}");
             }
         }
+        let tar_line = yml
+            .lines()
+            .find(|line| line.contains("tar.exe"))
+            .expect("portable tar.exe");
+        assert!(tar_line.contains("players"), "{tar_line}");
+        let fetch = yml.find("lite/scripts/fetch-players.sh").expect("fetch sh");
+        let fetch_ps = yml
+            .find("lite/scripts/fetch-players.ps1")
+            .expect("fetch ps1");
+        let mut actions = yml.match_indices("tauri-apps/tauri-action");
+        let first = actions.next().expect("first tauri-action").0;
+        let second = actions.next().expect("second tauri-action").0;
+        assert!(fetch < first && fetch_ps < first && first < second);
+        assert!(yml.contains("--bundles app"));
+        assert!(yml.contains("lite/scripts/finish-macos-app.sh"));
+        assert!(include_str!("../../scripts/finish-macos-app.sh")
+            .contains("codesign --force --deep -s -"));
+    }
+
+    #[test]
+    fn check_workflow_fetches_players_after_cargo() {
+        let yml = include_str!("../../../.github/workflows/lite-check.yml");
+        let mut steps = Vec::new();
+        for line in yml.lines() {
+            if line.contains("cargo test")
+                || line.contains("cargo check")
+                || line.contains("fetch-players")
+            {
+                steps.push(line.trim());
+            }
+        }
+        assert!(
+            steps
+                .windows(2)
+                .any(|pair| pair[0].contains("cargo test") && pair[1].contains("fetch-players")),
+            "{steps:?}"
+        );
+        assert!(
+            steps
+                .windows(2)
+                .any(|pair| pair[0].contains("cargo check") && pair[1].contains("fetch-players")),
+            "{steps:?}"
+        );
+        assert!(yml.contains("if: always()"));
     }
 
     #[test]

@@ -30,6 +30,9 @@ jobs:
       - name: cargo test
         working-directory: lite/src-tauri
         run: cargo test --locked
+      - name: Unpack pinned players
+        if: always()
+        run: bash lite/scripts/fetch-players.sh
 
   macos-check:
     runs-on: macos-latest
@@ -42,3 +45,6 @@ jobs:
       - name: cargo check
         working-directory: lite/src-tauri
         run: cargo check --locked
+      - name: Unpack pinned players
+        if: always()
+        run: bash lite/scripts/fetch-players.sh
