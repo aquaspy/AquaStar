@@ -132,19 +132,27 @@ fn preferred_engine() -> Engine {
     Engine::preferred()
 }
 
-#[tauri::command]
-async fn open_site(app: tauri::AppHandle, label: String, url: String) -> Result<(), String> {
+const SITE_HOSTS: &[&str] = &[
+    "aqwwiki.wikidot.com",
+    "account.aq.com",
+    "www.aq.com",
+    "www.artix.com",
+];
+
+/// HTTPS pages on the launcher's site list. Navigation inside a site window
+/// still drops ad hosts (`ads::host_blocked`); these hosts are not on that list.
+fn allowed_site(url: &str) -> Result<tauri::Url, String> {
     let parsed: tauri::Url = url.parse().map_err(|_| "bad url".to_string())?;
     let host = parsed.host_str().unwrap_or("");
-    let allowed = [
-        "aqwwiki.wikidot.com",
-        "account.aq.com",
-        "www.aq.com",
-        "www.artix.com",
-    ];
-    if parsed.scheme() != "https" || !allowed.contains(&host) {
+    if parsed.scheme() != "https" || !SITE_HOSTS.contains(&host) {
         return Err(format!("{host} is not an allowed site"));
     }
+    Ok(parsed)
+}
+
+#[tauri::command]
+async fn open_site(app: tauri::AppHandle, label: String, url: String) -> Result<(), String> {
+    let parsed = allowed_site(&url)?;
     if let Some(w) = app.get_webview_window(&label) {
         let _ = w.navigate(parsed);
         let _ = w.set_focus();
@@ -286,4 +294,33 @@ fn main() {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn launcher_pages_open_on_allowed_hosts_and_are_not_ad_hosts() {
+        let pages = [
+            "https://account.aq.com/CharPage",
+            "https://account.aq.com/CharPage?id=Yulgar",
+            "https://www.aq.com/gamedesignnotes/",
+            "https://www.aq.com/lore/dailygifts",
+            "https://www.aq.com/lore/calendar",
+            "https://aqwwiki.wikidot.com/new-releases",
+            "https://www.aq.com/lore/guides/enhancementtraits",
+            "https://aqwwiki.wikidot.com/",
+            "https://account.aq.com/",
+            "https://www.aq.com/",
+        ];
+        for url in pages {
+            let parsed = allowed_site(url).unwrap_or_else(|err| panic!("{url}: {err}"));
+            let host = parsed.host_str().unwrap();
+            assert!(!ads::host_blocked(host), "{host} is blocked");
+        }
+        assert!(allowed_site("http://www.aq.com/lore/calendar").is_err());
+        assert!(allowed_site("https://evil.example/CharPage").is_err());
+        assert!(allowed_site("not a url").is_err());
+    }
 }

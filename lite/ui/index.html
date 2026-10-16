@@ -20,12 +20,28 @@
   </section>
   <section class="sites">
     <h2>Sites</h2>
-    <button data-site="wiki" data-url="https://aqwwiki.wikidot.com/">AQW Wiki</button>
-    <button data-site="account" data-url="https://account.aq.com/">Account</button>
-    <button data-site="news" data-url="https://www.aq.com/">AQ.com news</button>
+    <div class="pair">
+      <button data-site="wiki" data-url="https://aqwwiki.wikidot.com/">AQW Wiki</button>
+      <button data-site="releases" data-url="https://aqwwiki.wikidot.com/new-releases">New Releases</button>
+    </div>
     <form id="wiki-search">
       <input name="q" placeholder="Search the wiki…" autocomplete="off">
     </form>
+    <button data-site="account" data-url="https://account.aq.com/">Account</button>
+    <form id="char-page" class="char-row">
+      <input name="character" placeholder="Character name" autocomplete="off" spellcheck="false">
+      <button type="submit">Char Page</button>
+    </form>
+    <button data-site="news" data-url="https://www.aq.com/">AQ.com news</button>
+    <div class="more">
+      <h3>More</h3>
+      <div class="more-grid">
+        <button data-site="design" data-url="https://www.aq.com/gamedesignnotes/">Design Notes</button>
+        <button data-site="gifts" data-url="https://www.aq.com/lore/dailygifts">Daily Gifts</button>
+        <button data-site="calendar" data-url="https://www.aq.com/lore/calendar">Calendar</button>
+        <button data-site="forge" data-url="https://www.aq.com/lore/guides/enhancementtraits">Forge / Enchants</button>
+      </div>
+    </div>
   </section>
   <section class="settings">
     <h2>Ruffle</h2>

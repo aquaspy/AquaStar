@@ -8,7 +8,7 @@
   "app": {
     "withGlobalTauri": true,
     "windows": [
-      { "label": "main", "title": "AquaStar Lite", "width": 900, "height": 720 }
+      { "label": "main", "title": "AquaStar Lite", "width": 900, "height": 860 }
     ],
     "security": {
       "csp": "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'"

@@ -61,6 +61,14 @@ document.getElementById('wiki-search').addEventListener('submit', (ev) => {
   const q = ev.target.q.value.trim();
   if (q) openSite('wiki', 'https://aqwwiki.wikidot.com/search:site/q/' + encodeURIComponent(q));
 });
+document.getElementById('char-page').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const name = ev.target.character.value.trim();
+  const url = name
+    ? 'https://account.aq.com/CharPage?id=' + encodeURIComponent(name)
+    : 'https://account.aq.com/CharPage';
+  openSite('char-page', url);
+});
 
 const qualitySelect = document.getElementById('ruffle-quality');
 const graphicsSelect = document.getElementById('ruffle-graphics');
