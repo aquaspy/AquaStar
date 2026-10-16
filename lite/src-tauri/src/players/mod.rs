@@ -1,6 +1,8 @@
 //! Game players run outside the webview, as child processes of the launcher.
 //! Ruffle quality and graphics come from [`crate::ruffle`].
 
+mod catalog;
+
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -14,90 +16,25 @@ use std::time::{Duration, Instant};
 
 use crate::ruffle::{self, ExitReport, RuffleGraphics, RuffleQuality, RuffleSettings};
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum Engine {
     Ruffle,
     Flash,
 }
 
-/// One pinned download: where to get it, its SHA-256, and the executable inside.
-struct Artifact {
-    dir: &'static str,
-    url: &'static str,
-    sha256: &'static str,
-    exe: &'static str,
-}
-
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-const RUFFLE: Option<Artifact> = Some(Artifact {
-    dir: "ruffle-0.7.1",
-    url: "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-x86_64.tar.gz",
-    sha256: "67950dfdde643f9087ae478eb3637fe52e0deefc79bdb55fe43cd69dab9fdd99",
-    exe: "ruffle",
-});
-#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
-const RUFFLE: Option<Artifact> = Some(Artifact {
-    dir: "ruffle-0.7.1",
-    url: "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-windows-x86_64.zip",
-    sha256: "a5f6df9881771226e330e08a1fa7666f4caff50ddf9f2f993cdd95293edca627",
-    exe: "ruffle.exe",
-});
-#[cfg(target_os = "macos")]
-const RUFFLE: Option<Artifact> = Some(Artifact {
-    dir: "ruffle-0.7.1",
-    url: "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-macos-universal.tar.gz",
-    sha256: "7a86a09b0ca1d5756abcbb093108265019d77edad79e91c98689126c940bea4e",
-    exe: "Ruffle.app/Contents/MacOS/ruffle",
-});
-#[cfg(not(any(
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "windows", target_arch = "x86_64"),
-    target_os = "macos"
-)))]
-const RUFFLE: Option<Artifact> = None;
-
-// Adobe's official standalone projector is 32.0.0.465. The Artix PPAPI build
-// 32.0.0.344 is not a projector, and Adobe's CDN does not serve one for that version.
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-const FLASH: Option<Artifact> = Some(Artifact {
-    dir: "flashplayer-32.0.0.465",
-    url: "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flash_player_sa_linux.x86_64.tar.gz",
-    sha256: "883f7aa23301fc80de879501157533a4acdbfee0721ed7c57676dc032fdf96c3",
-    exe: "flashplayer",
-});
-#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
-const FLASH: Option<Artifact> = Some(Artifact {
-    dir: "flashplayer-32.0.0.465",
-    url: "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.exe",
-    sha256: "a4b333ac1da12026989549015303d82231982838bccfb544ba5fd188746066f0",
-    exe: "flashplayer_32_sa.exe",
-});
-// The official projector is x86_64 only. Apple Silicon gets Ruffle.
-#[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-const FLASH: Option<Artifact> = Some(Artifact {
-    dir: "flashplayer-32.0.0.465",
-    url: "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.dmg",
-    sha256: "236ecef54a7d6c3eed739c74b7e14946b07b6156cbcedda3bbbf444f1d17023a",
-    exe: "Flash Player.app/Contents/MacOS/Flash Player",
-});
-#[cfg(not(any(
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "windows", target_arch = "x86_64"),
-    all(target_os = "macos", target_arch = "x86_64"),
-)))]
-const FLASH: Option<Artifact> = None;
-
 impl Engine {
-    pub const ALL: [Engine; 2] = [Engine::Flash, Engine::Ruffle];
+    pub const ALL: [Engine; 2] = [Engine::Ruffle, Engine::Flash];
 
-    /// Flash where a projector exists, except on macOS, where Ruffle is the default.
     pub fn preferred() -> Engine {
-        Self::preferred_on(std::env::consts::OS, Engine::Flash.supported())
+        Self::preferred_for(std::env::consts::OS, std::env::consts::ARCH)
     }
 
-    pub fn preferred_on(os: &str, flash_supported: bool) -> Engine {
-        if os == "macos" || !flash_supported {
+    pub fn preferred_for(os: &str, arch: &str) -> Engine {
+        if catalog::Catalog::pinned()
+            .select(Engine::Ruffle, os, arch)
+            .is_some()
+        {
             Engine::Ruffle
         } else {
             Engine::Flash
@@ -105,10 +42,11 @@ impl Engine {
     }
 
     pub fn supported(&self) -> bool {
-        match self {
-            Engine::Ruffle => RUFFLE.is_some(),
-            Engine::Flash => FLASH.is_some(),
-        }
+        self.supported_on(std::env::consts::OS, std::env::consts::ARCH)
+    }
+
+    pub fn supported_on(&self, os: &str, arch: &str) -> bool {
+        catalog::Catalog::pinned().select(*self, os, arch).is_some()
     }
 
     fn args(
@@ -527,46 +465,33 @@ fn safe_backend_name() -> &'static str {
 }
 
 fn resolve(data: &Path, engine: Engine) -> Result<PathBuf, String> {
-    let artifact = match engine {
-        Engine::Ruffle => RUFFLE,
-        Engine::Flash => FLASH,
-    };
-    if let Some(a) = artifact {
-        return install(data, &a);
-    }
-    Err(format!("{engine:?} is not available on this platform"))
+    let pin = catalog::Catalog::pinned()
+        .select(engine, std::env::consts::OS, std::env::consts::ARCH)
+        .ok_or_else(|| format!("{engine:?} is not available on this platform"))?;
+    install(data, &pin)
 }
 
-/// Idempotent: reuses an existing install, otherwise downloads, checks SHA-256 and unpacks.
-fn install(data: &Path, a: &Artifact) -> Result<PathBuf, String> {
-    let dir = data.join("players").join(a.dir);
-    let exe = dir.join(a.exe);
+fn install(data: &Path, pin: &catalog::Pinned) -> Result<PathBuf, String> {
+    let dir = data.join("players").join(&pin.dir);
+    let exe = dir.join(&pin.exe);
     if exe.exists() {
         return Ok(exe);
     }
     let mut bytes = Vec::new();
-    ureq::get(a.url)
+    ureq::get(&pin.url)
         .call()
         .map_err(|e| format!("download failed: {e}"))?
         .into_reader()
         .read_to_end(&mut bytes)
         .map_err(|e| e.to_string())?;
     let got = format!("{:x}", Sha256::digest(&bytes));
-    if got != a.sha256 {
-        return Err(format!("checksum mismatch for {}: {got}", a.url));
+    if got != pin.sha256 {
+        return Err(format!("checksum mismatch for {}: {got}", pin.url));
     }
     let tmp = dir.with_extension("partial");
     let _ = fs::remove_dir_all(&tmp);
     fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
-    if a.url.ends_with(".zip")
-        || a.url.ends_with(".exe")
-        || a.url.ends_with(".dmg")
-        || a.url.ends_with(".tar.gz")
-    {
-        unpack(a.url, &bytes, &tmp)?;
-    } else {
-        return Err(format!("unsupported player archive: {}", a.url));
-    }
+    unpack(pin, &bytes, &tmp)?;
     let _ = fs::remove_dir_all(&dir);
     fs::rename(&tmp, &dir).map_err(|e| e.to_string())?;
     #[cfg(unix)]
@@ -577,20 +502,25 @@ fn install(data: &Path, a: &Artifact) -> Result<PathBuf, String> {
     Ok(exe)
 }
 
-fn unpack(url: &str, bytes: &[u8], tmp: &Path) -> Result<(), String> {
-    if url.ends_with(".exe") {
-        let name = url.rsplit('/').next().unwrap_or("player.exe");
-        fs::write(tmp.join(name), bytes).map_err(|e| e.to_string())
-    } else if url.ends_with(".dmg") {
-        unpack_dmg(bytes, tmp)
-    } else if url.ends_with(".zip") {
-        zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec()))
-            .and_then(|mut z| z.extract(tmp))
-            .map_err(|e| e.to_string())
-    } else {
-        tar::Archive::new(flate2::read::GzDecoder::new(bytes))
+fn unpack(pin: &catalog::Pinned, bytes: &[u8], tmp: &Path) -> Result<(), String> {
+    match pin.kind {
+        catalog::ArchiveKind::Exe => {
+            let name = pin
+                .url
+                .rsplit('/')
+                .next()
+                .and_then(|part| part.split('?').next())
+                .filter(|part| !part.is_empty())
+                .unwrap_or("player.exe");
+            fs::write(tmp.join(name), bytes).map_err(|e| e.to_string())
+        }
+        catalog::ArchiveKind::Dmg => unpack_dmg(bytes, tmp),
+        catalog::ArchiveKind::Zip => zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec()))
+            .and_then(|mut archive| archive.extract(tmp))
+            .map_err(|e| e.to_string()),
+        catalog::ArchiveKind::TarGz => tar::Archive::new(flate2::read::GzDecoder::new(bytes))
             .unpack(tmp)
-            .map_err(|e| e.to_string())
+            .map_err(|e| e.to_string()),
     }
 }
 
@@ -641,71 +571,22 @@ fn unpack_dmg(_bytes: &[u8], _tmp: &Path) -> Result<(), String> {
 mod pin_tests {
     use super::*;
 
-    /// `(os, url, sha256, exe)` for the official 32.0.0.465 projector.
-    const FLASH_PINS: &[(&str, &str, &str, &str)] = &[
-        (
-            "linux",
-            "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flash_player_sa_linux.x86_64.tar.gz",
-            "883f7aa23301fc80de879501157533a4acdbfee0721ed7c57676dc032fdf96c3",
-            "flashplayer",
-        ),
-        (
-            "windows",
-            "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.exe",
-            "a4b333ac1da12026989549015303d82231982838bccfb544ba5fd188746066f0",
-            "flashplayer_32_sa.exe",
-        ),
-        (
-            "macos",
-            "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.dmg",
-            "236ecef54a7d6c3eed739c74b7e14946b07b6156cbcedda3bbbf444f1d17023a",
-            "Flash Player.app/Contents/MacOS/Flash Player",
-        ),
-    ];
-
     #[test]
-    fn every_official_projector_pin_is_a_sha256() {
-        for (os, url, sha, exe) in FLASH_PINS {
-            assert_eq!(sha.len(), 64, "{os}");
-            assert!(
-                url.starts_with("https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/"),
-                "{url}"
-            );
-            assert!(!url.contains("32.0.0.344"), "{url}");
-            assert!(!exe.is_empty());
-        }
-    }
-
-    #[test]
-    fn this_os_pins_the_official_projector_and_prefers_flash() {
-        let Some(pin) = FLASH else {
-            assert_eq!(Engine::preferred(), Engine::Ruffle);
-            return;
-        };
-        let row = FLASH_PINS
-            .iter()
-            .find(|(_, url, _, _)| *url == pin.url)
-            .unwrap_or_else(|| panic!("no pin row for {}", pin.url));
-        assert_eq!(row.2, pin.sha256);
-        assert_eq!(row.3, pin.exe);
+    fn ruffle_is_preferred_where_a_row_exists_and_flash_skips_apple_silicon() {
+        assert_eq!(Engine::preferred_for("linux", "x86_64"), Engine::Ruffle);
+        assert_eq!(Engine::preferred_for("windows", "x86_64"), Engine::Ruffle);
+        assert_eq!(Engine::preferred_for("macos", "x86_64"), Engine::Ruffle);
+        assert_eq!(Engine::preferred_for("macos", "aarch64"), Engine::Ruffle);
+        assert!(!Engine::Flash.supported_on("macos", "aarch64"));
+        assert!(Engine::Flash.supported_on("macos", "x86_64"));
+        assert!(Engine::Ruffle.supported_on("linux", "x86_64"));
+        assert!(Engine::Flash.supported_on("linux", "x86_64"));
+        assert!(Engine::Flash.supported_on("windows", "x86_64"));
+        assert_eq!(Engine::ALL, [Engine::Ruffle, Engine::Flash]);
         assert_eq!(
             Engine::preferred(),
-            Engine::preferred_on(std::env::consts::OS, true)
+            Engine::preferred_for(std::env::consts::OS, std::env::consts::ARCH)
         );
-        if std::env::consts::OS == "macos" {
-            assert_eq!(Engine::preferred(), Engine::Ruffle);
-        } else {
-            assert_eq!(Engine::preferred(), Engine::Flash);
-        }
-        assert!(Engine::Flash.supported());
-    }
-
-    #[test]
-    fn mac_prefers_ruffle_even_when_the_intel_projector_exists() {
-        assert_eq!(Engine::preferred_on("macos", true), Engine::Ruffle);
-        assert_eq!(Engine::preferred_on("macos", false), Engine::Ruffle);
-        assert_eq!(Engine::preferred_on("linux", true), Engine::Flash);
-        assert_eq!(Engine::preferred_on("windows", false), Engine::Ruffle);
     }
 }
 
