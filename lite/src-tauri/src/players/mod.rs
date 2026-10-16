@@ -1,6 +1,3 @@
-//! Game players run outside the webview, as child processes of the launcher.
-//! Ruffle quality and graphics come from [`crate::ruffle`].
-
 mod catalog;
 
 use serde::{Deserialize, Serialize};
@@ -190,8 +187,6 @@ impl Players {
         let save_directory = save_directory.map(Path::to_path_buf);
         let settings = settings.for_platform(std::env::consts::OS);
         let graphics = settings.graphics;
-        // Only a non-OpenGL Ruffle is watched. The relaunch uses the platform
-        // default and is not watched, so a second crash cannot start another copy.
         let capture = engine == Engine::Ruffle && graphics != RuffleGraphics::Gl;
         let mut child = spawn_player(
             exe,
@@ -805,7 +800,6 @@ mod tests {
         seen
     }
 
-    /// Automatic is a non-GL backend on every OS, so these tests do not depend on Vulkan.
     fn automatic_low() -> RuffleSettings {
         RuffleSettings {
             quality: RuffleQuality::Low,
