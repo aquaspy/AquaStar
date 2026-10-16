@@ -1,6 +1,5 @@
 mod catalog;
 mod flash_menu;
-mod projector;
 
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -276,31 +275,6 @@ fn flash_gtk_preload(scrubbed: &[(String, String)]) -> Option<String> {
     Some(preload)
 }
 
-fn proc_translated(success: bool, stdout: &[u8]) -> bool {
-    success && stdout.trim_ascii() == b"1"
-}
-
-fn running_under_rosetta() -> bool {
-    #[cfg(target_os = "macos")]
-    {
-        let Ok(output) = Command::new("sysctl")
-            .args(["-n", "sysctl.proc_translated"])
-            .output()
-        else {
-            return false;
-        };
-        return proc_translated(output.status.success(), &output.stdout);
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        false
-    }
-}
-
-fn flash_startup_failed(status: &ExitStatus) -> bool {
-    exit_signal(status).is_some() || matches!(status.code(), Some(code) if code != 0)
-}
-
 impl Players {
     pub fn launch(
         &self,
@@ -317,31 +291,7 @@ impl Players {
             Some(source) => source.path().to_path_buf(),
             None => catalog::publish(&pin, roots.app_data())?,
         };
-        let exe = if engine == Engine::Flash {
-            match projector::place(&located, roots.app_data()) {
-                Ok(path) => path,
-                Err(err) => {
-                    eprintln!("aquastar-lite: {err}");
-                    located.clone()
-                }
-            }
-        } else {
-            located.clone()
-        };
-        // Apple Silicon rejects the unsigned x64 projector, including under
-        // Rosetta. Intel runs that same file, so only a translated process
-        // may fall back to the signed copy and the Loader4 URL.
-        let signed =
-            (engine == Engine::Flash && projector::is_embedded(&exe) && running_under_rosetta())
-                .then_some(located);
-        self.launch_at(
-            &exe,
-            engine,
-            swf,
-            settings,
-            save_directory,
-            signed.as_deref(),
-        )
+        self.launch_at(&located, engine, swf, settings, save_directory)
     }
 
     pub fn watch_presence(
@@ -363,12 +313,11 @@ impl Players {
         swf: &str,
         settings: &RuffleSettings,
         save_directory: Option<&Path>,
-        signed_fallback: Option<&Path>,
     ) -> Result<String, String> {
         self.launch_hold.store(true, Ordering::SeqCst);
         let _hold = LaunchHold(&self.launch_hold);
         let _gate = self.launch_gate.lock().unwrap();
-        self.start_player(exe, engine, swf, settings, save_directory, signed_fallback)
+        self.start_player(exe, engine, swf, settings, save_directory)
     }
 
     fn start_player(
@@ -378,7 +327,6 @@ impl Players {
         swf: &str,
         settings: &RuffleSettings,
         save_directory: Option<&Path>,
-        signed_fallback: Option<&Path>,
     ) -> Result<String, String> {
         if let Some(msg) = self.prepare(engine) {
             return Ok(msg);
@@ -387,37 +335,20 @@ impl Players {
         let settings = settings.for_platform(std::env::consts::OS);
         let graphics = settings.graphics;
         let ruffle_may_fallback = engine == Engine::Ruffle && graphics != RuffleGraphics::Gl;
-        let mut args = engine.args(swf, &settings, save_directory.as_deref());
-        if engine == Engine::Flash && projector::is_embedded(exe) {
-            args.clear();
-        }
+        let args = engine.args(swf, &settings, save_directory.as_deref());
         if engine == Engine::Flash {
             log_flash_launch(exe, &args);
         }
-        let mut child = match spawn_player(
+        let mut child = spawn_player(
             exe,
             engine,
             &args,
             ruffle_may_fallback || engine == Engine::Flash,
-        ) {
-            Ok(child) => child,
-            Err(err) => {
-                return self.signed_projector_or_err(
-                    err,
-                    engine,
-                    swf,
-                    &settings,
-                    save_directory.as_deref(),
-                    signed_fallback,
-                );
-            }
-        };
+        )?;
         let started = Instant::now();
         let panicked = Arc::new(AtomicBool::new(false));
         let killed = Arc::new(AtomicBool::new(false));
-        if engine == Engine::Flash {
-            flash_menu::hide_until_gone(child.id(), killed.clone());
-        }
+        flash_menu::watch(engine, child.id(), killed.clone());
         let tail = Arc::new(Mutex::new(String::new()));
         let flash_err = (engine == Engine::Flash).then(|| stderr_tail(child.stderr.take()));
         let stderr_done = ruffle_may_fallback
@@ -427,23 +358,6 @@ impl Players {
         match child.try_wait() {
             Ok(Some(status)) => {
                 finish_stderr(stderr_done);
-                if flash_startup_failed(&status) {
-                    if let Some(signed) = signed_fallback {
-                        let err = if status.code() == Some(127) {
-                            flash_missing_library(&flash_err.expect("flash stderr").finish())
-                        } else {
-                            format!("{engine:?} exited immediately ({status})")
-                        };
-                        return self.signed_projector_or_err(
-                            err,
-                            engine,
-                            swf,
-                            &settings,
-                            save_directory.as_deref(),
-                            Some(signed),
-                        );
-                    }
-                }
                 if let Some(logged) = flash_err.as_ref() {
                     if status.code() == Some(127) {
                         return Err(flash_missing_library(&logged.finish()));
@@ -482,22 +396,6 @@ impl Players {
             }
             Err(e) => Err(format!("could not check {engine:?}: {e}")),
         }
-    }
-
-    fn signed_projector_or_err(
-        &self,
-        err: String,
-        engine: Engine,
-        swf: &str,
-        settings: &RuffleSettings,
-        save_directory: Option<&Path>,
-        signed_fallback: Option<&Path>,
-    ) -> Result<String, String> {
-        let Some(signed) = signed_fallback else {
-            return Err(err);
-        };
-        eprintln!("aquastar-lite: unsigned projector failed ({err}); opening the signed projector");
-        self.start_player(signed, engine, swf, settings, save_directory, None)
     }
 
     /// Drop exited children. If this engine is already up, say so. Otherwise stop
@@ -577,12 +475,9 @@ impl Players {
             ));
         }
         let pid = child.id();
-        self.adopt(
-            Engine::Ruffle,
-            child,
-            Arc::new(AtomicBool::new(false)),
-            None,
-        )?;
+        let killed = Arc::new(AtomicBool::new(false));
+        flash_menu::watch(Engine::Ruffle, pid, killed.clone());
+        self.adopt(Engine::Ruffle, child, killed, None)?;
         Ok(format!(
             "Ruffle ({}) crashed; relaunched with {backend} (pid {pid})",
             from.as_str()
@@ -919,13 +814,8 @@ fn log_flash_launch(exe: &Path, args: &[String]) {
         args.join(" ")
     };
     eprintln!(
-        "aquastar-lite: launching Flash {} trailer={} args={args}",
-        exe.display(),
-        if projector::trailer_present(exe) {
-            "yes"
-        } else {
-            "no"
-        },
+        "aquastar-lite: launching Flash {} args={args}",
+        exe.display()
     );
 }
 
@@ -992,14 +882,6 @@ mod pin_tests {
             Engine::preferred(),
             Engine::preferred_for(std::env::consts::OS, std::env::consts::ARCH)
         );
-    }
-
-    #[test]
-    fn proc_translated_is_only_the_digit_one() {
-        assert!(proc_translated(true, b"1\n"));
-        assert!(!proc_translated(true, b"0\n"));
-        assert!(!proc_translated(false, b"1\n"));
-        assert!(!proc_translated(true, b""));
     }
 
     #[test]
@@ -1237,14 +1119,7 @@ mod tests {
         let seen = record(&players);
         let _stop = Stop(players.clone());
         let msg = players
-            .launch_at(
-                &exe,
-                Engine::Ruffle,
-                "movie.swf",
-                &automatic_low(),
-                None,
-                None,
-            )
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap();
         assert!(msg.contains("relaunched with OpenGL"), "{msg}");
         assert!(wait_until(|| seen
@@ -1286,14 +1161,7 @@ mod tests {
         let players = Players::default();
         let seen = record(&players);
         let err = players
-            .launch_at(
-                &exe,
-                Engine::Ruffle,
-                "movie.swf",
-                &automatic_low(),
-                None,
-                None,
-            )
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap_err();
         assert!(err.contains("OpenGL"), "{err}");
         assert!(
@@ -1319,14 +1187,7 @@ mod tests {
         let players = Players::default();
         let seen = record(&players);
         let err = players
-            .launch_at(
-                &exe,
-                Engine::Ruffle,
-                "movie.swf",
-                &automatic_low(),
-                None,
-                None,
-            )
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap_err();
         assert!(err.contains("exited immediately"), "{err}");
         assert!(
@@ -1358,14 +1219,7 @@ mod tests {
         let seen = record(&players);
         let _stop = Stop(players.clone());
         let msg = players
-            .launch_at(
-                &exe,
-                Engine::Ruffle,
-                "movie.swf",
-                &automatic_low(),
-                None,
-                None,
-            )
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap();
         assert!(msg.contains("started"), "{msg}");
         let ready = wait_until(|| {
@@ -1402,14 +1256,7 @@ mod tests {
         let players = Players::default();
         let seen = record(&players);
         let err = players
-            .launch_at(
-                &exe,
-                Engine::Flash,
-                "movie.swf",
-                &automatic_low(),
-                None,
-                None,
-            )
+            .launch_at(&exe, Engine::Flash, "movie.swf", &automatic_low(), None)
             .unwrap_err();
         assert!(err.contains("Flash"), "{err}");
         assert!(
@@ -1419,132 +1266,6 @@ mod tests {
         );
         assert!(!err.contains("OpenGL"), "{err}");
         assert_eq!(log_lines(&log), ["movie.swf"]);
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn rosetta_falls_back_to_the_signed_projector_with_the_url() {
-        let dir = scratch("rosetta");
-        let log = dir.join("args");
-        let embedded = dir.join("flash-projector").join("Flash Player");
-        fs::create_dir_all(embedded.parent().unwrap()).unwrap();
-        fs::write(
-            &embedded,
-            format!(
-                "#!/bin/sh\nprintf 'embedded\\n' >> '{}'\nexit 137\n",
-                log.display()
-            ),
-        )
-        .unwrap();
-        fs::set_permissions(&embedded, fs::Permissions::from_mode(0o755)).unwrap();
-        let signed = dir
-            .join("Flash Player.app")
-            .join("Contents")
-            .join("MacOS")
-            .join("Flash Player");
-        fs::create_dir_all(signed.parent().unwrap()).unwrap();
-        fs::write(
-            &signed,
-            format!(
-                "#!/bin/sh\nprintf 'signed %s\\n' \"$*\" >> '{}'\nsleep 60\n",
-                log.display()
-            ),
-        )
-        .unwrap();
-        fs::set_permissions(&signed, fs::Permissions::from_mode(0o755)).unwrap();
-        let players = Players::default();
-        let _stop = Stop(players.clone());
-        let url = "https://game.aq.com/game/gamefiles/Loader4.swf?ver=b";
-        let msg = players
-            .launch_at(
-                &embedded,
-                Engine::Flash,
-                url,
-                &automatic_low(),
-                None,
-                Some(&signed),
-            )
-            .unwrap();
-        assert!(msg.contains("started"), "{msg}");
-        let lines = log_lines(&log);
-        assert_eq!(lines.len(), 2, "{lines:?}");
-        assert_eq!(lines[0], "embedded");
-        assert_eq!(lines[1], format!("signed {url}"));
-        drop(_stop);
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn intel_keeps_a_failed_projector_and_does_not_open_the_signed_copy() {
-        let dir = scratch("intel");
-        let log = dir.join("args");
-        let embedded = dir.join("flash-projector").join("Flash Player");
-        fs::create_dir_all(embedded.parent().unwrap()).unwrap();
-        fs::write(
-            &embedded,
-            format!(
-                "#!/bin/sh\nprintf 'embedded\\n' >> '{}'\nexit 137\n",
-                log.display()
-            ),
-        )
-        .unwrap();
-        fs::set_permissions(&embedded, fs::Permissions::from_mode(0o755)).unwrap();
-        let signed = dir.join("signed-projector");
-        fs::write(
-            &signed,
-            format!(
-                "#!/bin/sh\nprintf 'signed %s\\n' \"$*\" >> '{}'\nsleep 60\n",
-                log.display()
-            ),
-        )
-        .unwrap();
-        fs::set_permissions(&signed, fs::Permissions::from_mode(0o755)).unwrap();
-        let players = Players::default();
-        let err = players
-            .launch_at(
-                &embedded,
-                Engine::Flash,
-                "movie.swf",
-                &automatic_low(),
-                None,
-                None,
-            )
-            .unwrap_err();
-        assert!(err.contains("exited immediately"), "{err}");
-        assert_eq!(log_lines(&log), ["embedded"]);
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn rosetta_spawn_failure_opens_the_signed_projector() {
-        let dir = scratch("rosetta-missing");
-        let log = dir.join("args");
-        let embedded = dir.join("flash-projector").join("missing");
-        let signed = dir.join("signed-projector");
-        fs::write(
-            &signed,
-            format!(
-                "#!/bin/sh\nprintf 'signed %s\\n' \"$*\" >> '{}'\nsleep 60\n",
-                log.display()
-            ),
-        )
-        .unwrap();
-        fs::set_permissions(&signed, fs::Permissions::from_mode(0o755)).unwrap();
-        let players = Players::default();
-        let _stop = Stop(players.clone());
-        let msg = players
-            .launch_at(
-                &embedded,
-                Engine::Flash,
-                "movie.swf",
-                &automatic_low(),
-                None,
-                Some(&signed),
-            )
-            .unwrap();
-        assert!(msg.contains("started"), "{msg}");
-        assert_eq!(log_lines(&log), ["signed movie.swf"]);
-        drop(_stop);
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -1559,14 +1280,7 @@ mod tests {
         let players = Players::default();
         let seen = record(&players);
         players
-            .launch_at(
-                &exe,
-                Engine::Ruffle,
-                "movie.swf",
-                &automatic_low(),
-                None,
-                None,
-            )
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap();
         players.kill_all();
         std::thread::sleep(Duration::from_millis(500));
@@ -1597,7 +1311,6 @@ mod tests {
                 "movie.swf",
                 &RuffleSettings::default(),
                 None,
-                None,
             )
             .unwrap();
         let msg = players
@@ -1606,7 +1319,6 @@ mod tests {
                 Engine::Flash,
                 "again.swf",
                 &RuffleSettings::default(),
-                None,
                 None,
             )
             .unwrap();
@@ -1634,7 +1346,6 @@ mod tests {
                 "ruffle.swf",
                 &RuffleSettings::default(),
                 None,
-                None,
             )
             .unwrap();
         let msg = players
@@ -1643,7 +1354,6 @@ mod tests {
                 Engine::Flash,
                 "flash.swf",
                 &RuffleSettings::default(),
-                None,
                 None,
             )
             .unwrap();
@@ -1675,7 +1385,7 @@ mod tests {
             graphics: RuffleGraphics::Gl,
         };
         let msg = players
-            .launch_at(&exe, Engine::Ruffle, "movie.swf", &settings, None, None)
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &settings, None)
             .unwrap();
         assert!(msg.contains("started"), "{msg}");
         assert!(wait_until(|| {
@@ -1709,7 +1419,6 @@ mod tests {
                 "movie.swf",
                 &automatic_low(),
                 Some(&saves),
-                None,
             )
             .unwrap();
         assert!(msg.contains("relaunched with OpenGL"), "{msg}");

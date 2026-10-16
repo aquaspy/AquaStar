@@ -81,7 +81,7 @@ To use Flash in Lite, run the x64 copy under Rosetta.
 arch -x86_64 /Applications/aquastar-lite.app/Contents/MacOS/aquastar-lite
 ```
 
-Lite then tries an unsigned copy of the projector that hides the URL bar. On Apple Silicon, macOS can kill that unsigned copy. If the copy fails to launch, or dies while it is starting, Lite opens the signed projector and passes the Loader4 URL. The URL bar is visible in that case. An Intel Mac uses only the unsigned projector.
+Lite launches the signed Flash projector and passes the Loader4 URL. On Apple Silicon that still means the x64 app under Rosetta, because the projector is Intel-only. The Mac menu bar stays. On Windows and Linux the game window is titled AquaStar Lite.
 
 ### Linux
 

@@ -24,6 +24,7 @@ static void (*list_free)(GList *);
 static void (*widget_hide)(void *);
 static void (*get_alloc)(void *, GtkAllocation *);
 static void (*real_resize)(void *, int, int);
+static void (*real_set_title)(void *, const char *);
 static unsigned int (*idle_add)(gboolean (*)(gpointer), gpointer);
 
 static int ready;
@@ -41,10 +42,11 @@ static void resolve(void) {
     widget_hide = dlsym(RTLD_DEFAULT, "gtk_widget_hide");
     get_alloc = dlsym(RTLD_DEFAULT, "gtk_widget_get_allocation");
     real_resize = dlsym(RTLD_NEXT, "gtk_window_resize");
+    real_set_title = dlsym(RTLD_NEXT, "gtk_window_set_title");
     idle_add = dlsym(RTLD_DEFAULT, "g_idle_add");
     ready = check_type && menu_bar_type && entry_type && layout_type && window_type &&
             container_type && get_children && list_free && widget_hide && get_alloc &&
-            real_resize && idle_add;
+            real_resize && real_set_title && idle_add;
 }
 
 static int is_a(void *widget, GType (*type)(void)) {
@@ -101,12 +103,23 @@ static void fit_stage(void *window) {
         real_resize(window, stage.width, stage.height);
 }
 
+static void force_title(void *window) {
+    if (!real_set_title) real_set_title = dlsym(RTLD_NEXT, "gtk_window_set_title");
+    if (real_set_title) real_set_title(window, "AquaStar Lite");
+}
+
 static gboolean strip(gpointer data) {
     void *window = data;
     if (!is_a(window, window_type)) return 0;
     hide_chrome(window);
+    force_title(window);
     fit_stage(window);
     return 0;
+}
+
+void gtk_window_set_title(void *window, const char *title) {
+    (void)title;
+    force_title(window);
 }
 
 void gtk_widget_show(void *widget) {
