@@ -190,8 +190,8 @@ impl Players {
         let save_directory = save_directory.map(Path::to_path_buf);
         let settings = settings.for_platform(std::env::consts::OS);
         let graphics = settings.graphics;
-        // Only a non-OpenGL Ruffle is watched. The relaunch is always OpenGL and is not watched,
-        // so a second crash cannot start another copy.
+        // Only a non-OpenGL Ruffle is watched. The relaunch uses the platform
+        // default and is not watched, so a second crash cannot start another copy.
         let capture = engine == Engine::Ruffle && graphics != RuffleGraphics::Gl;
         let mut child = spawn_player(
             exe,
