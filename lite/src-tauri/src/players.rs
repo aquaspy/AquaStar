@@ -395,23 +395,25 @@ impl Players {
 
 /// Nearest `Something.app` that contains this executable. That is `Ruffle.app` or
 /// `Flash Player.app`, not an outer launcher that also ends in `.app`.
+#[cfg(target_os = "macos")]
 fn containing_app(exe: &Path) -> Option<&Path> {
     exe.ancestors()
         .find(|path| path.extension().and_then(|ext| ext.to_str()) == Some("app"))
 }
 
+#[cfg(target_os = "macos")]
 fn clear_quarantine(exe: &Path) {
-    #[cfg(target_os = "macos")]
     if let Some(app) = containing_app(exe) {
         let _ = Command::new("xattr")
             .args(["-dr", "com.apple.quarantine"])
             .arg(app)
             .status();
     }
-    #[cfg(not(target_os = "macos"))]
-    {
-        let _ = exe;
-    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn clear_quarantine(exe: &Path) {
+    let _ = exe;
 }
 
 fn spawn_failure(exe: &Path, err: std::io::Error) -> String {
