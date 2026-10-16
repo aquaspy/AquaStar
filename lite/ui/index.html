@@ -11,10 +11,10 @@
   <section class="play">
     <h2>Play AdventureQuest Worlds</h2>
     <div class="buttons">
-      <button data-engine="flash" id="play-flash">Play (Flash)</button>
       <button data-engine="ruffle">Play (Ruffle)</button>
+      <button data-engine="flash" id="play-flash">Play (Flash)</button>
     </div>
-    <p id="status">The game opens in its own window. Closing AquaStar Lite closes it too.</p>
+    <p id="status">The game opens in its own window. This window hides while it runs and comes back when the player exits.</p>
   </section>
   <section class="sites">
     <h2>Sites</h2>
@@ -35,7 +35,7 @@
         <select id="ruffle-graphics"></select>
       </label>
     </div>
-    <p class="hint">High is sharpest; Low turns off anti-aliasing and is faster on weak GPUs. OpenGL is the default on Linux and Windows. Metal is the default on macOS. If another backend crashes right after launch, the game reopens with that default. Applies the next time you press Play (Ruffle).</p>
+    <p class="hint">Medium is the default. High is sharpest. Low turns off anti-aliasing and is faster on weak GPUs. OpenGL is the default on Linux and Windows. Metal is the default on macOS. If another backend crashes right after launch, the game reopens with that default. Applies the next time you press Play (Ruffle).</p>
   </section>
 </main>
 <script src="main.js"></script>

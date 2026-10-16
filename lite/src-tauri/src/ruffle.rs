@@ -79,7 +79,7 @@ pub fn safe_graphics(platform: &str) -> RuffleGraphics {
 impl Default for RuffleSettings {
     fn default() -> Self {
         Self {
-            quality: RuffleQuality::High,
+            quality: RuffleQuality::Medium,
             graphics: safe_graphics(std::env::consts::OS),
         }
     }
@@ -114,8 +114,8 @@ pub struct ExitReport {
 
 pub fn quality_choices() -> Vec<SettingChoice> {
     [
-        ("high", "High (default)"),
-        ("medium", "Medium"),
+        ("high", "High"),
+        ("medium", "Medium (default)"),
         ("low", "Low (fastest)"),
     ]
     .into_iter()
@@ -149,7 +149,7 @@ pub fn normalize_quality(value: &str) -> RuffleQuality {
         "low" => RuffleQuality::Low,
         "medium" => RuffleQuality::Medium,
         "high" => RuffleQuality::High,
-        _ => RuffleQuality::High,
+        _ => RuffleQuality::Medium,
     }
 }
 
@@ -195,7 +195,7 @@ impl RuffleSettings {
         let quality = raw
             .get("ruffleQuality")
             .and_then(|v| v.as_str())
-            .unwrap_or("high");
+            .unwrap_or("medium");
         let graphics = raw
             .get("ruffleGraphics")
             .and_then(|v| v.as_str())
@@ -367,9 +367,9 @@ mod tests {
         assert!(auto.windows(2).any(|w| w == ["--quality", "medium"]));
         assert!(auto.windows(2).any(|w| w == ["--graphics", "default"]));
 
-        let high = ruffle_args("x.swf", &RuffleSettings::default(), "linux");
-        assert!(high.windows(2).any(|w| w == ["--quality", "high"]));
-        assert!(high.windows(2).any(|w| w == ["--graphics", "gl"]));
+        let defaults = ruffle_args("x.swf", &RuffleSettings::default(), "linux");
+        assert!(defaults.windows(2).any(|w| w == ["--quality", "medium"]));
+        assert!(defaults.windows(2).any(|w| w == ["--graphics", "gl"]));
     }
 
     #[test]
@@ -379,7 +379,7 @@ mod tests {
             "linux",
         );
         let args = ruffle_args("x.swf", &junk, "linux");
-        assert!(args.windows(2).any(|w| w == ["--quality", "high"]));
+        assert!(args.windows(2).any(|w| w == ["--quality", "medium"]));
         assert!(args.windows(2).any(|w| w == ["--graphics", "gl"]));
         assert!(!args.iter().any(|a| a.contains("rm ")));
 
@@ -393,7 +393,7 @@ mod tests {
             normalize_graphics("vulkan", "linux"),
             RuffleGraphics::Vulkan
         );
-        assert_eq!(normalize_quality("LOW"), RuffleQuality::High);
+        assert_eq!(normalize_quality("LOW"), RuffleQuality::Medium);
     }
 
     #[test]
@@ -415,6 +415,12 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["high", "medium", "low"]
         );
+        let labels: Vec<_> = quality_choices()
+            .into_iter()
+            .map(|c| (c.id, c.label))
+            .collect();
+        assert!(labels.contains(&("medium".into(), "Medium (default)".into())));
+        assert!(labels.contains(&("high".into(), "High".into())));
     }
 
     #[test]
@@ -571,7 +577,8 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
 
         let view = RuffleSettings::default().view();
-        assert_eq!(view.ruffle_quality, "high");
+        assert_eq!(view.ruffle_quality, "medium");
+        assert_eq!(RuffleSettings::default().quality, RuffleQuality::Medium);
         assert_eq!(view.ruffle_graphics, "gl");
         assert!(view.qualities.iter().any(|c| c.id == "low"));
         assert!(view.graphics_choices.iter().any(|c| c.id == "gl"));

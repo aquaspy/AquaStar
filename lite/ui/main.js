@@ -11,13 +11,15 @@ invoke('engines').then((list) => {
   const b = document.querySelector(`[data-engine="${engine}"]`);
   if (!b || b.disabled) return;
   b.classList.add('primary');
-  if (engine === 'flash') {
-    status.textContent = 'Flash is the default player. The game opens in its own window. Closing AquaStar Lite closes it too.';
+  if (engine === 'ruffle') {
+    status.textContent = 'Ruffle is the default player. The game opens in its own window. This window hides while it runs and comes back when the player exits.';
+  } else if (engine === 'flash') {
+    status.textContent = 'Flash is the default player. The game opens in its own window. This window hides while it runs and comes back when the player exits.';
   }
 });
 
 document.querySelectorAll('[data-engine]').forEach((b) => b.addEventListener('click', async () => {
-  status.textContent = `Starting ${b.dataset.engine} (first run downloads and verifies the player)…`;
+  status.textContent = `Starting ${b.dataset.engine}…`;
   try { status.textContent = await invoke('play', { engine: b.dataset.engine }); }
   catch (e) { status.textContent = `Error: ${e}`; }
 }));
