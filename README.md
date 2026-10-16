@@ -1,124 +1,122 @@
 # AquaStar
-![AquaStarLogo](Icon/Icon_1024.png)
 
-AquaStar is a Flash-capable companion launcher (Electron 11 + PPAPI). It ships with an **Adventure Quest Worlds** plugin and can be extended for other Flash games.
+![AquaStar](Icon/Icon_1024.png)
 
-**Writing a plugin:** full guide in [`docs/PLUGINS.md`](docs/PLUGINS.md). Worked example: [`plugins/example-companion/`](plugins/example-companion/) (stage + Flash, GitHub keybinds, dashboard). Empty stub: [`plugins/_template/`](plugins/_template/). Design: [`docs/design/plugin-architecture.md`](docs/design/plugin-architecture.md).
+AquaStar is a launcher for Adventure Quest Worlds.
 
-## How to download
+It is not a cheat and it is not a bot. It does not play the game for you. Electron's extra windows track tasks and inventory. Electron keeps drawing the game when its window is in the background. Lite runs the game in a separate player, and you can lower that player's quality.
 
-Go to this link: https://github.com/aquaspy/AquaStar/releases and download the correct one for your system
+Artix does not support third-party launchers. If AquaStar breaks, open an issue on this repo. The longer history is in [MOTIVATION.MD](MOTIVATION.MD).
 
-## Current working and missing
+## The two editions
 
-### Working:
+**AquaStar Electron** is the main app. It is Electron 11 with the PPAPI Flash plugin, so the game runs in Flash Player. Settings can switch a game window to Ruffle instead. That Ruffle build runs inside the page. Settings lists it as "Ruffle (Experimental)". Restart AquaStar after you switch to Ruffle.
 
-Linux build (x86, x64, and ARMv7)
-Windows Build (x86 and x64) (Portable and installer versions)
-Mac build
-ChromeBook support (more on that bellow!)
+Inventory reads your items and BuyBack from account.aq.com after you log in there once with Alt+A. The wiki can then mark items you already own. Reminders track daily and weekly tasks per character. There is a to-do list, a strategy window, a char page screenshot, Char Page Studio, game screenshots, and screen recording. Settings is Alt+9, and the shortcuts can be changed there. Other Flash games can be loaded from a custom URL or a local SWF in Settings. A plugin can add another game. The bundled plugin is Adventure Quest Worlds. See [docs/PLUGINS.md](docs/PLUGINS.md).
 
-### ChromeBook (Possibly outdated):
+Electron runs on Windows 7 and later, in 64-bit and 32-bit builds. Linux builds cover 64-bit, 32-bit, and 32-bit ARM. The Mac build is 64-bit Intel.
 
-According to /u/Primal_Majin on reddit, AquaStar (and game launcher, if you want that) is able to run on chromebooks using the Linux (Beta) support. 
+**AquaStar Lite** is the Tauri app. It does not bundle Chromium. The launcher window is the system webview. Lite starts a bundled player as its own process. The default player is standalone Ruffle 0.7.1. Flash is Adobe's standalone projector 32.0.0.465, also bundled. Lite does not sync inventory. Reminders, the to-do list, the strategy window, and char page tools stay in Electron. Wiki, account, and news open in their own windows. You can hide the launcher while a player is running.
 
-- On the linux terminal, (he used Debian Buster, the current one at this time), install the package "libnss3", doing the following command:
-```
-sudo apt install libnss3
-```
-- Then, on the appimage file, add a shortcut to ChromeOS or make it executable by double clicking, and its done!
+Lite runs on Windows 10 and Windows 11, macOS 11 and later, and 64-bit Linux. Windows needs the system WebView2 runtime. The portable zip does not install that runtime. If it is missing, the app says "Could not find the WebView2 Runtime".
 
-If you want a suggestion for making appimage shortcuts on ChromeOS, Primal_Majin also suggested ![menulibre](https://bluesabre.org/menulibre/), to make it.
+## Which one should I pick
 
-## Searching for why does this exists and if its safe?
+Pick Electron for inventory sync, the task windows, char page tools, plugins, or a build for Windows 7, Windows 8.1, or 32-bit Windows.
 
-Open Motivation.MD in this repository!
+Pick Lite for the launcher that does not bundle Chromium. The game runs in Ruffle or the Flash projector, in its own process. Lite publishes a Linux deb named aquastar-lite, a Windows portable zip, and a Mac disk image.
 
-## Is this cross platform?
-As cross as we can. Currently there are ARM, both 32 bits and 64 for windows and Linux, and Mac is supported. Try it out and give us Feedback.
+On Apple Silicon, both editions can play with Ruffle. Flash needs an Intel process. The macOS steps explain how to run it.
 
-## Key diferences from official Launcher
-While this project was made to be an AQLite launcher, the project evolved to be so much more. Now its as if AE dedicated their launcher to AQW, and evolved it as much as they could with QoL and fun features, while still supporting the comunity. We had to put some sparkles on top of it as a fully browser only to run flash seems... wastefull :D
+## Install
 
-As after version 1.2 AQLite is a part of vanilla game, what we offer is support for older platforms, and custom features the official launcher doesnt offer.
+Downloads are on the [releases page](https://github.com/aquaspy/AquaStar/releases). The release marked Latest is the stable Electron build. A version with a hyphen in it, for example 2.1.1-rc.4, is a pre-release. Lite is published only as a pre-release. Its tag starts with `lite-v`.
 
-## Just some new features on AquaStar:
- - Screenshot button that grabs the game part only.
- - Keybindings for game windows
- - Even more Keybindings for Wiki, design notes, and char pages
- - Support to use an older aqlite file if desired (or any custom flash file, as flash is... you know, dead).
- - Saving your character from flash character page with high resolution (as high as you monitor can render) into a .png in your pc!
-    - Colour customization is shown in char page when its saved.
- - And also a keybinding to save your char page!
- - Settings screen! Use the in-app Settings screen (Alt+9) to record and save keybinds and other features.
- - Record the game screen! Ctrl + J for default.
- - (For those looking at your childhood) Load a custom URL into the launcher for old flash games/content! Set it in the "Custom SWF File" section of the Settings screen (Alt+9), which also lets you pick a local .swf file directly.
- - Reminders (Alt+9's neighbor, Alt+T)! A per-character tracker for daily/weekly/seasonal in-game tasks (ultra bosses, class farming, seasonal events...), with a "time until reset" countdown synced to the game's server clock.
- - TODO list (Tasks) (Alt + Y). Write down what you need the most, and do when you feel like it.
- - Sync inventory (Alt + I). Browse your inventory and check what you have or not.
-    - They also show on wiki. Which also tells you if you have the item or not!
- - Ruffle support (experimentally). We allow you to test ruffle in the game and also update own version as you need it.
- - And maybe something I forgot
+`<version>` in the names below is the version of that release.
 
-# How to build it yourself
+| System | Electron | Lite |
+| --- | --- | --- |
+| Windows 64-bit | `AquaStar-Setup-x64.exe` or `AquaStar-Portable-x64-<version>.exe` | `aquastar-lite_<version>_x64-setup.exe` or `AquaStar.Lite_<version>_x64-portable.zip` |
+| Windows 32-bit | `AquaStar-Setup-ia32.exe` or `AquaStar-Portable-ia32-<version>.exe` | No Lite build |
+| macOS | `AquaStar-<version>-mac-x64.zip` | `AquaStar.Lite_<version>_universal.dmg` |
+| Linux 64-bit | `AquaStar-<version>.AppImage` or `AquaStar_<version>_amd64.deb` | `aquastar-lite_<version>_amd64.AppImage` or `aquastar-lite_<version>_amd64.deb` |
+| Linux 32-bit | `AquaStar-<version>-i386.AppImage` | No Lite build |
+| Linux 32-bit ARM | `AquaStar-<version>-armv7l.AppImage` | No Lite build |
 
-## Requirements:
- - npm/nodejs installed.
- - This repository's code or git installed.
+### Windows
 
-## Instructions:
+The Setup file is an installer. The Portable exe is a single program you can run without installing. On Lite, unzip `AquaStar.Lite_<version>_x64-portable.zip` and run `aquastar-lite.exe`. Leave `portable.txt` and the `players` folder next to that exe. Lite then keeps its data in a `data` folder in the same place.
 
-Download this project's folder into your PC, or clone it directly from this repository using git like:
-```
-  git clone https://github.com/aquaspy/AquaStar.git
-```
-If your Operating System's flash library file (like .dll or .so) is not in the FlashPlayer folder,
-get it from your own system (win64 and linux are already supported, and mac's one is in the folder too)
+### macOS
 
-Install the dependencies using NPM (nw-flash-trust, electron@11.5.0 and electron-builder) like:
+Neither Mac build is notarized. The release build signs them without an Apple Developer ID. macOS puts a quarantine flag on a downloaded app, and Gatekeeper then blocks it. Gatekeeper's usual message is that the app is damaged.
 
-(Electron is intentionally pinned to 11.5.0 in package.json - it's the last release built on a Chromium that still supports PPAPI Flash. Don't bump it without a Flash alternative in place.)
+For Electron, unzip the archive and move `AquaStar.app` into `/Applications`. Then, in Terminal:
 
 ```bash
-  cd path/to/project/folder
-  npm install
+xattr -cr /Applications/AquaStar.app
 ```
-npm install will install automatically all dependencies, so no need to specify them manually, just use "npm install".
 
-Now you are ready to run it! before making a package, you can test it running `npm start`.
+That command removes the quarantine flag from the app and everything inside it. Open the app after that.
 
-If aquastar opens correctly, build the package so you can run in any folder you like.
-Go to FlashPlayer folder and remove the flash libraries you don't need.
-(ex: delete .so in windows, and .dll in linux, as it's irrelevant)
-
-Type: `npm run dist`, and in the new "dist" folder, is your files. In linux case, it's a AppImage file! In windows, it's an Exe! And Mac should be a DMG file!
-
-PS: DO NOT run ./build.sh as it will build EVERY supported version at the same time. its used for releases in the github.
-
-## Troubleshooting
-
-### Stuck at 0%
-- This used to be a bug in the original AQlite. Try re-open Aquastar as if this still happens something probably went wrong...
-- If you can reproduce what is happening, tell us as we could fix next release.
-
-### Keybindings dont work
-- Some Keybindings only work in some places. Most can only be used in the game window.
-- The only ones that work on HTML, are Alt+B e Alt+F. The rest are AQW game windows exclusives.
-
-### I dont know where my screenshot/recordings are.
-- Check the F1 menu, and see the path the system takes to save. By default it should be the images folder.
-
-### I need to reinstall it everytime i need to open the game?
-- On windows, we do have a setup and a portable version. If you just want to double click an .exe instead of having it on your search menu, prefer the Portable version of it.
-
-### macOS says the app is damaged, or the game will not open
-AquaStar is not signed with an Apple Developer ID. After you unzip or open the disk image, clear the quarantine flag in Terminal, then open the app again:
+The Electron zip is an x64 app. On Apple Silicon, macOS runs it with Rosetta, and asks you to install Rosetta if it is missing. Flash is an Intel plugin loaded inside the app. It loads only when AquaStar itself is the x64 process. Rosetta does not translate the plugin on its own. If you need to start that binary yourself:
 
 ```bash
-xattr -cr /path/to/AquaStar.app
+arch -x86_64 /Applications/AquaStar.app/Contents/MacOS/AquaStar
 ```
 
-The same command fixes AquaStar Lite (`aquastar-lite.app`; Finder shows AquaStar Lite). PPAPI Flash on Mac is an Intel plugin. On Apple Silicon, start the x64 build under Rosetta (`arch -x86_64`) or play with Ruffle. The release zip is `AquaStar-<version>-mac-x64.zip`.
+Ruffle runs without the Flash plugin. In Electron, choose it in Settings.
 
-### I have another problem
-- Tell us the information that appears in F9 about OS and Arch, and open a issue on github saying what happened.
+For Lite, open the disk image and copy `aquastar-lite.app` into `/Applications`. Finder shows the name AquaStar Lite. The file name is `aquastar-lite.app`. Clear the same flag:
+
+```bash
+xattr -cr /Applications/aquastar-lite.app
+```
+
+The Lite disk image is a universal app. On a native Apple Silicon launch, Lite does not offer Flash, because the projector is x64. Ruffle is the player. On macOS, Ruffle's default graphics backend is Metal.
+
+To use Flash in Lite, run the x64 copy under Rosetta.
+
+```bash
+arch -x86_64 /Applications/aquastar-lite.app/Contents/MacOS/aquastar-lite
+```
+
+Lite then tries an unsigned copy of the projector that hides the URL bar. On Apple Silicon, macOS can kill that unsigned copy. If the copy fails to launch, or dies while it is starting, Lite opens the signed projector and passes the Loader4 URL. The URL bar is visible in that case. An Intel Mac uses only the unsigned projector.
+
+### Linux
+
+Mark an AppImage executable, then run it.
+
+```bash
+chmod +x AquaStar-<version>.AppImage
+./AquaStar-<version>.AppImage
+```
+
+The same `chmod +x` works for `aquastar-lite_<version>_amd64.AppImage`. That AppImage carries the GTK 2 libraries the Flash projector needs.
+
+The deb packages install with apt. From the directory that contains the file:
+
+```bash
+sudo apt install ./AquaStar_<version>_amd64.deb
+```
+
+```bash
+sudo apt install ./aquastar-lite_<version>_amd64.deb
+```
+
+The Lite deb depends on GTK 2, `libgtk2.0-0t64` or `libgtk2.0-0`, and on `libnss3`. Apt installs those with the package. If the Flash projector still cannot start, Lite names the missing library and exits with code 127. Ruffle does not need those libraries.
+
+## Build from source
+
+Electron is pinned to 11.5.0. That is the last Electron release whose Chromium still loads PPAPI Flash.
+
+```bash
+git clone https://github.com/aquaspy/AquaStar.git
+cd AquaStar
+npm install
+npm start
+```
+
+`npm run dist` packages a build for the OS you are on. The release workflow builds the published installers when a version tag is pushed. `./build.sh` is the old local script that builds several architectures at once.
+
+Lite's build and packaging notes are in [lite/README.md](lite/README.md).
