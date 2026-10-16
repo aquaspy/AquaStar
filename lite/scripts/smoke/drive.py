@@ -18,8 +18,8 @@ from pathlib import Path
 from buttons import BLUE, ORANGE, find_button
 
 COLORS = {"flash": BLUE, "ruffle": ORANGE}
-HOOK_WAIT = 15
-CLICK_WAIT = 12
+HOOK_WAIT = 8
+CLICK_WAIT = 45
 SOAK_SECONDS = 40
 PLAYER_NAMES = {
     ("Windows", "flash"): ["flashplayer_32_sa.exe"],
@@ -317,32 +317,35 @@ def focus_launcher(launcher):
         raise_windows_pid(launcher.pid)
 
 
-def click_play(engine, out_dir, launcher):
-    hit = None
-    image = None
-    for _attempt in range(4):
+def click_scales(image):
+    if platform.system() != "Darwin":
+        return [1]
+    if not hasattr(click_scales, "cached"):
+        click_scales.cached = mac_scales(image.width)
+    return click_scales.cached
+
+
+def click_play(engine, out_dir, launcher, seconds):
+    """Click Play until the player appears. The WebKit window can stay black for a while."""
+    names = player_names(engine)
+    deadline = time.time() + seconds
+    while time.time() < deadline and launcher.poll() is None:
+        if pids_named(names):
+            return True
         focus_launcher(launcher)
         image = screenshot(out_dir / "launcher.png")
         hit = find_button(image, COLORS[engine])
-        if hit is not None or launcher.poll() is not None:
-            break
-        print(f"no {engine} button yet in {image.size}")
-        time.sleep(5)
-    if hit is None or image is None:
-        print(f"no {engine} button")
-        return False
-    x, y = hit
-    scales = [1]
-    if platform.system() == "Darwin":
-        scales = mac_scales(image.width)
-    names = player_names(engine)
-    for scale in scales:
-        for _click in range(2):
+        if hit is None:
+            print(f"no {engine} button yet in {image.size}")
+            time.sleep(3)
+            continue
+        x, y = hit
+        for scale in click_scales(image):
             focus_launcher(launcher)
             click_at(x // scale, y // scale)
-            if wait_for(lambda: bool(pids_named(names)), 6, launcher):
+            if wait_for(lambda: bool(pids_named(names)), 4, launcher):
                 return True
-    return False
+    return bool(pids_named(names))
 
 
 def judge(engine, launcher, log_path, player_up):
@@ -408,14 +411,7 @@ def main():
         appeared = wait_for(lambda: bool(pids_named(player_names(engine))), HOOK_WAIT, launcher)
         if not appeared and launcher.poll() is None:
             print(f"{engine} did not start from the env hook; clicking Play")
-            if click_play(engine, out_dir, launcher):
-                appeared = True
-            else:
-                appeared = wait_for(
-                    lambda: bool(pids_named(player_names(engine))),
-                    CLICK_WAIT,
-                    launcher,
-                )
+            appeared = click_play(engine, out_dir, launcher, CLICK_WAIT)
         player_up = False
         if appeared:
             raise_player(engine)
