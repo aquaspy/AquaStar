@@ -333,10 +333,16 @@ fn unpack(pin: &Pinned, bytes: &[u8], dest: &Path) -> Result<(), String> {
     }
 }
 
+#[cfg(windows)]
 fn unpack_zip(bytes: &[u8], dest: &Path) -> Result<(), String> {
     zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec()))
         .and_then(|mut archive| archive.extract(dest))
         .map_err(|e| e.to_string())
+}
+
+#[cfg(not(windows))]
+fn unpack_zip(_bytes: &[u8], _dest: &Path) -> Result<(), String> {
+    Err("zip players are unpacked on Windows".into())
 }
 
 #[cfg(target_os = "macos")]
