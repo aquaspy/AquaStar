@@ -55,6 +55,10 @@ pub fn write_projector(source_exe: &Path, dest_root: &Path, swf: &[u8]) -> io::R
         fs::create_dir_all(dest_root)?;
         fs::copy(source_exe, &dest_exe)?;
     }
+    // macOS 11 and later rejects a Mach-O whose signature does not match the
+    // bytes on disk. Resigning after the append moves __LINKEDIT and drops
+    // the trailer, so the signature comes off first.
+    unsign_copied_player(&dest_exe)?;
     let player = fs::read(&dest_exe)?;
     fs::write(&dest_exe, append_projector(&player, swf))?;
     set_executable(&dest_exe)?;
@@ -62,15 +66,62 @@ pub fn write_projector(source_exe: &Path, dest_root: &Path, swf: &[u8]) -> io::R
     Ok(dest_exe)
 }
 
+#[cfg(target_os = "macos")]
+const PROJECTOR_STAMP_LAYOUT: u8 = 2;
+
 fn stamp_of(player: &[u8], swf: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(player);
     hasher.update(swf);
+    #[cfg(target_os = "macos")]
+    hasher.update([PROJECTOR_STAMP_LAYOUT]);
     hasher
         .finalize()
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect()
+}
+
+fn is_macho(bytes: &[u8]) -> bool {
+    matches!(
+        bytes.get(..4),
+        Some([0xFE, 0xED, 0xFA, 0xCE])
+            | Some([0xFE, 0xED, 0xFA, 0xCF])
+            | Some([0xCE, 0xFA, 0xED, 0xFE])
+            | Some([0xCF, 0xFA, 0xED, 0xFE])
+            | Some([0xCA, 0xFE, 0xBA, 0xBE])
+            | Some([0xBE, 0xBA, 0xFE, 0xCA])
+    )
+}
+
+fn signature_target(exe: &Path) -> &Path {
+    app_bundle(exe).unwrap_or(exe)
+}
+
+fn unsign_copied_player(exe: &Path) -> io::Result<()> {
+    #[cfg(target_os = "macos")]
+    {
+        let bytes = fs::read(exe)?;
+        if !is_macho(&bytes) {
+            return Ok(());
+        }
+        let status = std::process::Command::new("codesign")
+            .arg("--remove-signature")
+            .arg(signature_target(exe))
+            .status()?;
+        if status.success() {
+            return Ok(());
+        }
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("codesign --remove-signature exited {status}"),
+        ));
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = exe;
+        Ok(())
+    }
 }
 
 fn app_bundle(exe: &Path) -> Option<&Path> {
@@ -120,6 +171,25 @@ fn set_executable(path: &Path) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn macho_magic_is_a_projector_and_a_payload_is_not() {
+        assert!(is_macho(&[0xCF, 0xFA, 0xED, 0xFE]));
+        assert!(is_macho(&[0xCE, 0xFA, 0xED, 0xFE]));
+        assert!(is_macho(&[0xCA, 0xFE, 0xBA, 0xBE]));
+        assert!(!is_macho(b"player-bytes"));
+        assert!(!is_macho(b"MZ\x90\x00"));
+    }
+
+    #[test]
+    fn signature_removal_targets_the_app_bundle() {
+        let exe = Path::new("/tmp/Flash Player.app/Contents/MacOS/Flash Player");
+        assert_eq!(signature_target(exe), Path::new("/tmp/Flash Player.app"));
+        assert_eq!(
+            signature_target(Path::new("/tmp/flashplayer_32_sa.exe")),
+            Path::new("/tmp/flashplayer_32_sa.exe")
+        );
+    }
 
     #[test]
     fn trailer_is_magic_then_length_after_the_movie() {
