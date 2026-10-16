@@ -1,5 +1,24 @@
 const { invoke } = window.__TAURI__.core;
 const status = document.getElementById('status');
+const hideLauncher = document.getElementById('hide-launcher');
+const launcherHint = document.getElementById('launcher-hint');
+let preferred = null;
+let hideTouched = false;
+
+function describeLauncher() {
+  const behavior = hideLauncher.checked
+    ? 'This window hides while a game is running and comes back when the player exits.'
+    : 'This window stays open while a game is running, so the wiki and search stay usable.';
+  const who = preferred === 'flash'
+    ? 'Flash is the default player. '
+    : preferred === 'ruffle'
+      ? 'Ruffle is the default player. '
+      : '';
+  status.textContent = `${who}The game opens in its own window. ${behavior}`;
+  launcherHint.textContent = hideLauncher.checked
+    ? 'This window hides while a game is running and comes back when the player exits.'
+    : 'Off by default, so this window stays open and the wiki and search stay usable. When checked, this window hides while a game is running and comes back when the player exits.';
+}
 
 invoke('engines').then((list) => {
   for (const [engine, ok] of list) {
@@ -8,14 +27,25 @@ invoke('engines').then((list) => {
   }
   return invoke('preferred_engine');
 }).then((engine) => {
+  preferred = engine;
   const b = document.querySelector(`[data-engine="${engine}"]`);
-  if (!b || b.disabled) return;
-  b.classList.add('primary');
-  if (engine === 'ruffle') {
-    status.textContent = 'Ruffle is the default player. The game opens in its own window. This window hides while it runs and comes back when the player exits.';
-  } else if (engine === 'flash') {
-    status.textContent = 'Flash is the default player. The game opens in its own window. This window hides while it runs and comes back when the player exits.';
-  }
+  if (b && !b.disabled) b.classList.add('primary');
+  describeLauncher();
+});
+
+invoke('launcher_settings').then((settings) => {
+  if (hideTouched) return;
+  hideLauncher.checked = settings.hideLauncher;
+  describeLauncher();
+}).catch((e) => { status.textContent = `Error: ${e}`; });
+
+hideLauncher.addEventListener('change', async () => {
+  hideTouched = true;
+  try {
+    const settings = await invoke('set_hide_launcher', { hide: hideLauncher.checked });
+    hideLauncher.checked = settings.hideLauncher;
+    describeLauncher();
+  } catch (e) { status.textContent = `Error: ${e}`; }
 });
 
 document.querySelectorAll('[data-engine]').forEach((b) => b.addEventListener('click', async () => {

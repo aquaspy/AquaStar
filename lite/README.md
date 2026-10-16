@@ -1,6 +1,6 @@
 # AquaStar Lite (proof of concept)
 
-A Tauri 2 launcher for AQW. The launcher UI is plain HTML/JS in the system webview. The game never runs in the webview. Rust starts it as a separate player process. The launcher window hides while a player runs, and the window comes back when the last player exits.
+A Tauri 2 launcher for AQW. The launcher UI is plain HTML/JS in the system webview. The game never runs in the webview. Rust starts it as a separate player process. The launcher stays open while a player runs, so the wiki and search stay usable. "Hide the launcher during gameplay" in the launcher (stored as `hideLauncher` in `settings.json`) hides that window until the player exits.
 
 Ruffle is the default player on Linux, Windows, and macOS. Each platform package bundles that OS's players. The pin list is [`players.json`](players.json). If a bundled player is missing, the first launch downloads that pin into app data and checks the SHA-256.
 

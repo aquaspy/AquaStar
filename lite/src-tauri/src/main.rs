@@ -15,24 +15,64 @@ use players::Engine;
 use players::Players;
 #[cfg(target_os = "linux")]
 use players::LIMITED_FONTS_MARKER;
+use serde::Serialize;
 use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
 const AQW_LOADER: &str = "https://game.aq.com/game/gamefiles/Loader4.swf?ver=b";
+
+fn hide_launcher_enabled(app: &tauri::AppHandle) -> bool {
+    app.path()
+        .app_config_dir()
+        .map(|dir| ruffle::load_hide_launcher(&dir))
+        .unwrap_or(false)
+}
 
 fn sync_launcher(app: &tauri::AppHandle, presence: players::Presence) {
     let Some(window) = app.get_webview_window("main") else {
         return;
     };
-    match presence {
-        players::Presence::Running => {
+    match (presence, hide_launcher_enabled(app)) {
+        (players::Presence::Running, true) => {
             let _ = window.hide();
         }
-        players::Presence::Idle => {
+        (players::Presence::Running, false) => {
+            let _ = window.show();
+        }
+        (players::Presence::Idle, true) => {
             let _ = window.unminimize();
             let _ = window.show();
             let _ = window.set_focus();
         }
+        (players::Presence::Idle, false) => {}
     }
+}
+
+#[derive(Serialize)]
+struct LauncherSettings {
+    #[serde(rename = "hideLauncher")]
+    hide_launcher: bool,
+}
+
+fn config_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    app.path().app_config_dir().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn launcher_settings(app: tauri::AppHandle) -> Result<LauncherSettings, String> {
+    let dir = config_dir(&app)?;
+    Ok(LauncherSettings {
+        hide_launcher: ruffle::load_hide_launcher(&dir),
+    })
+}
+
+#[tauri::command]
+fn set_hide_launcher(app: tauri::AppHandle, hide: bool) -> Result<LauncherSettings, String> {
+    let dir = config_dir(&app)?;
+    ruffle::save_hide_launcher(&dir, hide)?;
+    sync_launcher(&app, app.state::<Players>().presence());
+    Ok(LauncherSettings {
+        hide_launcher: hide,
+    })
 }
 
 fn load_ruffle_settings(app: &tauri::AppHandle) -> ruffle::RuffleSettings {
@@ -222,7 +262,9 @@ fn main() {
             preferred_engine,
             open_site,
             ruffle_settings,
-            set_ruffle_settings
+            set_ruffle_settings,
+            launcher_settings,
+            set_hide_launcher
         ])
         .build(context)
         .expect("failed to build AquaStar Lite");

@@ -215,13 +215,16 @@ impl RuffleSettings {
 
     pub fn save(&self, dir: &Path) -> Result<(), String> {
         let current = self.for_platform(std::env::consts::OS);
-        fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-        let body = serde_json::to_string_pretty(&serde_json::json!({
-            "ruffleQuality": current.quality.as_str(),
-            "ruffleGraphics": current.graphics.as_str(),
-        }))
-        .map_err(|e| e.to_string())?;
-        fs::write(dir.join(SETTINGS_FILE), body + "\n").map_err(|e| e.to_string())
+        let mut map = settings_object(dir);
+        map.insert(
+            "ruffleQuality".into(),
+            serde_json::Value::String(current.quality.as_str().to_string()),
+        );
+        map.insert(
+            "ruffleGraphics".into(),
+            serde_json::Value::String(current.graphics.as_str().to_string()),
+        );
+        write_settings(dir, &map)
     }
 
     pub fn view(&self) -> SettingsView {
@@ -233,6 +236,41 @@ impl RuffleSettings {
             graphics_choices: graphics_choices(std::env::consts::OS),
         }
     }
+}
+
+fn settings_object(dir: &Path) -> serde_json::Map<String, serde_json::Value> {
+    fs::read_to_string(dir.join(SETTINGS_FILE))
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .and_then(|value| match value {
+            serde_json::Value::Object(map) => Some(map),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+fn write_settings(
+    dir: &Path,
+    map: &serde_json::Map<String, serde_json::Value>,
+) -> Result<(), String> {
+    fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let body = serde_json::to_string_pretty(&serde_json::Value::Object(map.clone()))
+        .map_err(|e| e.to_string())?;
+    fs::write(dir.join(SETTINGS_FILE), body + "\n").map_err(|e| e.to_string())
+}
+
+/// Missing or non-boolean values stay off, so an existing install keeps the launcher visible.
+pub fn load_hide_launcher(dir: &Path) -> bool {
+    settings_object(dir)
+        .get("hideLauncher")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
+
+pub fn save_hide_launcher(dir: &Path, hide: bool) -> Result<(), String> {
+    let mut map = settings_object(dir);
+    map.insert("hideLauncher".into(), serde_json::Value::Bool(hide));
+    write_settings(dir, &map)
 }
 
 /// Command line for one movie. The SWF is last, and only known flag values are passed.
@@ -582,5 +620,45 @@ mod tests {
         assert_eq!(view.ruffle_graphics, "gl");
         assert!(view.qualities.iter().any(|c| c.id == "low"));
         assert!(view.graphics_choices.iter().any(|c| c.id == "gl"));
+    }
+
+    #[test]
+    fn hide_launcher_defaults_off_and_survives_ruffle_saves() {
+        let dir = std::env::temp_dir().join(format!(
+            "aquastar-lite-hide-launcher-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        assert!(!load_hide_launcher(&dir));
+
+        RuffleSettings {
+            quality: RuffleQuality::Low,
+            graphics: RuffleGraphics::Gl,
+        }
+        .save(&dir)
+        .unwrap();
+        save_hide_launcher(&dir, true).unwrap();
+        let text = fs::read_to_string(dir.join(SETTINGS_FILE)).unwrap();
+        assert!(text.contains("\"hideLauncher\": true"));
+        assert!(text.contains("\"ruffleQuality\": \"low\""));
+        assert!(load_hide_launcher(&dir));
+        assert_eq!(RuffleSettings::load(&dir).quality, RuffleQuality::Low);
+
+        RuffleSettings {
+            quality: RuffleQuality::High,
+            graphics: RuffleGraphics::Gl,
+        }
+        .save(&dir)
+        .unwrap();
+        assert!(load_hide_launcher(&dir));
+        assert_eq!(RuffleSettings::load(&dir).quality, RuffleQuality::High);
+
+        save_hide_launcher(&dir, false).unwrap();
+        assert!(!load_hide_launcher(&dir));
+        assert_eq!(RuffleSettings::load(&dir).quality, RuffleQuality::High);
+
+        fs::write(dir.join(SETTINGS_FILE), r#"{"hideLauncher":"yes"}"#).unwrap();
+        assert!(!load_hide_launcher(&dir));
+        let _ = fs::remove_dir_all(&dir);
     }
 }

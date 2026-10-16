@@ -14,4 +14,6 @@ input, select { width: 100%; box-sizing: border-box; padding: 10px; border-radiu
 .fields label { display: block; color: #a9b4c2; font-size: 14px; }
 .fields select { margin-top: 4px; }
 .hint { color: #a9b4c2; font-size: 14px; margin: 12px 0 0; }
+label.check { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 15px; cursor: pointer; }
+label.check input { width: 18px; height: 18px; margin: 0; flex: none; }
 #status { color: #a9b4c2; min-height: 2em; }

@@ -536,6 +536,10 @@ impl Players {
         self.launch_hold.store(false, Ordering::SeqCst);
     }
 
+    pub fn presence(&self) -> Presence {
+        self.last_presence.lock().unwrap().unwrap_or(Presence::Idle)
+    }
+
     fn emit_presence(&self) {
         if self.shutting_down.load(Ordering::SeqCst) {
             return;
