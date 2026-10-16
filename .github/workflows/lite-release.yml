@@ -28,8 +28,8 @@ jobs:
       # linuxdeploy's bundled strip exits on .relr.dyn in current webkit2gtk, and
       # Tauri reports only "failed to run linuxdeploy". Extract-and-run starts
       # that AppImage when the runner has no FUSE mount.
-      NO_STRIP: "true"
-      APPIMAGE_EXTRACT_AND_RUN: "1"
+      NO_STRIP: 'true'
+      APPIMAGE_EXTRACT_AND_RUN: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
