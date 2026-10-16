@@ -1,4 +1,5 @@
 mod catalog;
+mod flash_menu;
 mod projector;
 
 use serde::{Deserialize, Serialize};
@@ -390,6 +391,9 @@ impl Players {
         if engine == Engine::Flash && projector::is_embedded(exe) {
             args.clear();
         }
+        if engine == Engine::Flash {
+            log_flash_launch(exe, &args);
+        }
         let mut child = match spawn_player(
             exe,
             engine,
@@ -411,6 +415,9 @@ impl Players {
         let started = Instant::now();
         let panicked = Arc::new(AtomicBool::new(false));
         let killed = Arc::new(AtomicBool::new(false));
+        if engine == Engine::Flash {
+            flash_menu::hide_until_gone(child.id(), killed.clone());
+        }
         let tail = Arc::new(Mutex::new(String::new()));
         let flash_err = (engine == Engine::Flash).then(|| stderr_tail(child.stderr.take()));
         let stderr_done = ruffle_may_fallback
@@ -903,6 +910,23 @@ fn exit_signal(status: &ExitStatus) -> Option<i32> {
 fn exit_signal(status: &ExitStatus) -> Option<i32> {
     let _ = status;
     None
+}
+
+fn log_flash_launch(exe: &Path, args: &[String]) {
+    let args = if args.is_empty() {
+        "(none)".to_string()
+    } else {
+        args.join(" ")
+    };
+    eprintln!(
+        "aquastar-lite: launching Flash {} trailer={} args={args}",
+        exe.display(),
+        if projector::trailer_present(exe) {
+            "yes"
+        } else {
+            "no"
+        },
+    );
 }
 
 fn log_fallback(report: &ExitReport, tail: &str) {

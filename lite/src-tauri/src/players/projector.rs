@@ -25,11 +25,38 @@ pub fn is_embedded(exe: &Path) -> bool {
         .any(|path| path.file_name().and_then(|name| name.to_str()) == Some("flash-projector"))
 }
 
-/// Linux returns the bundled player. Its GTK build does not read this trailer
-/// (the `0xFA123456` check runs against the ELF header, and the window stays the
-/// empty 640×520 shell). Windows and macOS get a copy under app data.
+/// macOS is the only platform that plays the appended loader.
+///
+/// The Windows projector reads this trailer (magic, then the movie length).
+/// The loader itself runs. `Loader.load` of a network movie does not: the load
+/// finishes as a 0×0 clip and that movie's first frame never executes, so the
+/// stage stays empty. The same player runs the movie when the Loader4 URL is
+/// the process argument, and that window has no URL bar. Linux does not read
+/// the trailer at all (the check runs against the ELF header).
+pub fn embeds_loader(os: &str) -> bool {
+    os == "macos"
+}
+
+/// The last eight bytes are the trailer magic and the movie length.
+pub fn trailer_present(exe: &Path) -> bool {
+    use std::io::{Read, Seek, SeekFrom};
+
+    let Ok(mut file) = fs::File::open(exe) else {
+        return false;
+    };
+    let Ok(len) = file.metadata().map(|meta| meta.len()) else {
+        return false;
+    };
+    if len < 8 || file.seek(SeekFrom::End(-8)).is_err() {
+        return false;
+    }
+    let mut tail = [0u8; 8];
+    file.read_exact(&mut tail).is_ok()
+        && u32::from_le_bytes(tail[0..4].try_into().unwrap()) == MAGIC
+}
+
 pub fn place(source_exe: &Path, players_dir: &Path) -> Result<PathBuf, String> {
-    if cfg!(any(windows, target_os = "macos")) {
+    if embeds_loader(std::env::consts::OS) {
         write_projector(source_exe, &players_dir.join("flash-projector"), LOADER)
             .map_err(|err| format!("could not build the Flash projector: {err}"))
     } else {
@@ -189,6 +216,28 @@ mod tests {
             signature_target(Path::new("/tmp/flashplayer_32_sa.exe")),
             Path::new("/tmp/flashplayer_32_sa.exe")
         );
+    }
+
+    #[test]
+    fn only_macos_embeds_the_loader() {
+        assert!(embeds_loader("macos"));
+        assert!(!embeds_loader("windows"));
+        assert!(!embeds_loader("linux"));
+    }
+
+    #[test]
+    fn trailer_present_is_the_magic_at_the_end_of_the_file() {
+        let dir =
+            std::env::temp_dir().join(format!("aquastar-projector-tail-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let exe = dir.join("player.exe");
+        fs::write(&exe, append_projector(b"PLAYER", b"FWS")).unwrap();
+        assert!(trailer_present(&exe));
+        fs::write(&exe, b"PLAYER").unwrap();
+        assert!(!trailer_present(&exe));
+        assert!(!trailer_present(&dir.join("missing.exe")));
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]
