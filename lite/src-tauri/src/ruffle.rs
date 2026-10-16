@@ -128,11 +128,16 @@ pub fn quality_choices() -> Vec<SettingChoice> {
 
 /// `platform` is `std::env::consts::OS` (`linux`, `windows`, `macos`).
 pub fn graphics_choices(platform: &str) -> Vec<SettingChoice> {
+    let gl_label = if platform == "macos" {
+        "OpenGL"
+    } else {
+        "OpenGL (default, most compatible)"
+    };
     [
-        ("gl", "OpenGL (default, most compatible)", &[] as &[&str]),
+        ("gl", gl_label, &[] as &[&str]),
         ("vulkan", "Vulkan", &["linux", "windows"]),
         ("dx12", "DirectX 12", &["windows"]),
-        ("metal", "Metal", &["macos"]),
+        ("metal", "Metal (default)", &["macos"]),
         ("default", "Automatic (Ruffle decides)", &[]),
     ]
     .into_iter()
@@ -446,6 +451,17 @@ mod tests {
         assert_eq!(ids("macos"), ["gl", "metal", "default"]);
         assert_eq!(ids("windows"), ["gl", "vulkan", "dx12", "default"]);
         assert_eq!(ids("freebsd"), ["gl", "default"]);
+        let label = |platform: &str, id: &str| -> String {
+            graphics_choices(platform)
+                .into_iter()
+                .find(|choice| choice.id == id)
+                .expect(id)
+                .label
+        };
+        assert_eq!(label("macos", "metal"), "Metal (default)");
+        assert_eq!(label("macos", "gl"), "OpenGL");
+        assert_eq!(label("windows", "gl"), "OpenGL (default, most compatible)");
+        assert_eq!(label("linux", "gl"), "OpenGL (default, most compatible)");
         assert_eq!(
             quality_choices()
                 .into_iter()
