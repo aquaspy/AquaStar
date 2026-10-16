@@ -18,6 +18,22 @@ use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
 const AQW_LOADER: &str = "https://game.aq.com/game/gamefiles/Loader4.swf?ver=b";
 
+fn sync_launcher(app: &tauri::AppHandle, presence: players::Presence) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+    match presence {
+        players::Presence::Running => {
+            let _ = window.hide();
+        }
+        players::Presence::Idle => {
+            let _ = window.unminimize();
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }
+}
+
 fn load_ruffle_settings(app: &tauri::AppHandle) -> ruffle::RuffleSettings {
     match app.path().app_config_dir() {
         Ok(dir) => ruffle::RuffleSettings::load(&dir),
@@ -204,6 +220,12 @@ fn main() {
         ])
         .build(context)
         .expect("failed to build AquaStar Lite");
+    app.state::<Players>()
+        .watch_presence({
+            let app = app.handle().clone();
+            move |presence| sync_launcher(&app, presence)
+        })
+        .expect("presence hook");
     app.run(|app, event| {
         let main_gone = matches!(
             &event,

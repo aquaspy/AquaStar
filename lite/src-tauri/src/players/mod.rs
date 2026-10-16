@@ -4,6 +4,7 @@
 mod catalog;
 
 use serde::{Deserialize, Serialize};
+#[cfg(test)]
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -71,17 +72,62 @@ impl Engine {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Presence {
+    Running,
+    Idle,
+}
+
+struct FallbackWatch {
+    graphics: RuffleGraphics,
+    started: Instant,
+    panicked: Arc<AtomicBool>,
+    stderr_done: mpsc::Receiver<()>,
+    tail: Arc<Mutex<String>>,
+    exe: PathBuf,
+    swf: String,
+    quality: RuffleQuality,
+    save_directory: Option<PathBuf>,
+}
+
 struct Tracked {
     engine: Engine,
     child: Child,
     killed: Arc<AtomicBool>,
+    watch: Option<FallbackWatch>,
 }
 
-#[derive(Clone, Default)]
+struct LaunchHold<'a>(&'a AtomicBool);
+
+impl Drop for LaunchHold<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
+}
+
+#[derive(Clone)]
 pub struct Players {
     children: Arc<Mutex<Vec<Tracked>>>,
     shutting_down: Arc<AtomicBool>,
     launch_gate: Arc<Mutex<()>>,
+    launch_hold: Arc<AtomicBool>,
+    presence_hook: Arc<Mutex<Option<Arc<dyn Fn(Presence) + Send + Sync>>>>,
+    last_presence: Arc<Mutex<Option<Presence>>>,
+    reaper_started: Arc<AtomicBool>,
+}
+
+impl Default for Players {
+    fn default() -> Self {
+        Self {
+            children: Arc::new(Mutex::new(Vec::new())),
+            shutting_down: Arc::new(AtomicBool::new(false)),
+            launch_gate: Arc::new(Mutex::new(())),
+            launch_hold: Arc::new(AtomicBool::new(false)),
+            presence_hook: Arc::new(Mutex::new(None)),
+            last_presence: Arc::new(Mutex::new(None)),
+            reaper_started: Arc::new(AtomicBool::new(false)),
+        }
+    }
 }
 
 /// Set by the launcher when it installed a WebKit-only fontconfig.
@@ -115,6 +161,18 @@ impl Players {
         self.launch_at(&exe, engine, swf, settings, save_directory)
     }
 
+    pub fn watch_presence(
+        &self,
+        hook: impl Fn(Presence) + Send + Sync + 'static,
+    ) -> Result<(), &'static str> {
+        let mut slot = self.presence_hook.lock().unwrap();
+        if slot.is_some() {
+            return Err("presence is already watched");
+        }
+        *slot = Some(Arc::new(hook));
+        Ok(())
+    }
+
     fn launch_at(
         &self,
         exe: &Path,
@@ -123,6 +181,8 @@ impl Players {
         settings: &RuffleSettings,
         save_directory: Option<&Path>,
     ) -> Result<String, String> {
+        self.launch_hold.store(true, Ordering::SeqCst);
+        let _hold = LaunchHold(&self.launch_hold);
         let _gate = self.launch_gate.lock().unwrap();
         if let Some(msg) = self.prepare(engine) {
             return Ok(msg);
@@ -168,22 +228,18 @@ impl Players {
             }
             Ok(None) => {
                 let pid = child.id();
-                self.adopt(engine, child, killed.clone())?;
-                if capture {
-                    self.arm_fallback(
-                        pid,
-                        graphics,
-                        started,
-                        panicked,
-                        killed,
-                        stderr_done.unwrap(),
-                        tail,
-                        exe.to_path_buf(),
-                        swf.to_string(),
-                        settings.quality,
-                        save_directory,
-                    );
-                }
+                let watch = capture.then(|| FallbackWatch {
+                    graphics,
+                    started,
+                    panicked,
+                    stderr_done: stderr_done.expect("stderr watch"),
+                    tail,
+                    exe: exe.to_path_buf(),
+                    swf: swf.to_string(),
+                    quality: settings.quality,
+                    save_directory,
+                });
+                self.adopt(engine, child, killed, watch)?;
                 Ok(format!("{engine:?} started (pid {pid})"))
             }
             Err(e) => Err(format!("could not check {engine:?}: {e}")),
@@ -212,6 +268,7 @@ impl Players {
         engine: Engine,
         mut child: Child,
         killed: Arc<AtomicBool>,
+        watch: Option<FallbackWatch>,
     ) -> Result<(), String> {
         let mut list = self.children.lock().unwrap();
         list.retain_mut(|t| matches!(t.child.try_wait(), Ok(None)));
@@ -225,7 +282,10 @@ impl Players {
             engine,
             child,
             killed,
+            watch,
         });
+        drop(list);
+        self.ensure_reaper();
         Ok(())
     }
 
@@ -262,69 +322,140 @@ impl Players {
             ));
         }
         let pid = child.id();
-        self.adopt(Engine::Ruffle, child, Arc::new(AtomicBool::new(false)))?;
+        self.adopt(
+            Engine::Ruffle,
+            child,
+            Arc::new(AtomicBool::new(false)),
+            None,
+        )?;
         Ok(format!(
             "Ruffle ({}) crashed; relaunched with {backend} (pid {pid})",
             from.as_str()
         ))
     }
 
-    fn arm_fallback(
-        &self,
-        pid: u32,
-        graphics: RuffleGraphics,
-        started: Instant,
-        panicked: Arc<AtomicBool>,
-        killed: Arc<AtomicBool>,
-        stderr_done: mpsc::Receiver<()>,
-        tail: Arc<Mutex<String>>,
-        exe: PathBuf,
-        swf: String,
-        quality: RuffleQuality,
-        save_directory: Option<PathBuf>,
-    ) {
-        let players = self.clone();
-        std::thread::spawn(move || loop {
-            std::thread::sleep(Duration::from_millis(200));
-            if players.shutting_down.load(Ordering::SeqCst) {
-                return;
-            }
-            let status = {
-                let mut list = players.children.lock().unwrap();
-                let Some(pos) = list.iter().position(|t| t.child.id() == pid) else {
-                    return;
-                };
-                match list[pos].child.try_wait() {
-                    Ok(None) => continue,
-                    Ok(Some(status)) => {
-                        list.remove(pos);
-                        status
-                    }
-                    Err(_) => return,
-                }
-            };
-            let _ = stderr_done.recv_timeout(Duration::from_millis(500));
-            let report = exit_report(graphics, status, started, &panicked, &killed);
-            if !ruffle::should_fallback(&report) || players.shutting_down.load(Ordering::SeqCst) {
-                return;
-            }
-            let tail_text = tail.lock().map(|t| t.clone()).unwrap_or_default();
-            log_fallback(&report, &tail_text);
-            let _gate = players.launch_gate.lock().unwrap();
-            {
-                let mut list = players.children.lock().unwrap();
-                list.retain_mut(|t| matches!(t.child.try_wait(), Ok(None)));
-                if !list.is_empty() {
-                    return;
-                }
-            }
-            if let Err(e) =
-                players.relaunch_gl(&exe, &swf, quality, graphics, save_directory.as_deref())
-            {
-                eprintln!("aquastar-lite: OpenGL relaunch failed: {e}");
-            }
+    fn ensure_reaper(&self) {
+        if self.reaper_started.swap(true, Ordering::SeqCst) {
             return;
+        }
+        let players = self.clone();
+        std::thread::spawn(move || {
+            while !players.shutting_down.load(Ordering::SeqCst) {
+                players.reap();
+                std::thread::sleep(Duration::from_millis(200));
+            }
+            players.reap();
         });
+    }
+
+    fn reap(&self) {
+        if let Some((status, tracked)) = self.take_exited_watch() {
+            self.fallback(status, tracked);
+        }
+        self.emit_presence();
+    }
+
+    fn take_exited_watch(&self) -> Option<(std::process::ExitStatus, Tracked)> {
+        let mut list = self.children.lock().unwrap();
+        let mut watch_at = None;
+        let mut index = 0;
+        while index < list.len() {
+            match list[index].child.try_wait() {
+                Ok(None) => index += 1,
+                Ok(Some(status)) => {
+                    if list[index].watch.is_some() && watch_at.is_none() {
+                        watch_at = Some((index, status));
+                        index += 1;
+                    } else {
+                        list.remove(index);
+                    }
+                }
+                Err(_) => {
+                    list.remove(index);
+                }
+            }
+        }
+        let (index, status) = watch_at?;
+        Some((status, list.remove(index)))
+    }
+
+    fn fallback(&self, status: std::process::ExitStatus, tracked: Tracked) {
+        let Some(watch) = tracked.watch else {
+            return;
+        };
+        let _ = watch.stderr_done.recv_timeout(Duration::from_millis(500));
+        let report = exit_report(
+            watch.graphics,
+            status,
+            watch.started,
+            &watch.panicked,
+            &tracked.killed,
+        );
+        if !ruffle::should_fallback(&report) || self.shutting_down.load(Ordering::SeqCst) {
+            return;
+        }
+        let tail_text = watch
+            .tail
+            .lock()
+            .map(|text| text.clone())
+            .unwrap_or_default();
+        log_fallback(&report, &tail_text);
+        self.launch_hold.store(true, Ordering::SeqCst);
+        let _gate = self.launch_gate.lock().unwrap();
+        let busy = {
+            let mut list = self.children.lock().unwrap();
+            list.retain_mut(|tracked| matches!(tracked.child.try_wait(), Ok(None)));
+            !list.is_empty()
+        };
+        if !busy {
+            if let Err(err) = self.relaunch_gl(
+                &watch.exe,
+                &watch.swf,
+                watch.quality,
+                watch.graphics,
+                watch.save_directory.as_deref(),
+            ) {
+                eprintln!("aquastar-lite: OpenGL relaunch failed: {err}");
+            }
+        }
+        self.launch_hold.store(false, Ordering::SeqCst);
+    }
+
+    fn emit_presence(&self) {
+        if self.shutting_down.load(Ordering::SeqCst) {
+            return;
+        }
+        let alive = {
+            let mut list = self.children.lock().unwrap();
+            let mut count = 0;
+            for tracked in list.iter_mut() {
+                if matches!(tracked.child.try_wait(), Ok(None)) {
+                    count += 1;
+                }
+            }
+            count
+        };
+        let hold = self.launch_hold.load(Ordering::SeqCst);
+        let mut last = self.last_presence.lock().unwrap();
+        if alive > 0 && *last != Some(Presence::Running) {
+            *last = Some(Presence::Running);
+            drop(last);
+            self.emit(Presence::Running);
+        } else if alive == 0 && !hold && *last == Some(Presence::Running) {
+            drop(last);
+            if self.shutting_down.load(Ordering::SeqCst) {
+                return;
+            }
+            self.emit(Presence::Idle);
+            *self.last_presence.lock().unwrap() = Some(Presence::Idle);
+        }
+    }
+
+    fn emit(&self, presence: Presence) {
+        let hook = self.presence_hook.lock().unwrap().clone();
+        if let Some(hook) = hook {
+            hook(presence);
+        }
     }
 
     pub fn kill_all(&self) {
@@ -508,6 +639,13 @@ mod pin_tests {
             Engine::preferred_for(std::env::consts::OS, std::env::consts::ARCH)
         );
     }
+
+    #[test]
+    fn presence_is_watched_once() {
+        let players = Players::default();
+        players.watch_presence(|_| {}).unwrap();
+        assert!(players.watch_presence(|_| {}).is_err());
+    }
 }
 
 #[cfg(test)]
@@ -658,6 +796,15 @@ mod tests {
             .collect()
     }
 
+    fn record(players: &Players) -> Arc<Mutex<Vec<Presence>>> {
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let sink = seen.clone();
+        players
+            .watch_presence(move |presence| sink.lock().unwrap().push(presence))
+            .unwrap();
+        seen
+    }
+
     /// Automatic is a non-GL backend on every OS, so these tests do not depend on Vulkan.
     fn automatic_low() -> RuffleSettings {
         RuffleSettings {
@@ -726,11 +873,21 @@ mod tests {
             ),
         );
         let players = Players::default();
+        let seen = record(&players);
         let _stop = Stop(players.clone());
         let msg = players
             .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap();
         assert!(msg.contains("relaunched with OpenGL"), "{msg}");
+        assert!(wait_until(|| seen
+            .lock()
+            .unwrap()
+            .contains(&Presence::Running)));
+        assert!(
+            !seen.lock().unwrap().contains(&Presence::Idle),
+            "{:?}",
+            seen.lock().unwrap()
+        );
         let lines = log_lines(&log);
         assert_eq!(lines.len(), 2, "{lines:?}");
         assert!(lines[0].contains("--graphics default"), "{lines:?}");
@@ -759,10 +916,16 @@ mod tests {
             ),
         );
         let players = Players::default();
+        let seen = record(&players);
         let err = players
             .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap_err();
         assert!(err.contains("OpenGL"), "{err}");
+        assert!(
+            seen.lock().unwrap().is_empty(),
+            "{:?}",
+            seen.lock().unwrap()
+        );
         let lines = log_lines(&log);
         assert_eq!(lines.len(), 2, "{lines:?}");
         assert!(lines[1].contains("--graphics gl"), "{lines:?}");
@@ -779,10 +942,16 @@ mod tests {
             &format!("printf '%s\\n' \"$*\" >> '{}'\nexit 0", log.display()),
         );
         let players = Players::default();
+        let seen = record(&players);
         let err = players
             .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap_err();
         assert!(err.contains("exited immediately"), "{err}");
+        assert!(
+            seen.lock().unwrap().is_empty(),
+            "{:?}",
+            seen.lock().unwrap()
+        );
         assert!(!err.contains("OpenGL"), "{err}");
         assert_eq!(log_lines(&log).len(), 1);
         let _ = fs::remove_dir_all(&dir);
@@ -804,6 +973,7 @@ mod tests {
             ),
         );
         let players = Players::default();
+        let seen = record(&players);
         let _stop = Stop(players.clone());
         let msg = players
             .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
@@ -827,6 +997,7 @@ mod tests {
             "fallback looped: {:?}",
             log_lines(&log)
         );
+        assert_eq!(*seen.lock().unwrap(), vec![Presence::Running]);
         drop(_stop);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -840,10 +1011,16 @@ mod tests {
             &format!("printf '%s\\n' \"$*\" >> '{}'\nexit 101", log.display()),
         );
         let players = Players::default();
+        let seen = record(&players);
         let err = players
             .launch_at(&exe, Engine::Flash, "movie.swf", &automatic_low(), None)
             .unwrap_err();
         assert!(err.contains("Flash"), "{err}");
+        assert!(
+            seen.lock().unwrap().is_empty(),
+            "{:?}",
+            seen.lock().unwrap()
+        );
         assert!(!err.contains("OpenGL"), "{err}");
         assert_eq!(log_lines(&log), ["movie.swf"]);
         let _ = fs::remove_dir_all(&dir);
@@ -858,12 +1035,18 @@ mod tests {
             &format!("printf '%s\\n' \"$*\" >> '{}'\nsleep 60", log.display()),
         );
         let players = Players::default();
+        let seen = record(&players);
         players
             .launch_at(&exe, Engine::Ruffle, "movie.swf", &automatic_low(), None)
             .unwrap();
         players.kill_all();
         std::thread::sleep(Duration::from_millis(500));
         assert_eq!(log_lines(&log).len(), 1, "{:?}", log_lines(&log));
+        assert!(
+            !seen.lock().unwrap().contains(&Presence::Idle),
+            "{:?}",
+            seen.lock().unwrap()
+        );
         assert!(players.children.lock().unwrap().is_empty());
         let _ = fs::remove_dir_all(&dir);
     }
@@ -945,6 +1128,26 @@ mod tests {
         );
         assert_eq!(log_lines(&log)[1], "flash.swf");
         drop(_stop);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_real_exit_returns_the_launcher() {
+        let dir = scratch("exit");
+        let exe = write_script(&dir, "sleep 1.2\nexit 0");
+        let players = Players::default();
+        let seen = record(&players);
+        let settings = RuffleSettings {
+            quality: RuffleQuality::Low,
+            graphics: RuffleGraphics::Gl,
+        };
+        let msg = players
+            .launch_at(&exe, Engine::Ruffle, "movie.swf", &settings, None)
+            .unwrap();
+        assert!(msg.contains("started"), "{msg}");
+        assert!(wait_until(|| {
+            seen.lock().unwrap().as_slice() == [Presence::Running, Presence::Idle]
+        }));
         let _ = fs::remove_dir_all(&dir);
     }
 
