@@ -339,6 +339,15 @@ mod tests {
     }
 
     #[test]
+    fn the_players_resource_dir_exists_before_fetch() {
+        let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+        assert!(manifest.join("players/.gitkeep").is_file());
+        let ignore = std::fs::read_to_string(manifest.join("../.gitignore")).unwrap();
+        assert!(ignore.contains("src-tauri/players/*\n"));
+        assert!(ignore.contains("!src-tauri/players/.gitkeep\n"));
+    }
+
+    #[test]
     fn installed_roots_use_an_existing_resource_players_dir() {
         let base = scratch("roots-installed");
         let app_data = base.join("app");

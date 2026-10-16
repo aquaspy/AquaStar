@@ -1,3 +1,4 @@
 src-tauri/target/
 src-tauri/gen/
-src-tauri/players/
+src-tauri/players/*
+!src-tauri/players/.gitkeep

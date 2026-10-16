@@ -20,7 +20,7 @@ cargo build --release          # needs a current stable Rust (1.85 is too old)
 ./target/release/aquastar-lite
 ```
 
-`lite/scripts/fetch-players.sh` (and `fetch-players.ps1` on Windows) reads `players.json`, checks each SHA-256, and unpacks the host OS into `lite/src-tauri/players/`. The release workflow runs that step before it bundles the app. `lite-check.yml` runs `cargo test` on pull requests that touch `lite/`, and `cargo check` on macOS, then runs the fetch script after the compiler.
+`lite/scripts/fetch-players.sh` (and `fetch-players.ps1` on Windows) reads `players.json`, checks each SHA-256, and unpacks the host OS into `lite/src-tauri/players/`. That directory is committed with only `.gitkeep`, because the Tauri build script refuses to compile when `bundle.resources` names a path that is not on disk. The fetched binaries stay gitignored. The release workflow runs the fetch before it bundles the app. `lite-check.yml` runs `cargo test` on pull requests that touch `lite/`, and `cargo check` on macOS, then runs the fetch script after the compiler.
 
 Windows (`nsis`) and macOS (universal app) bundles are built by `.github/workflows/lite-release.yml`. A `lite-v*` tag publishes a pre-release. A manual run (workflow_dispatch) only uploads the bundles as workflow artifacts so they can be tested before tagging. The Mac bundle is ad-hoc signed (`signingIdentity` `-`, hardened runtime off, minimum system 11.0). There is no Apple Developer ID certificate. `lite/scripts/finish-macos-app.sh` signs nested player apps inside the built app, then writes the disk image. After you open the disk image, clear quarantine and then launch:
 
