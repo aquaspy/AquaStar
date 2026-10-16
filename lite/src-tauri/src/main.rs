@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ads;
 #[cfg(target_os = "linux")]
 mod fonts;
 mod placement;
@@ -112,6 +113,11 @@ async fn open_site(app: tauri::AppHandle, label: String, url: String) -> Result<
     WebviewWindowBuilder::new(&app, &label, WebviewUrl::External(parsed))
         .title(format!("AquaStar Lite - {label}"))
         .inner_size(1100.0, 750.0)
+        .initialization_script_for_all_frames(ads::init_script())
+        .on_navigation(|url| match url.host_str() {
+            Some(host) => !ads::host_blocked(host),
+            None => true,
+        })
         .build()
         .map(|_| ())
         .map_err(|e| e.to_string())
