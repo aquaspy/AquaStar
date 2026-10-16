@@ -1,6 +1,6 @@
 [package]
 name = "aquastar-lite"
-version = "0.2.0-rc.2"
+version = "0.2.0-rc.3"
 edition = "2021"
 description = "AquaStar Lite: Tauri launcher proof of concept"
 license = "MIT"

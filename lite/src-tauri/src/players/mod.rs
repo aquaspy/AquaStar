@@ -1,4 +1,5 @@
 mod catalog;
+mod projector;
 
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -139,6 +140,115 @@ fn without_launcher_fontconfig(cmd: &mut Command) {
     }
 }
 
+/// AppImage AppRun points the dynamic linker and GTK module paths at the bundle.
+/// The Flash projector is GTK 2. `LD_LIBRARY_PATH` alone makes it exit before it
+/// maps a window (GLib-GObject NULL class). The same scrub applies to Ruffle.
+const APPIMAGE_DROP: &[&str] = &[
+    "GTK_PATH",
+    "GTK_EXE_PREFIX",
+    "GTK_IM_MODULE_FILE",
+    "GTK_DATA_PREFIX",
+    "GDK_PIXBUF_MODULE_FILE",
+    "GIO_MODULE_DIR",
+    "GSETTINGS_SCHEMA_DIR",
+    "GI_TYPELIB_PATH",
+    "PYTHONHOME",
+    "PYTHONPATH",
+    "QT_PLUGIN_PATH",
+];
+const APPIMAGE_PATH_LISTS: &[&str] = &["LD_LIBRARY_PATH", "XDG_DATA_DIRS", "LD_PRELOAD"];
+
+fn scrub_player_env(vars: Vec<(String, String)>) -> Vec<(String, String)> {
+    let appdir = vars
+        .iter()
+        .find(|(key, _)| key == "APPDIR")
+        .map(|(_, value)| value.clone())
+        .filter(|value| !value.is_empty());
+    let Some(appdir) = appdir else {
+        return vars;
+    };
+    let mut out = Vec::with_capacity(vars.len());
+    for (key, value) in vars {
+        if APPIMAGE_DROP.contains(&key.as_str()) && value.contains(&appdir) {
+            continue;
+        }
+        if APPIMAGE_PATH_LISTS.contains(&key.as_str()) {
+            let kept: Vec<&str> = value
+                .split(':')
+                .filter(|part| !part.is_empty() && !part.contains(&appdir))
+                .collect();
+            if kept.is_empty() {
+                continue;
+            }
+            out.push((key, kept.join(":")));
+            continue;
+        }
+        out.push((key, value));
+    }
+    out
+}
+
+fn apply_player_env(cmd: &mut Command, engine: Engine) {
+    let parent: Vec<(String, String)> = std::env::vars().collect();
+    let scrubbed = scrub_player_env(parent);
+    for (key, value) in std::env::vars() {
+        match scrubbed.iter().find(|(name, _)| name == &key) {
+            Some((_, new)) if new != &value => {
+                cmd.env(key, new);
+            }
+            Some(_) => {}
+            None => {
+                cmd.env_remove(key);
+            }
+        }
+    }
+    without_launcher_fontconfig(cmd);
+    if engine == Engine::Flash {
+        if let Some(preload) = flash_gtk_preload(&scrubbed) {
+            cmd.env("LD_PRELOAD", preload);
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn flash_gtk_library() -> Option<PathBuf> {
+    const BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/libaquastar_flash_gtk.so"));
+    let base = std::env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))?;
+    let dir = base.join("aquastar-lite");
+    std::fs::create_dir_all(&dir).ok()?;
+    let path = dir.join("libaquastar_flash_gtk.so");
+    if std::fs::read(&path).ok().as_deref() != Some(BYTES) {
+        let tmp = dir.join(format!(
+            "libaquastar_flash_gtk.so.{}.tmp",
+            std::process::id()
+        ));
+        std::fs::write(&tmp, BYTES).ok()?;
+        std::fs::rename(&tmp, &path).ok()?;
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755));
+    }
+    Some(path)
+}
+
+#[cfg(not(target_os = "linux"))]
+fn flash_gtk_library() -> Option<PathBuf> {
+    None
+}
+
+fn flash_gtk_preload(scrubbed: &[(String, String)]) -> Option<String> {
+    let path = flash_gtk_library()?;
+    let mut preload = path.to_string_lossy().into_owned();
+    if let Some((_, existing)) = scrubbed.iter().find(|(key, _)| key == "LD_PRELOAD") {
+        if !existing.is_empty() {
+            preload.push(':');
+            preload.push_str(existing);
+        }
+    }
+    Some(preload)
+}
+
 impl Players {
     pub fn launch(
         &self,
@@ -151,9 +261,20 @@ impl Players {
         let pin = catalog::Catalog::pinned()
             .select(engine, std::env::consts::OS, std::env::consts::ARCH)
             .ok_or_else(|| format!("{engine:?} is not available on this platform"))?;
-        let exe = match locate(&pin, roots) {
+        let located = match locate(&pin, roots) {
             Some(source) => source.path().to_path_buf(),
             None => catalog::publish(&pin, roots.app_data())?,
+        };
+        let exe = if engine == Engine::Flash {
+            match projector::place(&located, roots.app_data()) {
+                Ok(path) => path,
+                Err(err) => {
+                    eprintln!("aquastar-lite: {err}");
+                    located
+                }
+            }
+        } else {
+            located
         };
         self.launch_at(&exe, engine, swf, settings, save_directory)
     }
@@ -188,11 +309,11 @@ impl Players {
         let settings = settings.for_platform(std::env::consts::OS);
         let graphics = settings.graphics;
         let capture = engine == Engine::Ruffle && graphics != RuffleGraphics::Gl;
-        let mut child = spawn_player(
-            exe,
-            &engine.args(swf, &settings, save_directory.as_deref()),
-            capture,
-        )?;
+        let mut args = engine.args(swf, &settings, save_directory.as_deref());
+        if engine == Engine::Flash && projector::is_embedded(exe) {
+            args.clear();
+        }
+        let mut child = spawn_player(exe, engine, &args, capture)?;
         let started = Instant::now();
         let panicked = Arc::new(AtomicBool::new(false));
         let killed = Arc::new(AtomicBool::new(false));
@@ -301,6 +422,7 @@ impl Players {
         };
         let mut child = spawn_player(
             exe,
+            Engine::Ruffle,
             &Engine::Ruffle.args(swf, &settings, save_directory),
             false,
         )?;
@@ -497,14 +619,19 @@ fn spawn_failure(exe: &Path, err: std::io::Error) -> String {
     format!("could not start {}: {err}", exe.display())
 }
 
-fn spawn_player(exe: &Path, args: &[String], capture_stderr: bool) -> Result<Child, String> {
+fn spawn_player(
+    exe: &Path,
+    engine: Engine,
+    args: &[String],
+    capture_stderr: bool,
+) -> Result<Child, String> {
     clear_quarantine(exe);
     let mut cmd = Command::new(exe);
     cmd.args(args);
     if capture_stderr {
         cmd.stderr(Stdio::piped());
     }
-    without_launcher_fontconfig(&mut cmd);
+    apply_player_env(&mut cmd, engine);
     cmd.spawn().map_err(|err| spawn_failure(exe, err))
 }
 
@@ -1252,6 +1379,78 @@ mod save_directory_tests {
                 SWF.to_string(),
             ]
         );
+    }
+
+    #[test]
+    fn appimage_library_paths_do_not_reach_the_player() {
+        let appdir = "/tmp/AquaStar.AppDir";
+        let joined = |suffix: &str| format!("{appdir}{suffix}");
+        let vars = scrub_player_env(vec![
+            ("APPDIR".into(), appdir.into()),
+            ("DISPLAY".into(), ":0".into()),
+            ("HOME".into(), "/home/player".into()),
+            (
+                "LD_LIBRARY_PATH".into(),
+                format!("{appdir}/usr/lib:/usr/lib"),
+            ),
+            (
+                "XDG_DATA_DIRS".into(),
+                format!("{appdir}/usr/share:/usr/share"),
+            ),
+            (
+                "GDK_PIXBUF_MODULE_FILE".into(),
+                joined("/usr/lib/loaders.cache"),
+            ),
+            ("GTK_PATH".into(), joined("/usr/lib/gtk-3.0")),
+            ("GIO_MODULE_DIR".into(), joined("/usr/lib/gio/modules")),
+            (
+                "GSETTINGS_SCHEMA_DIR".into(),
+                joined("/usr/share/glib-2.0/schemas"),
+            ),
+            ("GTK_EXE_PREFIX".into(), joined("/usr")),
+            ("PYTHONHOME".into(), joined("/usr")),
+            (
+                "LD_PRELOAD".into(),
+                format!("{appdir}/usr/lib/preload.so:/usr/lib/keep.so"),
+            ),
+        ]);
+        let get = |key: &str| {
+            vars.iter()
+                .find(|(name, _)| name == key)
+                .map(|(_, value)| value.as_str())
+        };
+        assert_eq!(get("DISPLAY"), Some(":0"));
+        assert_eq!(get("HOME"), Some("/home/player"));
+        assert_eq!(get("LD_LIBRARY_PATH"), Some("/usr/lib"));
+        assert_eq!(get("XDG_DATA_DIRS"), Some("/usr/share"));
+        assert_eq!(get("LD_PRELOAD"), Some("/usr/lib/keep.so"));
+        for key in [
+            "GDK_PIXBUF_MODULE_FILE",
+            "GTK_PATH",
+            "GIO_MODULE_DIR",
+            "GSETTINGS_SCHEMA_DIR",
+            "GTK_EXE_PREFIX",
+            "PYTHONHOME",
+        ] {
+            assert_eq!(get(key), None, "{key}");
+        }
+    }
+
+    #[test]
+    fn a_normal_environment_is_left_alone() {
+        let vars = scrub_player_env(vec![
+            ("DISPLAY".into(), ":0".into()),
+            ("LD_LIBRARY_PATH".into(), "/usr/local/lib".into()),
+            ("GTK_PATH".into(), "/usr/lib/gtk-2.0".into()),
+        ]);
+        let get = |key: &str| {
+            vars.iter()
+                .find(|(name, _)| name == key)
+                .map(|(_, value)| value.as_str())
+        };
+        assert_eq!(get("LD_LIBRARY_PATH"), Some("/usr/local/lib"));
+        assert_eq!(get("GTK_PATH"), Some("/usr/lib/gtk-2.0"));
+        assert_eq!(get("DISPLAY"), Some(":0"));
     }
 
     #[test]

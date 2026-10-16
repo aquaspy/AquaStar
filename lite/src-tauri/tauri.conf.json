@@ -1,7 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "AquaStar Lite",
-  "version": "0.2.0-rc.2",
+  "productName": "aquastar-lite",
+  "mainBinaryName": "aquastar-lite",
+  "version": "0.2.0-rc.3",
   "identifier": "io.github.aquaspy.aquastar-lite",
   "build": { "frontendDist": "../ui" },
   "app": {

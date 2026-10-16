@@ -1,5 +1,12 @@
 {
   "bundle": {
-    "resources": ["players/"]
+    "resources": ["players/"],
+    "linux": {
+      "deb": {
+        "conflicts": ["aqua-star-lite"],
+        "replaces": ["aqua-star-lite"],
+        "desktopTemplate": "assets/aquastar-lite.desktop"
+      }
+    }
   }
 }
