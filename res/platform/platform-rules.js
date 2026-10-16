@@ -2,14 +2,17 @@
 // same applicator as plugin rules so that a plugin rule on the same webRequest event can
 // never replace them (Electron keeps one listener per event).
 
-// Ad / tracker hosts blocked in every window. Game traffic is never filtered here.
-const BLOCKED_HOST_PATTERNS = [
-    '*://*.adsymptotic.com/*',
-    '*://*.doubleclick.net/*',
-    '*://*.onesignal.com/*',
-    '*://*.nitropay.com/*',
-    '*://translate.googleapis.com/*'
-];
+// Ad / tracker hosts blocked in every window. The list is shared with AquaStar Lite
+// (`ad-hosts.json`). Game traffic is never filtered here.
+const AD_HOSTS = require('./ad-hosts.json');
+
+function blockedHostPatterns(hosts) {
+    return hosts.map(function (host) {
+        return '*://*.' + host + '/*';
+    });
+}
+
+const BLOCKED_HOST_PATTERNS = blockedHostPatterns(AD_HOSTS);
 
 function createPlatformSessionRules() {
     return [
@@ -24,6 +27,8 @@ function createPlatformSessionRules() {
 }
 
 module.exports = {
+    AD_HOSTS: AD_HOSTS,
+    blockedHostPatterns: blockedHostPatterns,
     BLOCKED_HOST_PATTERNS: BLOCKED_HOST_PATTERNS,
     createPlatformSessionRules: createPlatformSessionRules
 };

@@ -1,7 +1,12 @@
 const assert = require('assert');
 
 const { applySessionRules, matchesPattern } = require('../../res/platform/session-rules.js');
-const { createPlatformSessionRules, BLOCKED_HOST_PATTERNS } = require('../../res/platform/platform-rules.js');
+const {
+  createPlatformSessionRules,
+  BLOCKED_HOST_PATTERNS,
+  AD_HOSTS,
+  blockedHostPatterns
+} = require('../../res/platform/platform-rules.js');
 
 function fakeSession() {
   const registered = { headers: [], request: [] };
@@ -17,6 +22,13 @@ function fakeSession() {
     }
   };
 }
+
+test('ad patterns are the shared host list, one wildcard pattern each', () => {
+  assert.ok(AD_HOSTS.indexOf('nitropay.com') !== -1);
+  assert.ok(AD_HOSTS.indexOf('doubleclick.net') !== -1);
+  assert.deepStrictEqual(BLOCKED_HOST_PATTERNS, blockedHostPatterns(AD_HOSTS));
+  assert.strictEqual(BLOCKED_HOST_PATTERNS.length, AD_HOSTS.length);
+});
 
 test('matchesPattern follows Chrome match-pattern rules for the subset rules use', () => {
   assert.strictEqual(matchesPattern('*://*.aq.com/*', 'https://game.aq.com/game/x.swf'), true);
@@ -64,6 +76,21 @@ test('one listener per webRequest event: rules cannot replace each other (ad blo
     result = r;
   });
   assert.deepStrictEqual(result, { cancel: true }, 'ad host still blocked while swf log is on');
+
+  listener({ url: 'https://s.nitropay.com/ads-143.js' }, function (r) {
+    result = r;
+  });
+  assert.deepStrictEqual(result, { cancel: true }, 'NitroPay exchange host is blocked');
+
+  listener({ url: 'https://translate.googleapis.com/translate_a/element.js' }, function (r) {
+    result = r;
+  });
+  assert.deepStrictEqual(result, { cancel: true }, 'translate.googleapis.com is blocked');
+
+  listener({ url: 'https://www.aq.com/' }, function (r) {
+    result = r;
+  });
+  assert.deepStrictEqual(result, { cancel: false }, 'game host is not an ad host');
   assert.deepStrictEqual(logged, [], 'ad host is not a game request');
 
   listener({ url: 'https://game.aq.com/game/gamefiles/Loader4.swf' }, function (r) {
