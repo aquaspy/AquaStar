@@ -59,7 +59,9 @@ echo "--> Building ${PLATFORM} ${ARCH} (Flash: ${FLASH})"
 
 rm -rf "$WORKDIR"
 mkdir -p "$WORKDIR/FlashPlayer"
-cp -r \
+# cp -R, not cp -r. macOS cp -r follows symlinks, so node_modules/.bin/electron-builder
+# becomes a loose copy of the CLI and require('./out/cli/cli') cannot be resolved.
+cp -R \
     "${ROOT}/Icon" \
     "${ROOT}/build" \
     "${ROOT}/LICENSE.md" \
@@ -102,7 +104,8 @@ cd "$WORKDIR"
 
 mkdir -p "${ROOT}/dist"
 if compgen -G "dist/*" > /dev/null; then
-    cp -a dist/* "${ROOT}/dist/"
+    # cp -a is GNU-only. macOS cp rejects it.
+    cp -R dist/* "${ROOT}/dist/"
 fi
 
 echo "--> Done: ${PLATFORM} ${ARCH}"

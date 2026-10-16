@@ -17,7 +17,7 @@ test('release staging includes the auxiliary Char Page Studio processes', () => 
 
   // build-arch.sh stages by an explicit list. Every entry the app reads at runtime must be on it
   // (plugins/ was missing once: the release started, found no game plugin and exited).
-  const staged = (buildScript.match(/cp -r \\\n([\s\S]*?)"\$WORKDIR\/"/) || [])[1] || '';
+  const staged = (buildScript.match(/cp -R \\\n([\s\S]*?)"\$WORKDIR\/"/) || [])[1] || '';
   ['Icon', 'res', 'plugins', 'main.js', 'package.json', 'node_modules'].forEach((entry) => {
     assert.ok(staged.indexOf('"${ROOT}/' + entry + '"') !== -1, 'release staging must copy ' + entry);
   });
