@@ -46,7 +46,11 @@ jobs:
         run: |
           sudo apt-get update
           # Flash Player is linked to GTK 2. linuxdeploy aborts the AppImage when that library is missing.
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk2.0-0
+          # libnss3 is a projector dependency that WebKit does not pull in.
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk2.0-0 libnss3
+      - name: Bundle Flash GTK 2 libraries for the AppImage
+        if: matrix.platform == 'ubuntu-22.04'
+        run: bash lite/scripts/bundle-flash-gtk2.sh
       - name: Unpack pinned players
         if: matrix.platform != 'windows-latest'
         run: bash lite/scripts/fetch-players.sh

@@ -141,8 +141,10 @@ fn without_launcher_fontconfig(cmd: &mut Command) {
 }
 
 /// AppImage AppRun points the dynamic linker and GTK module paths at the bundle.
-/// The Flash projector is GTK 2. `LD_LIBRARY_PATH` alone makes it exit before it
-/// maps a window (GLib-GObject NULL class). The same scrub applies to Ruffle.
+/// The Flash projector is GTK 2. That `usr/lib` directory also holds GTK 3, and
+/// inheriting it makes the projector exit before it maps a window (GLib-GObject
+/// NULL class). The scrub applies to Ruffle and Flash. Flash then gets only
+/// `usr/lib/aquastar-lite/flash-gtk2` on `LD_LIBRARY_PATH`.
 const APPIMAGE_DROP: &[&str] = &[
     "GTK_PATH",
     "GTK_EXE_PREFIX",
@@ -188,6 +190,25 @@ fn scrub_player_env(vars: Vec<(String, String)>) -> Vec<(String, String)> {
     out
 }
 
+/// GTK 2 libraries copied by `lite/scripts/bundle-flash-gtk2.sh` and packed into
+/// the AppImage. The deb uses the system packages instead, so this stays empty
+/// unless `APPDIR` is set.
+const FLASH_RUNTIME_DIR: &str = "usr/lib/aquastar-lite/flash-gtk2";
+const FLASH_RUNTIME_MARK: &str = "libgtk-x11-2.0.so.0";
+
+fn flash_runtime_libs(appdir: &Path) -> Option<PathBuf> {
+    let dir = appdir.join(FLASH_RUNTIME_DIR);
+    dir.join(FLASH_RUNTIME_MARK).is_file().then_some(dir)
+}
+
+fn flash_library_path(libs: &Path, scrubbed: &[(String, String)]) -> String {
+    let dir = libs.to_string_lossy();
+    match scrubbed.iter().find(|(key, _)| key == "LD_LIBRARY_PATH") {
+        Some((_, existing)) if !existing.is_empty() => format!("{dir}:{existing}"),
+        _ => dir.into_owned(),
+    }
+}
+
 fn apply_player_env(cmd: &mut Command, engine: Engine) {
     let parent: Vec<(String, String)> = std::env::vars().collect();
     let scrubbed = scrub_player_env(parent);
@@ -204,6 +225,11 @@ fn apply_player_env(cmd: &mut Command, engine: Engine) {
     }
     without_launcher_fontconfig(cmd);
     if engine == Engine::Flash {
+        if let Some(appdir) = std::env::var_os("APPDIR") {
+            if let Some(libs) = flash_runtime_libs(Path::new(&appdir)) {
+                cmd.env("LD_LIBRARY_PATH", flash_library_path(&libs, &scrubbed));
+            }
+        }
         if let Some(preload) = flash_gtk_preload(&scrubbed) {
             cmd.env("LD_PRELOAD", preload);
         }
@@ -313,11 +339,17 @@ impl Players {
         if engine == Engine::Flash && projector::is_embedded(exe) {
             args.clear();
         }
-        let mut child = spawn_player(exe, engine, &args, ruffle_may_fallback)?;
+        let mut child = spawn_player(
+            exe,
+            engine,
+            &args,
+            ruffle_may_fallback || engine == Engine::Flash,
+        )?;
         let started = Instant::now();
         let panicked = Arc::new(AtomicBool::new(false));
         let killed = Arc::new(AtomicBool::new(false));
         let tail = Arc::new(Mutex::new(String::new()));
+        let flash_err = (engine == Engine::Flash).then(|| stderr_tail(child.stderr.take()));
         let stderr_done = ruffle_may_fallback
             .then(|| watch_stderr(child.stderr.take(), panicked.clone(), tail.clone()));
 
@@ -325,6 +357,11 @@ impl Players {
         match child.try_wait() {
             Ok(Some(status)) => {
                 finish_stderr(stderr_done);
+                if let Some(logged) = flash_err.as_ref() {
+                    if status.code() == Some(127) {
+                        return Err(flash_missing_library(&logged.finish()));
+                    }
+                }
                 let report = exit_report(graphics, status, started, &panicked, &killed);
                 if ruffle_may_fallback && ruffle::should_fallback(&report) {
                     log_fallback(&report, &tail.lock().unwrap());
@@ -635,6 +672,79 @@ fn spawn_player(
     }
     apply_player_env(&mut cmd, engine);
     cmd.spawn().map_err(|err| spawn_failure(exe, err))
+}
+
+struct StderrTail {
+    done: mpsc::Receiver<()>,
+    text: Arc<Mutex<String>>,
+}
+
+impl StderrTail {
+    fn finish(&self) -> String {
+        let _ = self.done.recv_timeout(Duration::from_millis(500));
+        self.text.lock().unwrap().clone()
+    }
+}
+
+fn stderr_tail(stderr: Option<ChildStderr>) -> StderrTail {
+    let text = Arc::new(Mutex::new(String::new()));
+    let slot = Arc::clone(&text);
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        if let Some(mut stderr) = stderr {
+            let mut buf = [0u8; 1024];
+            let mut acc = String::new();
+            loop {
+                match stderr.read(&mut buf) {
+                    Ok(0) | Err(_) => break,
+                    Ok(n) => {
+                        acc.push_str(&String::from_utf8_lossy(&buf[..n]));
+                        if acc.len() > 4096 {
+                            let mut cut = acc.len() - 4096;
+                            while !acc.is_char_boundary(cut) {
+                                cut += 1;
+                            }
+                            acc.drain(..cut);
+                        }
+                        if let Ok(mut guard) = slot.lock() {
+                            *guard = acc.clone();
+                        }
+                    }
+                }
+            }
+        }
+        let _ = tx.send(());
+    });
+    StderrTail { done: rx, text }
+}
+
+/// The dynamic linker names the first library it could not open.
+fn missing_shared_library(stderr: &str) -> Option<&str> {
+    let marker = "error while loading shared libraries: ";
+    let rest = stderr.split(marker).nth(1)?;
+    let name = rest.split([':', ' ', '\n']).next()?.trim();
+    (!name.is_empty()).then_some(name)
+}
+
+fn flash_library_package(library: &str) -> &'static str {
+    match library {
+        "libgtk-x11-2.0.so.0" | "libgdk-x11-2.0.so.0" => {
+            " (Debian and Ubuntu: libgtk2.0-0t64 or libgtk2.0-0)"
+        }
+        "libnss3.so" | "libsmime3.so" | "libssl3.so" | "libnspr4.so" | "libnssutil3.so"
+        | "libplc4.so" | "libplds4.so" => " (Debian and Ubuntu: libnss3)",
+        _ => "",
+    }
+}
+
+fn flash_missing_library(stderr: &str) -> String {
+    let Some(library) = missing_shared_library(stderr) else {
+        return "Flash could not start because a library it needs is missing (exit 127). Use Ruffle, or install GTK 2 and NSS (Debian and Ubuntu: libgtk2.0-0t64 or libgtk2.0-0, and libnss3).".to_string();
+    };
+    format!(
+        "Flash could not start because {library} is missing. Use Ruffle, or install the package that provides it{}.",
+        flash_library_package(library)
+    )
 }
 
 fn watch_stderr(
@@ -1453,6 +1563,55 @@ mod save_directory_tests {
         assert_eq!(get("LD_LIBRARY_PATH"), Some("/usr/local/lib"));
         assert_eq!(get("GTK_PATH"), Some("/usr/lib/gtk-2.0"));
         assert_eq!(get("DISPLAY"), Some(":0"));
+    }
+
+    #[test]
+    fn flash_appimage_library_path_is_only_the_gtk2_dir_plus_host() {
+        let root = std::env::temp_dir().join(format!("aqlite-flash-libs-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let appdir = root.join("AppDir");
+        let libs = appdir.join("usr/lib/aquastar-lite/flash-gtk2");
+        fs::create_dir_all(&libs).unwrap();
+        fs::write(libs.join("libgtk-x11-2.0.so.0"), b"not-really").unwrap();
+        assert!(flash_runtime_libs(&appdir).is_some());
+        assert!(flash_runtime_libs(&root.join("empty")).is_none());
+
+        let scrubbed = scrub_player_env(vec![
+            ("APPDIR".into(), appdir.to_string_lossy().into_owned()),
+            (
+                "LD_LIBRARY_PATH".into(),
+                format!("{}/usr/lib:/usr/local/lib", appdir.display()),
+            ),
+            (
+                "GTK_PATH".into(),
+                format!("{}/usr/lib/gtk-3.0", appdir.display()),
+            ),
+        ]);
+        let path = flash_library_path(&libs, &scrubbed);
+        assert_eq!(path, format!("{}:/usr/local/lib", libs.display()));
+        assert!(!path.contains("gtk-3.0"));
+        assert!(!path.contains(&format!("{}/usr/lib:", appdir.display())));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn flash_exit_127_names_the_missing_library_and_ruffle() {
+        let gtk = flash_missing_library(
+            "flashplayer: error while loading shared libraries: libgtk-x11-2.0.so.0: cannot open shared object file: No such file or directory\n",
+        );
+        assert!(gtk.contains("libgtk-x11-2.0.so.0"));
+        assert!(gtk.contains("libgtk2.0-0t64 or libgtk2.0-0"));
+        assert!(gtk.contains("Use Ruffle"));
+        let nss = flash_missing_library(
+            "error while loading shared libraries: libnss3.so: cannot open shared object file",
+        );
+        assert!(nss.contains("libnss3.so"));
+        assert!(nss.contains("libnss3"));
+        assert!(nss.contains("Use Ruffle"));
+        let unknown = flash_missing_library("exited 127");
+        assert!(unknown.contains("exit 127"));
+        assert!(unknown.contains("Use Ruffle"));
+        assert_eq!(missing_shared_library("no marker"), None);
     }
 
     #[test]
