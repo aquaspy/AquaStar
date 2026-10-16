@@ -24,6 +24,12 @@ jobs:
           - platform: macos-latest
             args: '--target universal-apple-darwin --bundles app'
     runs-on: ${{ matrix.platform }}
+    env:
+      # linuxdeploy's bundled strip exits on .relr.dyn in current webkit2gtk, and
+      # Tauri reports only "failed to run linuxdeploy". Extract-and-run starts
+      # that AppImage when the runner has no FUSE mount.
+      NO_STRIP: "true"
+      APPIMAGE_EXTRACT_AND_RUN: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,7 +45,8 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          # Flash Player is linked to GTK 2. linuxdeploy aborts the AppImage when that library is missing.
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk2.0-0
       - name: Unpack pinned players
         if: matrix.platform != 'windows-latest'
         run: bash lite/scripts/fetch-players.sh
