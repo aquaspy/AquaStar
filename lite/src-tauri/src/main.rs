@@ -230,6 +230,40 @@ fn tell_user(message: &str) {
     }
 }
 
+/// `AQUASTAR_LITE_SMOKE=flash` or `=ruffle` starts that player. Anything else,
+/// including an unset variable, leaves the launcher waiting for a click.
+fn parse_smoke_engine(value: &str) -> Option<Engine> {
+    match value.trim() {
+        "flash" => Some(Engine::Flash),
+        "ruffle" => Some(Engine::Ruffle),
+        _ => None,
+    }
+}
+
+fn smoke_request() -> Option<Engine> {
+    let Ok(value) = std::env::var("AQUASTAR_LITE_SMOKE") else {
+        return None;
+    };
+    match parse_smoke_engine(&value) {
+        Some(engine) => Some(engine),
+        None => {
+            eprintln!("aquastar-lite: ignoring AQUASTAR_LITE_SMOKE={value}");
+            None
+        }
+    }
+}
+
+fn schedule_smoke(app: tauri::AppHandle) {
+    let Some(engine) = smoke_request() else {
+        return;
+    };
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        let result = tauri::async_runtime::block_on(play(app, engine));
+        eprintln!("aquastar-lite: smoke {engine:?}: {result:?}");
+    });
+}
+
 fn main() {
     // WebKitGTK's DMA-BUF renderer costs ~125 MB PSS here (measured under Xvfb) and is a
     // known source of blank windows on NVIDIA/older Mesa. Users can still opt back in.
@@ -274,6 +308,10 @@ fn main() {
             launcher_settings,
             set_hide_launcher
         ])
+        .setup(|app| {
+            schedule_smoke(app.handle().clone());
+            Ok(())
+        })
         .build(context)
         .expect("failed to build AquaStar Lite");
     app.state::<Players>()
@@ -322,5 +360,14 @@ mod tests {
         assert!(allowed_site("http://www.aq.com/lore/calendar").is_err());
         assert!(allowed_site("https://evil.example/CharPage").is_err());
         assert!(allowed_site("not a url").is_err());
+    }
+
+    #[test]
+    fn smoke_hook_accepts_only_the_two_players() {
+        assert_eq!(parse_smoke_engine("flash"), Some(Engine::Flash));
+        assert_eq!(parse_smoke_engine(" ruffle\n"), Some(Engine::Ruffle));
+        assert_eq!(parse_smoke_engine(""), None);
+        assert_eq!(parse_smoke_engine("both"), None);
+        assert_eq!(parse_smoke_engine("FLASH"), None);
     }
 }
