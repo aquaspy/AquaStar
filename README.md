@@ -108,9 +108,6 @@ PS: DO NOT run ./build.sh as it will build EVERY supported version at the same t
 ### I dont know where my screenshot/recordings are.
 - Check the F1 menu, and see the path the system takes to save. By default it should be the images folder.
 
-### Desktop player screenshot or recording shows a message
-Native Ruffle screenshots and recordings capture the desktop player's window on Windows, macOS, and X11. On Wayland, Electron 11 cannot see other apps' windows, so AquaStar shows a message instead of saving the status page or the whole screen.
-
 ### I need to reinstall it everytime i need to open the game?
 - On windows, we do have a setup and a portable version. If you just want to double click an .exe instead of having it on your search menu, prefer the Portable version of it.
 

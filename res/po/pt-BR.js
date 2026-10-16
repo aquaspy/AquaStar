@@ -3,15 +3,7 @@ function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else ret
 exports.titleMessages = {
     doneSavedAs: "Pronto! Salvo como ",
     recording: "GRAVANDO",
-    alreadyRecording: "Você já está gravando em alguma outra janela!",
-    nativeCaptureStarting: "O player de desktop ainda está iniciando.",
-    nativeCaptureClosed: "O player de desktop não está em execução.",
-    nativeCaptureMacosDenied: "A permissão de gravação de tela está desativada, ou Automação e Acessibilidade estão bloqueadas. Permita que o AquaStar grave a tela e controle os Eventos do Sistema em Ajustes do Sistema e tente novamente.",
-    nativeCaptureMacosPrompt: "O macOS ainda não pediu a permissão de gravação de tela. Aceite o aviso e tente o print ou a gravação de novo.",
-    nativeCaptureWayland: "Esta sessão Wayland não consegue capturar a janela de outro aplicativo. Use uma sessão X11 para tirar um print ou gravar o player de desktop.",
-    nativeCaptureAmbiguous: "Há mais de uma janela do player de desktop, então nada foi capturado.",
-    nativeCaptureNoWindow: "Não foi possível encontrar a janela do player de desktop.",
-    nativeCaptureEmptyFrame: "A captura voltou vazia."
+    alreadyRecording: "Você já está gravando em alguma outra janela!"
 }
 
 exports.dialogMessages = {
@@ -101,7 +93,6 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "Canal de Atualização do Ruffle",
         ruffleAutoUpdate: "Baixar atualizações automaticamente",
         ruffleQuality: "Qualidade do Ruffle",
-        ruffleGraphics: "Gráficos do Ruffle desktop",
         showGameMenu: "Mostrar menu acima das janelas do jogo",
         enableDevTools: "Ativar DevTools"
     },
@@ -109,11 +100,10 @@ exports.settingsMessages = {
         appLanguage: "Idioma da interface do AquaStar e do plugin ativo. É preciso reiniciar depois de mudar.",
         customUrl: "Carrega uma URL de SWF diferente do jogo primário do plugin ativo. Deixe vazio para o padrão do plugin. Ignorada se um arquivo SWF local (abaixo) estiver ativo.",
         recordingFormat: "Formato do arquivo ao gravar a tela do jogo (Ctrl+J). MP4 não está disponível nesta versão do Electron.",
-        renderMode: "Qual runtime Flash carrega as janelas de jogo do plugin ativo. Ao trocar para Ruffle, reinicie para aplicar. Ruffle desktop (nativo) roda o app oficial do Ruffle numa janela própria (baixado no primeiro uso); o AquaStar mantém a janela de menus.",
+        renderMode: "Qual runtime Flash carrega as janelas de jogo do plugin ativo. Ao trocar para Ruffle, reinicie para aplicar.",
         ruffleUpdateChannel: "Latest usa a versão estável mais recente do Ruffle. Nightly inclui mudanças experimentais mais novas. Para aplicar uma troca de canal, feche o AquaStar completamente e abra-o novamente; não use somente o botão Reiniciar.",
         ruffleAutoUpdate: "Verifica o canal selecionado em segundo plano sempre que o AquaStar abre. O download é aplicado depois de reiniciar.",
         ruffleQuality: "Qualidade de renderização do Ruffle. Alta é a mais nítida; Baixa desliga o anti-aliasing e é bem mais rápida em GPUs fracas ou sem aceleração. Vale para janelas de jogo abertas depois da mudança.",
-        ruffleGraphics: "Backend gráfico do Ruffle desktop (modo nativo). OpenGL é o padrão no Linux e no Windows. Metal é o padrão no macOS. Se outro backend crashar logo ao abrir, o AquaStar reabre o jogo com esse padrão. Vale para janelas de jogo abertas depois da mudança.",
         showGameMenu: "Mostra uma barra de menu acima das janelas de jogo com os mesmos comandos dos atalhos. Desative se preferir só teclado.",
         enableDevTools: "Abre o console de DevTools automaticamente ao iniciar."
     },

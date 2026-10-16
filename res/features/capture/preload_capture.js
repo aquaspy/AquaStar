@@ -9,72 +9,6 @@ function desktopVideoConstraint(sourceId) {
   };
 }
 
-function stopStreamTracks(stream) {
-  if (!stream || typeof stream.getTracks !== "function") return;
-  stream.getTracks().forEach((track) => track.stop());
-}
-
-function grabOnePng(sourceId) {
-  return navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: desktopVideoConstraint(sourceId)
-  }).then((stream) => new Promise((resolve) => {
-    const video = document.createElement("video");
-    let settled = false;
-    const timer = setTimeout(() => finish(null), 4000);
-    function finish(png) {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      stopStreamTracks(stream);
-      resolve(png);
-    }
-    video.muted = true;
-    video.srcObject = stream;
-    video.onerror = () => finish(null);
-    function drawWhenReady() {
-      if (settled) return;
-      if (!video.videoWidth || !video.videoHeight) {
-        requestAnimationFrame(drawWhenReady);
-        return;
-      }
-      requestAnimationFrame(() => {
-        if (settled) return;
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          canvas.getContext("2d").drawImage(video, 0, 0);
-          canvas.toBlob((blob) => {
-            if (!blob) { finish(null); return; }
-            const reader = new FileReader();
-            reader.onload = function () { finish(Buffer.from(this.result)); };
-            reader.onerror = () => finish(null);
-            reader.readAsArrayBuffer(blob);
-          }, "image/png");
-        } catch (_e) {
-          finish(null);
-        }
-      });
-    }
-    video.onloadedmetadata = () => {
-      const play = video.play();
-      if (play && play.catch) play.catch(() => {});
-      drawWhenReady();
-    };
-  })).catch(() => null);
-}
-
-ipcRenderer.on("capture-native-frame", (_event, payload) => {
-  const token = payload && payload.token;
-  const sourceId = payload && payload.sourceId;
-  grabOnePng(sourceId).then((png) => {
-    ipcRenderer.send("capture-native-frame-result", { token: token, png: png });
-  }, () => {
-    ipcRenderer.send("capture-native-frame-result", { token: token, png: null });
-  });
-});
-
 let mediaRecorder;
 let captureStream;
 let currentExtension = 'webm';
@@ -117,21 +51,12 @@ function releaseCaptureStream() {
 }
 
 (() => {
-  async function initRecorder(knownSourceId) {
+  async function initRecorder() {
     let matchedSource;
-    if (knownSourceId) {
-      matchedSource = { id: knownSourceId };
-    } else {
-      try {
-        matchedSource = await ipcRenderer.invoke('getDesktopCapturerSourceForWindow');
-      } catch (error) {
-        console.log("[AquaStar] desktopCapturer error:", error);
-        return false;
-      }
-    }
-
-    if (matchedSource && matchedSource.aborted) {
-      ipcRenderer.send("recording-failed", matchedSource.message || "");
+    try {
+      matchedSource = await ipcRenderer.invoke('getDesktopCapturerSourceForWindow');
+    } catch (error) {
+      console.log("[AquaStar] desktopCapturer error:", error);
       return false;
     }
 
@@ -188,9 +113,9 @@ function releaseCaptureStream() {
     };
   }
 
-  async function triggerRecording(startRecording, knownSourceId) {
+  async function triggerRecording(startRecording) {
     if (!mediaRecorder) {
-      const ready = await initRecorder(knownSourceId);
+      const ready = await initRecorder();
       if (!ready || !mediaRecorder) {
         console.log("[AquaStar] mediaRecorder is not initialized yet — cannot record.");
         ipcRenderer.send("recording-failed", "");
@@ -206,8 +131,8 @@ function releaseCaptureStream() {
   }
 
   ipcRenderer.on('record', (event, message) => {
-    if (message && typeof message === 'object') triggerRecording(!!message.start, message.sourceId || null);
-    else triggerRecording(!!message, null);
+    if (message && typeof message === 'object') triggerRecording(!!message.start);
+    else triggerRecording(!!message);
   });
 
   function saveVideo () {

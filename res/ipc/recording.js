@@ -5,7 +5,6 @@
 const fs = require('fs');
 const path = require('path');
 const { ipcMain, desktopCapturer, dialog, BrowserWindow, app } = require('electron');
-const nativeWindowCapture = require('../nativeWindowCapture.js');
 
 ipcMain.on('saveDialog', async function (event, arg) {
     const extension = path.extname(typeof arg === 'string' ? arg : '').slice(1).toLowerCase();
@@ -27,10 +26,6 @@ ipcMain.on('saveRecording', function (event, filename, buffer) {
 ipcMain.handle('getDesktopCapturerSourceForWindow', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return null;
-
-    const verdict = await nativeWindowCapture.recordingSource(win);
-    if (verdict.route === 'blocked') return { aborted: true, message: verdict.message };
-    if (verdict.route === 'source') return { id: verdict.sourceId, name: verdict.title };
 
     const sources = await desktopCapturer.getSources({ types: ['window'] });
     const title = win.getTitle();
@@ -64,11 +59,11 @@ exports.forceIdle = function () {
     _wasRecording = false;
     setRecordingBadge('');
 };
-exports.triggerRecording = (win, sourceId) => {
+exports.triggerRecording = (win) => {
     _wasRecording = !_wasRecording;
     setRecordingBadge(_wasRecording ? 'REC' : '');
     const target = win || BrowserWindow.getFocusedWindow();
-    if (target) target.webContents.send('record', { start: _wasRecording, sourceId: sourceId || null });
+    if (target) target.webContents.send('record', { start: _wasRecording });
 }
 
 ipcMain.on('recording-failed', function (event, message) {

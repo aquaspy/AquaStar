@@ -120,7 +120,6 @@ exports.wrapSwfUrl = function(swfUrl, opts) {
 // see res/ruffle_wrapper.html. Covers the active plugin's Flash games when Settings →
 // renderMode is "ruffle".
 const ruffleWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_wrapper.html'));
-exports.ruffleNativePageUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_native.html'));
 exports.isRuffleEligible = function(swfUrl) {
     if (!swfUrl) return false;
     // HTML/stage pages are never Ruffle SWF targets.
@@ -200,8 +199,7 @@ exports.resolveRecordingFormat = function(id, hasAudio) {
 // is new and marked experimental - see isRuffleEligible()/wrapRuffleUrl() above.
 const renderModes = {
     'flash':  { label: 'Flash Player' },
-    'ruffle': { label: 'Ruffle (Experimental)' },
-    'ruffle-native': { label: 'Ruffle desktop, native (Experimental)' }
+    'ruffle': { label: 'Ruffle (Experimental)' }
 }
 exports.renderModes = renderModes;
 exports.defaultRenderMode = 'flash';
@@ -231,13 +229,6 @@ exports.normalizeRuffleQuality = function (value) {
     return Object.prototype.hasOwnProperty.call(ruffleQualities, value) ? value : 'high';
 };
 
-// Ruffle desktop graphics backend. OpenGL on Linux and Windows, Metal on macOS.
-const ruffleGraphics = require('./ruffleGraphics.js');
-exports.ruffleGraphicsChoicesFor = ruffleGraphics.choicesFor;
-exports.ruffleGraphicsChoices = ruffleGraphics.choicesFor(process.platform);
-exports.normalizeRuffleGraphics = ruffleGraphics.normalize;
-exports.safeRuffleGraphics = ruffleGraphics.safeId;
-
 exports.appLanguageChoices = [
     { id: 'system', label: 'System default' },
     { id: 'en-US', label: 'English' },
@@ -258,7 +249,6 @@ const originalOptions = {
     ruffleUpdateChannel: 'latest',
     ruffleAutoUpdate:  true,
     ruffleQuality:     'high',
-    ruffleGraphics:    process.platform === 'darwin' ? 'metal' : 'gl',
     // Native menu bar on game windows (mirrors shortcuts). Default on.
     showGameMenu:      true,
     // Dev-only escape hatch, warned about on enable in the Settings screen.

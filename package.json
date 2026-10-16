@@ -42,8 +42,7 @@
     "files": [
       "**/*",
       "!squashfs-root/**",
-      "!lite/**",
-      "!.ruffle-native-cache/**"
+      "!lite/**"
     ],
     "appId": "io.github.aquaspy.aquastar",
     "afterPack": "./scripts/strip-mac-signature.js",

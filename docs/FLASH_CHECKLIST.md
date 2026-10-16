@@ -42,7 +42,6 @@ Mark items with `[x]` when verified. Leave `[ ]` if not run yet.
 
 - [ ] **F2** screenshot saves under Pictures / AquaStar Screenshots
 - [ ] **Ctrl+J** screen recording starts/stops and saves WebM to the chosen path
-- [ ] **F2** / **Ctrl+J** in native desktop-player mode capture that player's window on Windows, macOS, and X11. On Wayland, AquaStar shows a message instead of saving the status page or the whole screen
 - [ ] **Alt+9** Settings: General / Active plugin / Keybinds tabs; Language; save + restart still work
 - [ ] **Alt+K** on an AQW Char Page (AQW plugin): hidden 4K capture window runs, then closes; image saved
 

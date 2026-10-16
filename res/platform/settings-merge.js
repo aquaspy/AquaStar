@@ -9,7 +9,6 @@ const PLATFORM_OPTION_KEYS = {
     ruffleUpdateChannel: true,
     ruffleAutoUpdate: true,
     ruffleQuality: true,
-    ruffleGraphics: true,
     ruffleAutoUpdateMigrated: true,
     showGameMenu: true,
     enableDevTools: true,
@@ -91,9 +90,22 @@ function splitSavePatch(changed, activePluginId, existingFile) {
     return topLevel;
 }
 
+const RETIRED_RENDER_MODES = {
+    'ruffle-native': 'ruffle'
+};
+
+function migrateRetiredRenderMode(settings) {
+    if (!settings || typeof settings !== 'object') return false;
+    const next = RETIRED_RENDER_MODES[settings.renderMode];
+    if (!next) return false;
+    settings.renderMode = next;
+    return true;
+}
+
 module.exports = {
     PLATFORM_OPTION_KEYS: PLATFORM_OPTION_KEYS,
     isPlatformKey: isPlatformKey,
     mergeLoadedSettings: mergeLoadedSettings,
-    splitSavePatch: splitSavePatch
+    splitSavePatch: splitSavePatch,
+    migrateRetiredRenderMode: migrateRetiredRenderMode
 };

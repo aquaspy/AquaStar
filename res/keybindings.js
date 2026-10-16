@@ -9,11 +9,9 @@ const path          = require('path');
 const { globalShortcut, BrowserWindow, ipcMain, app, dialog } = require('electron');
 const electronLocalshortcut = require('electron-localshortcut');
 const ruffleUpdate    = require('./ruffleUpdate.js');
-const nativeWindowCapture = require('./nativeWindowCapture.js');
 
 var finalKeybinds = {};
 var recordingWinId = 0;
-var recordingArming = false;
 // null = show every originalKeybinds row (legacy / filter unknown).
 var visibleKeybindIds = null;
 var activeDispatcher = null;
@@ -82,6 +80,7 @@ function customKeybinds() {
         (platform.pluginRuntime.getPluginInfo() && platform.pluginRuntime.getPluginInfo().id) ||
         '';
 
+    _migrateRetiredRenderMode(topLevel);
     finalKeybinds = platform.settingsMerge.mergeLoadedSettings({
         activePluginId: activeId,
         platformDefaults: platformDefaults,
@@ -91,6 +90,20 @@ function customKeybinds() {
     });
     _migrateRuffleAutoUpdateDefault(topLevel);
     return finalKeybinds;
+}
+
+function _migrateRetiredRenderMode(topLevel) {
+    platform.settingsMerge.migrateRetiredRenderMode(topLevel);
+    const locations = constant.listValidKeybindLocations || [];
+    locations.forEach(function (jsonPath) {
+        try {
+            const json = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+            if (!platform.settingsMerge.migrateRetiredRenderMode(json)) return;
+            fs.writeFileSync(jsonPath, JSON.stringify(json, null, 4));
+        } catch (e) {
+            console.log('[AquaStar] Could not migrate renderMode: ' + e.message);
+        }
+    });
 }
 
 // One-time migration: Ruffle auto-update used to default to off and the Settings
@@ -111,28 +124,15 @@ function _migrateRuffleAutoUpdateDefault(topLevel) {
     } catch (e) { console.log('[AquaStar] Could not migrate ruffleAutoUpdate: ' + e.message); }
 }
 
-async function toggleRecording(focusedWin) {
+function toggleRecording(focusedWin) {
     if (!focusedWin) return;
     if (!ipcRecording.wasRecording()) {
-        if (recordingArming) return;
-        recordingArming = true;
-        try {
-            const verdict = await nativeWindowCapture.recordingSource(focusedWin);
-            if (verdict.route === 'blocked') {
-                inst.notifyWin(focusedWin, verdict.message);
-                return;
-            }
-            inst.notifyWin(focusedWin,
-                constant.titleMessages.recording + "! " + focusedWin.getTitle(),
-                false);
-            recordingWinId = focusedWin.id;
-
-            const sourceId = verdict && verdict.route === 'source' ? verdict.sourceId : null;
-            ipcRecording.triggerRecording(focusedWin, sourceId);
-            focusedWin.setIcon(constant.nativeImageRedIcon)
-        } finally {
-            recordingArming = false;
-        }
+        inst.notifyWin(focusedWin,
+            constant.titleMessages.recording + "! " + focusedWin.getTitle(),
+            false);
+        recordingWinId = focusedWin.id;
+        ipcRecording.triggerRecording(focusedWin);
+        focusedWin.setIcon(constant.nativeImageRedIcon)
         return;
     }
     else {
@@ -228,14 +228,10 @@ const processKeybings = function (){
     addKeybind(k.settings, function () { activeDispatcher.run('settings'); });
     addKeybind(k.fullscreen, function (focusedWin) { activeDispatcher.run('fullscreen', focusedWin); });
     addGlobalKeybind(k.sshot, function (focusedWin) {
-        nativeWindowCapture.retarget(focusedWin).then(function (aimed) {
-            activeDispatcher.run('sshot', aimed || focusedWin);
-        });
+        activeDispatcher.run('sshot', focusedWin);
     }, false, true);
     addGlobalKeybind(k.record, function (focusedWin) {
-        nativeWindowCapture.retarget(focusedWin).then(function (aimed) {
-            activeDispatcher.run('record', aimed || focusedWin);
-        });
+        activeDispatcher.run('record', focusedWin);
     });
     addKeybind(k.reload, function (focusedWin) { activeDispatcher.run('reload', focusedWin); });
     addGlobalKeybind(k.reloadCache, function (focusedWin) { activeDispatcher.run('reloadCache', focusedWin); }, false, true);
@@ -362,7 +358,6 @@ ipcMain.handle('getKeybindings', () => {
         renderModeChoices: constant.renderModeChoices,
         ruffleUpdateChannelChoices: constant.ruffleUpdateChannelChoices,
         ruffleQualityChoices: constant.ruffleQualityChoices,
-        ruffleGraphicsChoices: constant.ruffleGraphicsChoices,
         appLanguageChoices: constant.appLanguageChoices,
         visibleKeybindIds: visibleIds,
         savePath: _keybindSaveTarget()

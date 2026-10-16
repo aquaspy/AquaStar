@@ -255,7 +255,6 @@ app.on('ready', () => {
   });
 })
 app.on('will-quit', () => {
-  require('./res/ruffleNative.js').killAll();
   keyb.unregisterGlobalShortcuts();
   // No-op if a Ruffle-mode window never started it.
   socketProxy.stop();

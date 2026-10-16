@@ -79,15 +79,6 @@ else
     cp "${ROOT}/FlashPlayer/${FLASH}" "$WORKDIR/FlashPlayer/"
 fi
 
-# Pinned Ruffle desktop (SHA-256 checked) next to the Flash plugin; skipped for targets
-# without an official build (armv7l), which keep the on-demand download.
-case "$PLATFORM" in
-    win) RUFFLE_PLATFORM=win32 ;;
-    mac) RUFFLE_PLATFORM=darwin ;;
-    *) RUFFLE_PLATFORM="$PLATFORM" ;;
-esac
-node "${ROOT}/scripts/fetch-ruffle-native.js" "$RUFFLE_PLATFORM" "$ARCH" "$WORKDIR"
-
 # The staging list above is kept by hand, so check the result with the staged copy of the
 # platform itself: every runtime entry exists and a bundled default plugin can be discovered.
 # Without plugins/ the app starts with no game to open and exits (a release shipped like that).

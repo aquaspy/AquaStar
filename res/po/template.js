@@ -6,15 +6,7 @@ function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else ret
 exports.titleMessages = {
     doneSavedAs: "",
     recording: "",
-    alreadyRecording: "",
-    nativeCaptureStarting: "",
-    nativeCaptureClosed: "",
-    nativeCaptureMacosDenied: "",
-    nativeCaptureMacosPrompt: "",
-    nativeCaptureWayland: "",
-    nativeCaptureAmbiguous: "",
-    nativeCaptureNoWindow: "",
-    nativeCaptureEmptyFrame: ""
+    alreadyRecording: ""
 };
 
 exports.dialogMessages = {
@@ -101,7 +93,6 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "",
         ruffleAutoUpdate: "",
         ruffleQuality: "",
-        ruffleGraphics: "",
         showGameMenu: "",
         enableDevTools: ""
     },
@@ -113,7 +104,6 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "",
         ruffleAutoUpdate: "",
         ruffleQuality: "",
-        ruffleGraphics: "",
         showGameMenu: "",
         enableDevTools: ""
     },

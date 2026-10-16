@@ -52,6 +52,18 @@ test('mergeLoadedSettings falls back to top-level plugin keys when slice empty',
   assert.strictEqual(merged.playerCharacter, 'OnlyTop');
 });
 
+test('a saved native render mode becomes web ruffle', () => {
+  const saved = { renderMode: 'ruffle-native', ruffleGraphics: 'vulkan', sshot: 'F2' };
+  assert.strictEqual(merge.migrateRetiredRenderMode(saved), true);
+  assert.strictEqual(saved.renderMode, 'ruffle');
+  assert.strictEqual(saved.ruffleGraphics, 'vulkan');
+  assert.strictEqual(saved.sshot, 'F2');
+  assert.strictEqual(merge.migrateRetiredRenderMode(saved), false);
+  assert.strictEqual(merge.migrateRetiredRenderMode({ renderMode: 'flash' }), false);
+  assert.strictEqual(merge.migrateRetiredRenderMode({ renderMode: 'ruffle' }), false);
+  assert.strictEqual(merge.migrateRetiredRenderMode(null), false);
+});
+
 test('splitSavePatch dual-writes plugin keys and keeps platform top-level', () => {
   const next = merge.splitSavePatch(
     {

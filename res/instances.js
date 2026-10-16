@@ -3,8 +3,6 @@ const windowConfig           = require('./windows/config.js');
 const windowsMenu            = require('./windows/menu.js');
 const keybinds               = require('./keybindings.js');
 const socketProxy            = require('./socketProxy.js');
-const ruffleNative           = require('./ruffleNative.js');
-const nativeWindowCapture    = require('./nativeWindowCapture.js');
 const createFeatureWindowController = require('./windows/feature-window-controller.js');
 const {BrowserWindow, Menu}  = require('electron');
 
@@ -75,12 +73,7 @@ function newBrowserWindow(new_path, isMainWin=false){
     var gameEntry = _findGameEntry(originalPath);
     var wrap = (gameEntry && gameEntry.wrap) || null;
     var renderMode = (keybinds.keybinds && keybinds.keybinds.renderMode) || constant.defaultRenderMode;
-    var nativeSwfUrl = null;
-    if (renderMode === 'ruffle-native' && constant.isRuffleEligible(new_path)) {
-        nativeSwfUrl = new_path;
-        new_path = constant.ruffleNativePageUrl;
-    }
-    else if (renderMode === 'ruffle' && constant.isRuffleEligible(new_path)) {
+    if (renderMode === 'ruffle' && constant.isRuffleEligible(new_path)) {
         const ruffleOpts = (wrap && wrap.ruffle) || null;
         if (ruffleOpts && ruffleOpts.socket) {
             socketProxy.allowHosts(ruffleOpts.socket.allowedHosts);
@@ -106,7 +99,6 @@ function newBrowserWindow(new_path, isMainWin=false){
     newWin.setMenuBarVisibility(false); //Remove default electron menu
     newWin.on('focus', () => { lastFocusedWindow = newWin; });
     newWin.loadURL(new_path);
-    if (nativeSwfUrl) _startNativeRuffle(newWin, nativeSwfUrl);
 
     // Debug mode opens DevTools on every window created through here (main, wiki,
     // design notes, account, game instances...). Windows a plugin builds directly with
@@ -154,63 +146,6 @@ function newBrowserWindow(new_path, isMainWin=false){
     _windowAddContext(newWin);
     
     return newWin;
-}
-
-// Ruffle desktop mode: the window keeps AquaStar's menus and shows a status page while
-// the native player runs in its own process. Closing the window closes the player.
-function _startNativeRuffle(win, swfUrl) {
-    const player = nativeWindowCapture.open(win);
-    const kb = keybinds.keybinds || {};
-    const setStatus = (text, canRelaunch) => {
-        if (win.isDestroyed()) return;
-        _executeJavaScriptSafely(win.webContents,
-            'window.setNativeStatus && window.setNativeStatus(' + JSON.stringify(text) + ',' + !!canRelaunch + ')',
-            'Ruffle desktop status');
-    };
-    let child = null;
-    const start = (graphicsOverride) => {
-        player.starting();
-        const graphics = graphicsOverride || constant.normalizeRuffleGraphics(kb.ruffleGraphics);
-        setStatus('Preparing Ruffle desktop…', false);
-        ruffleNative.ensureInstalled(constant.appDataDirectory, kb.ruffleAutoUpdate === true, constant.appRootPath).then((installed) => {
-            if (win.isDestroyed()) return;
-            const size = win.getContentSize();
-            child = ruffleNative.launch(installed.exe, swfUrl, {
-                width: size[0], height: size[1],
-                quality: kb.ruffleQuality,
-                graphics: graphics,
-                saveDirectory: path.join(constant.appDataDirectory, 'ruffle-native-saves')
-            });
-            player.spawned(child, swfUrl);
-            setStatus('The game is running in the Ruffle desktop window (' + installed.tag + '). ' +
-                'Closing this window also closes the game.', false);
-            const launched = child;
-            launched.on('exit', (code, signal) => {
-                const info = {
-                    graphics: graphics, code: code, signal: signal,
-                    elapsedMs: Date.now() - launched.aquaStarStartedAt,
-                    panicked: launched.aquaStarPanicked,
-                    killedByUs: !!launched.aquaStarKilledByUs || win.isDestroyed()
-                };
-                if (ruffleNative.shouldFallbackToGl(info)) {
-                    const safe = constant.safeRuffleGraphics();
-                    console.log('[AquaStar] Ruffle desktop (' + graphics + ') exited abnormally (code ' + code +
-                        ', signal ' + signal + ', ' + info.elapsedMs + ' ms' + (info.panicked ? ', panic' : '') +
-                        '); relaunching with ' + safe + '. stderr tail: ' + launched.aquaStarStderrTail().slice(-1000));
-                    setStatus('Ruffle desktop crashed with ' + graphics + '; reopening with ' + safe + '…', false);
-                    start(safe);
-                    return;
-                }
-                setStatus('Ruffle desktop was closed.', true);
-            });
-            child.on('error', (e) => setStatus('Could not start Ruffle desktop: ' + e.message, true));
-        }).catch((e) => setStatus('Could not prepare Ruffle desktop: ' + e.message, true));
-    };
-    win.webContents.once('did-finish-load', () => start());
-    win.webContents.on('did-navigate-in-page', (event, url) => {
-        if (/#relaunch-/.test(url) && (!child || child.exitCode !== null)) start();
-    });
-    win.on('closed', () => { if (child && child.exitCode === null) { child.aquaStarKilledByUs = true; child.kill(); } });
 }
 
 /**
@@ -397,26 +332,16 @@ function _writeScreenshot(focusedWin, pngBuffer, destroyWindow) {
 
 function takeSS(focusedWin, rect = null, destroyWindow = false){
     if (!focusedWin) return null;
-    return nativeWindowCapture.captureStill(focusedWin)
-        .then((still) => {
-            if (still.route === 'blocked') {
-                _notifyWindow(focusedWin, still.message);
-                return null;
-            }
-            if (still.route === 'png') {
-                return _writeScreenshot(focusedWin, still.png, destroyWindow);
-            }
-            if (rect == null) {
-                rect = {
-                    x: 0,
-                    y: 0,
-                    width: focusedWin.getContentSize()[0],
-                    height: focusedWin.getContentSize()[1]
-                };
-            }
-            return focusedWin.webContents.capturePage(rect)
-                .then((sshot) => _writeScreenshot(focusedWin, sshot.toPNG(), destroyWindow));
-        })
+    if (rect == null) {
+        rect = {
+            x: 0,
+            y: 0,
+            width: focusedWin.getContentSize()[0],
+            height: focusedWin.getContentSize()[1]
+        };
+    }
+    return focusedWin.webContents.capturePage(rect)
+        .then((sshot) => _writeScreenshot(focusedWin, sshot.toPNG(), destroyWindow))
         .catch((err) => {
             console.log("[AquaStar] Screenshot error:", err);
             return null;
