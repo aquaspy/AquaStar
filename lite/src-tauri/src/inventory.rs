@@ -850,6 +850,72 @@ mod tests {
         (root, files)
     }
 
+    fn home_page() -> String {
+        include_str!("../fixtures/account-home.html").to_string()
+    }
+
+    fn char_page() -> String {
+        include_str!("../fixtures/charpage.html").to_string()
+    }
+
+    fn live_account_fetch(url: &str) -> Result<String, String> {
+        if url.contains("myapi/") {
+            return Err("network".into());
+        }
+        if url.contains("/AQW/InventoryData") {
+            return Ok(include_str!("../fixtures/inventory-live.json").to_string());
+        }
+        if url.starts_with("https://account.aq.com/Home") {
+            return Ok(home_page());
+        }
+        if url.starts_with("https://account.aq.com/CharPage") {
+            return Ok(char_page());
+        }
+        if url.contains("BuyBackData") {
+            return Ok(include_str!("../fixtures/buyback-page.json").to_string());
+        }
+        Err("network".into())
+    }
+
+    #[test]
+    fn account_page_rows_fill_the_saved_inventory() {
+        let (_root, files) = scratch();
+        let synced = sync_document(&files.inventory, live_account_fetch);
+        assert_eq!(synced["ok"], true, "{synced}");
+        assert_eq!(synced["charId"], 4242);
+        let book = load_book(&files.inventory);
+        let tonic = &book["characters"]["4242"]["inventory"][0];
+        assert_eq!(tonic["name"], "Body Tonic");
+        assert_eq!(tonic["count"], 3);
+        assert_eq!(tonic["bank"], false);
+        let dark = &book["characters"]["4242"]["inventory"][1];
+        assert_eq!(dark["name"], "Dark Potion");
+        assert_eq!(dark["bank"], true);
+        assert_eq!(dark["coins"], true);
+        let member = &book["characters"]["4242"]["inventory"][3];
+        assert_eq!(member["name"], "Member Potion");
+        assert_eq!(member["member"], true);
+        assert_eq!(member["count"], 4);
+    }
+
+    #[test]
+    fn empty_account_payload_is_not_a_successful_sync() {
+        let (_root, files) = scratch();
+        let fetch = |url: &str| {
+            if url.starts_with("https://account.aq.com/Home") {
+                return Ok(home_page());
+            }
+            if url.starts_with("https://account.aq.com/CharPage") {
+                return Ok(char_page());
+            }
+            Ok(r#"{"data":[]}"#.to_string())
+        };
+        let synced = sync_document(&files.inventory, fetch);
+        assert_eq!(synced["ok"], false, "{synced}");
+        let written = fs::read_to_string(&files.inventory).unwrap_or_default();
+        assert!(!written.contains("lastInventorySync"), "{written}");
+    }
+
     #[test]
     fn fixtures_fill_the_inventory_list_and_the_hover_image() {
         let (_root, files) = scratch();
