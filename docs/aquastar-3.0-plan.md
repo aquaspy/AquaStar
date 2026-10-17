@@ -145,7 +145,16 @@ The check is that a test visits every Useful Page URL in the manifest, and the 3
 
 Switch the stable release path to the Tauri app and tag `v3.0.0` only when the user says this replaces Electron as the current release. Merge to `main` only with a separate explicit yes.
 
-The check is that the user has confirmed the stable tag, smoke passed on that commit, and any merge to `main` has its own confirmation.
+Reorganize the branches at that point.
+
+- `main` is the 3.x stable line.
+- `dev` is 3.x development.
+- `2.x` is the 2.x stable line and replaces `electron-2.x`.
+- `2.x-dev` is 2.x development.
+
+Delete old unused branches only after listing them and getting the user's explicit approval for each deletion. Do not rename or delete a branch while this paragraph is only a plan.
+
+The check is that the user has confirmed the stable tag, smoke passed on that commit, and any merge to `main` has its own confirmation. A branch rename or deletion also needs its own approval.
 
 ## Risks
 
