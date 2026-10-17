@@ -1,0 +1,59 @@
+# Launcher AquaStar 3.0
+
+Status: proposta para revisão. A interface do aplicativo ainda não foi alterada.
+
+## Objetivo
+
+Dar destaque ao jogo e reduzir a quantidade de controles disputando atenção. O launcher continua disponível para ferramentas e páginas enquanto o jogo roda em outra janela. A decoração e os controles da janela continuam nativos do sistema.
+
+## Direção visual
+
+Azul profundo no fundo, superfícies com diferenças discretas de luminosidade e ciano para navegação e foco. O botão principal usa o laranja atual, com texto escuro. O logo existente identifica o produto; nenhuma fonte, imagem ou biblioteca externa é necessária. Não há animação contínua, vídeo de fundo, blur nem transparência da janela.
+
+A prévia está em [launcher-3.0-preview.html](launcher-3.0-preview.html). Ela permite navegar entre as áreas e trocar o jogo selecionado. Seus controles não chamam comandos do aplicativo.
+
+## Organização
+
+| Área | Conteúdo | Comportamento existente preservado |
+| --- | --- | --- |
+| Jogar | AQW, servidor de testes e DragonFable; um botão principal; seleção de player | `play`, disponibilidade por sistema, player preferido e acompanhamento do processo |
+| Ferramentas | Inventário, lembretes, tarefas e estratégia | `open_tool` e os mesmos arquivos de perfil |
+| Páginas úteis | Links agrupados, pesquisa na wiki e consulta de personagem | Manifesto do jogo, allowlist e janelas de site existentes |
+| Preferências | Qualidade, backend gráfico, ocultar launcher e acesso às configurações completas | Comandos de settings e defaults por plataforma |
+
+Em uma janela normal, a navegação fica à esquerda. Em larguras menores, vira uma linha acima do conteúdo. A página inicial contém a área de jogo e atalhos curtos para ferramentas; a lista completa de sites não ocupa metade da janela inicial.
+
+O player escolhido aparece ao lado de Jogar. Flash permanece disponível nos sistemas suportados, sem competir visualmente com o player preferido. As opções de gráficos continuam vindo de `ruffle_settings`; não se oferece Vulkan/OpenGL no macOS só porque existem em outra plataforma.
+
+## Estados que precisam de desenho e teste
+
+- Inicialização, pronto, abrindo player, jogo aberto, download de player e falha de abertura.
+- Player indisponível, computador sem rede e configurações ainda carregando.
+- Mostrar o launcher novamente quando o jogo fechar, inclusive após falha do player.
+- Uma mensagem de status por operação, sem repetir a explicação sobre ocultar a janela.
+- Sem exibir login, contagem de inventário ou status de servidor que o backend não forneça.
+
+O status deve usar `aria-live="polite"`. Erros permanecem visíveis e não dependem apenas da cor. Uma ação em andamento desabilita apenas os controles que entrariam em conflito com ela.
+
+## Compatibilidade
+
+- Reutilizar HTML sem framework e o logo atual. Não adicionar downloads de fontes ou assets na abertura.
+- Usar Grid, Flexbox e media queries com layouts simples. Não depender de `:has`, container queries, subgrid, backdrop-filter ou APIs recentes para funções essenciais.
+- Preservar barra de título, menus nativos, atalhos e tamanho inicial atual da janela. Não implementar controles próprios de fechar/minimizar.
+- Links vêm do manifesto; textos novos entram nos catálogos en-US e pt-BR. O layout suporta traduções maiores sem cortar rótulos.
+- Todos os controles funcionam por teclado. Foco visível, labels associados e contraste de pelo menos 4.5:1 no texto comum são critérios de aceitação.
+- Testar zoom de 100%, 125%, 150% e 200%, janela 900×860 e janela maximizada. Permitir rolagem vertical em vez de esconder ações.
+- Manter DMA-BUF/fontconfig no Linux, capabilities e CSP. Nenhum requisito novo de sistema ou backend gráfico.
+
+## Implementação em etapas
+
+1. Revisar a prévia e escolher a organização visual antes de alterar o launcher real.
+2. Aplicar estrutura e estilos em `lite/ui/index.html` e `style.css`. Adaptar os seletores de `main.js` e preservar as chamadas existentes.
+3. Integrar estados, traduções e ações. Validar cada ferramenta, link, preferência e comportamento de encerramento do player.
+4. Atualizar o smoke visual para localizar a ação principal sem depender de textos em inglês. Preservar a distinção atual entre os botões de abrir jogo e os links.
+5. Comparar abertura e memória do launcher antes/depois em builds release, com os mesmos players e perfil. Sem prometer ganho numérico a partir de uma prévia estática.
+6. Validar WebView2, WKWebView e WebKitGTK antes de incluir a interface na stable.
+
+## Fora deste escopo
+
+Embedding de player, alterações nos SWFs, novos sistemas de login, notícias remotas, telemetria, sincronização extra e substituição dos arquivos de perfil. A correção de dimensionamento do Flash na linha Electron 2.1.1-rc deve permanecer independente desta interface.

@@ -205,13 +205,13 @@ No shared history with `main`, `dev`, or `electron-2.x`. Deleting the branch dro
 
 The check is that the user has confirmed the stable tag, smoke passed on that commit, and any merge to `main` has its own confirmation. A branch rename or deletion also needs its own approval.
 
-## Open investigation (not scheduled)
+## Launcher UI review before stable
 
-Is the 2.0 look achievable with standalone Ruffle and the Flash projector? In 2.0 the game is drawn inside the main window, under the Electron menu bar. The window title is `AquaStar - Adventure Quest Worlds`. The menu reads AquaStar, Tools, Usefull Pages, Game, and Features.
+The user confirmed that 3.0 keeps the game in its standalone player window. Embedding or reparenting the player is not planned for this release. The launcher receives its own visual design while keeping the migrated tools and the existing system webview requirements.
 
-The player is a separate process. Matching that look means embedding or reparenting the player window on each OS, or some other approach. Win32 can use `SetParent`. X11 can reparent. Wayland and macOS limit reparenting and may rule it out.
+The proposal and compatibility checklist live in [launcher-3.0-ui.md](design/launcher-3.0-ui.md). Its HTML preview is a design artifact, not the shipped launcher.
 
-Investigate this and report the findings to the user before anyone commits to building it. This section does not schedule that work.
+Stable publication remains on hold for the performance and interface review. The user verified the corrected Buy Back sync with an authenticated account. The Electron 2.1.1-rc macOS game-size improvement must remain intact while the early-activation startup error is corrected.
 
 ## Risks
 
