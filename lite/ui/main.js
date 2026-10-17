@@ -31,6 +31,19 @@ invoke('engines').then((list) => {
   const b = document.querySelector(`[data-engine="${engine}"]`);
   if (b && !b.disabled) b.classList.add('primary');
   describeLauncher();
+  document.querySelectorAll('[data-movie]').forEach((button) => {
+    if (!engine) {
+      button.disabled = true;
+      button.title = 'Not available on this system';
+      return;
+    }
+    button.addEventListener('click', async () => {
+      status.textContent = `Starting ${button.dataset.movie}…`;
+      try {
+        status.textContent = await invoke('play', { engine, movie: button.dataset.movie });
+      } catch (e) { status.textContent = `Error: ${e}`; }
+    });
+  });
 });
 
 invoke('launcher_settings').then((settings) => {
@@ -50,7 +63,7 @@ hideLauncher.addEventListener('change', async () => {
 
 document.querySelectorAll('[data-engine]').forEach((b) => b.addEventListener('click', async () => {
   status.textContent = `Starting ${b.dataset.engine}…`;
-  try { status.textContent = await invoke('play', { engine: b.dataset.engine }); }
+  try { status.textContent = await invoke('play', { engine: b.dataset.engine, movie: 'primary' }); }
   catch (e) { status.textContent = `Error: ${e}`; }
 }));
 

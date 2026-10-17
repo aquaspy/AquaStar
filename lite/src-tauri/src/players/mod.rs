@@ -2,6 +2,8 @@ mod catalog;
 mod flash_menu;
 mod movie;
 
+pub use movie::MovieKind;
+
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use std::fs;
@@ -269,7 +271,26 @@ fn flash_gtk_preload(scrubbed: &[(String, String)]) -> Option<String> {
 }
 
 impl Players {
-    pub fn launch(
+    pub fn launch_movie(
+        &self,
+        roots: &PlayerRoots,
+        engine: Engine,
+        profile: &crate::placement::ProfilePaths,
+        kind: MovieKind,
+        settings: &RuffleSettings,
+        save_directory: Option<&Path>,
+    ) -> Result<String, String> {
+        let movie = movie::resolve(profile, kind);
+        self.launch(
+            roots,
+            engine,
+            &movie.player_arg(),
+            settings,
+            save_directory,
+        )
+    }
+
+    fn launch(
         &self,
         roots: &PlayerRoots,
         engine: Engine,
@@ -1203,6 +1224,62 @@ mod tests {
         );
         assert!(!app_data.join("players").join(&pin.dir).exists());
         drop(_stop);
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn launch_movie_passes_the_chosen_kind_to_the_player() {
+        let pin = catalog::Catalog::pinned()
+            .select(
+                Engine::Ruffle,
+                catalog::Os::host().expect("os"),
+                catalog::Arch::host().expect("arch"),
+            )
+            .expect("ruffle pin");
+        let base = scratch("movie-kind");
+        let resource = base.join("resource");
+        let bundled = resource.join("players").join(&pin.dir).join(&pin.exe);
+        fs::create_dir_all(bundled.parent().unwrap()).unwrap();
+        let log = base.join("ran");
+        fs::write(
+            &bundled,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nsleep 60\n",
+                log.display()
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&bundled, fs::Permissions::from_mode(0o755)).unwrap();
+        let app_data = base.join("app");
+        let roots = crate::placement::placement_for(false, &base).player_roots(
+            &app_data,
+            Some(&resource),
+            None,
+        );
+        let profile = crate::placement::ProfilePaths {
+            settings_files: vec![base.join("missing.json")],
+            swf_candidates: vec![base.join("missing.swf")],
+            shell_cache: base.join("loader-cache.json"),
+            electron_loader_cache: base.join("electron.json"),
+        };
+        let settings = RuffleSettings {
+            quality: RuffleQuality::Low,
+            graphics: RuffleGraphics::Gl,
+        };
+        let start = |kind: MovieKind, needle: &str| {
+            let _ = fs::remove_file(&log);
+            let players = Players::default();
+            let _stop = Stop(players.clone());
+            let msg = players
+                .launch_movie(&roots, Engine::Ruffle, &profile, kind, &settings, None)
+                .unwrap();
+            assert!(msg.contains("started"), "{msg}");
+            let line = log_lines(&log).pop().expect("argv");
+            assert!(line.contains(needle), "{line}");
+            assert!(!line.contains("Loader4.swf"), "{line}");
+        };
+        start(MovieKind::Testing, "Loader_Spider.swf?ver=");
+        start(MovieKind::DragonFable, "DFLoader.swf?ver=668201");
         let _ = fs::remove_dir_all(&base);
     }
 

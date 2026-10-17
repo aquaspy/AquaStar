@@ -12,13 +12,12 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use players::Engine;
+use players::MovieKind;
 use players::Players;
 #[cfg(target_os = "linux")]
 use players::LIMITED_FONTS_MARKER;
 use serde::Serialize;
 use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
-
-const AQW_LOADER: &str = "https://game.aq.com/game/gamefiles/Loader4.swf?ver=b";
 
 fn hide_launcher_enabled(app: &tauri::AppHandle) -> bool {
     app.path()
@@ -86,7 +85,7 @@ fn load_ruffle_settings(app: &tauri::AppHandle) -> ruffle::RuffleSettings {
 }
 
 #[tauri::command]
-async fn play(app: tauri::AppHandle, engine: Engine) -> Result<String, String> {
+async fn play(app: tauri::AppHandle, engine: Engine, movie: MovieKind) -> Result<String, String> {
     let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let resource_dir = app.path().resource_dir().ok();
     let exe_dir = std::env::current_exe()
@@ -94,11 +93,12 @@ async fn play(app: tauri::AppHandle, engine: Engine) -> Result<String, String> {
         .and_then(|path| path.parent().map(Path::to_path_buf));
     let placement = app.state::<placement::Placement>().inner().clone();
     let roots = placement.player_roots(&app_data, resource_dir.as_deref(), exe_dir.as_deref());
+    let profile = placement::electron_profile(exe_dir.as_deref());
     let settings = load_ruffle_settings(&app);
     let saves = placement.ruffle_save_directory().map(Path::to_path_buf);
     let players = app.state::<Players>().inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        players.launch(&roots, engine, AQW_LOADER, &settings, saves.as_deref())
+        players.launch_movie(&roots, engine, &profile, movie, &settings, saves.as_deref())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -259,7 +259,7 @@ fn schedule_smoke(app: tauri::AppHandle) {
     };
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_secs(2));
-        let result = tauri::async_runtime::block_on(play(app, engine));
+        let result = tauri::async_runtime::block_on(play(app, engine, MovieKind::Primary));
         eprintln!("aquastar-lite: smoke {engine:?}: {result:?}");
     });
 }
@@ -309,6 +309,11 @@ fn main() {
             set_hide_launcher
         ])
         .setup(|app| {
+            let exe_dir = std::env::current_exe()
+                .ok()
+                .and_then(|path| path.parent().map(Path::to_path_buf));
+            let profile = placement::electron_profile(exe_dir.as_deref());
+            std::thread::spawn(move || players::warm_loader(&profile));
             schedule_smoke(app.handle().clone());
             Ok(())
         })
@@ -369,5 +374,37 @@ mod tests {
         assert_eq!(parse_smoke_engine(""), None);
         assert_eq!(parse_smoke_engine("both"), None);
         assert_eq!(parse_smoke_engine("FLASH"), None);
+    }
+
+    #[test]
+    fn testing_and_dragonfable_buttons_stay_off_the_smoke_colors() {
+        let ui = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../ui");
+        let html = std::fs::read_to_string(ui.join("index.html")).unwrap();
+        let css = std::fs::read_to_string(ui.join("style.css")).unwrap();
+        let js = std::fs::read_to_string(ui.join("main.js")).unwrap();
+        assert!(html.contains("data-movie=\"testing\""));
+        assert!(html.contains("data-movie=\"dragonfable\""));
+        for line in html.lines() {
+            if line.contains("data-movie") {
+                assert!(!line.contains("data-engine"), "{line}");
+            }
+        }
+        assert!(html.contains("data-engine=\"ruffle\""));
+        assert!(html.contains("data-engine=\"flash\""));
+        assert!(css.contains(".sites button, .movies button { background: #2a9d8f; }"));
+        assert!(css.contains("background: #4361ee"));
+        assert!(css.contains("button.primary { background: #f4a261;"));
+        let teal = (0x2a_i32, 0x9d_i32, 0x8f_i32);
+        for (name, target) in [("orange", (244, 162, 97)), ("blue", (67, 97, 238))] {
+            let dr = teal.0 - target.0;
+            let dg = teal.1 - target.1;
+            let db = teal.2 - target.2;
+            assert!(
+                dr * dr + dg * dg + db * db > 36 * 36,
+                "teal matches the smoke {name} finder"
+            );
+        }
+        assert!(js.contains("movie: 'primary'"));
+        assert!(js.contains("movie: button.dataset.movie"));
     }
 }
