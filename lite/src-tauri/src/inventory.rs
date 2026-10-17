@@ -125,17 +125,35 @@ pub fn sync_document(path: &Path, fetch: impl Fn(&str) -> Result<String, String>
     let Some(ccid) = capture(&char_page, r"var ccid = (\d+);") else {
         return fail("parse");
     };
-    let inventory = match fetch_pages(
+    let inventory = match load_collection(
+        "/AQW/InventoryData",
         "https://account.aq.com/myapi/inventory/InventoryData?",
         &fetch,
     ) {
         Ok(rows) => rows,
         Err(error) => return fail(&error),
     };
-    let buyback = match fetch_pages("https://account.aq.com/myapi/inventory/BuyBackData?", &fetch) {
+    let buyback = match load_collection(
+        "/AQW/BuyBackData",
+        "https://account.aq.com/myapi/inventory/BuyBackData?",
+        &fetch,
+    ) {
         Ok(rows) => rows,
         Err(error) => return fail(&error),
     };
+    let inventory: Vec<Value> = inventory
+        .iter()
+        .map(convert_inventory_row)
+        .filter(|row| named(row))
+        .collect();
+    let buyback: Vec<Value> = buyback
+        .iter()
+        .map(convert_buyback_row)
+        .filter(|row| named(row))
+        .collect();
+    if inventory.is_empty() && buyback.is_empty() {
+        return fail("empty");
+    }
     let mut book = load_book(path);
     let existing = book["characters"].get(&ccid).cloned();
     let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
@@ -155,8 +173,8 @@ pub fn sync_document(path: &Path, fetch: impl Fn(&str) -> Result<String, String>
             "lastInventorySync": now,
             "lastBuyBackSync": now,
             "lastWheelSync": last_wheel,
-            "inventory": inventory.into_iter().map(|row| convert_inventory_row(&row)).collect::<Vec<_>>(),
-            "buyback": buyback.into_iter().map(|row| convert_buyback_row(&row)).collect::<Vec<_>>(),
+            "inventory": inventory,
+            "buyback": buyback,
             "wheel": wheel
         }),
     );
@@ -187,6 +205,11 @@ pub fn live_get(url: &str, cookie: &str) -> Result<String, String> {
             .set("artixmode", "launcher");
         if !cookie.is_empty() {
             request = request.set("Cookie", cookie);
+        }
+        if url.contains("InventoryData") || url.contains("BuyBackData") {
+            request = request
+                .set("Accept", "application/json, text/javascript, */*; q=0.01")
+                .set("X-Requested-With", "XMLHttpRequest");
         }
     }
     match request.call() {
@@ -423,6 +446,57 @@ fn fail(error: &str) -> Value {
     serde_json::json!({ "ok": false, "error": error })
 }
 
+fn named(row: &Value) -> bool {
+    row.get("name")
+        .and_then(Value::as_str)
+        .is_some_and(|name| !name.trim().is_empty())
+}
+
+fn load_collection(
+    fresh_path: &str,
+    legacy_base: &str,
+    fetch: &impl Fn(&str) -> Result<String, String>,
+) -> Result<Vec<Value>, String> {
+    match account_collection(fresh_path, fetch) {
+        Ok(rows) if !rows.is_empty() => Ok(rows),
+        fresh => match fetch_pages(legacy_base, fetch) {
+            Ok(legacy) if !legacy.is_empty() => Ok(legacy),
+            Ok(_) => fresh,
+            Err(error) => fresh.or(Err(error)),
+        },
+    }
+}
+
+fn account_collection(path: &str, fetch: &impl Fn(&str) -> Result<String, String>) -> Result<Vec<Value>, String> {
+    let mut items = Vec::new();
+    let mut skip = 0usize;
+    loop {
+        let stamp = chrono::Utc::now().timestamp_millis();
+        let url = if skip == 0 {
+            format!("https://account.aq.com{path}?_={stamp}")
+        } else {
+            format!("https://account.aq.com{path}?skip={skip}&take={PAGE_SIZE}&requireTotalCount=true&_={stamp}")
+        };
+        let body = fetch(&url)?;
+        let parsed: Value = serde_json::from_str(&body).map_err(|_| "unauthenticated".to_string())?;
+        let Some(data) = parsed.get("data").and_then(Value::as_array).cloned() else {
+            return Err("unauthenticated".into());
+        };
+        let total = parsed
+            .get("totalCount")
+            .or_else(|| parsed.get("total"))
+            .and_then(Value::as_i64);
+        let len = data.len();
+        items.extend(data);
+        let complete = total.map(|count| items.len() as i64 >= count).unwrap_or(true);
+        if complete || len == 0 || skip > 20000 {
+            break;
+        }
+        skip += len.max(1);
+    }
+    Ok(items)
+}
+
 fn fetch_pages(base: &str, fetch: &impl Fn(&str) -> Result<String, String>) -> Result<Vec<Value>, String> {
     let mut items = Vec::new();
     let mut skip = 0usize;
@@ -444,6 +518,9 @@ fn fetch_pages(base: &str, fetch: &impl Fn(&str) -> Result<String, String>) -> R
 }
 
 fn convert_inventory_row(row: &Value) -> Value {
+    if let Some(cells) = row.as_array() {
+        return convert_inventory_cells(cells);
+    }
     serde_json::json!({
         "id": finite_i64(row.get("ID")),
         "name": row.get("Name").and_then(Value::as_str).unwrap_or(""),
@@ -454,6 +531,48 @@ fn convert_inventory_row(row: &Value) -> Value {
         "member": flag(row.get("Member")),
         "added": to_iso(row.get("Added").and_then(Value::as_str))
     })
+}
+
+fn convert_inventory_cells(cells: &[Value]) -> Value {
+    let type_name = cell_str(cells, 1);
+    let (name, count) = split_stack(cell_str(cells, 0), type_name);
+    serde_json::json!({
+        "id": cell_i64(cells, 2),
+        "name": name,
+        "type": type_name,
+        "count": count,
+        "bank": cell_str(cells, 3).eq_ignore_ascii_case("bank"),
+        "coins": cell_str(cells, 4).eq_ignore_ascii_case("ac"),
+        "member": cell_str(cells, 5).eq_ignore_ascii_case("member"),
+        "added": to_iso(cells.get(6).and_then(Value::as_str))
+    })
+}
+
+fn cell_str(cells: &[Value], index: usize) -> &str {
+    cells.get(index).and_then(Value::as_str).unwrap_or("")
+}
+
+fn cell_i64(cells: &[Value], index: usize) -> Option<i64> {
+    let cell = cells.get(index)?;
+    finite_i64(Some(cell)).or_else(|| cell.as_str().and_then(|text| text.parse().ok()))
+}
+
+fn split_stack(raw: &str, type_name: &str) -> (String, i64) {
+    let stackable = matches!(
+        type_name,
+        "Item" | "Resource" | "Quest Item" | "Wall Item" | "Floor Item"
+    );
+    if stackable {
+        if let Some(index) = raw.rfind(" x") {
+            let digits = &raw[index + 2..];
+            if !digits.is_empty() && digits.chars().all(|ch| ch.is_ascii_digit()) {
+                if let Ok(count) = digits.parse::<i64>() {
+                    return (raw[..index].to_string(), count);
+                }
+            }
+        }
+    }
+    (raw.to_string(), 1)
 }
 
 fn convert_buyback_row(row: &Value) -> Value {
@@ -980,5 +1099,8 @@ mod tests {
         assert!(html.contains("inventory-bridge.js"));
         assert!(html.contains("id=\"syncBtn\""));
         assert!(fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../ui/inventory-bridge.js")).unwrap().contains("sync_inventory_now"));
+        let worker = fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../ui/inventory_worker.js")).unwrap();
+        assert!(worker.contains("self.onmessage"));
+        assert!(html.contains("new Worker('inventory_worker.js')"));
     }
 }

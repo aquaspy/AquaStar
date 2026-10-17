@@ -624,7 +624,10 @@
     const result = await api.syncNow();
     btn.disabled = false;
     if (!result.ok) {
-      setStatus(result.error === 'unauthenticated' ? messages.syncErrorUnauthenticated : messages.syncErrorNetwork, true);
+      const text = result.error === 'unauthenticated' ? messages.syncErrorUnauthenticated
+        : result.error === 'empty' ? messages.syncErrorEmpty
+        : messages.syncErrorNetwork;
+      setStatus(text, true);
       return;
     }
     const reloaded = await api.getInventory();
