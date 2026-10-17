@@ -98,7 +98,8 @@ exports.enableDevTools = () => {
 }
 
 // wmode=direct draws the SWF on the GPU, so F2's capturePage bitmap is empty on macOS.
-// Darwin defaults this off. An explicit aquastar.json value still overrides it.
+// Darwin defaults this off. The SWF is still embedded (wmode=opaque). An explicit
+// aquastar.json value still overrides the flag.
 exports.useDirectWmode = process.platform !== 'darwin';
 exports.setUseDirectWmode = (val) => {
     exports.useDirectWmode = val !== false;

@@ -1,4 +1,5 @@
 const constant               = require('./const.js');
+const {chooseGamePresentation} = require('./game-presentation.js');
 const windowConfig           = require('./windows/config.js');
 const windowsMenu            = require('./windows/menu.js');
 const keybinds               = require('./keybindings.js');
@@ -68,12 +69,20 @@ function newBrowserWindow(new_path, isMainWin=false){
     
     // How a game is opened is the owning plugin's call (its primary/launch "wrap" config):
     // Ruffle when Settings → renderMode is "ruffle" and the SWF is eligible, an explicit
-    // wmode/scale HTML embed, or the default wmode=direct embed. HTML/feature pages are
-    // never wrapped — plugins may use file:// HTML as primary UI.
+    // wmode/scale HTML embed, or the default embed. Direct wmode is the GPU path. With
+    // it off, the embed uses wmode=opaque so the plugin still has a CSS box.
     var gameEntry = _findGameEntry(originalPath);
     var wrap = (gameEntry && gameEntry.wrap) || null;
     var renderMode = (keybinds.keybinds && keybinds.keybinds.renderMode) || constant.defaultRenderMode;
-    if (renderMode === 'ruffle' && constant.isRuffleEligible(new_path)) {
+    var presentation = chooseGamePresentation({
+        looksLikeSwf: _looksLikeSwfUrl(originalPath),
+        wrap: wrap,
+        standalone: !!(gameEntry && gameEntry.standalone),
+        renderMode: renderMode,
+        ruffleEligible: constant.isRuffleEligible(new_path),
+        useDirectWmode: constant.useDirectWmode
+    });
+    if (presentation.kind === 'ruffle') {
         const ruffleOpts = (wrap && wrap.ruffle) || null;
         if (ruffleOpts && ruffleOpts.socket) {
             socketProxy.allowHosts(ruffleOpts.socket.allowedHosts);
@@ -81,17 +90,13 @@ function newBrowserWindow(new_path, isMainWin=false){
         }
         new_path = constant.wrapRuffleUrl(new_path, ruffleOpts,
             keybinds.keybinds && keybinds.keybinds.ruffleQuality);
-    }
-    // Explicit wrap options (e.g. wmode=opaque + scale=showall for a game whose relative
-    // loads break under wmode=direct from file://). Applies even with useDirectWmode off.
-    else if (_looksLikeSwfUrl(originalPath) && wrap && (wrap.wmode || wrap.scale)) {
-        new_path = constant.wrapSwfUrl(new_path, { wmode: wrap.wmode, scale: wrap.scale });
-    }
-    // Default: wrap Flash SWFs of non-standalone games in an HTML page with wmode=direct.
-    else if (constant.useDirectWmode && _looksLikeSwfUrl(originalPath) &&
-        gameEntry && !gameEntry.standalone &&
-        !(wrap && wrap.preferDirectWmode === false)) {
-        new_path = constant.wrapSwfUrl(new_path);
+    } else if (presentation.kind === 'embed') {
+        new_path = constant.wrapSwfUrl(new_path, {
+            wmode: presentation.wmode,
+            scale: presentation.scale
+        });
+        console.log('[AquaStar] flash embed wmode=' + (presentation.wmode || 'direct') +
+            ' scale=' + (presentation.scale || 'showall'));
     }
     
     const newWin = new BrowserWindow(config);

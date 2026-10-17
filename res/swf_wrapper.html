@@ -54,6 +54,12 @@
     });
 
     document.body.appendChild(obj);
+    requestAnimationFrame(function () {
+      var box = obj.getBoundingClientRect();
+      console.log('[AquaStar] flash embed dpr=' + (window.devicePixelRatio || 1) +
+        ' viewport=' + window.innerWidth + 'x' + window.innerHeight +
+        ' object=' + Math.round(box.width) + 'x' + Math.round(box.height));
+    });
   })();
 </script>
 </body>

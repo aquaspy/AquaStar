@@ -65,7 +65,7 @@ The platform (`main.js`, `res/`, shared tooling in `scripts/`) names no game. An
 
 ## Important quirks
 
-- Game SWFs are loaded through **`res/swf_wrapper.html`** with `wmode=direct` (GPU direct-to-screen). Set `"useDirectWmode": false` in `aquastar.json` to disable the wrapper.
+- Game SWFs are loaded through **`res/swf_wrapper.html`**. The default `wmode` is `direct` (GPU direct-to-screen). macOS defaults `useDirectWmode` to false because that surface is invisible to F2, and the wrapper then uses `wmode=opaque`. A top-level SWF navigation is the wrong fallback: on a Retina display the Pepper plugin's preferred height is the stage divided by `devicePixelRatio` twice, so the movie sits in a short strip at the top of the window. `"useDirectWmode": true` in `aquastar.json` forces `wmode=direct`.
 - **Background throttling is disabled** via Chromium flags in `res/flash.js` and `backgroundThrottling: false` on game/main windows.
 - **F2 / Ctrl+J** use `globalShortcut` because Flash PPAPI consumes keyboard events before `before-input-event`.
 - **WikiView's hover-preview image** is fetched from the main process (`plugins/adventure-quest-worlds/features/wikiview/wikiFetch.js`), not the renderer - a page-side `fetch()` to aqwwiki.wikidot.com from an account.aq.com window would be blocked by CORS.
