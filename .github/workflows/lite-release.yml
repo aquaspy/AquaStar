@@ -5,6 +5,7 @@ on:
     tags:
       - 'lite-v*'
       - 'v3.*-*'
+      - 'v3.*'
   workflow_dispatch:
 
 permissions:
@@ -15,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       publish: ${{ steps.decide.outputs.publish }}
+      kind: ${{ steps.decide.outputs.kind }}
     steps:
       - id: decide
         env:
@@ -22,11 +24,14 @@ jobs:
         run: |
           set -euo pipefail
           publish=false
+          kind=prerelease
           case "$REF" in
-            refs/tags/lite-v*) publish=true ;;
-            refs/tags/v3.*-*) publish=true ;;
+            refs/tags/lite-v*) publish=true; kind=prerelease ;;
+            refs/tags/v3.*-*) publish=true; kind=prerelease ;;
+            refs/tags/v3.*) publish=true; kind=stable ;;
           esac
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
 
   build:
     needs: gate
@@ -84,11 +89,11 @@ jobs:
           projectPath: lite
           tauriScript: npx -y @tauri-apps/cli@2
           tagName: ${{ github.ref_name }}
-          releaseName: 'AquaStar v__VERSION__ - Pre-release'
+          releaseName: ${{ needs.gate.outputs.kind == 'stable' && 'AquaStar v__VERSION__' || 'AquaStar v__VERSION__ - Pre-release' }}
           releaseDraft: false
-          # Create the release as a prerelease. A later matrix leg updates that
-          # release without resending this flag; keep-prerelease reasserts it.
-          prerelease: true
+          # A prerelease tag stays a prerelease. A stable v3.0.0 tag is not a
+          # prerelease. Neither tag becomes Latest until that is a separate edit.
+          prerelease: ${{ needs.gate.outputs.kind != 'stable' }}
           args: ${{ matrix.args }}
       # Manual runs only build and upload workflow artifacts, so the bundles can be
       # tested before tagging. They never create or touch a release.
@@ -160,18 +165,24 @@ jobs:
             lite/src-tauri/target/**/release/bundle/dmg/*.dmg
           if-no-files-found: error
 
-  # Lite stays a prerelease and is never Latest. tauri-action has no make_latest
-  # input, and its update of an existing release does not send prerelease, so
-  # set both after every platform has uploaded.
+  # tauri-action cannot mark a release as Latest, and its update of an
+  # existing release does not send prerelease. Reassert both after every
+  # platform has uploaded. Stable and prerelease tags stay off Latest.
   keep-prerelease:
     needs: [build, gate]
     if: needs.gate.outputs.publish == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Mark Lite release as prerelease and not latest
+      - name: Keep the release off Latest
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false
+          KIND: ${{ needs.gate.outputs.kind }}
+        run: |
+          if [ "$KIND" = "stable" ]; then
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease=false --latest=false
+          else
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false
+          fi
 
   # workflow_run only starts lite-smoke.yml once that file is on the default
   # branch. Until then a dispatch is a no-op, so a release is not failed by a

@@ -531,7 +531,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_tag_accepts_lite_and_v3_prereleases_only() {
+    fn resolve_tag_accepts_lite_and_v3_releases() {
         let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../scripts/smoke/resolve-tag.sh");
         let accept = |tag: &str| {
             let output = std::env::temp_dir().join(format!(
@@ -552,8 +552,20 @@ mod tests {
         };
         assert!(accept("lite-v0.2.0"));
         assert!(accept("v3.0.0-alpha.1"));
-        assert!(!accept("v3.0.0"));
+        assert!(accept("v3.0.0"));
+        assert!(!accept("v3.0"));
         assert!(!accept("v2.1.1"));
+    }
+
+    #[test]
+    fn stable_v3_tag_publishes_and_stays_off_latest() {
+        let yml = include_str!("../../../.github/workflows/lite-release.yml");
+        assert!(yml.contains("- 'v3.*'"));
+        assert!(yml.contains("kind=stable"));
+        assert!(yml.contains("--prerelease=false --latest=false"));
+        assert!(yml.contains("--prerelease --latest=false"));
+        assert!(!yml.contains("--latest=true"));
+        assert!(!yml.contains("make_latest"));
     }
 
     #[test]

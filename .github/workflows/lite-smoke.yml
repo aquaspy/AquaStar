@@ -6,7 +6,7 @@ name: AquaStar Lite Smoke
 #
 # workflow_dispatch and workflow_run only fire once this file is on the
 # default branch. A push of this file to dev runs the same jobs before that.
-# Those jobs download the newest v3 prerelease, so the push retests that release.
+# Those jobs download the newest v3 release, so the push retests that release.
 # macos-13 was retired on 2025-12-04. Intel Macs use macos-15-intel.
 # macos-latest with an empty flash_arch is a normal Apple Silicon launch.
 # The x86_64 row runs the same app under arch -x86_64. electron-mac launches
@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag (lite-v* or v3.x.y-*). Empty uses the newest matching release. A bare v3.0.0 is rejected.
+        description: Release tag (lite-v* or v3.x.y.z, with or without a prerelease suffix). Empty uses the newest matching release.
         required: false
         default: ''
         type: string
@@ -42,7 +42,7 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       (startsWith(github.event.workflow_run.head_branch, 'lite-v') || (startsWith(github.event.workflow_run.head_branch, 'v3.') && contains(github.event.workflow_run.head_branch, '-'))))
+       (startsWith(github.event.workflow_run.head_branch, 'lite-v') || startsWith(github.event.workflow_run.head_branch, 'v3.')))
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
@@ -156,7 +156,7 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       (startsWith(github.event.workflow_run.head_branch, 'lite-v') || (startsWith(github.event.workflow_run.head_branch, 'v3.') && contains(github.event.workflow_run.head_branch, '-'))))
+       (startsWith(github.event.workflow_run.head_branch, 'lite-v') || startsWith(github.event.workflow_run.head_branch, 'v3.')))
     runs-on: macos-latest
     timeout-minutes: 30
     steps:

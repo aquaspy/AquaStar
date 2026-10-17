@@ -154,11 +154,56 @@ Reorganize the branches at that point.
 
 Delete old unused branches only after listing them and getting the user's explicit approval for each deletion. Do not rename or delete a branch while this paragraph is only a plan.
 
-One blocker has to be cleared before the first public 3.0 release. Do not fix it while this paragraph is only a plan.
+Inventory sync reported success and wrote no items. The account page now returns rows from `https://account.aq.com/AQW/InventoryData` as arrays (`Name xN`, type, code, Inv or Bank, Gold or AC, Free or Member, date). 3.0 was still calling `myapi/inventory/InventoryData` and treating `{ "data": [] }` as a finished sync. The button then said `AquaStar: Synced!`. Alpha.7 reads the account-page URL, still accepts the older object rows when that URL is empty, and refuses to write or report success when both lists have no named item. The inventory window also ships `inventory_worker.js`, which the page already starts. A saved array fixture covers the account-page shape.
 
-Inventory sync can report success and still write nothing. A user saw the success message, an empty sync, and no items in the inventory window. Find the root cause with a real account login. Saved HTTP fixtures are not enough for that check. Keep the fixtures as regression tests once the live flow is explained.
+The stable tag path is prepared in `lite-release.yml` and is not executed. A `v3.0.0` tag publishes a release that is not a prerelease and is not Latest. A `v3.*-*` tag stays a prerelease and is not Latest. Electron's release workflow still ignores every `v3.` tag. Moving Latest, tagging `v3.0.0`, merging to `main`, and renaming or deleting branches each still need their own yes.
 
-The check is that the user has confirmed the stable tag, smoke passed on that commit, and any merge to `main` has its own confirmation. A branch rename or deletion also needs its own approval. The inventory sync blocker above is also required before that public release.
+Branches that stay:
+
+- `main` becomes the 3.x stable line. It is not deleted.
+- `dev` stays 3.x development.
+- `electron-2.x` is the rename source for `2.x`. It is not deleted.
+- `2.x-dev` does not exist yet. Creating it is part of the rename, not a deletion.
+- `cursor/electron-mac-zip-symlinks-99c5` has two commits that are not in `electron-2.x` (the mac zip symlink unpack, and the 2.1.1-rc.7 bump). It is not on the deletion list.
+
+Proposed deletions. Each one still needs its own yes.
+
+Tips already contained in `dev` and `electron-2.x`:
+
+- `cursor/linux-hicolor-icons-ef66`. Hicolor icon sizes, already on both kept lines.
+- `cursor/lite-l1-player-391a`. One Flash projector, already on both kept lines.
+- `cursor/lite-windows-portable-3cae`. Portable zip notes, already on both kept lines.
+- `cursor/native-ruffle-capture-69e9`. Capture naming, already on both kept lines.
+- `cursor/prerelease-release-flags-9a26`. Prerelease flags, already on both kept lines.
+
+No shared history with `main`, `dev`, or `electron-2.x`. Deleting the branch drops those commits. A tag named below keeps the tip commit if the tag stays.
+
+- `1.10`. Old 1.10 line from August 2026. The `v1.10.*` tags are separate.
+- `aquastar-lite`. First Tauri proof of concept. The current `lite/` tree is on `dev`.
+- `bump-2.1.1-rc.1`. Version-bump branch. `main` already carries the 2.1.1-rc.1 release.
+- `cursor/lite-port-plan-391a`. Early Lite port notes. The 3.0 plan replaced them. The branch still has text that is not in `electron-2.x`.
+- `cursor/lite-ruffle-settings-c45f`. Ruffle quality settings. Those settings are on `dev`.
+- `dev-star`. 2024 ARM Flash experiment.
+- `flash-artix`. Old upstream merge for the Artix Flash build.
+- `herosmash`. 2021 HeroSmash rebrand. The tip is already tagged `beta0.2+hs0.0.1`.
+- `launcher-perf`. Spellchecker experiment from October 2026.
+- `lite-blank-window-fix`. Linux blank-window fix. The later Lite tree has that fix.
+- `lite-cleanup`. Lite cleanup branch. The later Lite tree has that cleanup.
+- `lite-release-workflow`. First `lite-v*` release workflow. The current workflow is on `dev`.
+- `lite-webkit-fontconfig`. WebKit font allow-list. That allow-list is on `dev`.
+- `master`. 2024 merge of `dev-star`. Stale name, not the current `main`.
+- `perf-review`. Ruffle quality test formatting.
+- `plugins`. Old build-path fix for plugins.
+- `pstack-models`. The per-role model rule. The rule file is on `dev`.
+- `release-2.1.0`. 2.1.0 bump branch. Tag `v2.1.0` is separate.
+- `ruffle-native`. Ruffle desktop experiment.
+- `ruffle-native-bundled`. Bundled Ruffle desktop experiment.
+- `ruffle-native-gl`. OpenGL default for Ruffle desktop. That behavior is on `dev`.
+- `ruffle-native-prune`. Prune old downloaded Ruffle versions.
+- `strategyboard`. September 2026 strategy board merge fix.
+- `update-flash34-ruffle071`. Flash 34 and Ruffle 0.7.1 pin. That pin is on the current lines.
+
+The check is that the user has confirmed the stable tag, smoke passed on that commit, and any merge to `main` has its own confirmation. A branch rename or deletion also needs its own approval.
 
 ## Open investigation (not scheduled)
 
