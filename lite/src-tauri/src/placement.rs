@@ -546,7 +546,7 @@ mod tests {
             result.status.success()
         };
         assert!(accept("lite-v0.2.0"));
-        assert!(accept("v3.0.0.1-rc.1"));
+        assert!(accept("v3.0.0-alpha.1"));
         assert!(!accept("v3.0.0"));
         assert!(!accept("v2.1.1"));
     }

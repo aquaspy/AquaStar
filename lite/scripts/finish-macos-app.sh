@@ -20,8 +20,7 @@ if [[ -z "$app" ]]; then
   exit 1
 fi
 
-# productName names the bundle aquastar-lite.app and is copied into
-# CFBundleDisplayName. Finder and the menu bar should still say AquaStar Lite.
+# productName names the bundle aquastar-lite.app. Finder and the menu bar say AquaStar.
 plist="$app/Contents/Info.plist"
 python3 - "$plist" <<'PY'
 import plistlib
@@ -29,8 +28,8 @@ import sys
 path = sys.argv[1]
 with open(path, "rb") as handle:
     info = plistlib.load(handle)
-info["CFBundleDisplayName"] = "AquaStar Lite"
-info["CFBundleName"] = "AquaStar Lite"
+info["CFBundleDisplayName"] = "AquaStar"
+info["CFBundleName"] = "AquaStar"
 with open(path, "wb") as handle:
     plistlib.dump(info, handle, fmt=plistlib.FMT_XML)
 PY
@@ -55,5 +54,5 @@ stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
 cp -R "$app" "$stage/"
 ln -s /Applications "$stage/Applications"
-hdiutil create -volname "AquaStar Lite" -srcfolder "$stage" -ov -format UDZO "$dmg"
+hdiutil create -volname "AquaStar" -srcfolder "$stage" -ov -format UDZO "$dmg"
 echo "$dmg"

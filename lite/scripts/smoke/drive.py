@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch one AquaStar Lite player from a release build and record the screen.
+"""Launch one AquaStar player from a release build and record the screen.
 
 Pass/fail is the process. rc.9 ignores AQUASTAR_LITE_SMOKE, so this clicks the
 Play button when the player does not appear on its own. A later build that
@@ -304,7 +304,7 @@ def focus_launcher(launcher):
         return
     system = platform.system()
     if system == "Linux":
-        run(["xdotool", "search", "--name", "AquaStar Lite", "windowactivate"])
+        run(["xdotool", "search", "--name", "^AquaStar$", "windowactivate"])
     elif system == "Darwin":
         run(
             [

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Pick the release this smoke run should download.
-# An empty input is the newest lite-v* or v3.x.y.z-* release.
+# An empty input is the newest lite-v* or v3.x.y-* prerelease.
 set -euo pipefail
 
 tag="${INPUT_TAG:-}"
@@ -10,10 +10,10 @@ fi
 
 if [ -z "$tag" ]; then
   tag=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,publishedAt \
-    --jq '[.[] | select(.tagName | test("^(lite-v[0-9A-Za-z._+-]+|v3\\.[0-9]+\\.[0-9]+\\.[0-9]+-.+)$"))] | sort_by(.publishedAt) | reverse | .[0].tagName')
+    --jq '[.[] | select(.tagName | test("^(lite-v[0-9A-Za-z._+-]+|v3\\.[0-9]+\\.[0-9]+-.+)$"))] | sort_by(.publishedAt) | reverse | .[0].tagName')
 fi
 
-if ! printf '%s\n' "$tag" | grep -Eq '^(lite-v[0-9A-Za-z._+-]+|v3\.[0-9]+\.[0-9]+\.[0-9]+-.+)$'; then
+if ! printf '%s\n' "$tag" | grep -Eq '^(lite-v[0-9A-Za-z._+-]+|v3\.[0-9]+\.[0-9]+-.+)$'; then
   echo "no lite-v* or v3 prerelease to test (got '${tag}')" >&2
   exit 1
 fi
