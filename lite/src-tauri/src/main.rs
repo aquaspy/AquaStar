@@ -361,14 +361,23 @@ fn set_inventory_active_char(char_id: String) -> serde_json::Value {
 }
 
 #[tauri::command]
-fn sync_inventory_now(app: tauri::AppHandle) -> serde_json::Value {
+async fn sync_inventory_now(app: tauri::AppHandle) -> serde_json::Value {
     let cookie = account_cookie_header(&app);
-    inventory::sync_locked(&profile::live_files().inventory, |url| inventory::live_get(url, &cookie))
+    let inventory_file = profile::live_files().inventory;
+    tauri::async_runtime::spawn_blocking(move || {
+        inventory::sync_locked(&inventory_file, |url| inventory::live_get(url, &cookie))
+    })
+    .await
+    .unwrap_or_else(|error| serde_json::json!({ "ok": false, "error": error.to_string() }))
 }
 
 #[tauri::command]
-fn fetch_wiki_page(url: String) -> serde_json::Value {
-    inventory::fetch_wiki(&url, |target| inventory::live_get(target, ""))
+async fn fetch_wiki_page(url: String) -> serde_json::Value {
+    tauri::async_runtime::spawn_blocking(move || {
+        inventory::fetch_wiki(&url, |target| inventory::live_get(target, ""))
+    })
+    .await
+    .unwrap_or_else(|error| serde_json::json!({ "ok": false, "error": error.to_string() }))
 }
 
 #[tauri::command]

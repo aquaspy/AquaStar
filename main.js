@@ -243,17 +243,26 @@ app.on('second-instance', () => {
     win.focus();
   }
 })
-app.on('ready', () => {
-  // No AquaStar window needs Chromium's spellchecker (Flash/Ruffle text fields never use
-  // it, and our own inputs set spellcheck=false). With it enabled, every launch fetched a
-  // Hunspell dictionary from Google into userData/Dictionaries and loaded it in the
-  // browser process. An empty language list turns that off for the default session.
-  try { session.defaultSession.setSpellCheckerLanguages([]); }
-  catch (e) { console.log('[AquaStar] Could not disable spellchecker: ' + e.message); }
-  activatePlugins().then(() => {
-    createWindow();
+// macOS can emit activate before ready (including during a backend restart).
+// Share initialization so activate and ready cannot race plugin activation or create
+// a window before Electron's session is available.
+let initializationPromise = null;
+function ensureMainWindow() {
+  if (!initializationPromise) {
+    initializationPromise = app.whenReady().then(() => {
+      // No AquaStar window needs Chromium's spellchecker. Avoid downloading and
+      // loading a Hunspell dictionary into the browser process on every launch.
+      try { session.defaultSession.setSpellCheckerLanguages([]); }
+      catch (e) { console.log('[AquaStar] Could not disable spellchecker: ' + e.message); }
+      return activatePlugins();
+    });
+  }
+  return initializationPromise.then(() => {
+    // Recheck after initialization: repeated activate events may be waiting too.
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
-})
+}
+app.on('ready', ensureMainWindow);
 app.on('will-quit', () => {
   keyb.unregisterGlobalShortcuts();
   // No-op if a Ruffle-mode window never started it.
@@ -271,8 +280,4 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow()
-  }
-})
+app.on('activate', ensureMainWindow);

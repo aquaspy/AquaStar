@@ -20,6 +20,25 @@ $(document).mousemove(function(event) {
 
 let mouseOn = false; // flag to prevent spam
 let hoverTimeout = null;
+let hoverGeneration = 0;
+let hoverTarget = null;
+let previewImageWait = null;
+
+function isCurrentHover(generation) {
+    return generation === hoverGeneration;
+}
+
+function scheduleHover(target, show) {
+    if (mouseOn && hoverTarget === target) return;
+    clearTimeout(hoverTimeout);
+    mouseOn = true;
+    hoverTarget = target;
+    const generation = ++hoverGeneration;
+    removePreview();
+    hoverTimeout = setTimeout(function() {
+        if (isCurrentHover(generation)) show(generation);
+    }, 100);
+}
 const AQW_WIKI_HOST = "aqwwiki.wikidot.com";
 
 function isAqwWikiUrl(link) {
@@ -34,14 +53,9 @@ function aqwWikiUrl(pathname) {
 }
 
 function hovered(link) {
-    if (!mouseOn) {
-        mouseOn = true;
-        // show preview if hovered for 100ms
-        hoverTimeout = setTimeout(function() {
-            removePreview(); // remove previous preview
-            showPreview(link);
-        }, 100);
-    }
+    scheduleHover('link:' + link, function(generation) {
+        showPreview(link, generation);
+    });
 }
 
 // Same as hovered(), but for callers that only have the item's bare name (table rows,
@@ -50,18 +64,17 @@ function hovered(link) {
 // into the page name itself (e.g. "Proto Legion Dark Caster (Merge)" ->
 // proto-legion-dark-caster-merge) - see showPreviewForName() below for the retry chain.
 function hoveredName(name) {
-    if (!mouseOn) {
-        mouseOn = true;
-        hoverTimeout = setTimeout(function() {
-            removePreview();
-            showPreviewForName(name);
-        }, 100);
-    }
+    scheduleHover('name:' + name, function(generation) {
+        showPreviewForName(name, generation);
+    });
 }
 
 function unhovered() {
     clearTimeout(hoverTimeout);
     mouseOn = false;
+    hoverTarget = null;
+    ++hoverGeneration;
+    removePreview();
 }
 
 // wikimg.php (whoasked.freewebhostmost.com) is gone - it used to scrape the wiki page
@@ -85,11 +98,12 @@ function fetchWikiHtml(link) {
     return fetch(link).then(function(response) { return response.text(); });
 }
 
-function showPreview(link) {
+function showPreview(link, generation) {
+    if (generation === undefined) generation = hoverGeneration;
     if (isAqwWikiUrl(link)) {
-        fetchAndExtractImages(link)
+        fetchAndExtractImages(link, 0, generation)
             .then(function(images) {
-                if (images.length > 0) renderPreview(images);
+                if (isCurrentHover(generation) && images.length > 0) renderPreview(images);
             })
             .catch(function(err) {
                 console.log("Failed to fetch page: ", err);
@@ -100,10 +114,12 @@ function showPreview(link) {
 // Fetches a wiki page and pulls out its item image(s), or resolves to [] if the page
 // doesn't exist / has none - never rejects for a missing page, only for a genuine network
 // failure, so callers can treat "no images" as "try the next thing" rather than an error.
-function fetchAndExtractImages(link, depth) {
+function fetchAndExtractImages(link, depth, generation) {
+    if (!isCurrentHover(generation)) return Promise.resolve([]);
     depth = depth || 0;
     return fetchWikiHtml(link)
         .then(function(html) {
+            if (!isCurrentHover(generation)) return null;
             // parse text. The explicit <base> keeps any relative image URLs anchored
             // to the wiki even when this script is actually running on account.aq.com -
             // DOMParser otherwise resolves relative URLs against the current window's
@@ -112,8 +128,9 @@ function fetchAndExtractImages(link, depth) {
             return new DOMParser().parseFromString('<base href="' + base + '">' + html, "text/html");
         })
         .then(function(doc) {
+            if (!doc || !isCurrentHover(generation)) return [];
             if (depth < 2 && isDisambiguationPage(doc, link)) {
-                return tryDisambiguationLinks(doc, depth + 1);
+                return tryDisambiguationLinks(doc, depth + 1, generation);
             }
             return extractItemImages(doc);
         });
@@ -135,7 +152,7 @@ function isDisambiguationPage(doc, link) {
     return result;
 }
 
-function tryDisambiguationLinks(doc, depth) {
+function tryDisambiguationLinks(doc, depth, generation) {
     const links = [];
     $(doc).find('#page-content a[href]').each(function () {
         const href = $(this).attr('href') || '';
@@ -146,8 +163,8 @@ function tryDisambiguationLinks(doc, depth) {
         links.push(url);
     });
     function next(index) {
-        if (index >= links.length) return Promise.resolve([]);
-        return fetchAndExtractImages(links[index], depth).then(function (images) {
+        if (!isCurrentHover(generation) || index >= links.length) return Promise.resolve([]);
+        return fetchAndExtractImages(links[index], depth, generation).then(function (images) {
             return images.length ? images : next(index + 1);
         }).catch(function () { return next(index + 1); });
     }
@@ -189,11 +206,13 @@ function renderPreview(images) {
 // known multi-tag exceptions live in nameVariants.js, shared with inventory ownership.
 const wikiNameVariants = window.AquaStarWikiNameVariants;
 
-function showPreviewForName(name) {
+function showPreviewForName(name, generation) {
+    if (generation === undefined) generation = hoverGeneration;
+    if (!isCurrentHover(generation)) return;
     const pageOverride = wikiNameVariants.findPageOverride(name);
     if (pageOverride) {
-        fetchAndExtractImages(aqwWikiUrl(pageOverride))
-            .then(function(images) { if (images.length > 0) renderPreview(images); })
+        fetchAndExtractImages(aqwWikiUrl(pageOverride), 0, generation)
+            .then(function(images) { if (isCurrentHover(generation) && images.length > 0) renderPreview(images); })
             .catch(function() {});
         return;
     }
@@ -201,29 +220,30 @@ function showPreviewForName(name) {
     if (override) {
         // Try the known-correct combo first; if even that doesn't resolve (e.g. the wiki
         // page moved), fall back to the generic single-suffix chain rather than giving up.
-        fetchAndExtractImages(aqwWikiUrl(wikiNameVariants.toWikiSlug(name + override)))
+        fetchAndExtractImages(aqwWikiUrl(wikiNameVariants.toWikiSlug(name + override)), 0, generation)
             .then(function(images) {
-                if (images.length > 0) renderPreview(images);
-                else tryNameVariant(name, 0);
+                if (isCurrentHover(generation) && images.length > 0) renderPreview(images);
+                else tryNameVariant(name, 0, generation);
             })
             .catch(function() {
-                tryNameVariant(name, 0);
+                tryNameVariant(name, 0, generation);
             });
         return;
     }
-    tryNameVariant(name, 0);
+    tryNameVariant(name, 0, generation);
 }
 
-function tryNameVariant(name, index) {
+function tryNameVariant(name, index, generation) {
+    if (!isCurrentHover(generation)) return;
     if (index >= wikiNameVariants.disambiguationSuffixes.length) return; // exhausted every variant
     const link = aqwWikiUrl(wikiNameVariants.toWikiSlug(name + wikiNameVariants.disambiguationSuffixes[index]));
-    fetchAndExtractImages(link)
+    fetchAndExtractImages(link, 0, generation)
         .then(function(images) {
-            if (images.length > 0) renderPreview(images);
-            else tryNameVariant(name, index + 1);
+            if (isCurrentHover(generation) && images.length > 0) renderPreview(images);
+            else tryNameVariant(name, index + 1, generation);
         })
         .catch(function() {
-            tryNameVariant(name, index + 1);
+            tryNameVariant(name, index + 1, generation);
         });
 }
 
@@ -276,19 +296,21 @@ function extractItemImages(doc) {
 }
 
 function removePreview() {
+    clearInterval(previewImageWait);
+    previewImageWait = null;
     $("#preview").remove();
 }
 
 function waitForImg(selector, callback) {
-    let wait = setInterval(function(){
+    previewImageWait = setInterval(function(){
         try {
             if( $(selector)[0].complete ) {
                 callback();
-                clearInterval(wait);
+                clearInterval(previewImageWait);
             }
         }
         catch {
-            clearInterval(wait);
+            clearInterval(previewImageWait);
         }
     }, 25);
 }
