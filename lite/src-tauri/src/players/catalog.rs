@@ -165,11 +165,24 @@ impl Catalog {
             .rows
             .iter()
             .find(|row| row.engine == engine && row.os == os && row.arch == arch);
-        let row = exact.or_else(|| {
-            self.rows
-                .iter()
-                .find(|row| row.engine == engine && row.os == os && row.arch == "universal")
-        })?;
+        let row = exact
+            .or_else(|| {
+                self.rows
+                    .iter()
+                    .find(|row| row.engine == engine && row.os == os && row.arch == "universal")
+            })
+            .or_else(|| {
+                // An arm64 process can spawn an x86_64 child. macOS runs that child
+                // under Rosetta when it is installed. The catalog has no arm64 Flash
+                // projector, so Apple Silicon uses the Intel pin.
+                if os == "macos" && arch == "aarch64" {
+                    self.rows
+                        .iter()
+                        .find(|row| row.engine == engine && row.os == os && row.arch == "x86_64")
+                } else {
+                    None
+                }
+            })?;
         Some(Pinned {
             dir: row.dir.clone(),
             sha256: row.sha256.clone(),
@@ -451,7 +464,7 @@ mod tests {
     }
 
     #[test]
-    fn exact_arch_beats_universal_and_apple_silicon_has_no_flash_row() {
+    fn exact_arch_beats_universal_and_apple_silicon_flash_uses_the_intel_pin() {
         let exact = sha(0x11);
         let universal = sha(0x22);
         let text = format!(
@@ -480,8 +493,14 @@ mod tests {
                 .url,
             "https://example.com/u.tar.gz"
         );
-        assert!(catalog.select(Engine::Flash, "macos", "aarch64").is_none());
-        assert!(catalog.select(Engine::Flash, "macos", "x86_64").is_some());
+        let apple = catalog
+            .select(Engine::Flash, "macos", "aarch64")
+            .expect("apple silicon flash");
+        let intel = catalog
+            .select(Engine::Flash, "macos", "x86_64")
+            .expect("intel flash");
+        assert_eq!(apple.exe, intel.exe);
+        assert_eq!(apple.url, "https://example.com/f.dmg");
     }
 
     #[test]

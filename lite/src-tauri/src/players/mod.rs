@@ -645,11 +645,19 @@ fn clear_quarantine(exe: &Path) {
     let _ = exe;
 }
 
+fn is_bad_cpu(err: &std::io::Error) -> bool {
+    // errno 86 is EBADARCH. macOS also phrases it as "Bad CPU type in executable".
+    err.raw_os_error() == Some(86)
+        || err
+            .to_string()
+            .to_ascii_lowercase()
+            .contains("bad cpu type")
+}
+
 fn spawn_failure(exe: &Path, err: std::io::Error) -> String {
-    // errno 86 is EBADARCH. The Intel projector dies this way under arm64 without Rosetta.
-    if err.raw_os_error() == Some(86) {
+    if is_bad_cpu(&err) {
         return format!(
-            "could not start {}: bad CPU type (errno 86). The Flash projector is Intel-only. Use Ruffle, or install Rosetta and the x64 app.",
+            "could not start {}: bad CPU type (errno 86). The Flash projector is Intel-only and Rosetta is not installed. Install it with `softwareupdate --install-rosetta`, or play with Ruffle.",
             exe.display()
         );
     }
@@ -867,17 +875,24 @@ mod pin_tests {
     use super::*;
 
     #[test]
-    fn ruffle_is_preferred_where_a_row_exists_and_flash_skips_apple_silicon() {
+    fn ruffle_is_preferred_and_apple_silicon_flash_uses_the_intel_projector() {
         assert_eq!(Engine::preferred_for("linux", "x86_64"), Engine::Ruffle);
         assert_eq!(Engine::preferred_for("windows", "x86_64"), Engine::Ruffle);
         assert_eq!(Engine::preferred_for("macos", "x86_64"), Engine::Ruffle);
         assert_eq!(Engine::preferred_for("macos", "aarch64"), Engine::Ruffle);
-        assert!(!Engine::Flash.supported_on("macos", "aarch64"));
+        assert!(Engine::Flash.supported_on("macos", "aarch64"));
         assert!(Engine::Flash.supported_on("macos", "x86_64"));
         assert!(Engine::Ruffle.supported_on("linux", "x86_64"));
         assert!(Engine::Flash.supported_on("linux", "x86_64"));
         assert!(Engine::Flash.supported_on("windows", "x86_64"));
         assert_eq!(Engine::ALL, [Engine::Ruffle, Engine::Flash]);
+        let missing_rosetta = spawn_failure(
+            Path::new("Flash Player.app/Contents/MacOS/Flash Player"),
+            std::io::Error::from_raw_os_error(86),
+        );
+        assert!(missing_rosetta.contains("softwareupdate --install-rosetta"));
+        assert!(missing_rosetta.contains("Ruffle"));
+        assert!(missing_rosetta.contains("Flash Player.app/Contents/MacOS/Flash Player"));
         assert_eq!(
             Engine::preferred(),
             Engine::preferred_for(std::env::consts::OS, std::env::consts::ARCH)

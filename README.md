@@ -26,7 +26,7 @@ Pick Electron for inventory sync, the task windows, char page tools, plugins, or
 
 Pick Lite for the launcher that does not bundle Chromium. The game runs in Ruffle or the Flash projector, in its own process. Lite publishes a Linux deb named aquastar-lite, a Windows portable zip, and a Mac disk image.
 
-On Apple Silicon, both editions can play with Ruffle. Flash needs an Intel process. The macOS steps explain how to run it.
+On Apple Silicon, both editions can play with Ruffle. Electron Flash is the x64 app under Rosetta. Lite Flash is the Intel projector, which the universal app starts on its own when Rosetta is installed. The macOS steps explain both.
 
 ## Install
 
@@ -73,15 +73,9 @@ For Lite, open the disk image and copy `aquastar-lite.app` into `/Applications`.
 xattr -cr /Applications/aquastar-lite.app
 ```
 
-The Lite disk image is a universal app. On a native Apple Silicon launch, Lite does not offer Flash, because the projector is x64. Ruffle is the player. On macOS, Ruffle's default graphics backend is Metal.
+The Lite disk image is a universal app. Ruffle is the default player. On macOS, Ruffle's default graphics backend is Metal. Play Flash starts the bundled Intel projector. On Apple Silicon, macOS runs that projector under Rosetta while the launcher itself stays arm64. If Rosetta is not installed, the launcher says so and names `softwareupdate --install-rosetta`. Ruffle does not need Rosetta.
 
-To use Flash in Lite, run the x64 copy under Rosetta.
-
-```bash
-arch -x86_64 /Applications/aquastar-lite.app/Contents/MacOS/aquastar-lite
-```
-
-Lite launches the signed Flash projector and passes the Loader4 URL. On Apple Silicon that still means the x64 app under Rosetta, because the projector is Intel-only. The Mac menu bar stays. On Windows and Linux the game window is titled AquaStar Lite.
+Lite launches the signed Flash projector and passes the Loader4 URL. The Mac menu bar stays. On Windows and Linux the game window is titled AquaStar Lite.
 
 ### Linux
 
