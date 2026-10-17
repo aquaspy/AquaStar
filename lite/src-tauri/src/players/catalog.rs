@@ -1,5 +1,5 @@
 use sha2::{Digest, Sha256};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
@@ -7,6 +7,71 @@ use std::process::Command;
 use std::sync::OnceLock;
 
 use super::Engine;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(crate) enum Os {
+    Linux,
+    Windows,
+    Macos,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(crate) enum Arch {
+    X86,
+    X86_64,
+    Aarch64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Cli {
+    Artix,
+    Stock,
+    Projector,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ClaimRank {
+    Native,
+    Compatible,
+}
+
+impl Os {
+    pub fn parse(raw: &str) -> Option<Self> {
+        match raw {
+            "linux" => Some(Self::Linux),
+            "windows" => Some(Self::Windows),
+            "macos" => Some(Self::Macos),
+            _ => None,
+        }
+    }
+
+    pub fn host() -> Option<Self> {
+        Self::parse(std::env::consts::OS)
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Linux => "linux",
+            Self::Windows => "windows",
+            Self::Macos => "macos",
+        }
+    }
+}
+
+impl Arch {
+    pub fn parse(raw: &str) -> Option<Self> {
+        match raw {
+            "x86" => Some(Self::X86),
+            "x86_64" => Some(Self::X86_64),
+            "aarch64" => Some(Self::Aarch64),
+            _ => None,
+        }
+    }
+
+    pub fn host() -> Option<Self> {
+        Self::parse(std::env::consts::ARCH)
+    }
+}
 
 #[derive(Clone, Copy)]
 pub(super) enum ArchiveKind {
@@ -24,7 +89,8 @@ pub(super) enum Extract {
     MacosCli,
 }
 
-pub(super) struct Pinned {
+#[derive(Clone)]
+pub(super) struct Pin {
     pub dir: String,
     pub sha256: String,
     pub binary_sha256: Option<String>,
@@ -32,6 +98,7 @@ pub(super) struct Pinned {
     pub url: String,
     pub kind: ArchiveKind,
     pub extract: Extract,
+    pub cli: Cli,
 }
 
 pub(super) const STAMP_NAME: &str = ".aquastar-pin";
@@ -58,21 +125,8 @@ pub(super) enum TreeJudge {
     Absent,
 }
 
-struct Row {
-    engine: Engine,
-    dir: String,
-    os: String,
-    arch: String,
-    kind: ArchiveKind,
-    extract: Extract,
-    url: String,
-    sha256: String,
-    binary_sha256: Option<String>,
-    exe: String,
-}
-
 pub(super) struct Catalog {
-    rows: Vec<Row>,
+    by_host: HashMap<(Engine, Os, Arch), Pin>,
 }
 
 impl Catalog {
@@ -83,9 +137,12 @@ impl Catalog {
             .get("players")
             .and_then(|v| v.as_array())
             .ok_or("players.json: missing players array")?;
-        let mut rows = Vec::new();
-        let mut seen = HashSet::new();
+        let mut staged: HashMap<(Engine, Os, Arch), (ClaimRank, Pin)> = HashMap::new();
+        let mut dirs_on_os = HashSet::new();
         for player in players {
+            if player.get("dir").is_some() {
+                return Err("player has dir".into());
+            }
             let engine = match player.get("engine").and_then(|v| v.as_str()) {
                 Some("ruffle") => Engine::Ruffle,
                 Some("flash") => Engine::Flash,
@@ -95,35 +152,37 @@ impl Catalog {
             if player.get("version").and_then(|v| v.as_str()).is_none() {
                 return Err("player is missing version".into());
             }
-            let dir = player
-                .get("dir")
-                .and_then(|v| v.as_str())
-                .ok_or("player is missing dir")?;
-            if !single_dir(dir) {
-                return Err(format!("dir {dir} is not a single path component"));
-            }
             let artifacts = player
                 .get("artifacts")
                 .and_then(|v| v.as_array())
                 .ok_or("player is missing artifacts")?;
             for artifact in artifacts {
-                let os = field(artifact, "os")?;
-                let arch = field(artifact, "arch")?;
+                let os_text = field(artifact, "os")?;
+                let arch_text = field(artifact, "arch")?;
+                let dir = field(artifact, "dir")?;
                 let kind_text = field(artifact, "kind")?;
                 let url = field(artifact, "url")?;
                 let sha256 = field(artifact, "sha256")?;
                 let exe = field(artifact, "exe")?;
-                if !matches!(os, "linux" | "windows" | "macos") {
-                    return Err(format!("unknown os {os}"));
+                let os = Os::parse(os_text).ok_or_else(|| format!("unknown os {os_text}"))?;
+                let native =
+                    Arch::parse(arch_text).ok_or_else(|| format!("unknown arch {arch_text}"))?;
+                let also = also_arches(artifact)?;
+                if also.contains(&native) {
+                    return Err(format!("arch {arch_text} is listed again in also"));
                 }
-                if !matches!(arch, "x86_64" | "universal" | "aarch64") {
-                    return Err(format!("unknown arch {arch}"));
+                if !single_dir(dir) {
+                    return Err(format!("dir {dir} is not a single path component"));
                 }
-                if arch == "universal" && os != "macos" {
-                    return Err(format!("universal arch is only valid on macos, not {os}"));
+                if !dirs_on_os.insert((os, dir.to_string())) {
+                    return Err(format!("duplicate dir {dir} on {os_text}"));
                 }
-                if arch == "aarch64" && os != "macos" {
-                    return Err(format!("aarch64 arch is only valid on macos, not {os}"));
+                let cli = parse_cli(field(artifact, "cli")?)?;
+                if !cli_matches_engine(engine, cli) {
+                    return Err(format!("{cli:?} is not valid for {engine:?}"));
+                }
+                if engine == Engine::Ruffle && !ruffle_exe_matches(cli, exe) {
+                    return Err(format!("exe {exe} does not match {cli:?}"));
                 }
                 let kind = match kind_text {
                     "tar.gz" => ArchiveKind::TarGz,
@@ -160,35 +219,51 @@ impl Catalog {
                 if !suffix_ok(&kind, url) {
                     return Err(format!("kind {kind_text} does not match url {url}"));
                 }
-                if matches!(kind, ArchiveKind::Dmg) && os != "macos" {
-                    return Err(format!("dmg archive is only valid on macos, not {os}"));
+                if matches!(kind, ArchiveKind::Dmg) && os != Os::Macos {
+                    return Err(format!("dmg archive is only valid on macos, not {os_text}"));
                 }
-                if !extract_ok(extract, os, &kind, exe, binary_sha256.is_some()) {
+                if !extract_ok(extract, os.as_str(), &kind, exe, binary_sha256.is_some()) {
                     return Err(format!(
-                        "extract {extract:?} is not valid for {os} {kind_text} exe {exe}"
+                        "extract {extract:?} is not valid for {os_text} {kind_text} exe {exe}"
                     ));
                 }
                 if !relative_exe(exe) {
                     return Err(format!("exe is not a relative path: {exe}"));
                 }
-                if !seen.insert((engine, os.to_string(), arch.to_string())) {
-                    return Err(format!("duplicate pin for {engine:?} {os} {arch}"));
-                }
-                rows.push(Row {
-                    engine,
+                let pin = Pin {
                     dir: dir.to_string(),
-                    os: os.to_string(),
-                    arch: arch.to_string(),
-                    kind,
-                    extract,
-                    url: url.to_string(),
                     sha256: sha256.to_string(),
                     binary_sha256,
                     exe: exe.to_string(),
-                });
+                    url: url.to_string(),
+                    kind,
+                    extract,
+                    cli,
+                };
+                let mut claims = vec![(native, ClaimRank::Native)];
+                for arch in also {
+                    claims.push((arch, ClaimRank::Compatible));
+                }
+                for (arch, rank) in claims {
+                    let key = (engine, os, arch);
+                    match staged.get(&key).map(|(held, _)| *held) {
+                        None => {
+                            staged.insert(key, (rank, pin.clone()));
+                        }
+                        Some(ClaimRank::Compatible) if rank == ClaimRank::Native => {
+                            staged.insert(key, (rank, pin.clone()));
+                        }
+                        // Native already won this host. A compatible claim does not replace it.
+                        Some(ClaimRank::Native) if rank == ClaimRank::Compatible => {}
+                        _ => {
+                            return Err(format!("duplicate pin for {engine:?} {os:?} {arch:?}"));
+                        }
+                    }
+                }
             }
         }
-        Ok(Self { rows })
+        let by_host = staged.into_iter().map(|(key, (_, pin))| (key, pin)).collect();
+        Ok(Self { by_host })
     }
 
     pub(super) fn pinned() -> &'static Self {
@@ -199,38 +274,52 @@ impl Catalog {
         })
     }
 
-    pub(super) fn select(&self, engine: Engine, os: &str, arch: &str) -> Option<Pinned> {
-        let exact = self
-            .rows
-            .iter()
-            .find(|row| row.engine == engine && row.os == os && row.arch == arch);
-        let row = exact
-            .or_else(|| {
-                self.rows
-                    .iter()
-                    .find(|row| row.engine == engine && row.os == os && row.arch == "universal")
-            })
-            .or_else(|| {
-                // An arm64 process can spawn an x86_64 child. macOS runs that child
-                // under Rosetta when it is installed. The catalog has no arm64 Flash
-                // projector, so Apple Silicon uses the Intel pin.
-                if os == "macos" && arch == "aarch64" {
-                    self.rows
-                        .iter()
-                        .find(|row| row.engine == engine && row.os == os && row.arch == "x86_64")
-                } else {
-                    None
-                }
-            })?;
-        Some(Pinned {
-            dir: row.dir.clone(),
-            sha256: row.sha256.clone(),
-            binary_sha256: row.binary_sha256.clone(),
-            exe: row.exe.clone(),
-            url: row.url.clone(),
-            kind: row.kind,
-            extract: row.extract,
-        })
+    pub(super) fn select(&self, engine: Engine, os: Os, arch: Arch) -> Option<&Pin> {
+        self.by_host.get(&(engine, os, arch))
+    }
+}
+
+fn also_arches(artifact: &serde_json::Value) -> Result<Vec<Arch>, String> {
+    match artifact.get("also") {
+        None => Ok(Vec::new()),
+        Some(value) => {
+            let list = value.as_array().ok_or("also is not an array")?;
+            let mut arches = Vec::new();
+            for item in list {
+                let text = item.as_str().ok_or("also entry is not a string")?;
+                let arch = Arch::parse(text).ok_or_else(|| format!("unknown arch {text}"))?;
+                arches.push(arch);
+            }
+            Ok(arches)
+        }
+    }
+}
+
+fn parse_cli(text: &str) -> Result<Cli, String> {
+    match text {
+        "artix" => Ok(Cli::Artix),
+        "stock" => Ok(Cli::Stock),
+        "projector" => Ok(Cli::Projector),
+        other => Err(format!("unknown cli {other}")),
+    }
+}
+
+fn cli_matches_engine(engine: Engine, cli: Cli) -> bool {
+    matches!(
+        (engine, cli),
+        (Engine::Ruffle, Cli::Artix | Cli::Stock) | (Engine::Flash, Cli::Projector)
+    )
+}
+
+fn ruffle_exe_matches(cli: Cli, exe: &str) -> bool {
+    let name = Path::new(exe)
+        .file_name()
+        .and_then(|part| part.to_str())
+        .unwrap_or("");
+    match cli {
+        Cli::Artix => name == "ruffle_desktop" || name == "ruffle_desktop.exe",
+        Cli::Stock => name == "ruffle" || name == "ruffle.exe",
+        Cli::Projector => false,
     }
 }
 
@@ -295,7 +384,7 @@ fn sha_ok(sha: &str) -> bool {
             .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
 }
 
-pub(super) fn judge(dir: &Path, pin: &Pinned) -> TreeJudge {
+pub(super) fn judge(dir: &Path, pin: &Pin) -> TreeJudge {
     if !dir.join(&pin.exe).is_file() {
         return TreeJudge::Absent;
     }
@@ -306,7 +395,7 @@ pub(super) fn judge(dir: &Path, pin: &Pinned) -> TreeJudge {
     }
 }
 
-pub(super) fn publish(pin: &Pinned, players_parent: &Path) -> Result<PathBuf, String> {
+pub(super) fn publish(pin: &Pin, players_parent: &Path) -> Result<PathBuf, String> {
     fs::create_dir_all(players_parent).map_err(|e| e.to_string())?;
     let incoming = players_parent.join(format!(".{}.incoming", pin.dir));
     let trash = players_parent.join(format!(".{}.trash", pin.dir));
@@ -333,7 +422,7 @@ pub(super) fn publish(pin: &Pinned, players_parent: &Path) -> Result<PathBuf, St
 }
 
 fn publish_downloaded(
-    pin: &Pinned,
+    pin: &Pin,
     temp: &Path,
     incoming: &Path,
     live: &Path,
@@ -351,7 +440,7 @@ fn publish_downloaded(
     Ok(live.join(&pin.exe))
 }
 
-fn download(pin: &Pinned, temp: &Path) -> Result<Vec<u8>, String> {
+fn download(pin: &Pin, temp: &Path) -> Result<Vec<u8>, String> {
     let mut bytes = Vec::new();
     ureq::get(&pin.url)
         .call()
@@ -389,7 +478,7 @@ fn remove_path(path: &Path) -> Result<(), String> {
     }
 }
 
-fn unpack(pin: &Pinned, bytes: &[u8], dest: &Path) -> Result<(), String> {
+fn unpack(pin: &Pin, bytes: &[u8], dest: &Path) -> Result<(), String> {
     match pin.kind {
         ArchiveKind::Exe => {
             let name = pin
@@ -416,7 +505,7 @@ fn unpack_zip(bytes: &[u8], dest: &Path) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-fn arrange(pin: &Pinned, dest: &Path) -> Result<(), String> {
+fn arrange(pin: &Pin, dest: &Path) -> Result<(), String> {
     match pin.extract {
         Extract::Archive => Ok(()),
         Extract::AppImage => arrange_appimage(pin, dest),
@@ -425,7 +514,7 @@ fn arrange(pin: &Pinned, dest: &Path) -> Result<(), String> {
     }
 }
 
-fn arrange_appimage(pin: &Pinned, dest: &Path) -> Result<(), String> {
+fn arrange_appimage(pin: &Pin, dest: &Path) -> Result<(), String> {
     let app = sole_file(dest, |path| {
         path.extension().and_then(|ext| ext.to_str()) == Some("AppImage")
     })?;
@@ -469,7 +558,7 @@ fn arrange_appimage(pin: &Pinned, dest: &Path) -> Result<(), String> {
     keep_only(dest, &[&pin.exe, "LICENSE.md"])
 }
 
-fn arrange_single_exe(pin: &Pinned, dest: &Path) -> Result<(), String> {
+fn arrange_single_exe(pin: &Pin, dest: &Path) -> Result<(), String> {
     let published = dest.join(&pin.exe);
     if !published.is_file() {
         let source = sole_file(dest, |path| {
@@ -485,7 +574,7 @@ fn arrange_single_exe(pin: &Pinned, dest: &Path) -> Result<(), String> {
     keep_only(dest, &[&pin.exe])
 }
 
-fn arrange_macos_cli(pin: &Pinned, dest: &Path) -> Result<(), String> {
+fn arrange_macos_cli(pin: &Pin, dest: &Path) -> Result<(), String> {
     let published = dest.join(&pin.exe);
     if !published.is_file() {
         let source = sole_file(dest, |path| {
@@ -795,6 +884,16 @@ mod tests {
         format!("{byte:02x}").repeat(32)
     }
 
+    fn cli_name(engine: &str, exe: &str) -> &'static str {
+        if engine == "flash" {
+            "projector"
+        } else if exe.contains("ruffle_desktop") {
+            "artix"
+        } else {
+            "stock"
+        }
+    }
+
     fn one(
         engine: &str,
         dir: &str,
@@ -805,109 +904,286 @@ mod tests {
         sha256: &str,
         exe: &str,
     ) -> String {
+        let cli = cli_name(engine, exe);
         format!(
-            r#"{{"players":[{{"engine":"{engine}","version":"1","dir":"{dir}","artifacts":[{{"os":"{os}","arch":"{arch}","kind":"{kind}","url":"{url}","sha256":"{sha256}","exe":"{exe}"}}]}}]}}"#
+            r#"{{"players":[{{"engine":"{engine}","version":"1","artifacts":[{{"os":"{os}","arch":"{arch}","dir":"{dir}","cli":"{cli}","kind":"{kind}","url":"{url}","sha256":"{sha256}","exe":"{exe}"}}]}}]}}"#
         )
     }
 
     #[test]
-    fn players_json_round_trips_the_pinned_players() {
-        let text = include_str!("../../../players.json");
-        let catalog = Catalog::parse(text).expect("players.json");
-        let raw: serde_json::Value = serde_json::from_str(text).unwrap();
-        let mut count = 0;
-        for player in raw["players"].as_array().unwrap() {
-            let engine = match player["engine"].as_str().unwrap() {
-                "ruffle" => Engine::Ruffle,
-                "flash" => Engine::Flash,
-                other => panic!("engine {other}"),
-            };
-            let dir = player["dir"].as_str().unwrap();
-            for artifact in player["artifacts"].as_array().unwrap() {
-                count += 1;
-                let os = artifact["os"].as_str().unwrap();
-                let arch = artifact["arch"].as_str().unwrap();
-                let pin = catalog
-                    .select(engine, os, arch)
-                    .unwrap_or_else(|| panic!("missing {engine:?} {os} {arch}"));
-                assert_eq!(pin.url, artifact["url"].as_str().unwrap());
-                assert_eq!(pin.sha256, artifact["sha256"].as_str().unwrap());
-                assert_eq!(pin.dir, dir);
-                assert_eq!(pin.exe, artifact["exe"].as_str().unwrap());
-            }
+    fn phase1_hosts_select_these_pins() {
+        let catalog = Catalog::parse(include_str!("../../../players.json")).expect("players.json");
+        let cases = [
+            (
+                Engine::Ruffle,
+                Os::Linux,
+                Arch::X86_64,
+                Cli::Artix,
+                "ruffle-artix-1.7.0",
+                "ruffle_desktop",
+                "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-linux-x64.zip",
+            ),
+            (
+                Engine::Ruffle,
+                Os::Linux,
+                Arch::X86,
+                Cli::Stock,
+                "ruffle-0.7.1-linux-x86",
+                "ruffle",
+                "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-i686.tar.gz",
+            ),
+            (
+                Engine::Ruffle,
+                Os::Linux,
+                Arch::Aarch64,
+                Cli::Stock,
+                "ruffle-0.7.1-linux-aarch64",
+                "ruffle",
+                "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-aarch64.tar.gz",
+            ),
+            (
+                Engine::Ruffle,
+                Os::Windows,
+                Arch::X86_64,
+                Cli::Artix,
+                "ruffle-artix-1.7.0",
+                "ruffle_desktop.exe",
+                "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-windows-x64.zip",
+            ),
+            (
+                Engine::Ruffle,
+                Os::Windows,
+                Arch::X86,
+                Cli::Stock,
+                "ruffle-0.7.1-windows-x86",
+                "ruffle.exe",
+                "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-windows-x86_32.zip",
+            ),
+            (
+                Engine::Ruffle,
+                Os::Macos,
+                Arch::Aarch64,
+                Cli::Artix,
+                "ruffle-artix-1.7.0",
+                "ruffle_desktop",
+                "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-macOS-arm64.zip",
+            ),
+            (
+                Engine::Ruffle,
+                Os::Macos,
+                Arch::X86_64,
+                Cli::Stock,
+                "ruffle-0.7.1",
+                "Ruffle.app/Contents/MacOS/ruffle",
+                "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-macos-universal.tar.gz",
+            ),
+            (
+                Engine::Flash,
+                Os::Linux,
+                Arch::X86_64,
+                Cli::Projector,
+                "flashplayer-32.0.0.465",
+                "flashplayer",
+                "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flash_player_sa_linux.x86_64.tar.gz",
+            ),
+            (
+                Engine::Flash,
+                Os::Windows,
+                Arch::X86,
+                Cli::Projector,
+                "flashplayer-32.0.0.465",
+                "flashplayer_32_sa.exe",
+                "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.exe",
+            ),
+            (
+                Engine::Flash,
+                Os::Windows,
+                Arch::X86_64,
+                Cli::Projector,
+                "flashplayer-32.0.0.465",
+                "flashplayer_32_sa.exe",
+                "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.exe",
+            ),
+            (
+                Engine::Flash,
+                Os::Macos,
+                Arch::X86_64,
+                Cli::Projector,
+                "flashplayer-32.0.0.465",
+                "Flash Player.app/Contents/MacOS/Flash Player",
+                "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.dmg",
+            ),
+            (
+                Engine::Flash,
+                Os::Macos,
+                Arch::Aarch64,
+                Cli::Projector,
+                "flashplayer-32.0.0.465",
+                "Flash Player.app/Contents/MacOS/Flash Player",
+                "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.dmg",
+            ),
+        ];
+        for (engine, os, arch, cli, dir, exe, url) in cases {
+            let pin = catalog
+                .select(engine, os, arch)
+                .unwrap_or_else(|| panic!("missing {engine:?} {os:?} {arch:?}"));
+            assert_eq!(pin.cli, cli, "{engine:?} {os:?} {arch:?}");
+            assert_eq!(pin.dir, dir);
+            assert_eq!(pin.exe, exe);
+            assert_eq!(pin.url, url);
         }
-        assert_eq!(count, 7);
+        let win_x86 = catalog
+            .select(Engine::Flash, Os::Windows, Arch::X86)
+            .unwrap();
+        let win_x64 = catalog
+            .select(Engine::Flash, Os::Windows, Arch::X86_64)
+            .unwrap();
+        assert_eq!(win_x86.url, win_x64.url);
+        let apple = catalog
+            .select(Engine::Ruffle, Os::Macos, Arch::Aarch64)
+            .unwrap();
+        assert!(!apple.url.contains("macos-universal"));
+        assert_eq!(apple.extract, Extract::MacosCli);
         let artix = catalog
-            .select(Engine::Ruffle, "linux", "x86_64")
-            .expect("linux ruffle");
-        assert!(artix.url.contains("chaoslabs.artix.com/Ruffle/1.7.0/"));
-        assert_eq!(artix.exe, "ruffle_desktop");
-        assert_eq!(artix.dir, "ruffle-artix-1.7.0");
+            .select(Engine::Ruffle, Os::Linux, Arch::X86_64)
+            .unwrap();
         assert_eq!(artix.extract, Extract::AppImage);
         assert_eq!(
             artix.binary_sha256.as_deref(),
             Some("9ad71857ea0c3546b7666addea064d14f1bcb214e148b2e34f99c04af2eff2a8")
         );
-        let windows = catalog
-            .select(Engine::Ruffle, "windows", "x86_64")
-            .expect("windows ruffle");
-        assert_eq!(windows.exe, "ruffle_desktop.exe");
-        assert_eq!(windows.extract, Extract::SingleExe);
-        let apple = catalog
-            .select(Engine::Ruffle, "macos", "aarch64")
-            .expect("apple silicon ruffle");
-        assert_eq!(apple.exe, "ruffle_desktop");
-        assert_eq!(apple.extract, Extract::MacosCli);
-        assert!(apple.url.ends_with("macOS-arm64.zip"));
-        let intel = catalog
-            .select(Engine::Ruffle, "macos", "x86_64")
-            .expect("intel ruffle");
-        assert!(intel
-            .url
-            .contains("ruffle-rs/ruffle/releases/download/v0.7.1/"));
-        assert_eq!(intel.exe, "Ruffle.app/Contents/MacOS/ruffle");
-        assert_eq!(intel.dir, "ruffle-0.7.1");
-        assert_ne!(apple.url, intel.url);
+        assert_eq!(
+            catalog
+                .select(Engine::Ruffle, Os::Windows, Arch::X86_64)
+                .unwrap()
+                .extract,
+            Extract::SingleExe
+        );
+        assert!(catalog
+            .select(Engine::Flash, Os::Linux, Arch::X86)
+            .is_none());
+        assert!(catalog
+            .select(Engine::Flash, Os::Linux, Arch::Aarch64)
+            .is_none());
+        assert!(catalog
+            .select(Engine::Flash, Os::Windows, Arch::Aarch64)
+            .is_none());
+        assert!(catalog
+            .select(Engine::Ruffle, Os::Windows, Arch::Aarch64)
+            .is_none());
     }
 
     #[test]
-    fn exact_arch_beats_universal_and_apple_silicon_flash_uses_the_intel_pin() {
-        let exact = sha(0x11);
-        let universal = sha(0x22);
-        let text = format!(
+    fn parse_rejects_a_second_native_claim_and_github_arch_suffixes() {
+        let ok_sha = sha(0x11);
+        for arch in ["i686", "x86_32", "universal"] {
+            assert!(
+                Catalog::parse(&one(
+                    "ruffle",
+                    "ruffle-1",
+                    "linux",
+                    arch,
+                    "tar.gz",
+                    "https://example.com/r.tar.gz",
+                    &ok_sha,
+                    "ruffle",
+                ))
+                .is_err(),
+                "{arch}"
+            );
+        }
+        assert!(Catalog::parse(&one(
+            "ruffle",
+            "ruffle-1",
+            "macos",
+            "universal",
+            "tar.gz",
+            "https://example.com/r.tar.gz",
+            &ok_sha,
+            "ruffle",
+        ))
+        .is_err());
+        assert!(Catalog::parse(&one(
+            "ruffle",
+            "ruffle-arm",
+            "linux",
+            "aarch64",
+            "tar.gz",
+            "https://example.com/r.tar.gz",
+            &ok_sha,
+            "ruffle",
+        ))
+        .is_ok());
+        let same_dir = format!(
+            r#"{{"players":[{{"engine":"ruffle","version":"1","artifacts":[
+                {{"os":"linux","arch":"x86_64","dir":"ruffle-1","cli":"stock","kind":"tar.gz","url":"https://example.com/a.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}},
+                {{"os":"linux","arch":"x86","dir":"ruffle-1","cli":"stock","kind":"tar.gz","url":"https://example.com/b.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}}
+            ]}}]}}"#
+        );
+        assert!(Catalog::parse(&same_dir).is_err());
+        let player_dir = format!(
+            r#"{{"players":[{{"engine":"ruffle","version":"1","dir":"ruffle-1","artifacts":[
+                {{"os":"linux","arch":"x86_64","dir":"ruffle-1","cli":"stock","kind":"tar.gz","url":"https://example.com/a.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}}
+            ]}}]}}"#
+        );
+        assert!(Catalog::parse(&player_dir).is_err());
+        let two_natives = format!(
+            r#"{{"players":[{{"engine":"ruffle","version":"1","artifacts":[
+                {{"os":"linux","arch":"x86_64","dir":"ruffle-a","cli":"stock","kind":"tar.gz","url":"https://example.com/a.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}},
+                {{"os":"linux","arch":"x86_64","dir":"ruffle-b","cli":"stock","kind":"tar.gz","url":"https://example.com/b.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}}
+            ]}}]}}"#
+        );
+        assert!(Catalog::parse(&two_natives).is_err());
+        let two_compatible = format!(
+            r#"{{"players":[{{"engine":"flash","version":"1","artifacts":[
+                {{"os":"windows","arch":"x86","also":["x86_64"],"dir":"flash-a","cli":"projector","kind":"exe","url":"https://example.com/a.exe","sha256":"{ok_sha}","exe":"flash.exe"}},
+                {{"os":"windows","arch":"x86","also":["x86_64"],"dir":"flash-b","cli":"projector","kind":"exe","url":"https://example.com/b.exe","sha256":"{ok_sha}","exe":"flash.exe"}}
+            ]}}]}}"#
+        );
+        assert!(Catalog::parse(&two_compatible).is_err());
+        let native_then_compatible = format!(
             r#"{{"players":[
-                {{"engine":"ruffle","version":"1","dir":"ruffle-1","artifacts":[
-                    {{"os":"macos","arch":"universal","kind":"tar.gz","url":"https://example.com/u.tar.gz","sha256":"{universal}","exe":"Ruffle.app/Contents/MacOS/ruffle"}},
-                    {{"os":"macos","arch":"x86_64","kind":"tar.gz","url":"https://example.com/x.tar.gz","sha256":"{exact}","exe":"Ruffle.app/Contents/MacOS/ruffle"}}
+                {{"engine":"ruffle","version":"1","artifacts":[
+                    {{"os":"macos","arch":"aarch64","dir":"artix","cli":"artix","kind":"zip","url":"https://example.com/artix.zip","sha256":"{ok_sha}","exe":"ruffle_desktop"}}
                 ]}},
-                {{"engine":"flash","version":"1","dir":"flash-1","artifacts":[
-                    {{"os":"macos","arch":"x86_64","kind":"dmg","url":"https://example.com/f.dmg","sha256":"{exact}","exe":"Flash Player.app/Contents/MacOS/Flash Player"}}
+                {{"engine":"ruffle","version":"1","artifacts":[
+                    {{"os":"macos","arch":"x86_64","also":["aarch64"],"dir":"stock","cli":"stock","kind":"tar.gz","url":"https://example.com/stock.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}}
                 ]}}
             ]}}"#
         );
-        let catalog = Catalog::parse(&text).unwrap();
+        let replaced = Catalog::parse(&native_then_compatible).expect("native replaces compatible");
         assert_eq!(
-            catalog
-                .select(Engine::Ruffle, "macos", "x86_64")
+            replaced
+                .select(Engine::Ruffle, Os::Macos, Arch::Aarch64)
                 .unwrap()
                 .url,
-            "https://example.com/x.tar.gz"
+            "https://example.com/artix.zip"
         );
         assert_eq!(
-            catalog
-                .select(Engine::Ruffle, "macos", "aarch64")
+            replaced
+                .select(Engine::Ruffle, Os::Macos, Arch::X86_64)
                 .unwrap()
                 .url,
-            "https://example.com/u.tar.gz"
+            "https://example.com/stock.tar.gz"
         );
-        let apple = catalog
-            .select(Engine::Flash, "macos", "aarch64")
-            .expect("apple silicon flash");
-        let intel = catalog
-            .select(Engine::Flash, "macos", "x86_64")
-            .expect("intel flash");
-        assert_eq!(apple.exe, intel.exe);
-        assert_eq!(apple.url, "https://example.com/f.dmg");
+        let stock_named_artix = format!(
+            r#"{{"players":[{{"engine":"ruffle","version":"1","artifacts":[
+                {{"os":"linux","arch":"x86_64","dir":"ruffle-1","cli":"stock","kind":"tar.gz","url":"https://example.com/r.tar.gz","sha256":"{ok_sha}","exe":"ruffle_desktop"}}
+            ]}}]}}"#
+        );
+        assert!(Catalog::parse(&stock_named_artix).is_err());
+        let artix_named_stock = format!(
+            r#"{{"players":[{{"engine":"ruffle","version":"1","artifacts":[
+                {{"os":"linux","arch":"x86_64","dir":"ruffle-1","cli":"artix","kind":"tar.gz","url":"https://example.com/r.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}}
+            ]}}]}}"#
+        );
+        assert!(Catalog::parse(&artix_named_stock).is_err());
+        let arch_in_also = format!(
+            r#"{{"players":[{{"engine":"ruffle","version":"1","artifacts":[
+                {{"os":"macos","arch":"x86_64","also":["x86_64"],"dir":"stock","cli":"stock","kind":"tar.gz","url":"https://example.com/stock.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}}
+            ]}}]}}"#
+        );
+        assert!(Catalog::parse(&arch_in_also).is_err());
     }
 
     #[test]
@@ -960,9 +1236,9 @@ mod tests {
             "tar.gz",
             "ruffle",
         ))
-        .is_err());
+        .is_ok());
         assert!(Catalog::parse(
-            r#"{"players":[{"engine":"ruffle","version":"1","dir":"ruffle-1","artifacts":[{"os":"windows","arch":"x86_64","kind":"zip","extract":"appimage","url":"https://example.com/r.zip","sha256":"abababababababababababababababababababababababababababababababab","binarySha256":"abababababababababababababababababababababababababababababababab","exe":"ruffle_desktop"}]}]}"#
+            r#"{"players":[{"engine":"ruffle","version":"1","artifacts":[{"os":"windows","arch":"x86_64","dir":"ruffle-1","cli":"artix","kind":"zip","extract":"appimage","url":"https://example.com/r.zip","sha256":"abababababababababababababababababababababababababababababababab","binarySha256":"abababababababababababababababababababababababababababababababab","exe":"ruffle_desktop"}]}]}"#
         )
         .is_err());
         assert!(Catalog::parse(&base(
@@ -1017,9 +1293,9 @@ mod tests {
         ))
         .is_err());
         let dup = format!(
-            r#"{{"players":[{{"engine":"ruffle","version":"1","dir":"ruffle-1","artifacts":[
-                {{"os":"linux","arch":"x86_64","kind":"tar.gz","url":"https://example.com/a.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}},
-                {{"os":"linux","arch":"x86_64","kind":"tar.gz","url":"https://example.com/b.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}}
+            r#"{{"players":[{{"engine":"ruffle","version":"1","artifacts":[
+                {{"os":"linux","arch":"x86_64","dir":"ruffle-a","cli":"stock","kind":"tar.gz","url":"https://example.com/a.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}},
+                {{"os":"linux","arch":"x86_64","dir":"ruffle-b","cli":"stock","kind":"tar.gz","url":"https://example.com/b.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}}
             ]}}]}}"#
         );
         assert!(Catalog::parse(&dup).is_err());
@@ -1036,8 +1312,8 @@ mod tests {
         dir
     }
 
-    fn fixture() -> Pinned {
-        Pinned {
+    fn fixture() -> Pin {
+        Pin {
             dir: "player-under-test".into(),
             sha256: sha(0x44),
             binary_sha256: None,
@@ -1045,6 +1321,7 @@ mod tests {
             url: "https://example.invalid/player.tar.gz".into(),
             kind: ArchiveKind::TarGz,
             extract: Extract::Archive,
+            cli: Cli::Stock,
         }
     }
 
@@ -1073,7 +1350,7 @@ mod tests {
     fn single_exe_extract_publishes_the_only_windows_binary() {
         let dir = scratch("single-exe");
         fs::write(dir.join("Artix Games Launcher.exe"), b"ruffle-bytes").unwrap();
-        let pin = Pinned {
+        let pin = Pin {
             dir: "ruffle-artix".into(),
             sha256: sha(0x11),
             binary_sha256: Some(format!("{:x}", Sha256::digest(b"ruffle-bytes"))),
@@ -1081,6 +1358,7 @@ mod tests {
             url: "https://example.invalid/r.zip".into(),
             kind: ArchiveKind::Zip,
             extract: Extract::SingleExe,
+            cli: Cli::Artix,
         };
         arrange(&pin, &dir).unwrap();
         assert_eq!(
@@ -1097,7 +1375,7 @@ mod tests {
         fs::create_dir_all(&nested).unwrap();
         fs::write(nested.join("ruffle_desktop"), b"arm64-ruffle").unwrap();
         fs::write(nested.join("ruffle"), b"#!/bin/sh\n").unwrap();
-        let pin = Pinned {
+        let pin = Pin {
             dir: "ruffle-artix".into(),
             sha256: sha(0x12),
             binary_sha256: Some(format!("{:x}", Sha256::digest(b"arm64-ruffle"))),
@@ -1105,6 +1383,7 @@ mod tests {
             url: "https://example.invalid/r.zip".into(),
             kind: ArchiveKind::Zip,
             extract: Extract::MacosCli,
+            cli: Cli::Artix,
         };
         arrange(&pin, &dir).unwrap();
         assert_eq!(
@@ -1118,7 +1397,7 @@ mod tests {
     fn a_binary_hash_mismatch_is_not_published() {
         let dir = scratch("bad-sha");
         fs::write(dir.join("player.exe"), b"nope").unwrap();
-        let pin = Pinned {
+        let pin = Pin {
             dir: "ruffle-artix".into(),
             sha256: sha(0x13),
             binary_sha256: Some(sha(0x99)),
@@ -1126,6 +1405,7 @@ mod tests {
             url: "https://example.invalid/r.zip".into(),
             kind: ArchiveKind::Zip,
             extract: Extract::SingleExe,
+            cli: Cli::Artix,
         };
         assert!(arrange(&pin, &dir).is_err());
     }

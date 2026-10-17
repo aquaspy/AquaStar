@@ -128,7 +128,7 @@ fn engines() -> Vec<(Engine, bool)> {
 }
 
 #[tauri::command]
-fn preferred_engine() -> Engine {
+fn preferred_engine() -> Option<Engine> {
     Engine::preferred()
 }
 

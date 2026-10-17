@@ -25,26 +25,37 @@ pub enum Engine {
 impl Engine {
     pub const ALL: [Engine; 2] = [Engine::Ruffle, Engine::Flash];
 
-    pub fn preferred() -> Engine {
-        Self::preferred_for(std::env::consts::OS, std::env::consts::ARCH)
+    pub fn preferred() -> Option<Engine> {
+        match (catalog::Os::host(), catalog::Arch::host()) {
+            (Some(os), Some(arch)) => Self::preferred_for(os, arch),
+            _ => None,
+        }
     }
 
-    pub fn preferred_for(os: &str, arch: &str) -> Engine {
+    pub fn preferred_for(os: catalog::Os, arch: catalog::Arch) -> Option<Engine> {
         if catalog::Catalog::pinned()
             .select(Engine::Ruffle, os, arch)
             .is_some()
         {
-            Engine::Ruffle
+            Some(Engine::Ruffle)
+        } else if catalog::Catalog::pinned()
+            .select(Engine::Flash, os, arch)
+            .is_some()
+        {
+            Some(Engine::Flash)
         } else {
-            Engine::Flash
+            None
         }
     }
 
     pub fn supported(&self) -> bool {
-        self.supported_on(std::env::consts::OS, std::env::consts::ARCH)
+        match (catalog::Os::host(), catalog::Arch::host()) {
+            (Some(os), Some(arch)) => self.supported_on(os, arch),
+            _ => false,
+        }
     }
 
-    pub fn supported_on(&self, os: &str, arch: &str) -> bool {
+    pub fn supported_on(&self, os: catalog::Os, arch: catalog::Arch) -> bool {
         catalog::Catalog::pinned().select(*self, os, arch).is_some()
     }
 
@@ -284,10 +295,14 @@ impl Players {
         settings: &RuffleSettings,
         save_directory: Option<&Path>,
     ) -> Result<String, String> {
-        let pin = catalog::Catalog::pinned()
-            .select(engine, std::env::consts::OS, std::env::consts::ARCH)
+        let os = catalog::Os::host()
             .ok_or_else(|| format!("{engine:?} is not available on this platform"))?;
-        let located = match locate(&pin, roots) {
+        let arch = catalog::Arch::host()
+            .ok_or_else(|| format!("{engine:?} is not available on this platform"))?;
+        let pin = catalog::Catalog::pinned()
+            .select(engine, os, arch)
+            .ok_or_else(|| format!("{engine:?} is not available on this platform"))?;
+        let located = match locate(pin, roots) {
             Some(source) => source.path().to_path_buf(),
             None => catalog::publish(&pin, roots.app_data())?,
         };
@@ -886,7 +901,7 @@ fn safe_backend_name() -> &'static str {
     }
 }
 
-fn locate(pin: &catalog::Pinned, roots: &PlayerRoots) -> Option<catalog::Source> {
+fn locate(pin: &catalog::Pin, roots: &PlayerRoots) -> Option<catalog::Source> {
     let updated = roots.app_data().join(&pin.dir);
     if catalog::judge(&updated, pin) == catalog::TreeJudge::Match {
         return Some(catalog::Source::Updated(updated.join(&pin.exe)));
@@ -909,15 +924,46 @@ mod pin_tests {
 
     #[test]
     fn ruffle_is_preferred_and_apple_silicon_flash_uses_the_intel_projector() {
-        assert_eq!(Engine::preferred_for("linux", "x86_64"), Engine::Ruffle);
-        assert_eq!(Engine::preferred_for("windows", "x86_64"), Engine::Ruffle);
-        assert_eq!(Engine::preferred_for("macos", "x86_64"), Engine::Ruffle);
-        assert_eq!(Engine::preferred_for("macos", "aarch64"), Engine::Ruffle);
-        assert!(Engine::Flash.supported_on("macos", "aarch64"));
-        assert!(Engine::Flash.supported_on("macos", "x86_64"));
-        assert!(Engine::Ruffle.supported_on("linux", "x86_64"));
-        assert!(Engine::Flash.supported_on("linux", "x86_64"));
-        assert!(Engine::Flash.supported_on("windows", "x86_64"));
+        assert_eq!(
+            Engine::preferred_for(catalog::Os::Linux, catalog::Arch::X86_64),
+            Some(Engine::Ruffle)
+        );
+        assert_eq!(
+            Engine::preferred_for(catalog::Os::Windows, catalog::Arch::X86_64),
+            Some(Engine::Ruffle)
+        );
+        assert_eq!(
+            Engine::preferred_for(catalog::Os::Macos, catalog::Arch::X86_64),
+            Some(Engine::Ruffle)
+        );
+        assert_eq!(
+            Engine::preferred_for(catalog::Os::Macos, catalog::Arch::Aarch64),
+            Some(Engine::Ruffle)
+        );
+        assert_eq!(
+            Engine::preferred_for(catalog::Os::Linux, catalog::Arch::Aarch64),
+            Some(Engine::Ruffle)
+        );
+        assert_eq!(
+            Engine::preferred_for(catalog::Os::Linux, catalog::Arch::X86),
+            Some(Engine::Ruffle)
+        );
+        assert_eq!(
+            Engine::preferred_for(catalog::Os::Windows, catalog::Arch::X86),
+            Some(Engine::Ruffle)
+        );
+        assert_eq!(
+            Engine::preferred_for(catalog::Os::Windows, catalog::Arch::Aarch64),
+            None
+        );
+        assert!(Engine::Flash.supported_on(catalog::Os::Macos, catalog::Arch::Aarch64));
+        assert!(Engine::Flash.supported_on(catalog::Os::Macos, catalog::Arch::X86_64));
+        assert!(Engine::Ruffle.supported_on(catalog::Os::Linux, catalog::Arch::X86_64));
+        assert!(Engine::Flash.supported_on(catalog::Os::Linux, catalog::Arch::X86_64));
+        assert!(Engine::Flash.supported_on(catalog::Os::Windows, catalog::Arch::X86_64));
+        assert!(Engine::Flash.supported_on(catalog::Os::Windows, catalog::Arch::X86));
+        assert!(!Engine::Flash.supported_on(catalog::Os::Linux, catalog::Arch::Aarch64));
+        assert!(!Engine::Flash.supported_on(catalog::Os::Linux, catalog::Arch::X86));
         assert_eq!(Engine::ALL, [Engine::Ruffle, Engine::Flash]);
         let missing_rosetta = spawn_failure(
             Path::new("Flash Player.app/Contents/MacOS/Flash Player"),
@@ -928,7 +974,10 @@ mod pin_tests {
         assert!(missing_rosetta.contains("Flash Player.app/Contents/MacOS/Flash Player"));
         assert_eq!(
             Engine::preferred(),
-            Engine::preferred_for(std::env::consts::OS, std::env::consts::ARCH)
+            Engine::preferred_for(
+                catalog::Os::host().expect("os"),
+                catalog::Arch::host().expect("arch")
+            )
         );
     }
 
@@ -955,9 +1004,13 @@ mod locate_tests {
         dir
     }
 
-    fn host_pin() -> catalog::Pinned {
+    fn host_pin() -> &'static catalog::Pin {
         catalog::Catalog::pinned()
-            .select(Engine::Ruffle, std::env::consts::OS, std::env::consts::ARCH)
+            .select(
+                Engine::Ruffle,
+                catalog::Os::host().expect("os"),
+                catalog::Arch::host().expect("arch"),
+            )
             .expect("ruffle pin")
     }
 
@@ -1107,7 +1160,11 @@ mod tests {
     #[test]
     fn a_bundled_player_runs_in_place() {
         let pin = catalog::Catalog::pinned()
-            .select(Engine::Ruffle, std::env::consts::OS, std::env::consts::ARCH)
+            .select(
+                Engine::Ruffle,
+                catalog::Os::host().expect("os"),
+                catalog::Arch::host().expect("arch"),
+            )
             .expect("ruffle pin");
         let base = scratch("in-place");
         let resource = base.join("resource");

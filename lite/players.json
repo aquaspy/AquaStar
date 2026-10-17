@@ -2,12 +2,60 @@
   "players": [
     {
       "engine": "ruffle",
+      "version": "0.7.1",
+      "artifacts": [
+        {
+          "os": "linux",
+          "arch": "x86",
+          "dir": "ruffle-0.7.1-linux-x86",
+          "cli": "stock",
+          "kind": "tar.gz",
+          "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-i686.tar.gz",
+          "sha256": "b2228c49fb1164deac58233b81ba53eac50522472c10a092f63c039f650ee572",
+          "exe": "ruffle"
+        },
+        {
+          "os": "linux",
+          "arch": "aarch64",
+          "dir": "ruffle-0.7.1-linux-aarch64",
+          "cli": "stock",
+          "kind": "tar.gz",
+          "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-aarch64.tar.gz",
+          "sha256": "36b222a53062709772c8dcd454fdd1dafa67ab743497e38a0a5d2ed8c0a6597f",
+          "exe": "ruffle"
+        },
+        {
+          "os": "windows",
+          "arch": "x86",
+          "dir": "ruffle-0.7.1-windows-x86",
+          "cli": "stock",
+          "kind": "zip",
+          "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-windows-x86_32.zip",
+          "sha256": "40bafa16ade6e449a4d5405f9ec81afea6246868cefd544534a6856e2d2fddfc",
+          "exe": "ruffle.exe"
+        },
+        {
+          "os": "macos",
+          "arch": "x86_64",
+          "also": ["aarch64"],
+          "dir": "ruffle-0.7.1",
+          "cli": "stock",
+          "kind": "tar.gz",
+          "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-macos-universal.tar.gz",
+          "sha256": "7a86a09b0ca1d5756abcbb093108265019d77edad79e91c98689126c940bea4e",
+          "exe": "Ruffle.app/Contents/MacOS/ruffle"
+        }
+      ]
+    },
+    {
+      "engine": "ruffle",
       "version": "1.7.0",
-      "dir": "ruffle-artix-1.7.0",
       "artifacts": [
         {
           "os": "linux",
           "arch": "x86_64",
+          "dir": "ruffle-artix-1.7.0",
+          "cli": "artix",
           "kind": "zip",
           "extract": "appimage",
           "url": "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-linux-x64.zip",
@@ -18,6 +66,8 @@
         {
           "os": "windows",
           "arch": "x86_64",
+          "dir": "ruffle-artix-1.7.0",
+          "cli": "artix",
           "kind": "zip",
           "extract": "single-exe",
           "url": "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-windows-x64.zip",
@@ -28,6 +78,8 @@
         {
           "os": "macos",
           "arch": "aarch64",
+          "dir": "ruffle-artix-1.7.0",
+          "cli": "artix",
           "kind": "zip",
           "extract": "macos-cli",
           "url": "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-macOS-arm64.zip",
@@ -38,28 +90,14 @@
       ]
     },
     {
-      "engine": "ruffle",
-      "version": "0.7.1",
-      "dir": "ruffle-0.7.1",
-      "artifacts": [
-        {
-          "os": "macos",
-          "arch": "universal",
-          "kind": "tar.gz",
-          "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-macos-universal.tar.gz",
-          "sha256": "7a86a09b0ca1d5756abcbb093108265019d77edad79e91c98689126c940bea4e",
-          "exe": "Ruffle.app/Contents/MacOS/ruffle"
-        }
-      ]
-    },
-    {
       "engine": "flash",
       "version": "32.0.0.465",
-      "dir": "flashplayer-32.0.0.465",
       "artifacts": [
         {
           "os": "linux",
           "arch": "x86_64",
+          "dir": "flashplayer-32.0.0.465",
+          "cli": "projector",
           "kind": "tar.gz",
           "url": "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flash_player_sa_linux.x86_64.tar.gz",
           "sha256": "883f7aa23301fc80de879501157533a4acdbfee0721ed7c57676dc032fdf96c3",
@@ -67,7 +105,10 @@
         },
         {
           "os": "windows",
-          "arch": "x86_64",
+          "arch": "x86",
+          "also": ["x86_64"],
+          "dir": "flashplayer-32.0.0.465",
+          "cli": "projector",
           "kind": "exe",
           "url": "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.exe",
           "sha256": "a4b333ac1da12026989549015303d82231982838bccfb544ba5fd188746066f0",
@@ -76,6 +117,9 @@
         {
           "os": "macos",
           "arch": "x86_64",
+          "also": ["aarch64"],
+          "dir": "flashplayer-32.0.0.465",
+          "cli": "projector",
           "kind": "dmg",
           "url": "https://fpdownload.macromedia.com/pub/flashplayer/updaters/32/flashplayer_32_sa.dmg",
           "sha256": "236ecef54a7d6c3eed739c74b7e14946b07b6156cbcedda3bbbf444f1d17023a",
