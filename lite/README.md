@@ -13,6 +13,14 @@ Nothing in the Electron app depends on it.
 
 ## Build and run (Linux)
 
+For local testing, install the development libraries once:
+
+```sh
+sudo apt-get install -y build-essential pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev librsvg2-dev libdbus-1-dev
+```
+
+From the repository root, run `bash lite/scripts/build-local.sh --run` to compile and open a debug build. Cargo reuses compiled dependencies on later runs. HTML and JavaScript live in `lite/ui/`; rebuild after changing them so the executable includes the updated pages. Use `--release` for an optimized build. The script builds a local executable without creating an installer or publishing a release. Missing players are downloaded on first launch, as described above.
+
 ```sh
 sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libgtk2.0-0 libnss3   # GTK 2 and NSS are for the Flash projector
 cd lite/src-tauri
