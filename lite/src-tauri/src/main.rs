@@ -2,6 +2,7 @@
 
 mod ads;
 mod inventory;
+mod manifest;
 #[cfg(target_os = "linux")]
 mod fonts;
 mod placement;
@@ -135,22 +136,8 @@ fn preferred_engine() -> Option<Engine> {
     Engine::preferred()
 }
 
-const SITE_HOSTS: &[&str] = &[
-    "aqwwiki.wikidot.com",
-    "account.aq.com",
-    "www.aq.com",
-    "www.artix.com",
-];
-
-/// HTTPS pages on the launcher's site list. Navigation inside a site window
-/// still drops ad hosts (`ads::host_blocked`); these hosts are not on that list.
 fn allowed_site(url: &str) -> Result<tauri::Url, String> {
-    let parsed: tauri::Url = url.parse().map_err(|_| "bad url".to_string())?;
-    let host = parsed.host_str().unwrap_or("");
-    if parsed.scheme() != "https" || !SITE_HOSTS.contains(&host) {
-        return Err(format!("{host} is not an allowed site"));
-    }
-    Ok(parsed)
+    manifest::accept_site(url)
 }
 
 #[tauri::command]
@@ -400,10 +387,11 @@ async fn open_inventory_item_wiki(app: tauri::AppHandle, item_name: String) -> R
     if slug.is_empty() {
         return Err("bad item".into());
     }
-    open_site(app, "wiki".into(), format!("https://aqwwiki.wikidot.com/{slug}")).await
+    open_site(app, "wiki".into(), format!("https://aqwwiki.wikidot.com/{slug}"), None).await
 }
 
 struct TimerShortcut(std::sync::Mutex<Option<tauri_plugin_global_shortcut::Shortcut>>);
+struct ShortcutBook(std::sync::Mutex<std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String>>);
 
 fn shortcut_from(accel: &profile::Accelerator) -> Option<tauri_plugin_global_shortcut::Shortcut> {
     use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
@@ -484,15 +472,16 @@ fn clear_strategy_timer_shortcut(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
-async fn open_site(app: tauri::AppHandle, label: String, url: String) -> Result<(), String> {
+async fn open_site(app: tauri::AppHandle, label: String, url: String, title: Option<String>) -> Result<(), String> {
     let parsed = allowed_site(&url)?;
+    let title = title.unwrap_or_else(|| label.clone());
     if let Some(w) = app.get_webview_window(&label) {
         let _ = w.navigate(parsed);
         let _ = w.set_focus();
         return Ok(());
     }
     WebviewWindowBuilder::new(&app, &label, WebviewUrl::External(parsed))
-        .title(format!("AquaStar - {label}"))
+        .title(format!("AquaStar - {title}"))
         .inner_size(1100.0, 750.0)
         .initialization_script_for_all_frames(ads::init_script())
         .on_page_load(|window, payload| {
@@ -595,6 +584,153 @@ fn smoke_request() -> Option<Engine> {
     }
 }
 
+#[tauri::command]
+fn get_shell_pages() -> serde_json::Value {
+    manifest::shell_pages(current_language().as_str())
+}
+
+#[tauri::command]
+async fn open_project_page(app: tauri::AppHandle) -> Result<(), String> {
+    let url = manifest::releases_url().to_string();
+    let title = manifest::about_dialog(current_language().as_str()).primary;
+    open_site(app, "project".into(), url, Some(title)).await
+}
+
+fn current_language() -> String {
+    let files = profile::live_files();
+    manifest::resolve_language(&profile::setting_str(&files, "appLanguage")).to_string()
+}
+
+fn focused_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
+    app.webview_windows()
+        .into_values()
+        .find(|window| window.is_focused().unwrap_or(false))
+        .or_else(|| app.get_webview_window("main"))
+}
+
+fn open_dialog(app: &tauri::AppHandle, label: &str, dialog: manifest::Dialog, width: f64, height: f64) {
+    if let Some(window) = app.get_webview_window(label) {
+        let _ = window.set_focus();
+        return;
+    }
+    let script = format!(
+        "window.__aquastarDialog = {};",
+        serde_json::to_string(&dialog).unwrap_or_else(|_| "{}".into())
+    );
+    let _ = WebviewWindowBuilder::new(app, label, WebviewUrl::App(format!("{label}.html").into()))
+        .title(dialog.title)
+        .inner_size(width, height)
+        .initialization_script(script)
+        .build();
+}
+
+fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
+    let Some(command) = manifest::command_for(id) else {
+        return;
+    };
+    match command.action.as_str() {
+        "about" => open_dialog(app, "about", manifest::about_dialog(current_language().as_str()), 520.0, 420.0),
+        "help" => {
+            let files = profile::live_files();
+            let merged = profile::merged_settings(&files);
+            let mut current = std::collections::HashMap::new();
+            for bind in manifest::keybinds() {
+                current.insert(bind.id.clone(), manifest::accelerators(&bind, merged.get(&bind.id)));
+            }
+            open_dialog(app, "help", manifest::help_dialog(current_language().as_str(), Some(&current)), 560.0, 480.0);
+        }
+        "fullscreen" => {
+            if let Some(window) = focused_window(app) {
+                let next = !window.is_fullscreen().unwrap_or(false);
+                let _ = window.set_fullscreen(next);
+            }
+        }
+        "reload" => {
+            if let Some(window) = focused_window(app) {
+                let _ = window.eval("location.reload()");
+            }
+        }
+        "reload-cache" => {
+            if let Some(window) = focused_window(app) {
+                let _ = window.eval("location.reload(true)");
+            }
+        }
+        "forward" => {
+            if let Some(window) = focused_window(app) {
+                let _ = window.eval("history.forward()");
+            }
+        }
+        "backward" => {
+            if let Some(window) = focused_window(app) {
+                let _ = window.eval("history.back()");
+            }
+        }
+        "settings" => {
+            let _ = open_tool(app.clone(), "settings".into());
+        }
+        "tool" => {
+            let _ = open_tool(app.clone(), command.target);
+        }
+        "page" => {
+            let lang = current_language();
+            let url = if command.target == "charpage" && !from_menu {
+                let name = profile::setting_str(&profile::live_files(), "playerCharacter");
+                manifest::charpage_url(&name)
+            } else {
+                manifest::page_url(&command.target).unwrap_or_default()
+            };
+            if url.is_empty() {
+                return;
+            }
+            let app = app.clone();
+            let label = command.target.clone();
+            let title = manifest::page_label(lang.as_str(), &label);
+            tauri::async_runtime::spawn(async move {
+                let _ = open_site(app, label, url, Some(title)).await;
+            });
+        }
+        "play-primary" => spawn_play(app, MovieKind::Primary),
+        "play-testing" => spawn_play(app, MovieKind::Testing),
+        "play-dragonfable" => spawn_play(app, MovieKind::DragonFable),
+        _ => {}
+    }
+}
+
+fn spawn_play(app: &tauri::AppHandle, movie: MovieKind) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let engine = Engine::preferred().unwrap_or(Engine::Ruffle);
+        let _ = play(app, engine, movie).await;
+    });
+}
+
+fn register_saved_shortcuts(app: &tauri::AppHandle) {
+    use tauri_plugin_global_shortcut::GlobalShortcutExt;
+    let merged = profile::merged_settings(&profile::live_files());
+    let mut map = std::collections::HashMap::new();
+    for bind in manifest::keybinds() {
+        for accel in manifest::accelerators(&bind, merged.get(&bind.id)) {
+            let Some(parsed) = profile::parse_accelerator(&accel) else {
+                eprintln!("aquastar-lite: skipping invalid shortcut {accel} for {}", bind.id);
+                continue;
+            };
+            let Some(shortcut) = shortcut_from(&parsed) else {
+                eprintln!("aquastar-lite: cannot map shortcut {accel} for {}", bind.id);
+                continue;
+            };
+            match app.global_shortcut().register(shortcut) {
+                Ok(()) => {
+                    map.insert(shortcut, bind.id.clone());
+                }
+                Err(err) => {
+                    eprintln!("aquastar-lite: shortcut {accel} for {} was not registered ({err})", bind.id);
+                }
+            }
+        }
+    }
+    *app.state::<ShortcutBook>().0.lock().unwrap_or_else(|err| err.into_inner()) = map;
+}
+
 fn schedule_inventory_sync(app: tauri::AppHandle) {
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_secs(30));
@@ -645,12 +781,27 @@ fn main() {
         }
     };
     let app = tauri::Builder::default()
-        .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app, _shortcut, event| {
+        .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app, shortcut, event| {
             if event.state != tauri_plugin_global_shortcut::ShortcutState::Pressed {
                 return;
             }
-            if let Some(window) = app.get_webview_window("strategy") {
-                let _ = window.eval("window.__aquastarTimerToggle&&window.__aquastarTimerToggle()");
+            let timer = app.state::<TimerShortcut>();
+            let slot = timer.0.lock().unwrap_or_else(|err| err.into_inner());
+            if slot.as_ref() == Some(shortcut) {
+                drop(slot);
+                if let Some(window) = app.get_webview_window("strategy") {
+                    let _ = window.eval("window.__aquastarTimerToggle&&window.__aquastarTimerToggle()");
+                }
+                return;
+            }
+            drop(slot);
+            let id = {
+                let book = app.state::<ShortcutBook>();
+                let map = book.0.lock().unwrap_or_else(|err| err.into_inner());
+                map.get(shortcut).cloned()
+            };
+            if let Some(id) = id {
+                dispatch(app, &id, false);
             }
         }).build())
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
@@ -663,6 +814,7 @@ fn main() {
         .manage(placement)
         .manage(Players::default())
         .manage(TimerShortcut(std::sync::Mutex::new(None)))
+        .manage(ShortcutBook(std::sync::Mutex::new(std::collections::HashMap::new())))
         .invoke_handler(tauri::generate_handler![
             play,
             engines,
@@ -708,7 +860,9 @@ fn main() {
             ruffle_settings,
             set_ruffle_settings,
             launcher_settings,
-            set_hide_launcher
+            set_hide_launcher,
+            get_shell_pages,
+            open_project_page
         ])
         .setup(|app| {
             let exe_dir = std::env::current_exe()
@@ -718,6 +872,14 @@ fn main() {
             std::thread::spawn(move || players::warm_loader(&profile));
             schedule_smoke(app.handle().clone());
             schedule_inventory_sync(app.handle().clone());
+            let lang = current_language();
+            if let Err(err) = manifest::install_menu(app.handle(), lang.as_str()) {
+                eprintln!("aquastar-lite: menu was not installed ({err})");
+            }
+            app.handle().on_menu_event(|app, event| {
+                dispatch(app, event.id().0.as_str(), true);
+            });
+            register_saved_shortcuts(app.handle());
             Ok(())
         })
         .build(context)
@@ -819,10 +981,10 @@ mod tests {
         let cargo = read("Cargo.toml");
         let conf = read("tauri.conf.json");
         assert!(cargo.contains("name = \"aquastar-lite\""));
-        assert!(cargo.contains("version = \"3.0.0-alpha.5\""));
+        assert!(cargo.contains("version = \"3.0.0-alpha.6\""));
         assert!(!cargo.contains(&lite));
         let parsed: serde_json::Value = serde_json::from_str(&conf).unwrap();
-        assert_eq!(parsed["version"], "3.0.0-alpha.5");
+        assert_eq!(parsed["version"], "3.0.0-alpha.6");
         assert_eq!(parsed["productName"], "aquastar-lite");
         assert_eq!(parsed["mainBinaryName"], "aquastar-lite");
         assert_eq!(parsed["identifier"], "io.github.aquaspy.aquastar-lite");

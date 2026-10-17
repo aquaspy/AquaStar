@@ -146,11 +146,6 @@ pub fn keybindings_payload(files: &ProfileFiles) -> Value {
         "current": current,
         "defaults": keybind_defaults(),
         "options": option_defaults(),
-        "recordingFormatChoices": [
-            {"id": "h264-mkv", "label": "MKV (H.264)"},
-            {"id": "vp9-webm", "label": "WebM (VP9)"},
-            {"id": "vp8-webm", "label": "WebM (VP8)"}
-        ],
         "renderModeChoices": [
             {"id": "flash", "label": "Flash Player"},
             {"id": "ruffle", "label": "Ruffle (Experimental)"}
@@ -631,6 +626,18 @@ fn migrate_settings_files(paths: &[PathBuf]) {
     }
 }
 
+pub(crate) fn merged_settings(files: &ProfileFiles) -> Map<String, Value> {
+    merge_settings(&files.settings_files)
+}
+
+pub(crate) fn setting_str(files: &ProfileFiles, key: &str) -> String {
+    merged_settings(files)
+        .get(key)
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string()
+}
+
 fn merge_settings(paths: &[PathBuf]) -> Map<String, Value> {
     let mut top = Map::new();
     let mut plugins = None;
@@ -698,7 +705,6 @@ fn option_defaults() -> Value {
     serde_json::json!({
         "appLanguage": "system",
         "customUrl": "",
-        "recordingFormat": "h264-mkv",
         "renderMode": "flash",
         "ruffleUpdateChannel": "latest",
         "ruffleAutoUpdate": true,
@@ -713,38 +719,11 @@ fn option_defaults() -> Value {
 }
 
 fn keybind_defaults() -> Value {
-    serde_json::json!({
-        "about": "F9",
-        "fullscreen": "F11",
-        "sshot": "F2",
-        "reload": ["CmdOrCtrl+F5", "CmdOrCtrl+R"],
-        "reloadCache": "CmdOrCtrl+Shift+F5",
-        "forward": "Alt+F",
-        "backward": "Alt+B",
-        "help": ["Alt+H", "CmdOrCtrl+H", "F1"],
-        "settings": "Alt+9",
-        "record": "Ctrl+J",
-        "wiki": "Alt+W",
-        "account": "Alt+A",
-        "design": "Alt+D",
-        "charpage": "Alt+P",
-        "newAqw": "Alt+N",
-        "newTest": "Alt+Q",
-        "dragon": "Alt+1",
-        "reminders": "Alt+T",
-        "todo": "Alt+Y",
-        "inventory": "Alt+I",
-        "strategy": "Alt+U",
-        "cpSshot": "Alt+K"
-    })
+    crate::manifest::keybind_defaults_value()
 }
 
-fn keybind_default_ids() -> Vec<&'static str> {
-    vec![
-        "about", "fullscreen", "sshot", "reload", "reloadCache", "forward", "backward", "help",
-        "settings", "record", "wiki", "account", "design", "charpage", "newAqw", "newTest",
-        "dragon", "reminders", "todo", "inventory", "strategy", "cpSshot",
-    ]
+fn keybind_default_ids() -> Vec<String> {
+    crate::manifest::keybind_ids()
 }
 
 fn parse_static(raw: &str) -> Value {

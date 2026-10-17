@@ -189,7 +189,6 @@
   const PLATFORM_OPTION_TYPES = {
     appLanguage:       'select',
     customUrl:         'text',
-    recordingFormat:   'select',
     renderMode:        'select',
     ruffleUpdateChannel: 'select',
     ruffleAutoUpdate:  'boolean',
@@ -205,7 +204,7 @@
   const CUSTOM_SWF_SECTION_KEYS = new Set(['customUrl']);
 
   const PLATFORM_RESERVED_KEYBIND_IDS = new Set([
-    'settings', 'fullscreen', 'sshot', 'record', 'reload', 'reloadCache',
+    'settings', 'fullscreen', 'reload', 'reloadCache',
     'help', 'about', 'forward', 'backward'
   ]);
 
@@ -1120,7 +1119,6 @@
         const localized = messages.languageChoiceLabels && messages.languageChoiceLabels[c.id];
         return { id: c.id, label: localized || c.label };
       }),
-      recordingFormat: kb.recordingFormatChoices || [],
       renderMode:      kb.renderModeChoices || []
     };
     updateChannelChoices = kb.ruffleUpdateChannelChoices || [];

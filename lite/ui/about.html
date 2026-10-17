@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AquaStar</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  main { display: block; max-width: 640px; }
+  p { white-space: pre-wrap; }
+  .actions { display: flex; gap: 8px; margin-top: 16px; }
+  .actions button { width: auto; padding: 10px 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">AquaStar</h1>
+  <p id="message"></p>
+  <p id="detail"></p>
+  <div class="actions">
+    <button type="button" id="primary"></button>
+    <button type="button" id="close"></button>
+  </div>
+</main>
+<script>
+const dialog = window.__aquastarDialog || {};
+const title = document.getElementById('title');
+const primary = document.getElementById('primary');
+title.textContent = dialog.title || 'AquaStar';
+document.title = dialog.title || 'AquaStar';
+document.getElementById('message').textContent = dialog.message || '';
+document.getElementById('detail').textContent = dialog.detail || '';
+primary.textContent = dialog.primary || '';
+primary.hidden = !dialog.primary;
+primary.addEventListener('click', () => {
+  window.__TAURI__.core.invoke('open_project_page').catch((err) => {
+    primary.textContent = String(err);
+  });
+});
+const close = document.getElementById('close');
+close.textContent = dialog.close || 'Close';
+close.addEventListener('click', () => window.close());
+</script>
+</body>
+</html>

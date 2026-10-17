@@ -1,0 +1,112 @@
+{
+  "id": "adventure-quest-worlds",
+  "locales": ["en-US", "pt-BR"],
+  "about": { "releasesUrl": "https://github.com/aquaspy/AquaStar/releases" },
+  "menus": [
+    {
+      "id": "back",
+      "labelKey": "menuBackward",
+      "labelPrefix": "<<< ",
+      "action": "backward",
+      "keybind": "backward"
+    },
+    {
+      "id": "forward",
+      "labelKey": "menuFoward",
+      "labelPrefix": ">>> ",
+      "action": "forward",
+      "keybind": "forward"
+    },
+    {
+      "id": "useful",
+      "labelKey": "menuOtherPages",
+      "items": [
+        { "id": "wiki", "labelKey": "menuWiki", "url": "http://aqwwiki.wikidot.com/new-releases", "keybind": "wiki" },
+        { "id": "design", "labelKey": "menuDesign", "url": "https://www.aq.com/gamedesignnotes/", "keybind": "design" },
+        { "id": "balancePatchNotes", "labelKey": "menuBalancePatchNotes", "url": "https://www.aq.com/gamedesignnotes/AQW-Balance-PatchNotes-9515" },
+        { "id": "account", "labelKey": "menuAccount", "url": "https://account.aq.com/", "keybind": "account" },
+        { "id": "charpage", "labelKey": "menuCharpage", "url": "https://account.aq.com/CharPage", "keybind": "charpage" },
+        { "type": "separator" },
+        {
+          "id": "otherPages",
+          "labelKey": "menuOtherPages2",
+          "items": [
+            { "id": "dailyGifts", "labelKey": "menuDailyGifts", "url": "https://www.aq.com/lore/dailygifts" },
+            { "id": "calendar", "labelKey": "menuCalendar", "url": "https://www.aq.com/lore/calendar" },
+            { "id": "forge", "labelKey": "menuForge", "url": "https://www.aq.com/lore/guides/enhancementtraits" },
+            { "id": "heromart", "labelKey": "menuHeromart", "url": "https://www.heromart.com/" },
+            { "id": "portal", "labelKey": "menuPortal", "url": "https://portal.battleon.com/" }
+          ]
+        },
+        {
+          "id": "socialMedia",
+          "labelKey": "menuSocialMedia",
+          "items": [
+            { "id": "twitter", "labelKey": "menuTwitter", "url": "https://twitter.com/Alina_AE" },
+            { "id": "reddit", "labelKey": "menuReddit", "url": "https://www.reddit.com/r/AQW/" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "labelKey": "menuTools",
+      "fallback": "Tools",
+      "items": [
+        { "id": "reload", "labelKey": "menuReloadPage", "keybind": "reload", "action": "reload" },
+        { "id": "reloadCache", "labelKey": "menuReloadCache", "keybind": "reloadCache", "action": "reload-cache" },
+        { "id": "fullscreen", "labelKey": "menuFullscreen", "keybind": "fullscreen", "action": "fullscreen" }
+      ]
+    },
+    {
+      "id": "game",
+      "labelKey": "menuGame",
+      "items": [
+        { "id": "newAqw", "labelKey": "menuNewAqw", "keybind": "newAqw", "action": "play-primary" },
+        { "id": "newTest", "labelKey": "menuNewTest", "keybind": "newTest", "action": "play-testing" },
+        { "id": "dragon", "labelKey": "menuDragon", "keybind": "dragon", "action": "play-dragonfable" }
+      ]
+    },
+    {
+      "id": "features",
+      "labelKey": "menuFeatures",
+      "items": [
+        { "id": "reminders", "labelKey": "menuReminders", "keybind": "reminders", "action": "tool" },
+        { "id": "todo", "labelKey": "menuTodo", "keybind": "todo", "action": "tool" },
+        { "id": "inventory", "labelKey": "menuInventory", "keybind": "inventory", "action": "tool" },
+        { "id": "strategy", "labelKey": "menuStrategy", "keybind": "strategy", "action": "tool" }
+      ]
+    },
+    {
+      "id": "aquastar",
+      "label": "AquaStar",
+      "items": [
+        { "id": "settings", "labelKey": "menuSettings", "keybind": "settings", "action": "settings" },
+        { "type": "separator" },
+        { "id": "help", "labelKey": "menuHelp", "keybind": "help", "action": "help" },
+        { "id": "about", "labelKey": "menuAbout", "keybind": "about", "action": "about" }
+      ]
+    }
+  ],
+  "keybinds": [
+    { "id": "about", "default": "F9", "action": "about" },
+    { "id": "fullscreen", "default": "F11", "action": "fullscreen" },
+    { "id": "reload", "default": ["CmdOrCtrl+F5", "CmdOrCtrl+R"], "action": "reload" },
+    { "id": "reloadCache", "default": "CmdOrCtrl+Shift+F5", "action": "reload-cache" },
+    { "id": "forward", "default": "Alt+F", "action": "forward" },
+    { "id": "backward", "default": "Alt+B", "action": "backward" },
+    { "id": "help", "default": ["Alt+H", "CmdOrCtrl+H", "F1"], "action": "help" },
+    { "id": "settings", "default": "Alt+9", "action": "settings" },
+    { "id": "wiki", "default": "Alt+W", "action": "page" },
+    { "id": "account", "default": "Alt+A", "action": "page" },
+    { "id": "design", "default": "Alt+D", "action": "page" },
+    { "id": "charpage", "default": "Alt+P", "action": "page" },
+    { "id": "newAqw", "default": "Alt+N", "action": "play-primary" },
+    { "id": "newTest", "default": "Alt+Q", "action": "play-testing" },
+    { "id": "dragon", "default": "Alt+1", "action": "play-dragonfable" },
+    { "id": "reminders", "default": "Alt+T", "action": "tool" },
+    { "id": "todo", "default": "Alt+Y", "action": "tool" },
+    { "id": "inventory", "default": "Alt+I", "action": "tool" },
+    { "id": "strategy", "default": "Alt+U", "action": "tool" }
+  ]
+}

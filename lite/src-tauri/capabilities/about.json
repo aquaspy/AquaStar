@@ -1,0 +1,6 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "about",
+  "windows": ["about", "help"],
+  "permissions": ["core:default", "about-commands"]
+}

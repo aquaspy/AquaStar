@@ -10,8 +10,14 @@ commands.allow = [
   "ruffle_settings",
   "set_ruffle_settings",
   "launcher_settings",
-  "set_hide_launcher"
+  "set_hide_launcher",
+  "get_shell_pages"
 ]
+
+[[permission]]
+identifier = "about-commands"
+description = "About window"
+commands.allow = ["open_project_page"]
 
 [[permission]]
 identifier = "settings-commands"

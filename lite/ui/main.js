@@ -71,20 +71,46 @@ document.querySelectorAll('[data-tool]').forEach((button) => button.addEventList
   invoke('open_tool', { name: button.dataset.tool }).catch((e) => { status.textContent = `Error: ${e}`; });
 }));
 
-const openSite = (label, url) => invoke('open_site', { label, url }).catch((e) => { status.textContent = `Error: ${e}`; });
-document.querySelectorAll('[data-site]').forEach((b) => b.addEventListener('click', () => openSite(b.dataset.site, b.dataset.url)));
+const openSite = (label, url, title) => invoke('open_site', { label, url, title }).catch((e) => { status.textContent = `Error: ${e}`; });
+let charpageUrl = 'https://account.aq.com/CharPage';
+invoke('get_shell_pages').then((shell) => {
+  const heading = document.getElementById('sites-heading');
+  if (heading && shell.heading) heading.textContent = shell.heading;
+  const mount = document.getElementById('site-buttons');
+  for (const group of shell.groups || []) {
+    const grid = document.createElement('div');
+    grid.className = group.label ? 'more-grid' : 'pair';
+    for (const page of group.pages || []) {
+      if (page.id === 'charpage') charpageUrl = page.url;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = page.label;
+      button.addEventListener('click', () => openSite(page.id, page.url, page.label));
+      grid.appendChild(button);
+    }
+    if (group.label) {
+      const block = document.createElement('div');
+      block.className = 'more';
+      const title = document.createElement('h3');
+      title.textContent = group.label;
+      block.appendChild(title);
+      block.appendChild(grid);
+      mount.appendChild(block);
+    } else {
+      mount.appendChild(grid);
+    }
+  }
+}).catch((e) => { status.textContent = `Error: ${e}`; });
 document.getElementById('wiki-search').addEventListener('submit', (ev) => {
   ev.preventDefault();
   const q = ev.target.q.value.trim();
-  if (q) openSite('wiki', 'https://aqwwiki.wikidot.com/search:site/q/' + encodeURIComponent(q));
+  if (q) openSite('wiki', 'https://aqwwiki.wikidot.com/search:site/q/' + encodeURIComponent(q), 'AQW Wiki');
 });
 document.getElementById('char-page').addEventListener('submit', (ev) => {
   ev.preventDefault();
-  const name = ev.target.character.value.trim();
-  const url = name
-    ? 'https://account.aq.com/CharPage?id=' + encodeURIComponent(name)
-    : 'https://account.aq.com/CharPage';
-  openSite('char-page', url);
+  const name = ev.target.character.value.trim().replace(/[^a-zA-Z0-9]/g, '');
+  const url = name ? charpageUrl + '?id=' + encodeURIComponent(name) : charpageUrl;
+  openSite('charpage', url, 'Charpages');
 });
 
 const qualitySelect = document.getElementById('ruffle-quality');
