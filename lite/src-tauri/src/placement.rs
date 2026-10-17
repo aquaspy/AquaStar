@@ -416,7 +416,7 @@ mod tests {
         assert!(yml.contains("AquaStar.Lite_"));
         assert!(yml.contains("_x64-portable.zip"));
         assert!(yml.contains("gh release upload"));
-        assert!(yml.contains("prerelease: true"));
+        assert!(yml.contains("prerelease: ${{ needs.gate.outputs.kind != 'stable' }}"));
         assert!(yml.contains("aquastar-lite-windows-portable"));
         assert!(yml.contains("lite/src-tauri/target/release/AquaStar.Lite_"));
         assert!(!yml
@@ -458,7 +458,8 @@ mod tests {
         assert!(yml.contains("AquaStar Lite Release"));
         assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'lite-v')"));
         assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'v3.')"));
-        assert!(yml.contains("contains(github.event.workflow_run.head_branch, '-')"));
+        assert!(!yml.contains("contains(github.event.workflow_run.head_branch, '-')"));
+        assert!(yml.contains("github.event.workflow_run.conclusion == 'success'"));
         for os in [
             "ubuntu-latest",
             "windows-latest",
