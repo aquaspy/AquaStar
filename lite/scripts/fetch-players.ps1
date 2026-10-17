@@ -105,10 +105,20 @@ function Publish-Player($dir, $sha, $url, $kind, $exe, $extract, $binarySha) {
     if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Force }
 }
 
+$hostArch = switch ($env:PROCESSOR_ARCHITECTURE) {
+    "AMD64" { "x86_64" }
+    "ARM64" { "aarch64" }
+    "x86" { "x86" }
+    default { throw "fetch-players.ps1 does not know arch $($env:PROCESSOR_ARCHITECTURE)" }
+}
+
 $selected = New-Object System.Collections.Generic.List[string]
 foreach ($player in $json.players) {
     foreach ($art in $player.artifacts) {
+        $also = @()
+        if ($null -ne $art.also) { $also = @($art.also) }
         if ($art.os -ne "windows") { continue }
+        if ($art.arch -ne $hostArch -and $also -notcontains $hostArch) { continue }
         if (-not $selected.Contains($art.dir)) { $selected.Add($art.dir) }
         Publish-Player $art.dir $art.sha256 $art.url $art.kind $art.exe $art.extract $art.binarySha256
     }

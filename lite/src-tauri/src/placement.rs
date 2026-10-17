@@ -558,11 +558,10 @@ mod tests {
         assert!(sh.contains("art[\"dir\"]"));
         assert!(!sh.contains("player[\"dir\"]"));
         assert!(sh.contains("art[\"os\"] != host"));
-        assert!(!sh.contains("art[\"arch\"]"));
-        assert!(ps.contains("$art.dir"));
-        assert!(!ps.contains("$player.dir"));
+        assert!(sh.contains("host_arch not in also"));
         assert!(ps.contains("$art.os"));
-        assert!(!ps.contains("$art.arch"));
+        assert!(ps.contains("$art.also"));
+        assert!(ps.contains("$hostArch"));
     }
 
     #[test]

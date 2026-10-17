@@ -16,16 +16,27 @@ case "$(uname -s)" in
     ;;
 esac
 
-rows=$(python3 - "$json" "$host_os" <<'PY'
+case "$(uname -m)" in
+  x86_64|amd64) host_arch=x86_64 ;;
+  aarch64|arm64) host_arch=aarch64 ;;
+  i686|i386) host_arch=x86 ;;
+  *)
+    echo "fetch-players.sh does not know arch $(uname -m)" >&2
+    exit 1
+    ;;
+esac
+
+rows=$(python3 - "$json" "$host_os" "$host_arch" <<'PY'
 import json
 import sys
 
-path, host = sys.argv[1], sys.argv[2]
+path, host, host_arch = sys.argv[1:]
 with open(path, encoding="utf-8") as handle:
     data = json.load(handle)
 for player in data["players"]:
     for art in player["artifacts"]:
-        if art["os"] != host:
+        also = art.get("also") or []
+        if art["os"] != host or (art["arch"] != host_arch and host_arch not in also):
             continue
         print(
             "\t".join(
