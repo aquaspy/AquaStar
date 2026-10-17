@@ -15,6 +15,7 @@ import os
 import platform
 import shutil
 import socket
+import stat
 import subprocess
 import sys
 import time
@@ -261,16 +262,55 @@ def mark_executables(app):
         if not root.is_dir():
             continue
         for path in root.rglob("*"):
-            if path.is_file():
+            if path.is_file() and not path.is_symlink():
                 path.chmod(path.stat().st_mode | 0o755)
+
+
+def _zip_target(dest, name):
+    rel = Path(name.replace("\\", "/"))
+    if rel.is_absolute() or ".." in rel.parts:
+        raise RuntimeError(f"unsafe zip entry {name}")
+    return dest.joinpath(*rel.parts)
+
+
+def extract_zip(zip_path, dest):
+    """Unpack a mac app zip and keep framework symlinks as symlinks.
+
+    ZipFile.extractall writes a symlink entry as a regular file whose bytes
+    are the link target. dyld then loads that text as Electron Framework and
+    aborts. ditto restores the links on macOS. Elsewhere the Unix mode stored
+    on the zip entry is enough.
+    """
+    dest = Path(dest)
+    dest.mkdir(parents=True, exist_ok=True)
+    if platform.system() == "Darwin" and shutil.which("ditto"):
+        subprocess.check_call(["ditto", "-xk", str(zip_path), str(dest)])
+        return
+    with zipfile.ZipFile(zip_path) as archive:
+        for info in archive.infolist():
+            target = _zip_target(dest, info.filename)
+            if info.is_dir() or info.filename.endswith("/"):
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            mode = (info.external_attr >> 16) & 0xFFFF
+            if stat.S_ISLNK(mode):
+                link = archive.read(info).decode("utf-8")
+                if target.is_symlink() or target.exists():
+                    target.unlink()
+                os.symlink(link, target)
+                continue
+            with archive.open(info) as src, open(target, "wb") as out:
+                shutil.copyfileobj(src, out)
+            if mode:
+                os.chmod(target, mode & 0o777)
 
 
 def install_app(zip_path, dest):
     if dest.exists():
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
-    with zipfile.ZipFile(zip_path) as archive:
-        archive.extractall(dest)
+    extract_zip(zip_path, dest)
     apps = [path for path in dest.rglob("*.app") if path.name == "AquaStar.app"]
     if not apps:
         raise RuntimeError("AquaStar.app was not in the zip")
