@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-pub const PLAYER_TITLE: &str = "AquaStar Lite";
+pub const PLAYER_TITLE: &str = "AquaStar";
 
 /// Whether a window title should be replaced.
 ///
