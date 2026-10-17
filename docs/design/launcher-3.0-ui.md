@@ -2,6 +2,8 @@
 
 Status: proposta para revisão. A interface do aplicativo ainda não foi alterada.
 
+A interface padrão e a prévia usam inglês (en-US), conforme solicitado pelo usuário. O idioma desta documentação não define o idioma do produto. Português fica disponível pela localização existente.
+
 ## Objetivo
 
 Dar destaque ao jogo e reduzir a quantidade de controles disputando atenção. O launcher continua disponível para ferramentas e páginas enquanto o jogo roda em outra janela. A decoração e os controles da janela continuam nativos do sistema.
@@ -16,7 +18,7 @@ A prévia está em [launcher-3.0-preview.html](launcher-3.0-preview.html). Ela p
 
 | Área | Conteúdo | Comportamento existente preservado |
 | --- | --- | --- |
-| Jogar | AQW, servidor de testes e DragonFable; um botão principal; seleção de player | `play`, disponibilidade por sistema, player preferido e acompanhamento do processo |
+| Jogar | AQW, AQW Test Loader e DragonFable; um botão principal; seleção de player | `play`, disponibilidade por sistema, player preferido e acompanhamento do processo |
 | Ferramentas | Inventário, lembretes, tarefas e estratégia | `open_tool` e os mesmos arquivos de perfil |
 | Páginas úteis | Links agrupados, pesquisa na wiki e consulta de personagem | Manifesto do jogo, allowlist e janelas de site existentes |
 | Preferências | Qualidade, backend gráfico, ocultar launcher e acesso às configurações completas | Comandos de settings e defaults por plataforma |
@@ -40,7 +42,7 @@ O status deve usar `aria-live="polite"`. Erros permanecem visíveis e não depen
 - Reutilizar HTML sem framework e o logo atual. Não adicionar downloads de fontes ou assets na abertura.
 - Usar Grid, Flexbox e media queries com layouts simples. Não depender de `:has`, container queries, subgrid, backdrop-filter ou APIs recentes para funções essenciais.
 - Preservar barra de título, menus nativos, atalhos e tamanho inicial atual da janela. Não implementar controles próprios de fechar/minimizar.
-- Links vêm do manifesto; textos novos entram nos catálogos en-US e pt-BR. O layout suporta traduções maiores sem cortar rótulos.
+- Links vêm do manifesto; textos novos têm inglês como padrão e entram nos catálogos en-US e pt-BR. O layout suporta traduções maiores sem cortar rótulos.
 - Todos os controles funcionam por teclado. Foco visível, labels associados e contraste de pelo menos 4.5:1 no texto comum são critérios de aceitação.
 - Testar zoom de 100%, 125%, 150% e 200%, janela 900×860 e janela maximizada. Permitir rolagem vertical em vez de esconder ações.
 - Manter DMA-BUF/fontconfig no Linux, capabilities e CSP. Nenhum requisito novo de sistema ou backend gráfico.
