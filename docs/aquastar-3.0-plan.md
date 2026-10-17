@@ -154,15 +154,19 @@ Reorganize the branches at that point.
 
 Delete old unused branches only after listing them and getting the user's explicit approval for each deletion. Do not rename or delete a branch while this paragraph is only a plan.
 
-Two blockers have to be cleared before the first public 3.0 release. Do not fix either while this paragraph is only a plan.
+One blocker has to be cleared before the first public 3.0 release. Do not fix it while this paragraph is only a plan.
 
 Inventory sync can report success and still write nothing. A user saw the success message, an empty sync, and no items in the inventory window. Find the root cause with a real account login. Saved HTTP fixtures are not enough for that check. Keep the fixtures as regression tests once the live flow is explained.
 
-The 3.0 window has to match the 2.0 window. The title is `AquaStar - Adventure Quest Worlds`. The menu bar above the game is AquaStar, Tools, Usefull Pages, Game, and Features. The game is drawn inside that window. Usefull is the spelling on the 2.0 menu.
+The check is that the user has confirmed the stable tag, smoke passed on that commit, and any merge to `main` has its own confirmation. A branch rename or deletion also needs its own approval. The inventory sync blocker above is also required before that public release.
 
-The player is a separate process. Putting it in the main window means reparenting that window on each OS, or choosing another approach. Win32 can use `SetParent`. X11 can reparent. Wayland and macOS limit reparenting and may rule it out. Phase 5 evaluates the options and reports the trade-offs before any of that work is implemented.
+## Open investigation (not scheduled)
 
-The check is that the user has confirmed the stable tag, smoke passed on that commit, and any merge to `main` has its own confirmation. A branch rename or deletion also needs its own approval. The two blockers above are also required before that public release.
+Is the 2.0 look achievable with standalone Ruffle and the Flash projector? In 2.0 the game is drawn inside the main window, under the Electron menu bar. The window title is `AquaStar - Adventure Quest Worlds`. The menu reads AquaStar, Tools, Usefull Pages, Game, and Features.
+
+The player is a separate process. Matching that look means embedding or reparenting the player window on each OS, or some other approach. Win32 can use `SetParent`. X11 can reparent. Wayland and macOS limit reparenting and may rule it out.
+
+Investigate this and report the findings to the user before anyone commits to building it. This section does not schedule that work.
 
 ## Risks
 
