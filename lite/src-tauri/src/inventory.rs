@@ -133,8 +133,7 @@ pub fn sync_document(path: &Path, fetch: impl Fn(&str) -> Result<String, String>
         Ok(rows) => rows,
         Err(error) => return fail(&error),
     };
-    let buyback = match load_collection(
-        "/AQW/BuyBackData",
+    let buyback = match fetch_pages(
         "https://account.aq.com/myapi/inventory/BuyBackData?",
         &fetch,
     ) {
@@ -501,7 +500,8 @@ fn fetch_pages(base: &str, fetch: &impl Fn(&str) -> Result<String, String>) -> R
     let mut items = Vec::new();
     let mut skip = 0usize;
     loop {
-        let url = format!("{base}&skip={skip}&take={PAGE_SIZE}&requireTotalCount=true&_=1");
+        let stamp = chrono::Utc::now().timestamp_millis();
+        let url = format!("{base}&skip={skip}&take={PAGE_SIZE}&requireTotalCount=true&_={stamp}");
         let body = fetch(&url)?;
         let parsed: Value = serde_json::from_str(&body).map_err(|_| "unauthenticated".to_string())?;
         let Some(data) = parsed.get("data").and_then(Value::as_array).cloned() else {
@@ -950,8 +950,12 @@ mod tests {
     use std::path::PathBuf;
 
     fn scratch() -> (PathBuf, ProfileFiles) {
-        let root = std::env::temp_dir().join(format!("aquastar-inventory-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&root);
+        static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let root = std::env::temp_dir().join(format!(
+            "aquastar-inventory-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
         let aqua = root.join("AquaStar");
         fs::create_dir_all(&aqua).unwrap();
         let files = ProfileFiles {
@@ -978,7 +982,7 @@ mod tests {
     }
 
     fn live_account_fetch(url: &str) -> Result<String, String> {
-        if url.contains("myapi/") {
+        if url.contains("myapi/") && !url.contains("/myapi/inventory/BuyBackData") {
             return Err("network".into());
         }
         if url.contains("/AQW/InventoryData") {
@@ -1012,7 +1016,6 @@ mod tests {
         let start = chrono::Utc::now().timestamp_millis();
         let result = sync_document(&path, |url| {
             if url.contains("/AQW/BuyBackData") {
-                // Synthetic unsupported row: its layout does not claim to model the live API.
                 return Ok(serde_json::json!({"data": [["unsupported buyback row"]]}).to_string());
             }
             if url.contains("/myapi/inventory/BuyBackData?") {
@@ -1055,7 +1058,6 @@ mod tests {
         fs::write(&path, existing).unwrap();
         let result = sync_document(&path, |url| {
             if url.contains("/AQW/BuyBackData") {
-                // Synthetic unsupported row: its layout does not claim to model the live API.
                 return Ok(serde_json::json!({"data": [["unsupported buyback row"]]}).to_string());
             }
             if url.contains("/myapi/inventory/BuyBackData?") {
