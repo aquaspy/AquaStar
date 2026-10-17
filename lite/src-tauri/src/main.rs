@@ -159,7 +159,7 @@ async fn open_site(app: tauri::AppHandle, label: String, url: String) -> Result<
         return Ok(());
     }
     WebviewWindowBuilder::new(&app, &label, WebviewUrl::External(parsed))
-        .title(format!("AquaStar Lite - {label}"))
+        .title(format!("AquaStar - {label}"))
         .inner_size(1100.0, 750.0)
         .initialization_script_for_all_frames(ads::init_script())
         .on_navigation(|url| match url.host_str() {
@@ -219,7 +219,7 @@ fn tell_user(message: &str) {
     }
 
     let text = wide(message);
-    let caption = wide("AquaStar Lite");
+    let caption = wide("AquaStar");
     unsafe {
         MessageBoxW(
             std::ptr::null_mut(),
@@ -279,7 +279,7 @@ fn main() {
         Ok(placement) => placement,
         Err(err) => {
             let message = format!(
-                "AquaStar Lite could not create its data folder next to the executable.\n\n{err}\n\nportable.txt is present, so data was not stored in AppData."
+                "AquaStar could not create its data folder next to the executable.\n\n{err}\n\nportable.txt is present, so data was not stored in AppData."
             );
             #[cfg(target_os = "windows")]
             tell_user(&message);
@@ -318,7 +318,7 @@ fn main() {
             Ok(())
         })
         .build(context)
-        .expect("failed to build AquaStar Lite");
+        .expect("failed to build AquaStar");
     app.state::<Players>()
         .watch_presence({
             let app = app.handle().clone();
@@ -406,5 +406,43 @@ mod tests {
         }
         assert!(js.contains("movie: 'primary'"));
         assert!(js.contains("movie: button.dataset.movie"));
+    }
+
+    #[test]
+    fn product_strings_say_aquastar_3_alpha() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let read = |path: &str| std::fs::read_to_string(root.join(path)).unwrap();
+        let lite = format!("{} {}", "AquaStar", "Lite");
+        let cargo = read("Cargo.toml");
+        let conf = read("tauri.conf.json");
+        assert!(cargo.contains("name = \"aquastar-lite\""));
+        assert!(cargo.contains("version = \"3.0.0-alpha.1\""));
+        assert!(!cargo.contains(&lite));
+        let parsed: serde_json::Value = serde_json::from_str(&conf).unwrap();
+        assert_eq!(parsed["version"], "3.0.0-alpha.1");
+        assert_eq!(parsed["productName"], "aquastar-lite");
+        assert_eq!(parsed["mainBinaryName"], "aquastar-lite");
+        assert_eq!(parsed["identifier"], "io.github.aquaspy.aquastar-lite");
+        assert_eq!(parsed["app"]["windows"][0]["title"], "AquaStar");
+        assert_eq!(parsed["bundle"]["macOS"]["bundleName"], "AquaStar");
+        let visible = [
+            conf,
+            read("src/players/flash_gtk.c"),
+            read("assets/aquastar-lite.desktop"),
+            read("../ui/index.html"),
+            read("src/players/flash_menu.rs"),
+            read("src/main.rs"),
+            read("src/players/mod.rs"),
+            read("Info.plist"),
+        ];
+        for text in &visible {
+            assert!(text.contains("AquaStar"));
+            assert!(!text.contains(&lite), "{text}");
+        }
+        assert!(visible[3].contains("<title>AquaStar</title>"));
+        assert!(visible[3].contains("<h1>AquaStar</h1>"));
+        assert!(visible[4].contains("PLAYER_TITLE: &str = \"AquaStar\""));
+        assert!(visible[2].lines().any(|line| line == "Name=AquaStar"));
+        assert!(visible[7].contains("<string>AquaStar</string>"));
     }
 }

@@ -105,7 +105,7 @@ static void fit_stage(void *window) {
 
 static void force_title(void *window) {
     if (!real_set_title) real_set_title = dlsym(RTLD_NEXT, "gtk_window_set_title");
-    if (real_set_title) real_set_title(window, "AquaStar Lite");
+    if (real_set_title) real_set_title(window, "AquaStar");
 }
 
 static gboolean strip(gpointer data) {

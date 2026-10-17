@@ -450,7 +450,7 @@ impl Players {
             drop(list);
             let _ = child.kill();
             let _ = child.wait();
-            return Err("AquaStar Lite is closing".into());
+            return Err("AquaStar is closing".into());
         }
         list.push(Tracked {
             engine,
@@ -473,7 +473,7 @@ impl Players {
         save_directory: Option<&Path>,
     ) -> Result<String, String> {
         if self.shutting_down.load(Ordering::SeqCst) {
-            return Err("AquaStar Lite is closing".into());
+            return Err("AquaStar is closing".into());
         }
         let settings = RuffleSettings {
             quality,
@@ -489,7 +489,7 @@ impl Players {
         if self.shutting_down.load(Ordering::SeqCst) {
             let _ = child.kill();
             let _ = child.wait();
-            return Err("AquaStar Lite is closing".into());
+            return Err("AquaStar is closing".into());
         }
         let backend = safe_backend_name();
         if let Ok(Some(status)) = child.try_wait() {
