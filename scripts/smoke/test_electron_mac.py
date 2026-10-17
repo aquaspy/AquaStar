@@ -3,6 +3,7 @@ import os
 import shutil
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -58,6 +59,49 @@ def main():
         electron_mac.mark_executables(app)
         check("the main binary becomes executable", os.access(binary, os.X_OK))
         check("a helper binary becomes executable", os.access(nested, os.X_OK))
+    finally:
+        shutil.rmtree(scratch)
+
+    scratch = Path(tempfile.mkdtemp())
+    try:
+        zip_path = scratch / "app.zip"
+        with zipfile.ZipFile(zip_path, "w") as archive:
+            link = zipfile.ZipInfo(
+                "AquaStar.app/Contents/Frameworks/Electron Framework.framework/Electron Framework"
+            )
+            link.create_system = 3
+            link.external_attr = 0o120755 << 16
+            archive.writestr(link, b"Versions/Current/Electron Framework")
+            current = zipfile.ZipInfo(
+                "AquaStar.app/Contents/Frameworks/Electron Framework.framework/Versions/Current"
+            )
+            current.create_system = 3
+            current.external_attr = 0o120755 << 16
+            archive.writestr(current, b"A")
+            binary = zipfile.ZipInfo("AquaStar.app/Contents/MacOS/AquaStar")
+            binary.create_system = 3
+            binary.external_attr = 0o100755 << 16
+            archive.writestr(binary, b"bin")
+        dest = scratch / "out"
+        electron_mac.extract_zip(zip_path, dest)
+        framework = (
+            dest
+            / "AquaStar.app/Contents/Frameworks/Electron Framework.framework/Electron Framework"
+        )
+        check("a framework entry stays a symlink", framework.is_symlink())
+        check(
+            "the framework link points at the versioned binary",
+            os.readlink(framework) == "Versions/Current/Electron Framework",
+        )
+        check(
+            "Versions/Current stays a symlink",
+            (
+                dest
+                / "AquaStar.app/Contents/Frameworks/Electron Framework.framework/Versions/Current"
+            ).is_symlink(),
+        )
+        exe = dest / "AquaStar.app/Contents/MacOS/AquaStar"
+        check("the zip mode keeps the executable bit", os.access(exe, os.X_OK))
     finally:
         shutil.rmtree(scratch)
 
