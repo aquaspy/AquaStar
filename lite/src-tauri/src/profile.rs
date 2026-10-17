@@ -67,6 +67,7 @@ pub fn tool_spec(name: &str) -> Option<(&'static str, f64, f64)> {
         "reminders" => ("AquaStar - Reminders", 1040.0, 620.0),
         "todo" => ("AquaStar - To-Do List", 960.0, 620.0),
         "strategy" => ("AquaStar - Strategy", 1040.0, 680.0),
+        "inventory" => ("AquaStar - Inventory", 1040.0, 620.0),
         _ => return None,
     })
 }
@@ -395,55 +396,6 @@ pub fn save_strategy(files: &ProfileFiles, state: &Value) -> Result<Value, Strin
     let clean = migrate_strategy(&data);
     write_electron(&files.strategy, &clean)?;
     Ok(serde_json::json!({ "data": clean, "savePath": files.strategy.display().to_string() }))
-}
-
-pub fn inventory_counts(files: &ProfileFiles, names: &[String]) -> Value {
-    let names: Vec<&str> = names.iter().take(200).map(String::as_str).collect();
-    let mut counts = Map::new();
-    for name in &names {
-        counts.insert((*name).to_string(), serde_json::json!({"characters": []}));
-    }
-    let Some(state) = read_json(&files.inventory) else {
-        return Value::Object(counts);
-    };
-    let Some(characters) = state.get("characters").and_then(Value::as_object) else {
-        return Value::Object(counts);
-    };
-    for (char_id, character) in characters {
-        let char_name = character.get("name").and_then(Value::as_str).unwrap_or("");
-        let label = if char_name.is_empty() { format!("Character {char_id}") } else { char_name.to_string() };
-        let mut per_name: Vec<(usize, usize)> = names.iter().map(|_| (0, 0)).collect();
-        if let Some(items) = character.get("inventory").and_then(Value::as_array) {
-            for item in items {
-                let item_name = item.get("name").and_then(Value::as_str).unwrap_or("");
-                let normalized = item_name.trim().to_lowercase();
-                let Some(index) = names.iter().position(|name| name.trim().to_lowercase() == normalized) else { continue };
-                let member = item.get("member") == Some(&Value::Bool(true));
-                let coins = item.get("coins") == Some(&Value::Bool(true));
-                if member || (coins && normalized != "dark potion") {
-                    continue;
-                }
-                let count = item.get("count").and_then(Value::as_u64).unwrap_or(0) as usize;
-                if item.get("bank") == Some(&Value::Bool(true)) {
-                    per_name[index].1 += count;
-                } else {
-                    per_name[index].0 += count;
-                }
-            }
-        }
-        for (index, name) in names.iter().enumerate() {
-            let (inventory, bank) = per_name[index];
-            if let Some(list) = counts.get_mut(*name).and_then(|entry| entry.get_mut("characters")).and_then(Value::as_array_mut) {
-                list.push(serde_json::json!({
-                    "id": char_id,
-                    "name": label,
-                    "inventory": inventory,
-                    "bank": bank
-                }));
-            }
-        }
-    }
-    Value::Object(counts)
 }
 
 fn load_reminders_value(path: &Path) -> Value {

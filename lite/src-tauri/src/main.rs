@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ads;
+mod inventory;
 #[cfg(target_os = "linux")]
 mod fonts;
 mod placement;
@@ -325,7 +326,81 @@ fn save_strategy(data: serde_json::Value) -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 fn get_inventory_item_counts(names: Option<Vec<String>>) -> serde_json::Value {
-    profile::inventory_counts(&profile::live_files(), names.as_deref().unwrap_or(&[]))
+    inventory::item_counts(&profile::live_files(), names.as_deref().unwrap_or(&[]))
+}
+
+fn account_cookie_header(app: &tauri::AppHandle) -> String {
+    let Ok(url) = "https://account.aq.com/".parse::<tauri::Url>() else {
+        return String::new();
+    };
+    let mut pairs = Vec::new();
+    for (_label, window) in app.webview_windows() {
+        let Ok(cookies) = window.cookies_for_url(url.clone()) else {
+            continue;
+        };
+        for cookie in cookies {
+            let pair = format!("{}={}", cookie.name(), cookie.value());
+            if !pairs.contains(&pair) {
+                pairs.push(pair);
+            }
+        }
+    }
+    pairs.join("; ")
+}
+
+#[tauri::command]
+fn get_inventory() -> serde_json::Value {
+    inventory::document(&profile::live_files())
+}
+
+#[tauri::command]
+fn get_inventory_messages() -> serde_json::Value {
+    inventory::inventory_messages()
+}
+
+#[tauri::command]
+fn get_wiki_messages() -> serde_json::Value {
+    inventory::wiki_messages()
+}
+
+#[tauri::command]
+fn save_inventory_labels(labels: serde_json::Value) -> serde_json::Value {
+    inventory::save_labels(&profile::live_files(), &labels)
+}
+
+#[tauri::command]
+fn set_inventory_active_char(char_id: String) -> serde_json::Value {
+    inventory::set_active_char(&profile::live_files(), &char_id)
+}
+
+#[tauri::command]
+fn sync_inventory_now(app: tauri::AppHandle) -> serde_json::Value {
+    let cookie = account_cookie_header(&app);
+    inventory::sync_locked(&profile::live_files().inventory, |url| inventory::live_get(url, &cookie))
+}
+
+#[tauri::command]
+fn fetch_wiki_page(url: String) -> serde_json::Value {
+    inventory::fetch_wiki(&url, |target| inventory::live_get(target, ""))
+}
+
+#[tauri::command]
+fn match_wiki_item(title: String) -> serde_json::Value {
+    inventory::match_title(&profile::live_files(), &title)
+}
+
+#[tauri::command]
+fn match_wiki_items(titles: Vec<String>) -> serde_json::Value {
+    inventory::match_titles(&profile::live_files(), &titles)
+}
+
+#[tauri::command]
+async fn open_inventory_item_wiki(app: tauri::AppHandle, item_name: String) -> Result<(), String> {
+    let slug = inventory::wiki_slug(&item_name);
+    if slug.is_empty() {
+        return Err("bad item".into());
+    }
+    open_site(app, "wiki".into(), format!("https://aqwwiki.wikidot.com/{slug}")).await
 }
 
 struct TimerShortcut(std::sync::Mutex<Option<tauri_plugin_global_shortcut::Shortcut>>);
@@ -420,6 +495,15 @@ async fn open_site(app: tauri::AppHandle, label: String, url: String) -> Result<
         .title(format!("AquaStar - {label}"))
         .inner_size(1100.0, 750.0)
         .initialization_script_for_all_frames(ads::init_script())
+        .on_page_load(|window, payload| {
+            if payload.event() != tauri::webview::PageLoadEvent::Finished {
+                return;
+            }
+            let script = inventory::page_script(payload.url().as_str());
+            if !script.is_empty() {
+                let _ = window.eval(&script);
+            }
+        })
         .on_navigation(|url| match url.host_str() {
             Some(host) => !ads::host_blocked(host),
             None => true,
@@ -511,6 +595,20 @@ fn smoke_request() -> Option<Engine> {
     }
 }
 
+fn schedule_inventory_sync(app: tauri::AppHandle) {
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(30));
+        loop {
+            let files = profile::live_files();
+            if inventory::auto_sync_enabled(&files) && inventory::auto_sync_due(&files.inventory, chrono::Utc::now().timestamp_millis()) {
+                let cookie = account_cookie_header(&app);
+                let _ = inventory::sync_locked(&files.inventory, |url| inventory::live_get(url, &cookie));
+            }
+            std::thread::sleep(std::time::Duration::from_secs(2 * 60 * 60));
+        }
+    });
+}
+
 fn schedule_smoke(app: tauri::AppHandle) {
     let Some(engine) = smoke_request() else {
         return;
@@ -595,6 +693,16 @@ fn main() {
             get_strategy_messages,
             save_strategy,
             get_inventory_item_counts,
+            get_inventory,
+            get_inventory_messages,
+            get_wiki_messages,
+            save_inventory_labels,
+            set_inventory_active_char,
+            sync_inventory_now,
+            fetch_wiki_page,
+            match_wiki_item,
+            match_wiki_items,
+            open_inventory_item_wiki,
             set_strategy_timer_shortcut,
             clear_strategy_timer_shortcut,
             ruffle_settings,
@@ -609,6 +717,7 @@ fn main() {
             let profile = placement::electron_profile(exe_dir.as_deref());
             std::thread::spawn(move || players::warm_loader(&profile));
             schedule_smoke(app.handle().clone());
+            schedule_inventory_sync(app.handle().clone());
             Ok(())
         })
         .build(context)
@@ -710,10 +819,10 @@ mod tests {
         let cargo = read("Cargo.toml");
         let conf = read("tauri.conf.json");
         assert!(cargo.contains("name = \"aquastar-lite\""));
-        assert!(cargo.contains("version = \"3.0.0-alpha.4\""));
+        assert!(cargo.contains("version = \"3.0.0-alpha.5\""));
         assert!(!cargo.contains(&lite));
         let parsed: serde_json::Value = serde_json::from_str(&conf).unwrap();
-        assert_eq!(parsed["version"], "3.0.0-alpha.4");
+        assert_eq!(parsed["version"], "3.0.0-alpha.5");
         assert_eq!(parsed["productName"], "aquastar-lite");
         assert_eq!(parsed["mainBinaryName"], "aquastar-lite");
         assert_eq!(parsed["identifier"], "io.github.aquaspy.aquastar-lite");

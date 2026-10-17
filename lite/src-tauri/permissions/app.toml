@@ -43,6 +43,45 @@ description = "To-do window"
 commands.allow = ["get_todo", "get_todo_messages", "save_todo", "open_todo_link"]
 
 [[permission]]
+identifier = "inventory-commands"
+description = "Inventory window"
+commands.allow = [
+  "get_inventory",
+  "get_inventory_messages",
+  "save_inventory_labels",
+  "sync_inventory_now",
+  "set_inventory_active_char",
+  "open_inventory_item_wiki",
+  "fetch_wiki_page",
+  "match_wiki_items"
+]
+
+[[permission]]
+identifier = "account-commands"
+description = "Account window"
+commands.allow = [
+  "sync_inventory_now",
+  "fetch_wiki_page",
+  "get_wiki_messages",
+  "get_inventory",
+  "set_inventory_active_char",
+  "match_wiki_item",
+  "match_wiki_items"
+]
+
+[[permission]]
+identifier = "wiki-commands"
+description = "Wiki window"
+commands.allow = [
+  "fetch_wiki_page",
+  "get_wiki_messages",
+  "get_inventory",
+  "set_inventory_active_char",
+  "match_wiki_item",
+  "match_wiki_items"
+]
+
+[[permission]]
 identifier = "strategy-commands"
 description = "Strategy window"
 commands.allow = [
