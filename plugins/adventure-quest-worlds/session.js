@@ -42,7 +42,6 @@ function flashTrustUrlList(primaryUrl) {
     if (primaryUrl) list.push(primaryUrl);
     list.push(urls.loaderUrl());
     list.push(urls.URLS.dfLoader);
-    list.push(urls.URLS.testingPrefix);
     return list;
 }
 

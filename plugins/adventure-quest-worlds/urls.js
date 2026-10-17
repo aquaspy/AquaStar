@@ -17,17 +17,8 @@ const URLS = {
     // Same loader Artix Game Launcher uses (its web page calls interop.setGameWindows with it).
     // Loader3.swf?ver=a is the retired loader and misbehaves against the current Game.swf.
     loader4: 'https://game.aq.com/game/gamefiles/Loader4.swf?ver=b',
-    testingPrefix: 'https://game.aq.com/game/gamefiles/Loader_Spider.swf',
     dfLoader: 'https://play.dragonfable.com/game/DFLoader.swf?ver=668201'
 };
-
-function testingAQW() {
-    return URLS.testingPrefix + '?ver=' + (Math.floor(Math.random() * 900) + 100);
-}
-
-function isTestingAqwUrl(target) {
-    return typeof target === 'string' && target.indexOf(URLS.testingPrefix) === 0;
-}
 
 function buildCharLookupUrl(playerCharacter) {
     var id = playerCharacter == null ? '' :
@@ -71,8 +62,6 @@ function isLoaderUrl(target) {
 
 module.exports = {
     URLS: URLS,
-    testingAQW: testingAQW,
-    isTestingAqwUrl: isTestingAqwUrl,
     buildCharLookupUrl: buildCharLookupUrl,
     loaderUrl: loaderUrl,
     setLoaderUrl: setLoaderUrl,

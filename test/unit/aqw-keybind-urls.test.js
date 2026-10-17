@@ -64,14 +64,22 @@ test('newAqw follows the effective primary URL (customUrl / local SWF), not the 
   assert.deepStrictEqual(r.opened, ['file:///C:/data/aqlite_old.swf']);
 });
 
-test('newTest opens the testing loader with a cache-busting ver each time', () => {
+test('obsolete testing launch has no keybind defaults, metadata, or action', () => {
   const r = registrations('x', '');
-  r.byId.newTest.action();
-  r.byId.newTest.action();
-  assert.strictEqual(r.opened.length, 2);
-  r.opened.forEach(function (u) {
-    assert.ok(urls.isTestingAqwUrl(u), u);
-  });
+  assert.strictEqual(keybinds.AQW_KEYBIND_DEFAULTS.newTest, undefined);
+  assert.strictEqual(r.byId.newTest, undefined);
+  assert.ok(!keybinds.describeKeybindActions().some((action) => action.id === 'newTest'));
+  const registered = [];
+  const saved = { newTest: 'Alt+Q', newAqw: 'Alt+N' };
+  keybinds.register(
+    {
+      registerKeybindDefaults: () => {},
+      registerKeybinds: (bindings) => bindings.forEach((binding) => registered.push(saved[binding.id]))
+    },
+    { deferActions: true }
+  );
+  assert.ok(registered.includes('Alt+N'));
+  assert.ok(!registered.includes('Alt+Q'), 'stale settings must not restore the testing shortcut');
 });
 
 test('cpSshot is HTML-windows-only on macOS and plugin-declared (platform has no id check)', () => {

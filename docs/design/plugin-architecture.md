@@ -562,13 +562,12 @@ host.setPrimaryGame({
   id: 'aqw-main',
   getUrl: () => resolveAqwMainUrl(host), // Loader4, customUrl, or aqlite_old.swf file URL
   title: (ctx) => ctx.displayName + ' - ' + (isOldAqlite ? 'Older/Custom AQLite' : ' Adventure Quest Worlds'),
-  isGameUrl: (url) => isMainOrTesting(url),
+  isGameUrl: (url) => urls.isLoaderUrl(url),
   wrap: { preferDirectWmode: true, ruffleEligible: true },
   flashTrust: true
 });
 
 host.registerLaunches([
-  { id: 'aqw-testing', keybindId: 'newTest', getUrl: () => testingUrl, wrap: { preferDirectWmode: true, ruffleEligible: true }, flashTrust: true },
   { id: 'dragonfable', keybindId: 'dragon', getUrl: () => dfUrl,
     wrap: { wmode: 'opaque', scale: 'showall', ruffleEligible: true }, flashTrust: true }
 ]);

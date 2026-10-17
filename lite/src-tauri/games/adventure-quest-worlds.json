@@ -63,7 +63,6 @@
       "labelKey": "menuGame",
       "items": [
         { "id": "newAqw", "labelKey": "menuNewAqw", "keybind": "newAqw", "action": "play-primary" },
-        { "id": "newTest", "labelKey": "menuNewTest", "keybind": "newTest", "action": "play-testing" },
         { "id": "dragon", "labelKey": "menuDragon", "keybind": "dragon", "action": "play-dragonfable" }
       ]
     },
@@ -102,7 +101,6 @@
     { "id": "design", "default": "Alt+D", "action": "page" },
     { "id": "charpage", "default": "Alt+P", "action": "page" },
     { "id": "newAqw", "default": "Alt+N", "action": "play-primary" },
-    { "id": "newTest", "default": "Alt+Q", "action": "play-testing" },
     { "id": "dragon", "default": "Alt+1", "action": "play-dragonfable" },
     { "id": "reminders", "default": "Alt+T", "action": "tool" },
     { "id": "todo", "default": "Alt+Y", "action": "tool" },

@@ -18,7 +18,7 @@ A prévia está em [launcher-3.0-preview.html](launcher-3.0-preview.html). Ela p
 
 | Área | Conteúdo | Comportamento existente preservado |
 | --- | --- | --- |
-| Jogar | AQW, AQW Test Loader e DragonFable; um botão principal; seleção de player | `play`, disponibilidade por sistema, player preferido e acompanhamento do processo |
+| Jogar | AQW e DragonFable; um botão principal; seleção de player | `play`, disponibilidade por sistema, player preferido e acompanhamento do processo |
 | Ferramentas | Inventário, lembretes, tarefas e estratégia | `open_tool` e os mesmos arquivos de perfil |
 | Páginas úteis | Links agrupados, pesquisa na wiki e consulta de personagem | Manifesto do jogo, allowlist e janelas de site existentes |
 | Preferências | Qualidade, backend gráfico, ocultar launcher e acesso às configurações completas | Comandos de settings e defaults por plataforma |
@@ -59,3 +59,5 @@ O status deve usar `aria-live="polite"`. Erros permanecem visíveis e não depen
 ## Fora deste escopo
 
 Embedding de player, alterações nos SWFs, novos sistemas de login, notícias remotas, telemetria, sincronização extra e substituição dos arquivos de perfil. A correção de dimensionamento do Flash na linha Electron 2.1.1-rc deve permanecer independente desta interface.
+
+A instância AQW Testing foi removida por ser obsoleta. Não aparece em botões, menus, preferências ou ajuda, e Alt+Q deixa de ter essa ação nas linhas 2.x e 3.x.

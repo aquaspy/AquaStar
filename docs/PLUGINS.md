@@ -139,23 +139,23 @@ If activation fails, AquaStar logs `[AquaStar:plugins] …` and falls back to th
 
 Do these in order; each needs the matching **permission** in `plugin.json`.
 
-### 4.1 Extra launches (testing build, second title)
+### 4.1 Extra launches (second title)
 
 ```js
 host.registerLaunches([
   {
-    id: 'my-testing',
-    keybindId: 'newTest',
-    getUrl: function () { return 'https://example.com/game/Loader_Test.swf?ver=1'; },
-    title: function () { return 'AquaStar - Testing'; },
+    id: 'second-title',
+    keybindId: 'secondTitle',
+    getUrl: function () { return 'https://example.com/game/SecondTitle.swf'; },
+    title: function () { return 'AquaStar - Second Title'; },
     wrap: { preferDirectWmode: true, ruffleEligible: false },
     flashTrust: true
   }
 ]);
-host.registerKeybindDefaults({ newTest: 'Alt+Q' });
+host.registerKeybindDefaults({ secondTitle: 'Alt+2' });
 host.registerKeybinds([{
-  id: 'newTest',
-  action: function () { host.windows.openLaunch('my-testing'); }
+  id: 'secondTitle',
+  action: function () { host.windows.openLaunch('second-title'); }
 }]);
 ```
 

@@ -699,7 +699,6 @@ fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
             });
         }
         "play-primary" => spawn_play(app, MovieKind::Primary),
-        "play-testing" => spawn_play(app, MovieKind::Testing),
         "play-dragonfable" => spawn_play(app, MovieKind::DragonFable),
         _ => {}
     }
@@ -951,12 +950,16 @@ mod tests {
     }
 
     #[test]
-    fn testing_and_dragonfable_buttons_stay_off_the_smoke_colors() {
+    fn dragonfable_button_stays_off_the_smoke_colors() {
         let ui = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../ui");
         let html = std::fs::read_to_string(ui.join("index.html")).unwrap();
         let css = std::fs::read_to_string(ui.join("style.css")).unwrap();
         let js = std::fs::read_to_string(ui.join("main.js")).unwrap();
-        assert!(html.contains("data-movie=\"testing\""));
+        assert!(!html.contains("data-movie=\"testing\""));
+        let game = include_str!("../games/adventure-quest-worlds.json");
+        assert!(!game.contains("play-testing"));
+        assert!(!game.contains("newTest"));
+        assert!(!game.contains("Alt+Q"));
         assert!(html.contains("data-movie=\"dragonfable\""));
         for line in html.lines() {
             if line.contains("data-movie") {

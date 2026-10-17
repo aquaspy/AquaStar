@@ -8,7 +8,6 @@ use serde::Deserialize;
 use crate::placement::ProfilePaths;
 
 const LOADER4: &str = "https://game.aq.com/game/gamefiles/Loader4.swf?ver=b";
-const LOADER_SPIDER: &str = "https://game.aq.com/game/gamefiles/Loader_Spider.swf";
 const DF_LOADER: &str = "https://play.dragonfable.com/game/DFLoader.swf?ver=668201";
 const LAUNCHER_PAGE: &str = "https://www.artix.com/gamelauncher";
 const PLUGIN_ID: &str = "adventure-quest-worlds";
@@ -17,7 +16,6 @@ const PLUGIN_ID: &str = "adventure-quest-worlds";
 #[serde(rename_all = "lowercase")]
 pub enum MovieKind {
     Primary,
-    Testing,
     DragonFable,
 }
 
@@ -61,20 +59,11 @@ struct MovieFacts {
 
 pub(super) fn resolve(paths: &ProfilePaths, kind: MovieKind) -> Movie {
     let facts = load_facts(paths);
-    decide(kind, &facts, testing_ver().clamp(100, 999))
+    decide(kind, &facts)
 }
 
-fn testing_ver() -> u16 {
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.subsec_nanos())
-        .unwrap_or(0);
-    100 + (nanos % 900) as u16
-}
-
-fn decide(kind: MovieKind, facts: &MovieFacts, testing_ver: u16) -> Movie {
+fn decide(kind: MovieKind, facts: &MovieFacts) -> Movie {
     match kind {
-        MovieKind::Testing => Movie::https(format!("{LOADER_SPIDER}?ver={testing_ver}")),
         MovieKind::DragonFable => Movie::https(DF_LOADER),
         MovieKind::Primary => decide_primary(facts),
     }
@@ -358,27 +347,24 @@ mod tests {
 
     #[test]
     fn decide_prefers_custom_swf_then_custom_url_then_cached_loader() {
+        assert!(serde_json::from_str::<MovieKind>(r#""testing""#).is_err());
         let swf = PathBuf::from("/games/custom-game.swf");
         let custom = "https://cdn.example/games/custom.swf";
         let shell = "https://game.aq.com/game/gamefiles/Loader5.swf?ver=c";
         let electron = "https://game.aq.com/game/gamefiles/Loader6.swf?ver=d";
         let full = facts(Some(swf.clone()), Some(custom), true, Some(shell), Some(electron));
         assert_eq!(
-            decide(MovieKind::Primary, &full, 100).player_arg(),
+            decide(MovieKind::Primary, &full).player_arg(),
             swf.display().to_string()
         );
         assert_eq!(
-            decide(MovieKind::Testing, &full, 321).player_arg(),
-            format!("{LOADER_SPIDER}?ver=321")
-        );
-        assert_eq!(
-            decide(MovieKind::DragonFable, &full, 100).player_arg(),
+            decide(MovieKind::DragonFable, &full).player_arg(),
             DF_LOADER
         );
 
         let url_only = facts(None, Some(custom), true, Some(shell), Some(electron));
         assert_eq!(
-            decide(MovieKind::Primary, &url_only, 100).player_arg(),
+            decide(MovieKind::Primary, &url_only).player_arg(),
             custom
         );
         let bad_url = facts(
@@ -389,26 +375,26 @@ mod tests {
             Some(electron),
         );
         assert_eq!(
-            decide(MovieKind::Primary, &bad_url, 100).player_arg(),
+            decide(MovieKind::Primary, &bad_url).player_arg(),
             shell
         );
         let shell_only = facts(None, None, true, Some(shell), Some(electron));
         assert_eq!(
-            decide(MovieKind::Primary, &shell_only, 100).player_arg(),
+            decide(MovieKind::Primary, &shell_only).player_arg(),
             shell
         );
         let electron_only = facts(None, None, true, Some("not a loader"), Some(electron));
         assert_eq!(
-            decide(MovieKind::Primary, &electron_only, 100).player_arg(),
+            decide(MovieKind::Primary, &electron_only).player_arg(),
             electron
         );
         let skipped = facts(None, None, false, Some(shell), Some(electron));
         assert_eq!(
-            decide(MovieKind::Primary, &skipped, 100).player_arg(),
+            decide(MovieKind::Primary, &skipped).player_arg(),
             LOADER4
         );
         let empty = facts(None, None, true, None, None);
-        assert_eq!(decide(MovieKind::Primary, &empty, 100).player_arg(), LOADER4);
+        assert_eq!(decide(MovieKind::Primary, &empty).player_arg(), LOADER4);
     }
 
     #[test]
@@ -457,9 +443,6 @@ mod tests {
             resolve(&paths, MovieKind::Primary).player_arg(),
             swf.display().to_string()
         );
-        let testing = resolve(&paths, MovieKind::Testing).player_arg();
-        assert!(testing.starts_with(LOADER_SPIDER), "{testing}");
-        assert!(testing.contains("?ver="), "{testing}");
         assert!(loaded.shell_loader.is_some());
         assert!(!should_refresh(&loaded));
         let before = fs::read(&paths.shell_cache).unwrap();

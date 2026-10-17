@@ -1280,7 +1280,6 @@ mod tests {
             assert!(line.contains(needle), "{line}");
             assert!(!line.contains("Loader4.swf"), "{line}");
         };
-        start(MovieKind::Testing, "Loader_Spider.swf?ver=");
         start(MovieKind::DragonFable, "DFLoader.swf?ver=668201");
         let _ = fs::remove_dir_all(&base);
     }
