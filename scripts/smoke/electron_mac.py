@@ -253,6 +253,18 @@ def download_zip(tag, dest):
     return found[0]
 
 
+def mark_executables(app):
+    """Zip extraction can drop the executable bit. `arch` then refuses to start it."""
+    roots = [app / "Contents" / "MacOS"]
+    roots.extend(helper / "Contents" / "MacOS" for helper in app.rglob("*.app"))
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if path.is_file():
+                path.chmod(path.stat().st_mode | 0o755)
+
+
 def install_app(zip_path, dest):
     if dest.exists():
         shutil.rmtree(dest)
@@ -263,11 +275,14 @@ def install_app(zip_path, dest):
     if not apps:
         raise RuntimeError("AquaStar.app was not in the zip")
     app = apps[0]
+    mark_executables(app)
     subprocess.check_call(["xattr", "-cr", str(app)])
     subprocess.run(["codesign", "--force", "--deep", "-s", "-", str(app)], check=False)
     exe = app / "Contents" / "MacOS" / app.stem
     if not exe.is_file():
         raise RuntimeError(f"missing executable {exe}")
+    if not os.access(exe, os.X_OK):
+        raise RuntimeError(f"{exe} is not executable")
     return exe
 
 

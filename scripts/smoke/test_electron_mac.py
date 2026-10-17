@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -39,6 +42,24 @@ def main():
     check("a missed measurement is still recorded", ok)
     ok, _lines = electron_mac.judge_metrics({"error": "timed out"}, True)
     check("a missed measurement fails the requirement", not ok)
+    scratch = Path(tempfile.mkdtemp())
+    try:
+        app = scratch / "AquaStar.app"
+        macos = app / "Contents" / "MacOS"
+        helper = app / "Contents" / "Frameworks" / "Electron Helper.app" / "Contents" / "MacOS"
+        macos.mkdir(parents=True)
+        helper.mkdir(parents=True)
+        binary = macos / "AquaStar"
+        nested = helper / "Electron Helper"
+        binary.write_text("bin")
+        nested.write_text("helper")
+        binary.chmod(0o644)
+        nested.chmod(0o644)
+        electron_mac.mark_executables(app)
+        check("the main binary becomes executable", os.access(binary, os.X_OK))
+        check("a helper binary becomes executable", os.access(nested, os.X_OK))
+    finally:
+        shutil.rmtree(scratch)
 
 
 if __name__ == "__main__":
