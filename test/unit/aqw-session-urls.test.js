@@ -4,11 +4,9 @@ const urls = require('../../plugins/adventure-quest-worlds/urls.js');
 const session = require('../../plugins/adventure-quest-worlds/session.js');
 const { applySessionRules } = require('../../res/platform/session-rules.js');
 
-test('AQW url catalog exposes loader, DF, and testing helpers', () => {
+test('AQW url catalog exposes loader and DF helpers', () => {
   assert.ok(urls.URLS.loader4.indexOf('Loader4.swf') !== -1);
   assert.ok(urls.URLS.dfLoader.indexOf('dragonfable.com') !== -1);
-  const testing = urls.testingAQW();
-  assert.ok(urls.isTestingAqwUrl(testing));
   assert.ok(urls.buildCharLookupUrl('Hero').indexOf('id=Hero') !== -1);
 });
 

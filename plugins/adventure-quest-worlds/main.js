@@ -76,21 +76,13 @@ async function activate(host) {
             return windowTitle.primaryTitle(ctx);
         },
         isGameUrl: function (url) {
-            return urls.isLoaderUrl(url) || urls.isTestingAqwUrl(url);
+            return urls.isLoaderUrl(url);
         },
         wrap: { preferDirectWmode: true, ruffleEligible: true, ruffle: ruffle },
         flashTrust: true
     });
 
     host.registerLaunches([
-        {
-            id: 'aqw-testing',
-            keybindId: 'newTest',
-            getUrl: function () { return urls.testingAQW(); },
-            title: function () { return 'AquaStar - AQW Testing Version!'; },
-            wrap: { preferDirectWmode: true, ruffleEligible: true, ruffle: ruffle },
-            flashTrust: true
-        },
         {
             id: 'dragonfable',
             keybindId: 'dragon',

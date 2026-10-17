@@ -15,6 +15,9 @@ test('AQW plugin locale catalogs export feature message namespaces', () => {
     assert.strictEqual(typeof catalog.dialogMessages.helpDetailExtra, 'function');
     assert.ok(catalog.menuMessages.menuWiki);
     assert.ok(catalog.settingsMessages.labels.wiki);
+    assert.strictEqual(catalog.settingsMessages.labels.newTest, undefined);
+    assert.strictEqual(catalog.menuMessages.menuNewTest, undefined);
+    assert.ok(!catalog.dialogMessages.helpDetailExtra({ newTest: 'Alt+Q' }, (value) => value).includes('Alt+Q'));
   });
 });
 
@@ -54,7 +57,6 @@ test('mergePluginLocales applies plugin keys without clobbering platformMessages
     charpage: 'Alt+P',
     cpSshot: 'Alt+K',
     newAqw: 'Alt+N',
-    newTest: 'Alt+Q',
     dragon: 'Alt+1',
     reminders: 'Alt+T',
     todo: 'Alt+Y',

@@ -45,7 +45,7 @@ test('AQW keybind URL navigations declare openMode new-window', () => {
     byId[a.id] = a;
   });
 
-  ['wiki', 'account', 'design', 'charpage', 'newAqw', 'newTest', 'dragon'].forEach(function (id) {
+  ['wiki', 'account', 'design', 'charpage', 'newAqw', 'dragon'].forEach(function (id) {
     assert.ok(byId[id], 'missing keybind ' + id);
     assert.strictEqual(byId[id].openMode, 'new-window', id + ' keybind must open new-window');
   });
@@ -234,4 +234,29 @@ test('AQW activate source registers menus and keybinds', () => {
   assert.ok(menusSrc.indexOf('host.registerMenuPages') !== -1);
   assert.ok(menusSrc.indexOf('appUsefulPages: describeAppUsefulPages') !== -1);
   assert.ok(menusSrc.indexOf('gameMenuPages: describeGameMenuPages') !== -1);
+});
+
+test('AQW menus ignore the retired testing shortcut in saved settings', () => {
+  const contributors = [];
+  menus.register({
+    registerMenus: (contributor) => contributors.push(contributor),
+    registerMenuPages: () => {}
+  });
+  const template = contributors[0]({
+    keybinds: { newTest: 'Alt+Q' },
+    labels: { menuNewTest: 'Retired testing instance' },
+    actions: {
+      newTest: () => {
+        throw new Error('retired action');
+      }
+    }
+  });
+  function visit(items) {
+    items.forEach((item) => {
+      assert.notStrictEqual(item.accelerator, 'Alt+Q');
+      assert.notStrictEqual(item.label, 'Retired testing instance');
+      if (item.submenu) visit(item.submenu);
+    });
+  }
+  visit(template);
 });

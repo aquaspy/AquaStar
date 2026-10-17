@@ -46,7 +46,6 @@ exports.dialogMessages = {
         expand(k.charpage)  + "" +
         expand(k.cpSshot)   + '' +
         expand(k.newAqw)    + '' +
-        expand(k.newTest)   + '' +
         expand(k.dragon)    + '' +
         expand(k.reminders) + '' +
         expand(k.todo)      + '' +
@@ -81,7 +80,6 @@ exports.menuMessages = {
     menuInventory: "",
     menuStrategy: "",
     menuNewAqw: "",
-    menuNewTest: "",
     menuDragon: "",
     menuTools: ""
 };
@@ -93,7 +91,6 @@ exports.settingsMessages = {
         design: "",
         charpage: "",
         newAqw: "",
-        newTest: "",
         dragon: "",
         reminders: "",
         todo: "",

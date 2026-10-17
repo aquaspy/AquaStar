@@ -284,12 +284,6 @@ function createAqwChromeContributor(options) {
                         click: clickAction('newAqw')
                     },
                     {
-                        label: labelOr(labels, 'menuNewTest', 'AQW Testing'),
-                        accelerator: keybinds.newTest,
-                        registerAccelerator: false,
-                        click: clickAction('newTest')
-                    },
-                    {
                         label: labelOr(labels, 'menuDragon', 'DragonFable'),
                         accelerator: keybinds.dragon,
                         registerAccelerator: false,

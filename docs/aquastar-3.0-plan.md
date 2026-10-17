@@ -70,7 +70,8 @@ The Artix binary accepts `--title`, `--companion`, `--companion-name`, `--tcp-co
 | Play AQW | Migrate | The shell starts the standalone player with the loader URL. |
 | Live loader URL | Migrate | Fetch the loader from the Artix Game Launcher page, cache it, and fall back to the built-in URL. |
 | Custom SWF and custom URL | Migrate | A custom SWF still wins over a custom URL. |
-| Testing loader and DragonFable | Migrate | Same menu entries, aimed at the standalone player. |
+| DragonFable | Migrate | Same menu entry, aimed at the standalone player. |
+| AQW testing instance | Drop | Obsolete. Remove its loader, menu and Alt+Q from both 2.x and 3.x. |
 | Window title, fullscreen, quality, graphics | Migrate | Artix flags. Stock builds skip the flags they reject. |
 | Menus and Useful Pages | Migrate | URLs and labels come from the game JSON. |
 | Wiki, design notes, account, char page, gifts, calendar, forge, heromart, portal, Twitter, Reddit | Migrate | Open in the shell browser or the system browser. |
@@ -119,7 +120,7 @@ Each phase ends the same way. The smoke workflow passes, the phase is tagged as 
 
 ### 1. Player matrix
 
-Keep growing `lite/` into the 3.0 shell. Launch the Artix binary by default on Windows x64, Linux x64, and macOS arm64. Launch the stock binary on Windows x86, Linux i686, Linux aarch64, and Intel Mac. Keep the projector selectable and off by default. Carry over the live loader, custom SWF, custom URL, testing loader, and DragonFable.
+Keep growing `lite/` into the 3.0 shell. Launch the Artix binary by default on Windows x64, Linux x64, and macOS arm64. Launch the stock binary on Windows x86, Linux i686, Linux aarch64, and Intel Mac. Keep the projector selectable and off by default. Carry over the live loader, custom SWF, custom URL, and DragonFable.
 
 The check is that `cargo test` passes, smoke passes for an Artix launch on Linux x64, Windows x64, and macOS arm64, and a test launches the stock binary without `--title` and `--companion`.
 

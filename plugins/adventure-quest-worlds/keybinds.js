@@ -14,7 +14,6 @@ const AQW_KEYBIND_DEFAULTS = {
     design: 'Alt+D',
     charpage: 'Alt+P',
     newAqw: 'Alt+N',
-    newTest: 'Alt+Q',
     dragon: 'Alt+1',
     reminders: 'Alt+T',
     todo: 'Alt+Y',
@@ -35,7 +34,6 @@ function describeKeybindActions() {
         { id: 'design', openMode: 'new-window', surface: 'keybind' },
         { id: 'charpage', openMode: 'new-window', surface: 'keybind' },
         { id: 'newAqw', openMode: 'new-window', surface: 'keybind' },
-        { id: 'newTest', openMode: 'new-window', surface: 'keybind' },
         { id: 'dragon', openMode: 'new-window', surface: 'keybind' },
         { id: 'reminders', surface: 'keybind' },
         { id: 'todo', surface: 'keybind' },
@@ -104,11 +102,6 @@ function createKeybindRegistrations(deps) {
             id: 'newAqw',
             openMode: 'new-window',
             action: function () { inst.newBrowserWindow(d.getPrimaryUrl()); }
-        },
-        {
-            id: 'newTest',
-            openMode: 'new-window',
-            action: function () { inst.newBrowserWindow(urls.testingAQW()); }
         },
         {
             id: 'dragon',

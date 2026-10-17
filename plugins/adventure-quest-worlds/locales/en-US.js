@@ -49,7 +49,6 @@ exports.dialogMessages = {
         expand(k.charpage)  + " - Opens the configured player character's Char Page\n" +
         expand(k.cpSshot)   + ' - (Char Pages only) saves the open Char Page\n' +
         expand(k.newAqw)    + ' - Opens a new AQW instance\n' +
-        expand(k.newTest)   + ' - Opens a Testing AQW instance\n' +
         expand(k.dragon)    + ' - Opens DragonFable\n' +
         expand(k.reminders) + ' - Quest reminders per character\n' +
         expand(k.todo)      + ' - To-Do List\n' +
@@ -84,7 +83,6 @@ exports.menuMessages = {
     menuInventory: "Inventory",
     menuStrategy: "Strategy",
     menuNewAqw: "New AQW Instance",
-    menuNewTest: "AQW Testing Instance",
     menuDragon: "DragonFable",
     menuTools: "Tools",
 };
@@ -96,7 +94,6 @@ exports.settingsMessages = {
         design: "Open Design Notes",
         charpage: "Character Lookup",
         newAqw: "Open New AQW Instance",
-        newTest: "Open Testing AQW Instance",
         dragon: "Open DragonFable",
         reminders: "Open Reminders",
         todo: "Open To-Do List",

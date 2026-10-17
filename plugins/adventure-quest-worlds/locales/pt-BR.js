@@ -48,7 +48,6 @@ exports.dialogMessages = {
         expand(k.charpage)  + ' - Char Page do personagem configurado nas Configurações\n' +
         expand(k.cpSshot)   + ' - (Somente Char Pages) salva a Char Page aberta\n' +
         expand(k.newAqw)    + ' - Nova instância do AQW\n' +
-        expand(k.newTest)   + ' - Instância de testes do AQW\n' +
         expand(k.dragon)    + ' - Abre o DragonFable\n' +
         expand(k.reminders) + ' - Lembretes de quests por personagem\n' +
         expand(k.todo)      + ' - Lista de Tarefas\n' +
@@ -82,7 +81,6 @@ exports.menuMessages = {
     menuInventory: "Inventário",
     menuStrategy: "Estratégia",
     menuNewAqw: "Nova Instância AQW",
-    menuNewTest: "Instância de Testes AQW",
     menuDragon: "DragonFable",
     menuTools: "Ferramentas",
     menuFeatures: "Recursos",
@@ -95,7 +93,6 @@ exports.settingsMessages = {
         design: "Abrir as Design Notes",
         charpage: "Consultar Char Page",
         newAqw: "Abrir Nova Instância do AQW",
-        newTest: "Abrir Instância de Testes do AQW",
         dragon: "Abrir o DragonFable",
         reminders: "Abrir Lembretes",
         todo: "Abrir Lista de Tarefas",
