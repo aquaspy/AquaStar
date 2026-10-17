@@ -6,6 +6,7 @@ name: AquaStar Lite Smoke
 #
 # workflow_dispatch and workflow_run only fire once this file is on the
 # default branch. A push of this file to dev runs the same jobs before that.
+# Those jobs download the newest v3 prerelease, so the push retests that release.
 # macos-13 was retired on 2025-12-04. Intel Macs use macos-15-intel.
 # macos-latest with an empty flash_arch is a normal Apple Silicon launch.
 # The x86_64 row runs the same app under arch -x86_64. electron-mac launches
