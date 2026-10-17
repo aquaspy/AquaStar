@@ -331,6 +331,13 @@ mod tests {
         }
         assert!(yml.contains("actions/upload-artifact@v4"));
         assert!(yml.contains("AQUASTAR_LITE_SMOKE"));
+        assert_eq!(yml.matches("os: macos-latest").count(), 2);
+        assert!(yml.contains("electron_mac.py"));
+        let electron = include_str!("../../../scripts/smoke/electron_mac.py");
+        assert!(electron.contains("devicePixelRatio"));
+        assert!(electron.contains("swf_wrapper.html"));
+        assert!(electron.contains("force-device-scale-factor"));
+        assert!(electron.contains("--install-rosetta"));
         let unix = include_str!("../../scripts/smoke/install-unix.sh");
         assert!(unix.contains("xattr -cr"));
         assert!(unix.contains("hdiutil attach"));

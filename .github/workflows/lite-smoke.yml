@@ -8,6 +8,9 @@ name: AquaStar Lite Smoke
 # workflow_dispatch and workflow_run only fire once this file is on the
 # default branch. A push of this file to dev runs the same jobs before that.
 # macos-13 was retired on 2025-12-04. Intel Macs use macos-15-intel.
+# macos-latest with an empty flash_arch is a normal Apple Silicon launch.
+# The x86_64 row runs the same app under arch -x86_64. electron-mac launches
+# the Electron x64 zip on Apple Silicon and records the game page size.
 on:
   workflow_dispatch:
     inputs:
@@ -24,6 +27,7 @@ on:
     paths:
       - .github/workflows/lite-smoke.yml
       - lite/scripts/smoke/**
+      - scripts/smoke/**
 
 concurrency:
   group: lite-smoke-${{ github.ref }}
@@ -79,6 +83,9 @@ jobs:
             flash_arch: ''
           - os: macos-latest
             package: dmg
+            flash_arch: ''
+          - os: macos-latest
+            package: dmg
             flash_arch: x86_64
     steps:
       - uses: actions/checkout@v4
@@ -88,7 +95,9 @@ jobs:
       - name: Install Pillow
         run: python -m pip install pillow
       - name: Button finder test
-        run: python lite/scripts/smoke/test_buttons.py
+        run: |
+          python lite/scripts/smoke/test_buttons.py
+          python scripts/smoke/test_electron_mac.py
       - name: Download the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -132,13 +141,36 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: smoke-${{ matrix.os }}-${{ matrix.package }}-flash
+          name: smoke-${{ matrix.os }}-${{ matrix.package }}-flash${{ matrix.flash_arch && format('-{0}', matrix.flash_arch) || '' }}
           path: smoke-out/flash/
           if-no-files-found: warn
       - name: Upload Ruffle screenshot and log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: smoke-${{ matrix.os }}-${{ matrix.package }}-ruffle
+          name: smoke-${{ matrix.os }}-${{ matrix.package }}-ruffle${{ matrix.flash_arch && format('-{0}', matrix.flash_arch) || '' }}
           path: smoke-out/ruffle/
+          if-no-files-found: warn
+
+  electron-mac:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'lite-v'))
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Judge the embed measurement
+        run: python3 scripts/smoke/test_electron_mac.py
+      - name: Launch the newest Electron mac zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/smoke/electron_mac.py --out smoke-electron
+      - name: Upload the Electron screenshot and page size
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-macos-latest-electron-mac
+          path: smoke-electron/
           if-no-files-found: warn

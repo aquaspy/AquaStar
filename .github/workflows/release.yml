@@ -81,6 +81,17 @@ jobs:
       - run: bash scripts/build-arch.sh mac x64
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Smoke the mac zip on this Apple Silicon runner
+        run: |
+          set -euo pipefail
+          zip=$(echo dist/AquaStar-*-mac-x64.zip)
+          python3 scripts/smoke/electron_mac.py --zip "$zip" --out smoke-electron --require-wrapper
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: electron-mac-smoke
+          path: smoke-electron/
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: aquastar-macos-x64
