@@ -80,9 +80,7 @@ function harness(file) {
 async function settle() {
   for (let i = 0; i < 15; i++) await Promise.resolve();
 }
-for (const file of [
-  'plugins/adventure-quest-worlds/features/wikiview/hoverPreview.js'
-]) {
+for (const file of ['plugins/adventure-quest-worlds/features/wikiview/hoverPreview.js']) {
   test(file + ': latest hover wins, including reverse request completion', async () => {
     const h = harness(file);
     h.context.hovered('https://aqwwiki.wikidot.com/a');
