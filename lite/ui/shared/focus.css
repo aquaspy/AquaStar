@@ -1,0 +1,46 @@
+/* Keep keyboard focus consistent across AquaStar's native HTML windows. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+a:focus,
+summary:focus,
+[role="button"]:focus,
+[tabindex]:focus {
+  outline: 2px solid #4da3ff;
+  outline-offset: 2px;
+}
+
+/* Chromium's native scrollbar otherwise stays bright against AquaStar's dark
+   HTML feature windows. Kept here so every feature that shares focus styling
+   also shares the same unobtrusive scroll treatment. */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #121212;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border: 3px solid #121212;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4d4d4d;
+}
+
+::-webkit-scrollbar-corner {
+  background: #121212;
+}

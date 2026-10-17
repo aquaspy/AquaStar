@@ -9,6 +9,7 @@ mod profile;
 mod ruffle;
 
 use std::path::Path;
+use std::str::FromStr;
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
 
@@ -151,23 +152,6 @@ fn allowed_site(url: &str) -> Result<tauri::Url, String> {
     Ok(parsed)
 }
 
-fn profile_paths() -> placement::ProfilePaths {
-    let exe_dir = std::env::current_exe()
-        .ok()
-        .and_then(|path| path.parent().map(Path::to_path_buf));
-    placement::electron_profile(exe_dir.as_deref())
-}
-
-fn list_paths(profile: &placement::ProfilePaths) -> profile::ListPaths {
-    profile::ListPaths {
-        settings_files: profile.settings_files.clone(),
-        reminders: profile.aqua_dir.join("aquastar_reminders.json"),
-        legacy_reminders: profile.legacy_reminders.clone(),
-        todo: profile.aqua_dir.join("aquastar_todo.json"),
-        strategy: profile.aqua_dir.join("aquastar_strategy.json"),
-    }
-}
-
 #[tauri::command]
 fn open_tool(app: tauri::AppHandle, name: String) -> Result<(), String> {
     let (title, width, height) =
@@ -185,21 +169,243 @@ fn open_tool(app: tauri::AppHandle, name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn tool_document(name: String) -> Result<profile::ToolDocument, String> {
-    if profile::tool_spec(&name).is_none() {
-        return Err(format!("unknown window {name}"));
-    }
-    let profile = profile_paths();
-    let paths = list_paths(&profile);
-    profile::ensure_window(&paths, &name)?;
-    documents_for(&paths)
-        .into_iter()
-        .find(|doc| doc.name == name)
-        .ok_or_else(|| format!("unknown window {name}"))
+fn get_keybindings() -> serde_json::Value {
+    profile::keybindings_payload(&profile::live_files())
 }
 
-fn documents_for(paths: &profile::ListPaths) -> Vec<profile::ToolDocument> {
-    profile::documents(paths)
+#[tauri::command]
+fn get_settings_messages() -> serde_json::Value {
+    profile::settings_messages()
+}
+
+#[tauri::command]
+fn save_keybindings(binds: serde_json::Value) -> Result<serde_json::Value, String> {
+    profile::save_keybindings(&profile::live_files(), &binds)
+}
+
+#[tauri::command]
+fn get_ruffle_status() -> serde_json::Value {
+    profile::ruffle_status(&profile::live_files())
+}
+
+#[tauri::command]
+fn update_ruffle(channel: Option<String>) -> serde_json::Value {
+    let _ = channel;
+    serde_json::json!({
+        "ok": false,
+        "error": "AquaStar 3.0 uses the pinned desktop players. The in-page Ruffle download is not used."
+    })
+}
+
+#[tauri::command]
+fn restore_bundled_ruffle() -> serde_json::Value {
+    serde_json::json!({ "ok": true })
+}
+
+#[tauri::command]
+fn restart_app(app: tauri::AppHandle) {
+    app.restart();
+}
+
+#[tauri::command]
+fn get_custom_swf_status() -> serde_json::Value {
+    profile::swf_status(&profile::live_files())
+}
+
+#[tauri::command]
+fn choose_custom_swf(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.run_on_main_thread(move || {
+        let picked = rfd::FileDialog::new()
+            .set_title("Select a custom SWF file")
+            .add_filter("Flash SWF", &["swf"])
+            .pick_file();
+        let _ = tx.send(picked);
+    })
+    .map_err(|e| e.to_string())?;
+    let Some(path) = rx.recv().map_err(|e| e.to_string())? else {
+        return Ok(serde_json::json!({ "canceled": true }));
+    };
+    let mut status = profile::install_swf(&profile::live_files(), &path)?;
+    if let Some(obj) = status.as_object_mut() {
+        obj.insert("canceled".into(), serde_json::Value::Bool(false));
+    }
+    Ok(status)
+}
+
+#[tauri::command]
+fn remove_custom_swf() -> serde_json::Value {
+    profile::remove_swf(&profile::live_files())
+}
+
+#[tauri::command]
+fn get_plugin_list(opts: Option<serde_json::Value>) -> serde_json::Value {
+    profile::plugin_list(&profile::live_files(), opts.as_ref().unwrap_or(&serde_json::Value::Null))
+}
+
+#[tauri::command]
+fn get_plugin_settings() -> serde_json::Value {
+    profile::plugin_settings(&profile::live_files())
+}
+
+#[tauri::command]
+fn get_settings_layout() -> serde_json::Value {
+    profile::settings_layout()
+}
+
+#[tauri::command]
+fn get_reminders() -> Result<serde_json::Value, String> {
+    profile::reminders_document(&profile::live_files())
+}
+
+#[tauri::command]
+fn get_reminders_messages() -> serde_json::Value {
+    profile::reminders_messages()
+}
+
+#[tauri::command]
+fn save_reminders(state: serde_json::Value) -> Result<serde_json::Value, String> {
+    profile::save_reminders(&profile::live_files(), &state)
+}
+
+#[tauri::command]
+fn get_todo() -> Result<serde_json::Value, String> {
+    profile::todo_document(&profile::live_files())
+}
+
+#[tauri::command]
+fn get_todo_messages() -> serde_json::Value {
+    profile::todo_messages()
+}
+
+#[tauri::command]
+fn save_todo(state: serde_json::Value) -> Result<serde_json::Value, String> {
+    profile::save_todo(&profile::live_files(), &state)
+}
+
+#[tauri::command]
+fn open_todo_link(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    let parsed: tauri::Url = url.parse().map_err(|_| "bad url".to_string())?;
+    if parsed.scheme() != "https" && parsed.scheme() != "http" {
+        return Err("only http(s) links open".into());
+    }
+    let label = "todo-link";
+    if let Some(window) = app.get_webview_window(label) {
+        let _ = window.navigate(parsed);
+        let _ = window.set_focus();
+        return Ok(());
+    }
+    WebviewWindowBuilder::new(&app, label, WebviewUrl::External(parsed))
+        .title("AquaStar - To-Do")
+        .inner_size(1100.0, 750.0)
+        .initialization_script_for_all_frames(ads::init_script())
+        .on_navigation(|url| match url.host_str() {
+            Some(host) => !ads::host_blocked(host),
+            None => true,
+        })
+        .build()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_strategy() -> Result<serde_json::Value, String> {
+    profile::strategy_document(&profile::live_files())
+}
+
+#[tauri::command]
+fn get_strategy_messages() -> serde_json::Value {
+    profile::strategy_messages()
+}
+
+#[tauri::command]
+fn save_strategy(data: serde_json::Value) -> Result<serde_json::Value, String> {
+    profile::save_strategy(&profile::live_files(), &data)
+}
+
+#[tauri::command]
+fn get_inventory_item_counts(names: Option<Vec<String>>) -> serde_json::Value {
+    profile::inventory_counts(&profile::live_files(), names.as_deref().unwrap_or(&[]))
+}
+
+struct TimerShortcut(std::sync::Mutex<Option<tauri_plugin_global_shortcut::Shortcut>>);
+
+fn shortcut_from(accel: &profile::Accelerator) -> Option<tauri_plugin_global_shortcut::Shortcut> {
+    use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
+    let mut mods = Modifiers::empty();
+    if accel.alt {
+        mods |= Modifiers::ALT;
+    }
+    if accel.shift {
+        mods |= Modifiers::SHIFT;
+    }
+    if accel.control {
+        mods |= Modifiers::CONTROL;
+    }
+    if accel.meta {
+        mods |= Modifiers::SUPER;
+    }
+    if accel.command_or_control {
+        mods |= if cfg!(target_os = "macos") { Modifiers::META } else { Modifiers::CONTROL };
+    }
+    let key = accel.key.as_str();
+    let code = if key.len() == 1 && key.chars().next().unwrap().is_ascii_alphabetic() {
+        Code::from_str(&format!("Key{}", key.to_ascii_uppercase())).ok()?
+    } else if key.len() == 1 && key.chars().next().unwrap().is_ascii_digit() {
+        Code::from_str(&format!("Digit{key}")).ok()?
+    } else if key.starts_with('F') && key[1..].parse::<u8>().is_ok() {
+        Code::from_str(key).ok()?
+    } else {
+        match key.to_ascii_lowercase().as_str() {
+            "esc" | "escape" => Code::Escape,
+            "space" => Code::Space,
+            "enter" | "return" => Code::Enter,
+            "tab" => Code::Tab,
+            "up" => Code::ArrowUp,
+            "down" => Code::ArrowDown,
+            "left" => Code::ArrowLeft,
+            "right" => Code::ArrowRight,
+            _ => return None,
+        }
+    };
+    Some(Shortcut::new(Some(mods), code))
+}
+
+#[tauri::command]
+fn set_strategy_timer_shortcut(app: tauri::AppHandle, key: String) -> serde_json::Value {
+    use tauri_plugin_global_shortcut::GlobalShortcutExt;
+    let state = app.state::<TimerShortcut>();
+    let mut slot = state.0.lock().unwrap_or_else(|err| err.into_inner());
+    if let Some(previous) = slot.take() {
+        let _ = app.global_shortcut().unregister(previous);
+    }
+    let key = key.trim();
+    if key.is_empty() {
+        return serde_json::json!({ "ok": true });
+    }
+    let Some(accel) = profile::parse_accelerator(key) else {
+        return serde_json::json!({ "ok": false, "error": "invalid" });
+    };
+    let Some(shortcut) = shortcut_from(&accel) else {
+        return serde_json::json!({ "ok": false, "error": "invalid" });
+    };
+    match app.global_shortcut().register(shortcut) {
+        Ok(()) => {
+            *slot = Some(shortcut);
+            serde_json::json!({ "ok": true })
+        }
+        Err(_) => serde_json::json!({ "ok": false, "error": "unavailable" }),
+    }
+}
+
+#[tauri::command]
+fn clear_strategy_timer_shortcut(app: tauri::AppHandle) {
+    use tauri_plugin_global_shortcut::GlobalShortcutExt;
+    let state = app.state::<TimerShortcut>();
+    let mut slot = state.0.lock().unwrap_or_else(|err| err.into_inner());
+    if let Some(previous) = slot.take() {
+        let _ = app.global_shortcut().unregister(previous);
+    }
 }
 
 #[tauri::command]
@@ -341,6 +547,14 @@ fn main() {
         }
     };
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app, _shortcut, event| {
+            if event.state != tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                return;
+            }
+            if let Some(window) = app.get_webview_window("strategy") {
+                let _ = window.eval("window.__aquastarTimerToggle&&window.__aquastarTimerToggle()");
+            }
+        }).build())
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
@@ -350,13 +564,39 @@ fn main() {
         }))
         .manage(placement)
         .manage(Players::default())
+        .manage(TimerShortcut(std::sync::Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             play,
             engines,
             preferred_engine,
             open_site,
             open_tool,
-            tool_document,
+            get_keybindings,
+            get_settings_messages,
+            save_keybindings,
+            get_ruffle_status,
+            update_ruffle,
+            restore_bundled_ruffle,
+            restart_app,
+            get_custom_swf_status,
+            choose_custom_swf,
+            remove_custom_swf,
+            get_plugin_list,
+            get_plugin_settings,
+            get_settings_layout,
+            get_reminders,
+            get_reminders_messages,
+            save_reminders,
+            get_todo,
+            get_todo_messages,
+            save_todo,
+            open_todo_link,
+            get_strategy,
+            get_strategy_messages,
+            save_strategy,
+            get_inventory_item_counts,
+            set_strategy_timer_shortcut,
+            clear_strategy_timer_shortcut,
             ruffle_settings,
             set_ruffle_settings,
             launcher_settings,
@@ -470,10 +710,10 @@ mod tests {
         let cargo = read("Cargo.toml");
         let conf = read("tauri.conf.json");
         assert!(cargo.contains("name = \"aquastar-lite\""));
-        assert!(cargo.contains("version = \"3.0.0-alpha.3\""));
+        assert!(cargo.contains("version = \"3.0.0-alpha.4\""));
         assert!(!cargo.contains(&lite));
         let parsed: serde_json::Value = serde_json::from_str(&conf).unwrap();
-        assert_eq!(parsed["version"], "3.0.0-alpha.3");
+        assert_eq!(parsed["version"], "3.0.0-alpha.4");
         assert_eq!(parsed["productName"], "aquastar-lite");
         assert_eq!(parsed["mainBinaryName"], "aquastar-lite");
         assert_eq!(parsed["identifier"], "io.github.aquaspy.aquastar-lite");

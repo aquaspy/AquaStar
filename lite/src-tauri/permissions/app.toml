@@ -1,0 +1,55 @@
+[[permission]]
+identifier = "launcher-commands"
+description = "Launcher window"
+commands.allow = [
+  "play",
+  "engines",
+  "preferred_engine",
+  "open_site",
+  "open_tool",
+  "ruffle_settings",
+  "set_ruffle_settings",
+  "launcher_settings",
+  "set_hide_launcher"
+]
+
+[[permission]]
+identifier = "settings-commands"
+description = "Settings window"
+commands.allow = [
+  "get_keybindings",
+  "get_settings_messages",
+  "save_keybindings",
+  "get_ruffle_status",
+  "update_ruffle",
+  "restore_bundled_ruffle",
+  "restart_app",
+  "get_custom_swf_status",
+  "choose_custom_swf",
+  "remove_custom_swf",
+  "get_plugin_list",
+  "get_plugin_settings",
+  "get_settings_layout"
+]
+
+[[permission]]
+identifier = "reminders-commands"
+description = "Reminders window"
+commands.allow = ["get_reminders", "get_reminders_messages", "save_reminders"]
+
+[[permission]]
+identifier = "todo-commands"
+description = "To-do window"
+commands.allow = ["get_todo", "get_todo_messages", "save_todo", "open_todo_link"]
+
+[[permission]]
+identifier = "strategy-commands"
+description = "Strategy window"
+commands.allow = [
+  "get_strategy",
+  "get_strategy_messages",
+  "save_strategy",
+  "get_inventory_item_counts",
+  "set_strategy_timer_shortcut",
+  "clear_strategy_timer_shortcut"
+]

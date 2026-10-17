@@ -2,5 +2,5 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "reminders",
   "windows": ["reminders"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "reminders-commands"]
 }

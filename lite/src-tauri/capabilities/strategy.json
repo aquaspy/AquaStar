@@ -2,5 +2,5 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "strategy",
   "windows": ["strategy"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "strategy-commands"]
 }
