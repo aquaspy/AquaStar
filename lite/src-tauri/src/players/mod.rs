@@ -335,7 +335,7 @@ impl Players {
         let settings = settings.for_platform(std::env::consts::OS);
         let graphics = settings.graphics;
         let ruffle_may_fallback = engine == Engine::Ruffle && graphics != RuffleGraphics::Gl;
-        let args = engine.args(swf, &settings, save_directory.as_deref());
+        let args = player_args(exe, engine, swf, &settings, save_directory.as_deref());
         if engine == Engine::Flash {
             log_flash_launch(exe, &args);
         }
@@ -459,7 +459,7 @@ impl Players {
         let mut child = spawn_player(
             exe,
             Engine::Ruffle,
-            &Engine::Ruffle.args(swf, &settings, save_directory),
+            &player_args(exe, Engine::Ruffle, swf, &settings, save_directory),
             false,
         )?;
         std::thread::sleep(Duration::from_millis(800));
@@ -622,6 +622,35 @@ impl Players {
     }
 }
 
+/// Artix's standalone binary is named `ruffle_desktop`. Stock Ruffle 0.7.1 is
+/// `ruffle` and rejects `--title`, so the flag is added only for the Artix name.
+fn player_args(
+    exe: &Path,
+    engine: Engine,
+    swf: &str,
+    settings: &RuffleSettings,
+    save_directory: Option<&Path>,
+) -> Vec<String> {
+    let mut args = engine.args(swf, settings, save_directory);
+    if engine == Engine::Ruffle && artix_desktop(exe) {
+        let swf_arg = args.pop().expect("ruffle args end with the swf");
+        args.push("--title".to_string());
+        args.push(flash_menu::PLAYER_TITLE.to_string());
+        args.push(swf_arg);
+    }
+    args
+}
+
+fn artix_desktop(exe: &Path) -> bool {
+    match exe.file_name().and_then(|name| name.to_str()) {
+        Some(name) => {
+            name.eq_ignore_ascii_case("ruffle_desktop")
+                || name.eq_ignore_ascii_case("ruffle_desktop.exe")
+        }
+        None => false,
+    }
+}
+
 /// Nearest `Something.app` that contains this executable. That is `Ruffle.app` or
 /// `Flash Player.app`, not an outer launcher that also ends in `.app`.
 #[cfg(target_os = "macos")]
@@ -632,6 +661,10 @@ fn containing_app(exe: &Path) -> Option<&Path> {
 
 #[cfg(target_os = "macos")]
 fn clear_quarantine(exe: &Path) {
+    let _ = Command::new("xattr")
+        .args(["-d", "com.apple.quarantine"])
+        .arg(exe)
+        .status();
     if let Some(app) = containing_app(exe) {
         let _ = Command::new("xattr")
             .args(["-dr", "com.apple.quarantine"])
@@ -1475,6 +1508,46 @@ mod save_directory_tests {
             quality: RuffleQuality::Low,
             graphics: RuffleGraphics::Automatic,
         }
+    }
+
+    #[test]
+    fn artix_desktop_gets_a_title_and_stock_ruffle_does_not() {
+        let settings = low_automatic();
+        let artix = player_args(
+            Path::new("/players/ruffle_desktop"),
+            Engine::Ruffle,
+            SWF,
+            &settings,
+            None,
+        );
+        assert!(artix
+            .windows(2)
+            .any(|pair| pair == ["--title", "AquaStar Lite"]));
+        assert_eq!(artix.last().map(String::as_str), Some(SWF));
+        let stock = player_args(
+            Path::new("Ruffle.app/Contents/MacOS/ruffle"),
+            Engine::Ruffle,
+            SWF,
+            &settings,
+            Some(Path::new(SAVE)),
+        );
+        assert!(!stock.iter().any(|arg| arg == "--title"));
+        assert_eq!(
+            stock
+                .windows(2)
+                .any(|pair| pair == ["--save-directory", SAVE]),
+            true
+        );
+        let windows = player_args(
+            Path::new("ruffle_desktop.exe"),
+            Engine::Ruffle,
+            SWF,
+            &settings,
+            None,
+        );
+        assert!(windows
+            .windows(2)
+            .any(|pair| pair == ["--title", "AquaStar Lite"]));
     }
 
     #[test]

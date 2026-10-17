@@ -2,25 +2,46 @@
   "players": [
     {
       "engine": "ruffle",
-      "version": "0.7.1",
-      "dir": "ruffle-0.7.1",
+      "version": "1.7.0",
+      "dir": "ruffle-artix-1.7.0",
       "artifacts": [
         {
           "os": "linux",
           "arch": "x86_64",
-          "kind": "tar.gz",
-          "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-x86_64.tar.gz",
-          "sha256": "67950dfdde643f9087ae478eb3637fe52e0deefc79bdb55fe43cd69dab9fdd99",
-          "exe": "ruffle"
+          "kind": "zip",
+          "extract": "appimage",
+          "url": "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-linux-x64.zip",
+          "sha256": "961dec3632b11d8f49d2b38e6368aa39b05a179bac047416ddb1d4f5a1cf17db",
+          "binarySha256": "9ad71857ea0c3546b7666addea064d14f1bcb214e148b2e34f99c04af2eff2a8",
+          "exe": "ruffle_desktop"
         },
         {
           "os": "windows",
           "arch": "x86_64",
           "kind": "zip",
-          "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-windows-x86_64.zip",
-          "sha256": "a5f6df9881771226e330e08a1fa7666f4caff50ddf9f2f993cdd95293edca627",
-          "exe": "ruffle.exe"
+          "extract": "single-exe",
+          "url": "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-windows-x64.zip",
+          "sha256": "0fa3d531afc04611645019af94de5e85d800cfd482f7b65d74328ca70f6f12ae",
+          "binarySha256": "1ee60154a491bb61c069a7dbd7de6419b894457d50b44a9611a21eced3d27f09",
+          "exe": "ruffle_desktop.exe"
         },
+        {
+          "os": "macos",
+          "arch": "aarch64",
+          "kind": "zip",
+          "extract": "macos-cli",
+          "url": "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-macOS-arm64.zip",
+          "sha256": "ab859ad5ae942eef35399dd376d46bcc07dd555c8a388b0bc22c436dc10546c7",
+          "binarySha256": "bfbead364812dd3c82c22a4829e86ecc13022f093468e301a6362b5c8905a3e4",
+          "exe": "ruffle_desktop"
+        }
+      ]
+    },
+    {
+      "engine": "ruffle",
+      "version": "0.7.1",
+      "dir": "ruffle-0.7.1",
+      "artifacts": [
         {
           "os": "macos",
           "arch": "universal",

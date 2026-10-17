@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
+use std::process::Command;
 use std::sync::OnceLock;
 
 use super::Engine;
@@ -15,12 +16,22 @@ pub(super) enum ArchiveKind {
     Dmg,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Extract {
+    Archive,
+    AppImage,
+    SingleExe,
+    MacosCli,
+}
+
 pub(super) struct Pinned {
     pub dir: String,
     pub sha256: String,
+    pub binary_sha256: Option<String>,
     pub exe: String,
     pub url: String,
     pub kind: ArchiveKind,
+    pub extract: Extract,
 }
 
 pub(super) const STAMP_NAME: &str = ".aquastar-pin";
@@ -53,8 +64,10 @@ struct Row {
     os: String,
     arch: String,
     kind: ArchiveKind,
+    extract: Extract,
     url: String,
     sha256: String,
+    binary_sha256: Option<String>,
     exe: String,
 }
 
@@ -103,11 +116,14 @@ impl Catalog {
                 if !matches!(os, "linux" | "windows" | "macos") {
                     return Err(format!("unknown os {os}"));
                 }
-                if !matches!(arch, "x86_64" | "universal") {
+                if !matches!(arch, "x86_64" | "universal" | "aarch64") {
                     return Err(format!("unknown arch {arch}"));
                 }
                 if arch == "universal" && os != "macos" {
                     return Err(format!("universal arch is only valid on macos, not {os}"));
+                }
+                if arch == "aarch64" && os != "macos" {
+                    return Err(format!("aarch64 arch is only valid on macos, not {os}"));
                 }
                 let kind = match kind_text {
                     "tar.gz" => ArchiveKind::TarGz,
@@ -115,6 +131,25 @@ impl Catalog {
                     "exe" => ArchiveKind::Exe,
                     "dmg" => ArchiveKind::Dmg,
                     other => return Err(format!("unknown kind {other}")),
+                };
+                let extract = match artifact.get("extract").and_then(|v| v.as_str()) {
+                    None => Extract::Archive,
+                    Some("appimage") => Extract::AppImage,
+                    Some("single-exe") => Extract::SingleExe,
+                    Some("macos-cli") => Extract::MacosCli,
+                    Some(other) => return Err(format!("unknown extract {other}")),
+                };
+                let binary_sha256 = match artifact.get("binarySha256") {
+                    None => None,
+                    Some(value) => {
+                        let text = value.as_str().ok_or("binarySha256 is not a string")?;
+                        if !sha_ok(text) {
+                            return Err(format!(
+                                "binarySha256 is not 64 lowercase hex digits: {text}"
+                            ));
+                        }
+                        Some(text.to_string())
+                    }
                 };
                 if !url.starts_with("https://") {
                     return Err(format!("url is not https: {url}"));
@@ -125,11 +160,13 @@ impl Catalog {
                 if !suffix_ok(&kind, url) {
                     return Err(format!("kind {kind_text} does not match url {url}"));
                 }
-                if matches!(kind, ArchiveKind::Zip) && os != "windows" {
-                    return Err(format!("zip archive is only valid on windows, not {os}"));
-                }
                 if matches!(kind, ArchiveKind::Dmg) && os != "macos" {
                     return Err(format!("dmg archive is only valid on macos, not {os}"));
+                }
+                if !extract_ok(extract, os, &kind, exe, binary_sha256.is_some()) {
+                    return Err(format!(
+                        "extract {extract:?} is not valid for {os} {kind_text} exe {exe}"
+                    ));
                 }
                 if !relative_exe(exe) {
                     return Err(format!("exe is not a relative path: {exe}"));
@@ -143,8 +180,10 @@ impl Catalog {
                     os: os.to_string(),
                     arch: arch.to_string(),
                     kind,
+                    extract,
                     url: url.to_string(),
                     sha256: sha256.to_string(),
+                    binary_sha256,
                     exe: exe.to_string(),
                 });
             }
@@ -186,9 +225,11 @@ impl Catalog {
         Some(Pinned {
             dir: row.dir.clone(),
             sha256: row.sha256.clone(),
+            binary_sha256: row.binary_sha256.clone(),
             exe: row.exe.clone(),
             url: row.url.clone(),
             kind: row.kind,
+            extract: row.extract,
         })
     }
 }
@@ -223,6 +264,28 @@ fn relative_exe(exe: &str) -> bool {
         && path
             .components()
             .all(|component| matches!(component, Component::Normal(_)))
+}
+
+fn extract_ok(
+    extract: Extract,
+    os: &str,
+    kind: &ArchiveKind,
+    exe: &str,
+    has_binary_sha: bool,
+) -> bool {
+    let flat = !exe.contains('/') && !exe.contains('\\');
+    match extract {
+        Extract::Archive => !has_binary_sha,
+        Extract::AppImage => {
+            os == "linux" && matches!(kind, ArchiveKind::Zip) && flat && has_binary_sha
+        }
+        Extract::SingleExe => {
+            os == "windows" && matches!(kind, ArchiveKind::Zip) && flat && has_binary_sha
+        }
+        Extract::MacosCli => {
+            os == "macos" && matches!(kind, ArchiveKind::Zip) && flat && has_binary_sha
+        }
+    }
 }
 
 fn sha_ok(sha: &str) -> bool {
@@ -343,19 +406,332 @@ fn unpack(pin: &Pinned, bytes: &[u8], dest: &Path) -> Result<(), String> {
         ArchiveKind::TarGz => tar::Archive::new(flate2::read::GzDecoder::new(bytes))
             .unpack(dest)
             .map_err(|e| e.to_string()),
-    }
+    }?;
+    arrange(pin, dest)
 }
 
-#[cfg(windows)]
 fn unpack_zip(bytes: &[u8], dest: &Path) -> Result<(), String> {
     zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec()))
         .and_then(|mut archive| archive.extract(dest))
         .map_err(|e| e.to_string())
 }
 
-#[cfg(not(windows))]
-fn unpack_zip(_bytes: &[u8], _dest: &Path) -> Result<(), String> {
-    Err("zip players are unpacked on Windows".into())
+fn arrange(pin: &Pinned, dest: &Path) -> Result<(), String> {
+    match pin.extract {
+        Extract::Archive => Ok(()),
+        Extract::AppImage => arrange_appimage(pin, dest),
+        Extract::SingleExe => arrange_single_exe(pin, dest),
+        Extract::MacosCli => arrange_macos_cli(pin, dest),
+    }
+}
+
+fn arrange_appimage(pin: &Pinned, dest: &Path) -> Result<(), String> {
+    let app = sole_file(dest, |path| {
+        path.extension().and_then(|ext| ext.to_str()) == Some("AppImage")
+    })?;
+    make_executable(&app)?;
+    let work = dest.join(".appimage-extract");
+    let _ = remove_path(&work);
+    fs::create_dir_all(&work).map_err(|e| e.to_string())?;
+    let status = Command::new(&app)
+        .arg("--appimage-extract")
+        .current_dir(&work)
+        .env("APPIMAGE_EXTRACT_AND_RUN", "1")
+        .status()
+        .map_err(|e| format!("appimage extract failed: {e}"))?;
+    if !status.success() {
+        return Err(format!("appimage extract exited {status}"));
+    }
+    let inner = work
+        .join("squashfs-root")
+        .join("usr")
+        .join("bin")
+        .join(&pin.exe);
+    if !inner.is_file() {
+        return Err(format!("appimage is missing usr/bin/{}", pin.exe));
+    }
+    let published = dest.join(&pin.exe);
+    fs::copy(&inner, &published).map_err(|e| e.to_string())?;
+    make_executable(&published)?;
+    if let Some(sha) = &pin.binary_sha256 {
+        require_sha(&published, sha)?;
+    }
+    let license = work
+        .join("squashfs-root")
+        .join("usr")
+        .join("share")
+        .join("doc")
+        .join("artix-games-launcher")
+        .join("LICENSE.md");
+    if license.is_file() {
+        fs::copy(&license, dest.join("LICENSE.md")).map_err(|e| e.to_string())?;
+    }
+    keep_only(dest, &[&pin.exe, "LICENSE.md"])
+}
+
+fn arrange_single_exe(pin: &Pinned, dest: &Path) -> Result<(), String> {
+    let published = dest.join(&pin.exe);
+    if !published.is_file() {
+        let source = sole_file(dest, |path| {
+            path.extension()
+                .and_then(|ext| ext.to_str())
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("exe"))
+        })?;
+        fs::copy(&source, &published).map_err(|e| e.to_string())?;
+    }
+    if let Some(sha) = &pin.binary_sha256 {
+        require_sha(&published, sha)?;
+    }
+    keep_only(dest, &[&pin.exe])
+}
+
+fn arrange_macos_cli(pin: &Pinned, dest: &Path) -> Result<(), String> {
+    let published = dest.join(&pin.exe);
+    if !published.is_file() {
+        let source = sole_file(dest, |path| {
+            path.file_name().and_then(|name| name.to_str()) == Some(pin.exe.as_str())
+        })?;
+        fs::copy(&source, &published).map_err(|e| e.to_string())?;
+    }
+    make_executable(&published)?;
+    if let Some(sha) = &pin.binary_sha256 {
+        require_sha(&published, sha)?;
+    }
+    keep_only(dest, &[&pin.exe])?;
+    #[cfg(target_os = "macos")]
+    vendor_macos_dylibs(&published)?;
+    Ok(())
+}
+
+fn sole_file(dest: &Path, pred: impl Fn(&Path) -> bool) -> Result<PathBuf, String> {
+    let mut files = Vec::new();
+    walk_files(dest, &mut files)?;
+    let matched: Vec<PathBuf> = files.into_iter().filter(|path| pred(path)).collect();
+    if matched.len() != 1 {
+        return Err(format!(
+            "expected one matching file in {}, found {}",
+            dest.display(),
+            matched.len()
+        ));
+    }
+    Ok(matched.into_iter().next().unwrap())
+}
+
+fn walk_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
+    if !dir.exists() {
+        return Ok(());
+    }
+    for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        if path.is_dir() {
+            walk_files(&path, out)?;
+        } else if path.is_file() {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn require_sha(path: &Path, expected: &str) -> Result<(), String> {
+    let bytes = fs::read(path).map_err(|e| e.to_string())?;
+    let got = format!("{:x}", Sha256::digest(bytes));
+    if got != expected {
+        return Err(format!(
+            "{} sha256 {got} does not match the pinned binary",
+            path.display()
+        ));
+    }
+    Ok(())
+}
+
+fn keep_only(dest: &Path, names: &[&str]) -> Result<(), String> {
+    let hold = dest.join(".aquastar-keep");
+    let _ = remove_path(&hold);
+    fs::create_dir_all(&hold).map_err(|e| e.to_string())?;
+    for name in names {
+        let src = dest.join(name);
+        if src.is_file() {
+            fs::rename(&src, hold.join(name)).map_err(|e| e.to_string())?;
+        }
+    }
+    for entry in fs::read_dir(dest).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        if entry.file_name() == ".aquastar-keep" {
+            continue;
+        }
+        remove_path(&entry.path())?;
+    }
+    for name in names {
+        let src = hold.join(name);
+        if src.is_file() {
+            fs::rename(&src, dest.join(name)).map_err(|e| e.to_string())?;
+        }
+    }
+    remove_path(&hold)
+}
+
+fn make_executable(path: &Path) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(path).map_err(|e| e.to_string())?.permissions();
+        perms.set_mode(perms.mode() | 0o755);
+        fs::set_permissions(path, perms).map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn vendor_macos_dylibs(exe: &Path) -> Result<(), String> {
+    let dir = exe.parent().ok_or("player executable has no directory")?;
+    let archs = macho_archs(exe)?;
+    let mut pending = vec![exe.to_path_buf()];
+    let mut queued = HashSet::new();
+    queued.insert(exe.to_path_buf());
+    while let Some(bin) = pending.pop() {
+        for dep in macho_deps(&bin)? {
+            if dep.starts_with("/usr/lib/") || dep.starts_with("/System/") || dep.starts_with('@') {
+                continue;
+            }
+            let base = Path::new(&dep)
+                .file_name()
+                .ok_or_else(|| format!("dylib {dep} has no file name"))?
+                .to_os_string();
+            let local = dir.join(&base);
+            let own_id = bin
+                .file_name()
+                .is_some_and(|name| name == Path::new(&dep).file_name().unwrap_or_default());
+            if !own_id && !queued.contains(&local) {
+                if !Path::new(&dep).is_file() {
+                    return Err(format!(
+                        "missing {dep}, required by {}. The Apple Silicon build vendors this library next to ruffle_desktop.",
+                        bin.display()
+                    ));
+                }
+                thin_macho(Path::new(&dep), &local, &archs)?;
+                make_executable(&local)?;
+                install_name(
+                    &local,
+                    &[
+                        "-id",
+                        &format!(
+                            "@executable_path/{}",
+                            local.file_name().unwrap().to_string_lossy()
+                        ),
+                    ],
+                )?;
+                pending.push(local.clone());
+                queued.insert(local);
+            }
+            if !own_id {
+                let installed = format!(
+                    "@executable_path/{}",
+                    Path::new(&dep).file_name().unwrap().to_string_lossy()
+                );
+                install_name(&bin, &["-change", &dep, &installed])?;
+            }
+        }
+    }
+    for path in &queued {
+        let status = Command::new("codesign")
+            .args(["--force", "-s", "-"])
+            .arg(path)
+            .status()
+            .map_err(|e| format!("codesign failed: {e}"))?;
+        if !status.success() {
+            return Err(format!("codesign exited {status} for {}", path.display()));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn macho_deps(path: &Path) -> Result<Vec<String>, String> {
+    let output = Command::new("otool")
+        .args(["-L"])
+        .arg(path)
+        .output()
+        .map_err(|e| format!("otool failed: {e}"))?;
+    if !output.status.success() {
+        return Err(format!("otool exited {}", output.status));
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut deps = Vec::new();
+    for line in text.lines().skip(1) {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let dep = line.split(" (compatibility").next().unwrap_or(line).trim();
+        if !dep.is_empty() {
+            deps.push(dep.to_string());
+        }
+    }
+    Ok(deps)
+}
+
+#[cfg(target_os = "macos")]
+fn macho_archs(path: &Path) -> Result<Vec<String>, String> {
+    let output = Command::new("lipo")
+        .args(["-archs"])
+        .arg(path)
+        .output()
+        .map_err(|e| format!("lipo failed: {e}"))?;
+    if !output.status.success() {
+        return Err(format!("lipo exited {}", output.status));
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let archs: Vec<String> = text.split_whitespace().map(str::to_string).collect();
+    if archs.is_empty() {
+        return Err(format!(
+            "lipo reported no architectures for {}",
+            path.display()
+        ));
+    }
+    Ok(archs)
+}
+
+#[cfg(target_os = "macos")]
+fn thin_macho(src: &Path, dest: &Path, archs: &[String]) -> Result<(), String> {
+    if archs.len() == 1 {
+        let status = Command::new("lipo")
+            .arg(src)
+            .args(["-extract", &archs[0], "-output"])
+            .arg(dest)
+            .status()
+            .map_err(|e| format!("lipo extract failed: {e}"))?;
+        if !status.success() {
+            return Err(format!(
+                "could not extract {} from {}",
+                archs[0],
+                src.display()
+            ));
+        }
+        return Ok(());
+    }
+    fs::copy(src, dest).map(|_| ()).map_err(|e| e.to_string())
+}
+
+#[cfg(target_os = "macos")]
+fn install_name(path: &Path, args: &[&str]) -> Result<(), String> {
+    let status = Command::new("install_name_tool")
+        .args(args)
+        .arg(path)
+        .status()
+        .map_err(|e| format!("install_name_tool failed: {e}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "install_name_tool exited {status} for {}",
+            path.display()
+        ))
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -435,7 +811,7 @@ mod tests {
     }
 
     #[test]
-    fn players_json_round_trips_six_pins() {
+    fn players_json_round_trips_the_pinned_players() {
         let text = include_str!("../../../players.json");
         let catalog = Catalog::parse(text).expect("players.json");
         let raw: serde_json::Value = serde_json::from_str(text).unwrap();
@@ -460,7 +836,38 @@ mod tests {
                 assert_eq!(pin.exe, artifact["exe"].as_str().unwrap());
             }
         }
-        assert_eq!(count, 6);
+        assert_eq!(count, 7);
+        let artix = catalog
+            .select(Engine::Ruffle, "linux", "x86_64")
+            .expect("linux ruffle");
+        assert!(artix.url.contains("chaoslabs.artix.com/Ruffle/1.7.0/"));
+        assert_eq!(artix.exe, "ruffle_desktop");
+        assert_eq!(artix.dir, "ruffle-artix-1.7.0");
+        assert_eq!(artix.extract, Extract::AppImage);
+        assert_eq!(
+            artix.binary_sha256.as_deref(),
+            Some("9ad71857ea0c3546b7666addea064d14f1bcb214e148b2e34f99c04af2eff2a8")
+        );
+        let windows = catalog
+            .select(Engine::Ruffle, "windows", "x86_64")
+            .expect("windows ruffle");
+        assert_eq!(windows.exe, "ruffle_desktop.exe");
+        assert_eq!(windows.extract, Extract::SingleExe);
+        let apple = catalog
+            .select(Engine::Ruffle, "macos", "aarch64")
+            .expect("apple silicon ruffle");
+        assert_eq!(apple.exe, "ruffle_desktop");
+        assert_eq!(apple.extract, Extract::MacosCli);
+        assert!(apple.url.ends_with("macOS-arm64.zip"));
+        let intel = catalog
+            .select(Engine::Ruffle, "macos", "x86_64")
+            .expect("intel ruffle");
+        assert!(intel
+            .url
+            .contains("ruffle-rs/ruffle/releases/download/v0.7.1/"));
+        assert_eq!(intel.exe, "Ruffle.app/Contents/MacOS/ruffle");
+        assert_eq!(intel.dir, "ruffle-0.7.1");
+        assert_ne!(apple.url, intel.url);
     }
 
     #[test]
@@ -545,6 +952,18 @@ mod tests {
             "zip",
             "ruffle",
         ))
+        .is_ok());
+        assert!(Catalog::parse(&base(
+            "https://example.com/r.tar.gz",
+            "linux",
+            "aarch64",
+            "tar.gz",
+            "ruffle",
+        ))
+        .is_err());
+        assert!(Catalog::parse(
+            r#"{"players":[{"engine":"ruffle","version":"1","dir":"ruffle-1","artifacts":[{"os":"windows","arch":"x86_64","kind":"zip","extract":"appimage","url":"https://example.com/r.zip","sha256":"abababababababababababababababababababababababababababababababab","binarySha256":"abababababababababababababababababababababababababababababababab","exe":"ruffle_desktop"}]}]}"#
+        )
         .is_err());
         assert!(Catalog::parse(&base(
             "https://example.com/r.dmg",
@@ -621,9 +1040,11 @@ mod tests {
         Pinned {
             dir: "player-under-test".into(),
             sha256: sha(0x44),
+            binary_sha256: None,
             exe: "player".into(),
             url: "https://example.invalid/player.tar.gz".into(),
             kind: ArchiveKind::TarGz,
+            extract: Extract::Archive,
         }
     }
 
@@ -646,6 +1067,67 @@ mod tests {
         assert_eq!(fs::read(&exe).unwrap(), b"player");
         assert!(!incoming.exists());
         assert!(!trash.exists());
+    }
+
+    #[test]
+    fn single_exe_extract_publishes_the_only_windows_binary() {
+        let dir = scratch("single-exe");
+        fs::write(dir.join("Artix Games Launcher.exe"), b"ruffle-bytes").unwrap();
+        let pin = Pinned {
+            dir: "ruffle-artix".into(),
+            sha256: sha(0x11),
+            binary_sha256: Some(format!("{:x}", Sha256::digest(b"ruffle-bytes"))),
+            exe: "ruffle_desktop.exe".into(),
+            url: "https://example.invalid/r.zip".into(),
+            kind: ArchiveKind::Zip,
+            extract: Extract::SingleExe,
+        };
+        arrange(&pin, &dir).unwrap();
+        assert_eq!(
+            fs::read(dir.join("ruffle_desktop.exe")).unwrap(),
+            b"ruffle-bytes"
+        );
+        assert!(!dir.join("Artix Games Launcher.exe").exists());
+    }
+
+    #[test]
+    fn macos_cli_extract_flattens_ruffle_desktop_out_of_the_app() {
+        let dir = scratch("macos-cli");
+        let nested = dir.join("Artix Games Launcher · Ruffle.app/Contents/MacOS");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(nested.join("ruffle_desktop"), b"arm64-ruffle").unwrap();
+        fs::write(nested.join("ruffle"), b"#!/bin/sh\n").unwrap();
+        let pin = Pinned {
+            dir: "ruffle-artix".into(),
+            sha256: sha(0x12),
+            binary_sha256: Some(format!("{:x}", Sha256::digest(b"arm64-ruffle"))),
+            exe: "ruffle_desktop".into(),
+            url: "https://example.invalid/r.zip".into(),
+            kind: ArchiveKind::Zip,
+            extract: Extract::MacosCli,
+        };
+        arrange(&pin, &dir).unwrap();
+        assert_eq!(
+            fs::read(dir.join("ruffle_desktop")).unwrap(),
+            b"arm64-ruffle"
+        );
+        assert!(!dir.join("Artix Games Launcher · Ruffle.app").exists());
+    }
+
+    #[test]
+    fn a_binary_hash_mismatch_is_not_published() {
+        let dir = scratch("bad-sha");
+        fs::write(dir.join("player.exe"), b"nope").unwrap();
+        let pin = Pinned {
+            dir: "ruffle-artix".into(),
+            sha256: sha(0x13),
+            binary_sha256: Some(sha(0x99)),
+            exe: "ruffle_desktop.exe".into(),
+            url: "https://example.invalid/r.zip".into(),
+            kind: ArchiveKind::Zip,
+            extract: Extract::SingleExe,
+        };
+        assert!(arrange(&pin, &dir).is_err());
     }
 
     #[test]

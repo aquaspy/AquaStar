@@ -5,6 +5,10 @@
 //! - `--quality low|medium|high` (high is Ruffle's own default: 4x MSAA; low is no anti-aliasing)
 //! - `--graphics default|vulkan|metal|dx12|gl`
 //!
+//! Artix Experimental Launcher 1.7.0's `ruffle_desktop` accepts those same
+//! values, plus `--title`. Smooth Motion (`frame_interpolation`) is a saved
+//! context-menu preference in that build, not a command-line flag.
+//!
 //! The safe backend is OpenGL on Linux and Windows, and Metal on macOS. The other
 //! backends match the Electron app (`res/ruffleGraphics.js`): Vulkan on Linux and
 //! Windows, DirectX 12 on Windows, Metal on macOS, and Automatic (`default`,

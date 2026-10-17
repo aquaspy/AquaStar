@@ -16,7 +16,7 @@ Inventory reads your items and BuyBack from account.aq.com after you log in ther
 
 Electron runs on Windows 7 and later, in 64-bit and 32-bit builds. Linux builds cover 64-bit, 32-bit, and 32-bit ARM. The Mac build is 64-bit Intel.
 
-**AquaStar Lite** is the Tauri app. It does not bundle Chromium. The launcher window is the system webview. Lite starts a bundled player as its own process. The default player is standalone Ruffle 0.7.1. Flash is Adobe's standalone projector 32.0.0.465, also bundled. Lite does not sync inventory. Reminders, the to-do list, the strategy window, and char page tools stay in Electron. Wiki, account, and news open in their own windows. You can hide the launcher while a player is running.
+**AquaStar Lite** is the Tauri app. It does not bundle Chromium. The launcher window is the system webview. Lite starts a bundled player as its own process. The default player is the standalone Ruffle desktop from Artix's Experimental Launcher 1.7.0. Intel Macs use the official Ruffle 0.7.1 universal build, because that Artix build is Apple Silicon only. Flash is Adobe's standalone projector 32.0.0.465, also bundled. Lite does not sync inventory. Reminders, the to-do list, the strategy window, and char page tools stay in Electron. Wiki, account, and news open in their own windows. You can hide the launcher while a player is running.
 
 Lite runs on Windows 10 and Windows 11, macOS 11 and later, and 64-bit Linux. Windows needs the system WebView2 runtime. The portable zip does not install that runtime. If it is missing, the app says "Could not find the WebView2 Runtime".
 
@@ -73,9 +73,9 @@ For Lite, open the disk image and copy `aquastar-lite.app` into `/Applications`.
 xattr -cr /Applications/aquastar-lite.app
 ```
 
-The Lite disk image is a universal app. Ruffle is the default player. On macOS, Ruffle's default graphics backend is Metal. Play Flash starts the bundled Intel projector. On Apple Silicon, macOS runs that projector under Rosetta while the launcher itself stays arm64. If Rosetta is not installed, the launcher says so and names `softwareupdate --install-rosetta`. Ruffle does not need Rosetta.
+The Lite disk image is a universal app. Ruffle is the default player. On Apple Silicon that Ruffle is Artix's arm64 `ruffle_desktop`. On an Intel Mac it is the official Ruffle 0.7.1 universal build. On macOS, Ruffle's default graphics backend is Metal. Play Flash starts the bundled Intel projector. On Apple Silicon, macOS runs that projector under Rosetta while the launcher itself stays arm64. If Rosetta is not installed, the launcher says so and names `softwareupdate --install-rosetta`. Ruffle does not need Rosetta.
 
-Lite launches the signed Flash projector and passes the Loader4 URL. The Mac menu bar stays. On Windows and Linux the game window is titled AquaStar Lite.
+Lite launches the signed Flash projector and passes the Loader4 URL. The Mac menu bar stays. Artix's `ruffle_desktop` is started with `--title AquaStar Lite`. The Intel Ruffle build has no title flag, so on Windows and Linux an X11 window whose title starts with Ruffle is renamed from outside the process. The Flash window is titled AquaStar Lite on Windows and Linux.
 
 ### Linux
 
@@ -98,7 +98,9 @@ sudo apt install ./AquaStar_<version>_amd64.deb
 sudo apt install ./aquastar-lite_<version>_amd64.deb
 ```
 
-The Lite deb depends on GTK 2, `libgtk2.0-0t64` or `libgtk2.0-0`, on `libnss3`, and on `libxkbcommon-x11-0`. Apt installs those with the package. GTK 2 and NSS are for the Flash projector. If the projector still cannot start, Lite names the missing library and exits with code 127. Ruffle loads `libxkbcommon-x11` when it opens an X11 window.
+The Lite deb depends on GTK 2, `libgtk2.0-0t64` or `libgtk2.0-0`, on `libnss3`, and on `libxkbcommon-x11-0`. It also depends on `libssl3`, `libasound2t64` or `libasound2`, `libegl1`, and `libfontconfig1`, which Artix's `ruffle_desktop` loads. Apt installs those with the package. GTK 2 and NSS are for the Flash projector. If the projector still cannot start, Lite names the missing library and exits with code 127. Ruffle loads `libxkbcommon-x11` when it opens an X11 window.
+
+Artix's Ruffle build is MIT or Apache-2.0. The text shipped with the binary is [lite/licenses/artix-ruffle-1.7.0-LICENSE.md](lite/licenses/artix-ruffle-1.7.0-LICENSE.md), and the credit is [lite/licenses/artix-ruffle-1.7.0-NOTICE.md](lite/licenses/artix-ruffle-1.7.0-NOTICE.md).
 
 ## Build from source
 

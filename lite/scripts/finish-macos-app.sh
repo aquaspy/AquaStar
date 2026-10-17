@@ -40,6 +40,9 @@ if [[ -d "$players" ]]; then
   while IFS= read -r nested; do
     codesign --force --deep -s - "$nested"
   done < <(find "$players" -type d -name "*.app")
+  while IFS= read -r loose; do
+    codesign --force -s - "$loose"
+  done < <(find "$players" -type f \( -name 'ruffle_desktop' -o -name '*.dylib' \))
 fi
 codesign --force --deep -s - "$app"
 

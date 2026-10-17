@@ -15,7 +15,11 @@ case "$(uname -s)" in
     # libegl1 is the host GL loader. The AppImage does not bundle it, and a
     # desktop already has it. libxkbcommon-x11-0 is what Ruffle dlopens for an
     # X11 window. rc.9's deb does not depend on it. Later debs do.
-    sudo apt-get install -y xvfb openbox scrot xdotool "$gtk" libnss3 libegl1 libxkbcommon-x11-0 libgl1-mesa-dri fonts-liberation
+    alsa=libasound2
+    if apt-cache show libasound2t64 >/dev/null 2>&1; then
+      alsa=libasound2t64
+    fi
+    sudo apt-get install -y xvfb openbox scrot xdotool "$gtk" libnss3 libegl1 libxkbcommon-x11-0 libgl1-mesa-dri fonts-liberation libssl3 "$alsa" libfontconfig1
     if [ "$pkg" = deb ]; then
       sudo apt-get install -y ./dist/*.deb
       bin=$(command -v aquastar-lite)

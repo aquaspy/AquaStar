@@ -24,6 +24,24 @@ function Move-Incoming([string]$incoming, [string]$live, [string]$trash) {
     if (Test-Path -LiteralPath $trash) { Remove-Item -LiteralPath $trash -Recurse -Force }
 }
 
+function Finish-Extract([string]$extract, [string]$exe, [string]$binarySha, [string]$into) {
+    if ($extract -eq "single-exe") {
+        $target = Join-Path $into $exe
+        if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
+            $exes = @(Get-ChildItem -LiteralPath $into -Recurse -File -Filter *.exe)
+            if ($exes.Count -ne 1) { throw "expected one exe in $into, found $($exes.Count)" }
+            Copy-Item -LiteralPath $exes[0].FullName -Destination $target
+            if ($exes[0].FullName -ne $target) { Remove-Item -LiteralPath $exes[0].FullName -Force }
+        }
+    } elseif ($extract) {
+        throw "fetch-players.ps1 cannot finish extract $extract"
+    }
+    if ($binarySha) {
+        $got = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $into $exe)).Hash.ToLower()
+        if ($got -ne $binarySha) { throw "binary checksum mismatch for $exe" }
+    }
+}
+
 function Expand-Player([string]$kind, [string]$url, [string]$archive, [string]$into) {
     switch ($kind) {
         "zip" {
@@ -43,7 +61,7 @@ function Expand-Player([string]$kind, [string]$url, [string]$archive, [string]$i
     }
 }
 
-function Publish-Player($dir, $sha, $url, $kind, $exe) {
+function Publish-Player($dir, $sha, $url, $kind, $exe, $extract, $binarySha) {
     $live = Join-Path $dest $dir
     $incoming = Join-Path $dest ".$dir.incoming"
     $trash = Join-Path $dest ".$dir.trash"
@@ -73,6 +91,7 @@ function Publish-Player($dir, $sha, $url, $kind, $exe) {
     New-Item -ItemType Directory -Force -Path $incoming | Out-Null
     try {
         Expand-Player $kind $url $temp $incoming
+        Finish-Extract $extract $exe $binarySha $incoming
         Set-Content -Encoding ascii -Path (Join-Path $incoming ".aquastar-pin") -Value "$sha`n" -NoNewline
         if (-not (Test-TreeMatch $incoming $exe $sha)) {
             throw "unpacked $url is missing $exe"
@@ -91,7 +110,7 @@ foreach ($player in $json.players) {
     foreach ($art in $player.artifacts) {
         if ($art.os -ne "windows") { continue }
         if (-not $selected.Contains($player.dir)) { $selected.Add($player.dir) }
-        Publish-Player $player.dir $art.sha256 $art.url $art.kind $art.exe
+        Publish-Player $player.dir $art.sha256 $art.url $art.kind $art.exe $art.extract $art.binarySha256
     }
 }
 if ($selected.Count -eq 0) { throw "players.json has no windows artifacts" }

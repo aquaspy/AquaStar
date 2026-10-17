@@ -27,7 +27,19 @@ for player in data["players"]:
     for art in player["artifacts"]:
         if art["os"] != host:
             continue
-        print("\t".join([player["dir"], art["sha256"], art["url"], art["kind"], art["exe"]]))
+        print(
+            "\t".join(
+                [
+                    player["dir"],
+                    art["sha256"],
+                    art["url"],
+                    art["kind"],
+                    art["exe"],
+                    art.get("extract") or "",
+                    art.get("binarySha256") or "",
+                ]
+            )
+        )
 PY
 )
 
@@ -56,6 +68,173 @@ swap_in() {
   rm -rf "$trash"
 }
 
+unpack_zip() {
+  local archive="$1" into="$2"
+  python3 - "$archive" "$into" <<'PY'
+import sys
+import zipfile
+from pathlib import Path
+
+archive, into = sys.argv[1], Path(sys.argv[2])
+with zipfile.ZipFile(archive) as handle:
+    for info in handle.infolist():
+        name = info.filename
+        if not (info.flag_bits & 0x800):
+            raw = name.encode("cp437")
+            try:
+                name = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                pass
+        target = (into / name).resolve()
+        if into.resolve() not in target.parents and target != into.resolve():
+            raise SystemExit(f"zip entry escapes destination: {name}")
+        if name.endswith("/"):
+            target.mkdir(parents=True, exist_ok=True)
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with handle.open(info) as src, target.open("wb") as dst:
+            dst.write(src.read())
+PY
+}
+
+finish_extract() {
+  local extract="$1" exe="$2" binary_sha="$3" into="$4"
+  case "$extract" in
+    "")
+      return 0
+      ;;
+    appimage)
+      local appimage work
+      appimage=$(find "$into" -type f -name '*.AppImage' | head -n 1)
+      if [[ -z "$appimage" ]]; then
+        echo "zip has no AppImage" >&2
+        return 1
+      fi
+      work=$(mktemp -d)
+      chmod +x "$appimage"
+      if ! (cd "$work" && APPIMAGE_EXTRACT_AND_RUN=1 "$appimage" --appimage-extract); then
+        rm -rf "$work"
+        echo "appimage extract failed" >&2
+        return 1
+      fi
+      if [[ ! -f "$work/squashfs-root/usr/bin/$exe" ]]; then
+        rm -rf "$work"
+        echo "appimage is missing usr/bin/$exe" >&2
+        return 1
+      fi
+      find "$into" -mindepth 1 -delete
+      cp "$work/squashfs-root/usr/bin/$exe" "$into/$exe"
+      chmod +x "$into/$exe"
+      if [[ -f "$work/squashfs-root/usr/share/doc/artix-games-launcher/LICENSE.md" ]]; then
+        cp "$work/squashfs-root/usr/share/doc/artix-games-launcher/LICENSE.md" "$into/LICENSE.md"
+      fi
+      rm -rf "$work"
+      ;;
+    macos-cli)
+      local found
+      found=$(find "$into" -type f -name "$exe" | head -n 1)
+      if [[ -z "$found" ]]; then
+        echo "zip has no $exe" >&2
+        return 1
+      fi
+      cp "$found" "$into/.$exe.flat"
+      find "$into" -mindepth 1 ! -name ".$exe.flat" -delete
+      mv "$into/.$exe.flat" "$into/$exe"
+      chmod +x "$into/$exe"
+      if [[ -n "$binary_sha" ]]; then
+        local got
+        got=$(sha256_file "$into/$exe")
+        if [[ "$got" != "$binary_sha" ]]; then
+          echo "binary checksum mismatch for $exe" >&2
+          return 1
+        fi
+      fi
+      if [[ "$(uname -s)" == "Darwin" ]]; then
+        vendor_macos_dylibs "$into/$exe"
+      fi
+      return 0
+      ;;
+    *)
+      echo "fetch-players.sh cannot finish extract $extract" >&2
+      return 1
+      ;;
+  esac
+  if [[ -n "$binary_sha" ]]; then
+    local got
+    got=$(sha256_file "$into/$exe")
+    if [[ "$got" != "$binary_sha" ]]; then
+      echo "binary checksum mismatch for $exe" >&2
+      return 1
+    fi
+  fi
+}
+
+vendor_macos_dylibs() {
+  local exe="$1"
+  local dir
+  dir=$(cd "$(dirname "$exe")" && pwd)
+  exe="$dir/$(basename "$exe")"
+  python3 - "$exe" "$dir" <<'PY'
+import os
+import shutil
+import subprocess
+import sys
+
+exe, dest = sys.argv[1], sys.argv[2]
+
+def run(cmd):
+    result = subprocess.run(cmd, check=False, text=True, capture_output=True)
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr or result.stdout)
+        raise SystemExit(result.returncode or 1)
+    return result.stdout
+
+def archs(path):
+    return run(["lipo", "-archs", path]).split()
+
+def deps(path):
+    found = []
+    for line in run(["otool", "-L", path]).splitlines()[1:]:
+        line = line.strip()
+        if not line:
+            continue
+        found.append(line.split(" (compatibility", 1)[0].strip())
+    return found
+
+wanted = archs(exe)
+pending = [exe]
+seen = {exe}
+while pending:
+    binary = pending.pop()
+    for dep in deps(binary):
+        if dep.startswith("/usr/lib/") or dep.startswith("/System/") or dep.startswith("@"):
+            continue
+        base = os.path.basename(dep)
+        local = os.path.join(dest, base)
+        own = os.path.basename(binary) == base
+        if not own and local not in seen:
+            if not os.path.isfile(dep):
+                if "fontconfig" in dep:
+                    brew = subprocess.run(["brew", "install", "fontconfig"], check=False)
+                    if brew.returncode != 0 or not os.path.isfile(dep):
+                        raise SystemExit(f"missing {dep}")
+                else:
+                    raise SystemExit(f"missing {dep}")
+            if len(wanted) == 1:
+                run(["lipo", dep, "-extract", wanted[0], "-output", local])
+            else:
+                shutil.copy2(dep, local)
+            os.chmod(local, 0o755)
+            run(["install_name_tool", "-id", f"@executable_path/{base}", local])
+            pending.append(local)
+            seen.add(local)
+        if not own:
+            run(["install_name_tool", "-change", dep, f"@executable_path/{base}", binary])
+for path in seen:
+    run(["codesign", "--force", "-s", "-", path])
+PY
+}
+
 unpack_kind() {
   local kind="$1" url="$2" archive="$3" into="$4"
   case "$kind" in
@@ -80,8 +259,7 @@ unpack_kind() {
       rmdir "$mount" || true
       ;;
     zip)
-      echo "zip players are unpacked on Windows" >&2
-      return 1
+      unpack_zip "$archive" "$into"
       ;;
     *)
       echo "unknown archive kind $kind" >&2
@@ -91,7 +269,7 @@ unpack_kind() {
 }
 
 publish_one() {
-  local dir="$1" sha="$2" url="$3" kind="$4" exe="$5"
+  local dir="$1" sha="$2" url="$3" kind="$4" exe="$5" extract="$6" binary_sha="$7"
   local live="$dest/$dir"
   local incoming="$dest/.$dir.incoming"
   local trash="$dest/.$dir.trash"
@@ -125,6 +303,11 @@ publish_one() {
     rm -f "$temp"
     exit 1
   fi
+  if ! finish_extract "$extract" "$exe" "$binary_sha" "$incoming"; then
+    rm -rf "$incoming"
+    rm -f "$temp"
+    exit 1
+  fi
   printf '%s\n' "$sha" > "$incoming/.aquastar-pin"
   if ! tree_match "$incoming" "$exe" "$sha"; then
     rm -rf "$incoming"
@@ -137,10 +320,10 @@ publish_one() {
 }
 
 dirs=()
-while IFS=$'\t' read -r dir sha url kind exe; do
+while IFS=$'\t' read -r dir sha url kind exe extract binary_sha; do
   [[ -n "$dir" ]] || continue
   dirs+=("$dir")
-  publish_one "$dir" "$sha" "$url" "$kind" "$exe"
+  publish_one "$dir" "$sha" "$url" "$kind" "$exe" "$extract" "$binary_sha"
 done <<< "$rows"
 
 if [[ ${#dirs[@]} -eq 0 ]]; then
