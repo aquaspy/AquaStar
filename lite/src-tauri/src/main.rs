@@ -974,17 +974,17 @@ mod tests {
     }
 
     #[test]
-    fn product_strings_say_aquastar_3_alpha() {
+    fn product_strings_say_aquastar_3() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
         let read = |path: &str| std::fs::read_to_string(root.join(path)).unwrap();
         let lite = format!("{} {}", "AquaStar", "Lite");
         let cargo = read("Cargo.toml");
         let conf = read("tauri.conf.json");
         assert!(cargo.contains("name = \"aquastar-lite\""));
-        assert!(cargo.contains("version = \"3.0.0-alpha.7\""));
+        assert!(cargo.contains("version = \"3.0.0\""));
         assert!(!cargo.contains(&lite));
         let parsed: serde_json::Value = serde_json::from_str(&conf).unwrap();
-        assert_eq!(parsed["version"], "3.0.0-alpha.7");
+        assert_eq!(parsed["version"], "3.0.0");
         assert_eq!(parsed["productName"], "aquastar-lite");
         assert_eq!(parsed["mainBinaryName"], "aquastar-lite");
         assert_eq!(parsed["identifier"], "io.github.aquaspy.aquastar-lite");
