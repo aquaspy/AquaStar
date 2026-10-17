@@ -30,7 +30,7 @@ for player in data["players"]:
         print(
             "\t".join(
                 [
-                    player["dir"],
+                    art["dir"],
                     art["sha256"],
                     art["url"],
                     art["kind"],

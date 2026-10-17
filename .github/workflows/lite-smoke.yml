@@ -4,7 +4,7 @@ name: AquaStar Lite Smoke
 # player. Screenshots are for a person. A Cloudflare block or a blank login
 # is not a failure.
 #
-# An empty tag is the newest lite-v* release, prerelease or final.
+# An empty tag is the newest lite-v* or v3.x.y.z-* release. A bare v3.0.0 is rejected.
 # workflow_dispatch and workflow_run only fire once this file is on the
 # default branch. A push of this file to dev runs the same jobs before that.
 # macos-13 was retired on 2025-12-04. Intel Macs use macos-15-intel.
@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Lite release tag (lite-v*). Empty uses the newest lite-v* release, prerelease or final.
+        description: Lite release tag (lite-v* or v3.x.y.z-*). Empty uses the newest matching release. A bare v3.0.0 is rejected.
         required: false
         default: ''
         type: string
@@ -42,7 +42,7 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       startsWith(github.event.workflow_run.head_branch, 'lite-v'))
+       (startsWith(github.event.workflow_run.head_branch, 'lite-v') || (startsWith(github.event.workflow_run.head_branch, 'v3.') && contains(github.event.workflow_run.head_branch, '-'))))
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
@@ -156,7 +156,7 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       startsWith(github.event.workflow_run.head_branch, 'lite-v'))
+       (startsWith(github.event.workflow_run.head_branch, 'lite-v') || (startsWith(github.event.workflow_run.head_branch, 'v3.') && contains(github.event.workflow_run.head_branch, '-'))))
     runs-on: macos-latest
     timeout-minutes: 30
     steps:

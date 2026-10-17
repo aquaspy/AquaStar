@@ -1,18 +1,37 @@
 name: AquaStar Lite Release
 
-# Builds the Tauri app in lite/. Triggered only by lite-v* tags, so it never
-# collides with the Electron release workflow (release.yml, v* tags).
+# Builds the Tauri app in lite/. lite-v* and v3 prerelease tags publish.
+# A bare v3.0.0 stays on the Electron workflow, whose jobs skip every v3 tag.
 on:
   push:
     tags:
       - 'lite-v*'
+      - 'v3.*-*'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+    steps:
+      - id: decide
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          publish=false
+          case "$REF" in
+            refs/tags/lite-v*) publish=true ;;
+            refs/tags/v3.*-*) publish=true ;;
+          esac
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: gate
     strategy:
       fail-fast: false
       matrix:
@@ -59,7 +78,7 @@ jobs:
         shell: pwsh
         run: ./lite/scripts/fetch-players.ps1
       - name: Build and publish release (tag push)
-        if: startsWith(github.ref, 'refs/tags/lite-v')
+        if: needs.gate.outputs.publish == 'true'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,7 +95,7 @@ jobs:
       # Manual runs only build and upload workflow artifacts, so the bundles can be
       # tested before tagging. They never create or touch a release.
       - name: Build only (manual run)
-        if: "!startsWith(github.ref, 'refs/tags/lite-v')"
+        if: needs.gate.outputs.publish != 'true'
         uses: tauri-apps/tauri-action@v0
         with:
           projectPath: lite
@@ -86,7 +105,7 @@ jobs:
         if: matrix.platform == 'macos-latest'
         run: bash lite/scripts/finish-macos-app.sh
       - name: Attach macOS disk image to the pre-release
-        if: matrix.platform == 'macos-latest' && startsWith(github.ref, 'refs/tags/lite-v')
+        if: matrix.platform == 'macos-latest' && needs.gate.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -108,7 +127,7 @@ jobs:
           if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
           New-Item -ItemType Directory -Path $stage | Out-Null
           Copy-Item $exe (Join-Path $stage "aquastar-lite.exe")
-          Set-Content -Encoding ascii -Path (Join-Path $stage "portable.txt") -Value "AquaStar Lite stores its data in the data folder next to this file.`r`n"
+          Set-Content -Encoding ascii -Path (Join-Path $stage "portable.txt") -Value "AquaStar stores its data in the data folder next to this file.`r`n"
           $players = "lite/src-tauri/players"
           if (-not (Test-Path $players)) { throw "missing $players" }
           Copy-Item -Recurse $players (Join-Path $stage "players")
@@ -116,7 +135,7 @@ jobs:
           if (Test-Path $zip) { Remove-Item -Force $zip }
           tar.exe -a -cf $zip -C $stage aquastar-lite.exe portable.txt players
       - name: Attach portable zip to the pre-release
-        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/lite-v')
+        if: matrix.platform == 'windows-latest' && needs.gate.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
@@ -125,14 +144,14 @@ jobs:
           gh release upload "$env:GITHUB_REF_NAME" --repo "$env:GITHUB_REPOSITORY" --clobber `
             "lite/src-tauri/target/release/AquaStar.Lite_${ver}_x64-portable.zip"
       - name: Upload portable zip (manual run)
-        if: matrix.platform == 'windows-latest' && !startsWith(github.ref, 'refs/tags/lite-v')
+        if: matrix.platform == 'windows-latest' && needs.gate.outputs.publish != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: aquastar-lite-windows-portable
           path: lite/src-tauri/target/release/AquaStar.Lite_*_x64-portable.zip
           if-no-files-found: error
       - name: Upload bundles (manual run)
-        if: "!startsWith(github.ref, 'refs/tags/lite-v')"
+        if: needs.gate.outputs.publish != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: aquastar-lite-${{ matrix.platform }}
@@ -147,8 +166,8 @@ jobs:
   # input, and its update of an existing release does not send prerelease, so
   # set both after every platform has uploaded.
   keep-prerelease:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/lite-v')
+    needs: [build, gate]
+    if: needs.gate.outputs.publish == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Mark Lite release as prerelease and not latest
@@ -160,8 +179,8 @@ jobs:
   # branch. Until then a dispatch is a no-op, so a release is not failed by a
   # workflow GitHub cannot see yet. A push of the smoke file to dev runs it.
   smoke:
-    needs: [build, keep-prerelease]
-    if: startsWith(github.ref, 'refs/tags/lite-v')
+    needs: [build, keep-prerelease, gate]
+    if: needs.gate.outputs.publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       actions: write

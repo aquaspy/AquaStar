@@ -7,6 +7,7 @@ on:
 
 jobs:
   build-linux:
+    if: ${{ !startsWith(github.ref, 'refs/tags/v3.') }}
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ''
@@ -32,6 +33,7 @@ jobs:
           if-no-files-found: error
 
   build-windows:
+    if: ${{ !startsWith(github.ref, 'refs/tags/v3.') }}
     runs-on: windows-latest
     env:
       GH_TOKEN: ''
@@ -68,6 +70,7 @@ jobs:
           if-no-files-found: error
 
   build-mac:
+    if: ${{ !startsWith(github.ref, 'refs/tags/v3.') }}
     runs-on: macos-latest
     env:
       GH_TOKEN: ''
@@ -100,6 +103,7 @@ jobs:
 
   publish:
     needs: [build-linux, build-windows, build-mac]
+    if: ${{ !startsWith(github.ref, 'refs/tags/v3.') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

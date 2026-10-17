@@ -109,8 +109,8 @@ $selected = New-Object System.Collections.Generic.List[string]
 foreach ($player in $json.players) {
     foreach ($art in $player.artifacts) {
         if ($art.os -ne "windows") { continue }
-        if (-not $selected.Contains($player.dir)) { $selected.Add($player.dir) }
-        Publish-Player $player.dir $art.sha256 $art.url $art.kind $art.exe $art.extract $art.binarySha256
+        if (-not $selected.Contains($art.dir)) { $selected.Add($art.dir) }
+        Publish-Player $art.dir $art.sha256 $art.url $art.kind $art.exe $art.extract $art.binarySha256
     }
 }
 if ($selected.Count -eq 0) { throw "players.json has no windows artifacts" }

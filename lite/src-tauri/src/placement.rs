@@ -438,6 +438,9 @@ mod tests {
         let second = actions.next().expect("second tauri-action").0;
         assert!(fetch < first && fetch_ps < first && first < second);
         assert!(yml.contains("--bundles app"));
+        assert!(yml.contains("v3.*-*"));
+        assert!(yml.contains("needs.gate.outputs.publish == 'true'"));
+        assert!(!yml.contains("startsWith(github.ref, 'refs/tags/lite-v')"));
         assert!(yml.contains("lite/scripts/finish-macos-app.sh"));
         assert!(include_str!("../../scripts/finish-macos-app.sh")
             .contains("codesign --force --deep -s -"));
@@ -450,6 +453,8 @@ mod tests {
         assert!(yml.contains("workflow_run"));
         assert!(yml.contains("AquaStar Lite Release"));
         assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'lite-v')"));
+        assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'v3.')"));
+        assert!(yml.contains("contains(github.event.workflow_run.head_branch, '-')"));
         for os in [
             "ubuntu-latest",
             "windows-latest",
@@ -507,6 +512,57 @@ mod tests {
             "{steps:?}"
         );
         assert!(yml.contains("if: always()"));
+    }
+
+    #[test]
+    fn electron_release_skips_every_v3_tag() {
+        let yml = include_str!("../../../.github/workflows/release.yml");
+        assert!(yml.contains("- 'v*'"));
+        assert!(!yml.contains("'!v3.*-*'"));
+        assert_eq!(
+            yml.matches("!startsWith(github.ref, 'refs/tags/v3.')").count(),
+            yml.matches("runs-on:").count()
+        );
+    }
+
+    #[test]
+    fn resolve_tag_accepts_lite_and_v3_prereleases_only() {
+        let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../scripts/smoke/resolve-tag.sh");
+        let accept = |tag: &str| {
+            let output = std::env::temp_dir().join(format!(
+                "aquastar-resolve-{}-{}",
+                std::process::id(),
+                tag.replace('.', "_")
+            ));
+            let result = std::process::Command::new("bash")
+                .arg(&script)
+                .env("INPUT_TAG", tag)
+                .env("EVENT_NAME", "workflow_dispatch")
+                .env("GITHUB_OUTPUT", &output)
+                .env("GITHUB_REPOSITORY", "example/example")
+                .output()
+                .expect("resolve-tag");
+            let _ = std::fs::remove_file(&output);
+            result.status.success()
+        };
+        assert!(accept("lite-v0.2.0"));
+        assert!(accept("v3.0.0.1-rc.1"));
+        assert!(!accept("v3.0.0"));
+        assert!(!accept("v2.1.1"));
+    }
+
+    #[test]
+    fn fetch_players_reads_artifact_dir_for_this_os() {
+        let sh = include_str!("../../scripts/fetch-players.sh");
+        let ps = include_str!("../../scripts/fetch-players.ps1");
+        assert!(sh.contains("art[\"dir\"]"));
+        assert!(!sh.contains("player[\"dir\"]"));
+        assert!(sh.contains("art[\"os\"] != host"));
+        assert!(!sh.contains("art[\"arch\"]"));
+        assert!(ps.contains("$art.dir"));
+        assert!(!ps.contains("$player.dir"));
+        assert!(ps.contains("$art.os"));
+        assert!(!ps.contains("$art.arch"));
     }
 
     #[test]
