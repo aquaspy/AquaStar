@@ -96,6 +96,138 @@ impl Placement {
     }
 }
 
+pub(crate) struct ProfilePaths {
+    pub settings_files: Vec<PathBuf>,
+    pub swf_candidates: Vec<PathBuf>,
+    pub shell_cache: PathBuf,
+    pub electron_loader_cache: PathBuf,
+}
+
+const SHELL_ID: &str = "io.github.aquaspy.aquastar-lite";
+const SWF_NAMES: [&str; 2] = ["custom-game.swf", "aqlite_old.swf"];
+
+pub fn electron_profile(exe_dir: Option<&Path>) -> ProfilePaths {
+    let cwd = std::env::current_dir().ok();
+    profile_paths(
+        &electron_app_data_root(),
+        cwd.as_deref(),
+        exe_dir,
+        &shell_config_dir(exe_dir),
+    )
+}
+
+fn profile_paths(
+    app_data_root: &Path,
+    cwd: Option<&Path>,
+    exe_dir: Option<&Path>,
+    config_dir: &Path,
+) -> ProfilePaths {
+    let aqua = app_data_root.join("AquaStar");
+    let mut settings_files = vec![app_data_root.join("aquastar.json")];
+    if let Some(exe_dir) = exe_dir {
+        settings_files.push(exe_dir.join("aquastar.json"));
+    }
+    settings_files.push(aqua.join("aquastar.json"));
+
+    let mut swf_dirs = vec![aqua.clone()];
+    if let Some(cwd) = cwd {
+        swf_dirs.push(cwd.to_path_buf());
+    }
+    if let Some(exe_dir) = exe_dir {
+        if let Some(beside) = directory_beside_app(exe_dir) {
+            swf_dirs.push(beside);
+        }
+    }
+    let mut swf_candidates = Vec::new();
+    for dir in swf_dirs {
+        for name in SWF_NAMES {
+            swf_candidates.push(dir.join(name));
+        }
+    }
+    ProfilePaths {
+        settings_files,
+        swf_candidates,
+        shell_cache: config_dir.join("loader-cache.json"),
+        electron_loader_cache: aqua.join("aquastar.adventure-quest-worlds.launcher-config.json"),
+    }
+}
+
+fn shell_config_dir(exe_dir: Option<&Path>) -> PathBuf {
+    if let Some(exe_dir) = exe_dir {
+        if matches!(
+            placement_for(cfg!(target_os = "windows"), exe_dir),
+            Placement::Portable(_)
+        ) {
+            return exe_dir.join("data").join("config");
+        }
+    }
+    tauri_config_dir()
+}
+
+fn electron_app_data_root() -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        std::env::var_os("APPDATA")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("."))
+    }
+    #[cfg(target_os = "macos")]
+    {
+        home_dir().join("Library").join("Application Support")
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        std::env::var_os("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .filter(|path| !path.as_os_str().is_empty())
+            .unwrap_or_else(|| home_dir().join(".config"))
+    }
+}
+
+fn tauri_config_dir() -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        electron_app_data_root().join(SHELL_ID)
+    }
+    #[cfg(target_os = "macos")]
+    {
+        home_dir()
+            .join("Library")
+            .join("Application Support")
+            .join(SHELL_ID)
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        electron_app_data_root().join(SHELL_ID)
+    }
+}
+
+fn home_dir() -> PathBuf {
+    std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("USERPROFILE").map(PathBuf::from))
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn directory_beside_app(exe_dir: &Path) -> Option<PathBuf> {
+    let mut dir = exe_dir.to_path_buf();
+    for _ in 0..8 {
+        let is_app = dir
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.len() > 4 && name.to_ascii_lowercase().ends_with(".app"));
+        if is_app {
+            return dir.parent().map(Path::to_path_buf);
+        }
+        let parent = dir.parent()?.to_path_buf();
+        if parent == dir {
+            return None;
+        }
+        dir = parent;
+    }
+    None
+}
+
 pub fn apply<R: tauri::Runtime>(context: &mut tauri::Context<R>) -> io::Result<Placement> {
     let Some(exe_dir) = std::env::current_exe()
         .ok()
@@ -437,5 +569,51 @@ mod tests {
         let roots =
             placement_for(true, &exe).player_roots(&exe.join("data"), Some(&resource), Some(&exe));
         assert_eq!(roots.bundled(), Some(resource.join("players").as_path()));
+    }
+
+    #[test]
+    fn electron_profile_lists_settings_then_swf_names_in_electron_order() {
+        let root = scratch("profile");
+        let app_data = root.join("appData");
+        let cwd = root.join("cwd");
+        let exe = root.join("AquaStar.app").join("Contents").join("MacOS");
+        let config = root.join("config");
+        let paths = profile_paths(&app_data, Some(&cwd), Some(&exe), &config);
+        assert_eq!(
+            paths.settings_files,
+            vec![
+                app_data.join("aquastar.json"),
+                exe.join("aquastar.json"),
+                app_data.join("AquaStar").join("aquastar.json"),
+            ]
+        );
+        assert_eq!(
+            paths.swf_candidates,
+            vec![
+                app_data.join("AquaStar").join("custom-game.swf"),
+                app_data.join("AquaStar").join("aqlite_old.swf"),
+                cwd.join("custom-game.swf"),
+                cwd.join("aqlite_old.swf"),
+                root.join("custom-game.swf"),
+                root.join("aqlite_old.swf"),
+            ]
+        );
+        assert_eq!(paths.shell_cache, config.join("loader-cache.json"));
+        assert_eq!(
+            paths.electron_loader_cache,
+            app_data
+                .join("AquaStar")
+                .join("aquastar.adventure-quest-worlds.launcher-config.json")
+        );
+        let host = electron_profile(None);
+        assert!(host.shell_cache.ends_with("loader-cache.json"));
+        assert!(host
+            .settings_files
+            .last()
+            .unwrap()
+            .ends_with(Path::new("AquaStar").join("aquastar.json")));
+        assert!(host
+            .electron_loader_cache
+            .ends_with("aquastar.adventure-quest-worlds.launcher-config.json"));
     }
 }

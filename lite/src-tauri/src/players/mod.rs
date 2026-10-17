@@ -625,6 +625,12 @@ impl Players {
     }
 }
 
+pub fn warm_loader(paths: &crate::placement::ProfilePaths) {
+    if let Err(err) = movie::refresh(paths) {
+        eprintln!("aquastar-lite: loader refresh skipped: {err}");
+    }
+}
+
 fn movie_from_arg(swf: &str) -> movie::Movie {
     if swf.starts_with("https://") || swf.starts_with("http://") {
         movie::Movie::https(swf)
