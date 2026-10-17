@@ -1261,6 +1261,8 @@ mod tests {
             swf_candidates: vec![base.join("missing.swf")],
             shell_cache: base.join("loader-cache.json"),
             electron_loader_cache: base.join("electron.json"),
+            aqua_dir: base.join("AquaStar"),
+            legacy_reminders: base.join("aquastar_reminders.json"),
         };
         let settings = RuffleSettings {
             quality: RuffleQuality::Low,

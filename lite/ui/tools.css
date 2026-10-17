@@ -1,0 +1,25 @@
+:root { color-scheme: dark; }
+html, body {
+  margin: 0; height: 100%;
+  background: #121212; color: #e6e6e6;
+  font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size: 13px;
+}
+body { display: flex; flex-direction: column; }
+header {
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid #2c2c2c;
+}
+h1 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+#path { margin: 0; color: #9a9a9a; font-size: 11px; word-break: break-all; }
+#rows { padding: 4px 18px 18px; overflow: auto; }
+.row {
+  display: flex; gap: 12px; align-items: baseline;
+  padding: 8px 0; border-bottom: 1px solid #202020;
+}
+.label { flex: 0 1 280px; min-width: 0; }
+.value {
+  flex: 1 1 auto; min-width: 0;
+  color: #dcdcdc; font-family: Consolas, "Courier New", monospace;
+  white-space: pre-wrap; word-break: break-word;
+}

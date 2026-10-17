@@ -67,6 +67,10 @@ document.querySelectorAll('[data-engine]').forEach((b) => b.addEventListener('cl
   catch (e) { status.textContent = `Error: ${e}`; }
 }));
 
+document.querySelectorAll('[data-tool]').forEach((button) => button.addEventListener('click', () => {
+  invoke('open_tool', { name: button.dataset.tool }).catch((e) => { status.textContent = `Error: ${e}`; });
+}));
+
 const openSite = (label, url) => invoke('open_site', { label, url }).catch((e) => { status.textContent = `Error: ${e}`; });
 document.querySelectorAll('[data-site]').forEach((b) => b.addEventListener('click', () => openSite(b.dataset.site, b.dataset.url)));
 document.getElementById('wiki-search').addEventListener('submit', (ev) => {

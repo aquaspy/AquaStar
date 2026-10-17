@@ -5,6 +5,7 @@ mod ads;
 mod fonts;
 mod placement;
 mod players;
+mod profile;
 mod ruffle;
 
 use std::path::Path;
@@ -148,6 +149,57 @@ fn allowed_site(url: &str) -> Result<tauri::Url, String> {
         return Err(format!("{host} is not an allowed site"));
     }
     Ok(parsed)
+}
+
+fn profile_paths() -> placement::ProfilePaths {
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(Path::to_path_buf));
+    placement::electron_profile(exe_dir.as_deref())
+}
+
+fn list_paths(profile: &placement::ProfilePaths) -> profile::ListPaths {
+    profile::ListPaths {
+        settings_files: profile.settings_files.clone(),
+        reminders: profile.aqua_dir.join("aquastar_reminders.json"),
+        legacy_reminders: profile.legacy_reminders.clone(),
+        todo: profile.aqua_dir.join("aquastar_todo.json"),
+        strategy: profile.aqua_dir.join("aquastar_strategy.json"),
+    }
+}
+
+#[tauri::command]
+fn open_tool(app: tauri::AppHandle, name: String) -> Result<(), String> {
+    let (title, width, height) =
+        profile::tool_spec(&name).ok_or_else(|| format!("unknown window {name}"))?;
+    if let Some(window) = app.get_webview_window(&name) {
+        let _ = window.set_focus();
+        return Ok(());
+    }
+    WebviewWindowBuilder::new(&app, &name, WebviewUrl::App(format!("{name}.html").into()))
+        .title(title)
+        .inner_size(width, height)
+        .build()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn tool_document(name: String) -> Result<profile::ToolDocument, String> {
+    if profile::tool_spec(&name).is_none() {
+        return Err(format!("unknown window {name}"));
+    }
+    let profile = profile_paths();
+    let paths = list_paths(&profile);
+    profile::ensure_window(&paths, &name)?;
+    documents_for(&paths)
+        .into_iter()
+        .find(|doc| doc.name == name)
+        .ok_or_else(|| format!("unknown window {name}"))
+}
+
+fn documents_for(paths: &profile::ListPaths) -> Vec<profile::ToolDocument> {
+    profile::documents(paths)
 }
 
 #[tauri::command]
@@ -303,6 +355,8 @@ fn main() {
             engines,
             preferred_engine,
             open_site,
+            open_tool,
+            tool_document,
             ruffle_settings,
             set_ruffle_settings,
             launcher_settings,
@@ -416,10 +470,10 @@ mod tests {
         let cargo = read("Cargo.toml");
         let conf = read("tauri.conf.json");
         assert!(cargo.contains("name = \"aquastar-lite\""));
-        assert!(cargo.contains("version = \"3.0.0-alpha.2\""));
+        assert!(cargo.contains("version = \"3.0.0-alpha.3\""));
         assert!(!cargo.contains(&lite));
         let parsed: serde_json::Value = serde_json::from_str(&conf).unwrap();
-        assert_eq!(parsed["version"], "3.0.0-alpha.2");
+        assert_eq!(parsed["version"], "3.0.0-alpha.3");
         assert_eq!(parsed["productName"], "aquastar-lite");
         assert_eq!(parsed["mainBinaryName"], "aquastar-lite");
         assert_eq!(parsed["identifier"], "io.github.aquaspy.aquastar-lite");

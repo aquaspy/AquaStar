@@ -101,6 +101,8 @@ pub(crate) struct ProfilePaths {
     pub swf_candidates: Vec<PathBuf>,
     pub shell_cache: PathBuf,
     pub electron_loader_cache: PathBuf,
+    pub aqua_dir: PathBuf,
+    pub legacy_reminders: PathBuf,
 }
 
 const SHELL_ID: &str = "io.github.aquaspy.aquastar-lite";
@@ -149,6 +151,8 @@ fn profile_paths(
         swf_candidates,
         shell_cache: config_dir.join("loader-cache.json"),
         electron_loader_cache: aqua.join("aquastar.adventure-quest-worlds.launcher-config.json"),
+        legacy_reminders: app_data_root.join("aquastar_reminders.json"),
+        aqua_dir: aqua,
     }
 }
 
@@ -520,7 +524,8 @@ mod tests {
         assert!(yml.contains("- 'v*'"));
         assert!(!yml.contains("'!v3.*-*'"));
         assert_eq!(
-            yml.matches("!startsWith(github.ref, 'refs/tags/v3.')").count(),
+            yml.matches("!startsWith(github.ref, 'refs/tags/v3.')")
+                .count(),
             yml.matches("runs-on:").count()
         );
     }

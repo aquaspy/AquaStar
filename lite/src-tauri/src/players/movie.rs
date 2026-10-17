@@ -443,6 +443,8 @@ mod tests {
             swf_candidates: vec![swf.clone(), alias],
             shell_cache: shell,
             electron_loader_cache: root.join("missing.json"),
+            aqua_dir: root.join("AquaStar"),
+            legacy_reminders: root.join("aquastar_reminders.json"),
         };
         let loaded = load_facts(&paths);
         assert_eq!(
