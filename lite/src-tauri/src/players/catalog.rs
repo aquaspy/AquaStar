@@ -246,16 +246,12 @@ impl Catalog {
                 }
                 for (arch, rank) in claims {
                     let key = (engine, os, arch);
-                    match staged.get(&key).map(|(held, _)| *held) {
-                        None => {
+                    match admit(staged.get(&key).map(|(held, _)| *held), rank) {
+                        Admit::Place => {
                             staged.insert(key, (rank, pin.clone()));
                         }
-                        Some(ClaimRank::Compatible) if rank == ClaimRank::Native => {
-                            staged.insert(key, (rank, pin.clone()));
-                        }
-                        // Native already won this host. A compatible claim does not replace it.
-                        Some(ClaimRank::Native) if rank == ClaimRank::Compatible => {}
-                        _ => {
+                        Admit::KeepNative => {}
+                        Admit::Conflict => {
                             return Err(format!("duplicate pin for {engine:?} {os:?} {arch:?}"));
                         }
                     }
@@ -276,6 +272,21 @@ impl Catalog {
 
     pub(super) fn select(&self, engine: Engine, os: Os, arch: Arch) -> Option<&Pin> {
         self.by_host.get(&(engine, os, arch))
+    }
+}
+
+enum Admit {
+    Place,
+    KeepNative,
+    Conflict,
+}
+
+fn admit(held: Option<ClaimRank>, incoming: ClaimRank) -> Admit {
+    match (held, incoming) {
+        (None, _) => Admit::Place,
+        (Some(ClaimRank::Compatible), ClaimRank::Native) => Admit::Place,
+        (Some(ClaimRank::Native), ClaimRank::Compatible) => Admit::KeepNative,
+        _ => Admit::Conflict,
     }
 }
 

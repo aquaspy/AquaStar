@@ -1,7 +1,5 @@
 name: AquaStar Lite Release
 
-# Builds the Tauri app in lite/. lite-v* and v3 prerelease tags publish.
-# A bare v3.0.0 is published by neither workflow. Phase 5 points that tag at Tauri.
 on:
   push:
     tags:

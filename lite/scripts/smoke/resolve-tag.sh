@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Pick the release this smoke run should download.
-# An empty input is the newest lite-v* or v3.x.y-* prerelease.
 set -euo pipefail
 
 tag="${INPUT_TAG:-}"
