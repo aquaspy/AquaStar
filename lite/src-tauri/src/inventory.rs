@@ -996,6 +996,81 @@ mod tests {
         Err("network".into())
     }
 
+    fn buyback_regression_path(test: &str) -> PathBuf {
+        static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        std::env::temp_dir().join(format!(
+            "aquastar-buyback-regression-{}-{}-{test}.json",
+            std::process::id(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ))
+    }
+
+    #[test]
+    fn buyback_sync_uses_legacy_pages_and_persists_every_field() {
+        let path = buyback_regression_path("pages");
+        let calls = std::cell::RefCell::new(Vec::new());
+        let start = chrono::Utc::now().timestamp_millis();
+        let result = sync_document(&path, |url| {
+            if url.contains("/AQW/BuyBackData") {
+                // Synthetic unsupported row: its layout does not claim to model the live API.
+                return Ok(serde_json::json!({"data": [["unsupported buyback row"]]}).to_string());
+            }
+            if url.contains("/myapi/inventory/BuyBackData?") {
+                calls.borrow_mut().push(url.to_string());
+                assert!(url.contains("take=100&requireTotalCount=true"), "{url}");
+                let stamp: i64 = url.split("&_=").nth(1).unwrap().parse().unwrap();
+                assert!(stamp >= start && stamp <= chrono::Utc::now().timestamp_millis(), "{url}");
+                let fixture: Value = serde_json::from_str(include_str!("../fixtures/buyback-page.json")).unwrap();
+                let count = if url.contains("skip=0&") { 100 } else {
+                    assert!(url.contains("skip=100&"), "{url}");
+                    1
+                };
+                return Ok(serde_json::json!({"data": vec![fixture["data"][0].clone(); count]}).to_string());
+            }
+            if url.contains("/AQW/InventoryData") {
+                return Ok(include_str!("../fixtures/inventory-live.json").to_string());
+            }
+            fixture_fetch(url)
+        });
+        assert_eq!(result["ok"], true, "{result}");
+        let saved: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        let rows = saved["characters"]["4242"]["buyback"].as_array().unwrap();
+        assert_eq!(rows.len(), 101);
+        assert_eq!(calls.borrow().len(), 2);
+        let expected = serde_json::json!({
+            "itemId": 9, "name": "Body Tonic", "type": "Item", "cost": 100,
+            "amount": 1, "inserted": "2021-05-06T07:08:09.000Z", "typeId": 1,
+            "rarity": 2, "rarityName": "Rare", "searchName": "body tonic",
+            "sortName": "body tonic", "insertedAt": 1620284889000_i64
+        });
+        assert!(rows.iter().all(|row| row == &expected), "{rows:?}");
+        assert!(!saved["characters"]["4242"]["inventory"].as_array().unwrap().is_empty());
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn buyback_sync_failure_preserves_the_existing_profile() {
+        let path = buyback_regression_path("failure");
+        let existing = r#"{"characters":{"4242":{"name":"FixtureHero","buyback":[{"name":"Keep me"}],"inventory":[],"lastBuyBackSync":"before"}},"lastActiveCharId":"4242"}"#;
+        fs::write(&path, existing).unwrap();
+        let result = sync_document(&path, |url| {
+            if url.contains("/AQW/BuyBackData") {
+                // Synthetic unsupported row: its layout does not claim to model the live API.
+                return Ok(serde_json::json!({"data": [["unsupported buyback row"]]}).to_string());
+            }
+            if url.contains("/myapi/inventory/BuyBackData?") {
+                return Err("network".to_string());
+            }
+            if url.contains("/AQW/InventoryData") {
+                return Ok(include_str!("../fixtures/inventory-live.json").to_string());
+            }
+            fixture_fetch(url)
+        });
+        assert_eq!(result, serde_json::json!({"ok": false, "error": "network"}));
+        assert_eq!(fs::read_to_string(&path).unwrap(), existing);
+        fs::remove_file(path).unwrap();
+    }
+
     #[test]
     fn account_page_rows_fill_the_saved_inventory() {
         let (_root, files) = scratch();
