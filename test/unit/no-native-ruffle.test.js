@@ -24,6 +24,7 @@ function walk(dir, hits) {
   fs.readdirSync(dir, { withFileTypes: true }).forEach(function (entry) {
     const rel = path.relative(root, path.join(dir, entry.name)).split(path.sep).join('/');
     if (entry.isDirectory()) {
+      if (rel === 'docs') return;
       if (skipDirs.has(entry.name) || skipDirs.has(rel)) return;
       walk(path.join(dir, entry.name), hits);
       return;
