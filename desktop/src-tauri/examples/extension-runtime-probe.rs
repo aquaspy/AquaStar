@@ -124,6 +124,7 @@ fn probe_secret() -> Value {
 }
 
 fn main() {
+    eprintln!("Starting native extension isolation probe");
     let base = std::path::PathBuf::from(std::env::var("AQUASTAR_PROBE_PACKAGES").unwrap());
     let mut context = tauri::generate_context!();
     context.config_mut().identifier =

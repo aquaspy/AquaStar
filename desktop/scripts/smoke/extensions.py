@@ -95,6 +95,8 @@ def main():
                 start_new_session=os.name != "nt",
             )
             status = process.wait(timeout=args.timeout)
+        if not (base / "results.json").exists():
+            raise RuntimeError(f"Native probe exited {status} (0x{status & 0xffffffff:08x}) without a report; see {base / 'native.log'}")
         report = json.loads((base / "results.json").read_text(encoding="utf-8"))
         if set(report) != {"probe-one", "probe-two"}:
             raise RuntimeError("Both simultaneous plugin tools must report")

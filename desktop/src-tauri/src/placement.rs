@@ -270,7 +270,7 @@ mod tests {
     }
 
     fn fresh_context() -> tauri::Context<tauri::Wry> {
-        tauri::generate_context!()
+        crate::app_context()
     }
 
     fn portable_override() -> AppDirectoriesOverride {

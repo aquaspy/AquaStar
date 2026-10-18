@@ -793,6 +793,10 @@ fn schedule_smoke(app: tauri::AppHandle) {
     });
 }
 
+fn app_context() -> tauri::Context<tauri::Wry> {
+    tauri::generate_context!()
+}
+
 fn main() {
     // WebKitGTK's DMA-BUF renderer costs ~125 MB PSS here (measured under Xvfb) and is a
     // known source of blank windows on NVIDIA/older Mesa. Users can still opt back in.
@@ -803,7 +807,7 @@ fn main() {
     }
     #[cfg(target_os = "linux")]
     limit_webkit_fonts();
-    let mut context = tauri::generate_context!();
+    let mut context = app_context();
     let placement = match placement::apply(&mut context) {
         Ok(placement) => placement,
         Err(err) => {
