@@ -45,6 +45,8 @@ def main():
             command('python3', str(SCRIPT), str(package))
             assert hashlib.sha256(package.read_bytes()).hexdigest() == digest
             if '~' in expected:
+                members = command('ar', 't', str(package)).splitlines()
+                assert 'control.tar.gz' in members and 'data.tar.xz' in members
                 subprocess.run(['dpkg', '--compare-versions', expected, 'lt', expected.split('~')[0]], check=True)
     print('Debian candidate ordering, identity, payload, stable versions and idempotence: passed')
 
