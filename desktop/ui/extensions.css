@@ -1,0 +1,48 @@
+.extension-toolbar,
+.extension-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.extension-card {
+  padding: 22px;
+  margin: 18px 0;
+  border: 1px solid var(--border, #394550);
+  border-radius: 14px;
+  background: var(--card, #182431);
+}
+.extension-card h2 {
+  margin-top: 0;
+  font-size: 20px;
+}
+.extension-card h3 {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+.extension-card p {
+  overflow-wrap: anywhere;
+}
+.extension-state {
+  color: #a7d8c1;
+}
+.extension-error,
+#extension-status[data-error='true'] {
+  color: #ffb1a9;
+}
+.extension-delete-data {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0;
+}
+.extension-card summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+#extension-review {
+  border-color: #f3ab62;
+}
+.extension-actions details {
+  width: 100%;
+}

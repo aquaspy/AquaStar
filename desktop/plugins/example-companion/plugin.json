@@ -1,0 +1,16 @@
+{
+  "format": "aquastar-desktop-plugin",
+  "apiVersion": 1,
+  "id": "example-companion",
+  "name": "Example Companion",
+  "version": "1.0.0",
+  "permissions": ["storage", "network", "links"],
+  "origins": ["https://api.github.com"],
+  "tools": [{ "id": "companion", "name": "Example Companion", "entry": "index.html" }],
+  "links": [{ "id": "project", "name": "AquaStar on GitHub", "url": "https://github.com/aquaspy/AquaStar" }],
+  "actions": [
+    { "id": "open-companion", "name": "Open Example Companion", "kind": "tool", "target": "companion" },
+    { "id": "open-project", "name": "Open AquaStar on GitHub", "kind": "link", "target": "project" }
+  ],
+  "menus": [{ "action": "open-companion" }]
+}

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Example Companion</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Example Companion</h1>
+      <p>A small tool using the AquaStar desktop plugin SDK.</p>
+      <label for="note">Your note</label><textarea id="note" rows="5"></textarea>
+      <div><button id="save">Save note</button><button id="clear">Delete note</button></div>
+      <div><button id="network">Check project information</button><button id="project">Open project page</button></div>
+      <p id="host"></p>
+      <p id="status" role="status" aria-live="polite"></p>
+    </main>
+    <script src="main.js"></script>
+  </body>
+</html>

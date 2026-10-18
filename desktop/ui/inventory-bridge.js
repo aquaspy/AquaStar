@@ -4,6 +4,7 @@ window.aquastarInventory = {
   saveLabels: (labels) => invoke('save_inventory_labels', { labels }),
   getMessages: () => invoke('get_inventory_messages'),
   syncNow: () => invoke('sync_inventory_now'),
+  openAccount: () => invoke('open_account_for_sync'),
   setActiveChar: (charId) => invoke('set_inventory_active_char', { char_id: charId }),
   openItemWiki: (itemName) => invoke('open_inventory_item_wiki', { item_name: itemName })
 };

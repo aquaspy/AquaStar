@@ -1,0 +1,45 @@
+:root {
+  color-scheme: dark;
+  font:
+    16px system-ui,
+    sans-serif;
+  background: #101c28;
+  color: #edf3fa;
+}
+main {
+  max-width: 620px;
+  margin: 32px auto;
+  padding: 20px;
+}
+label,
+textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+textarea {
+  margin: 12px 0;
+  padding: 12px;
+  background: #1d2b3b;
+  color: inherit;
+  border: 1px solid #70849a;
+  border-radius: 8px;
+}
+button {
+  margin: 6px 8px 6px 0;
+  padding: 12px;
+  cursor: pointer;
+  background: #f4ad65;
+  color: #102030;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+}
+:focus-visible {
+  outline: 3px solid #91d8ff;
+  outline-offset: 3px;
+}
+#status {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -109,10 +109,10 @@ pub fn sync_locked(path: &Path, fetch: impl Fn(&str) -> Result<String, String>) 
 pub fn sync_document(path: &Path, fetch: impl Fn(&str) -> Result<String, String>) -> Value {
     let home = match fetch("https://account.aq.com/Home") {
         Ok(body) => body,
-        Err(_) => return fail("network"),
+        Err(error) => return sync_failure(&error, "home"),
     };
     let Some(name) = capture(&home, r#"<span class="small fw-bold ml-1 ms-lg-3">([^<]+)</span>"#) else {
-        return fail("unauthenticated");
+        return sync_failure("unauthenticated", "home");
     };
     let name = name.trim().to_string();
     let char_page = match fetch(&format!(
@@ -120,10 +120,10 @@ pub fn sync_document(path: &Path, fetch: impl Fn(&str) -> Result<String, String>
         urlencoding_name(&name)
     )) {
         Ok(body) => body,
-        Err(_) => return fail("network"),
+        Err(error) => return sync_failure(&error, "character"),
     };
     let Some(ccid) = capture(&char_page, r"var ccid = (\d+);") else {
-        return fail("parse");
+        return sync_failure("parse", "character");
     };
     let inventory = match load_collection(
         "/AQW/InventoryData",
@@ -131,14 +131,14 @@ pub fn sync_document(path: &Path, fetch: impl Fn(&str) -> Result<String, String>
         &fetch,
     ) {
         Ok(rows) => rows,
-        Err(error) => return fail(&error),
+        Err(error) => return sync_failure(&error, "inventory"),
     };
     let buyback = match fetch_pages(
         "https://account.aq.com/myapi/inventory/BuyBackData?",
         &fetch,
     ) {
         Ok(rows) => rows,
-        Err(error) => return fail(&error),
+        Err(error) => return sync_failure(&error, "buyback"),
     };
     let inventory: Vec<Value> = inventory
         .iter()
@@ -151,7 +151,7 @@ pub fn sync_document(path: &Path, fetch: impl Fn(&str) -> Result<String, String>
         .filter(|row| named(row))
         .collect();
     if inventory.is_empty() && buyback.is_empty() {
-        return fail("empty");
+        return sync_failure("empty", "collections");
     }
     let mut book = load_book(path);
     let existing = book["characters"].get(&ccid).cloned();
@@ -183,7 +183,7 @@ pub fn sync_document(path: &Path, fetch: impl Fn(&str) -> Result<String, String>
         .insert(ccid.clone(), character);
     book["lastActiveCharId"] = Value::String(ccid.clone());
     if write_pretty(path, &book).is_err() {
-        return fail("network");
+        return sync_failure("storage", "save");
     }
     serde_json::json!({
         "ok": true,
@@ -216,7 +216,8 @@ pub fn live_get(url: &str, cookie: &str) -> Result<String, String> {
         Err(ureq::Error::Status(code, _)) if url.contains("aqwwiki.wikidot.com") => {
             Err(format!("http-{code}"))
         }
-        Err(_) => Err("network".into()),
+        Err(ureq::Error::Status(code, _)) => Err(format!("http-{code}")),
+        Err(ureq::Error::Transport(error)) => Err(format!("transport-{:?}", error.kind()).to_ascii_lowercase()),
     }
 }
 
@@ -441,8 +442,15 @@ fn charpage_has_id(lower: &str) -> bool {
     lower.split("charpage?id=").nth(1).is_some_and(|rest| !rest.is_empty() && !rest.starts_with('&'))
 }
 
-fn fail(error: &str) -> Value {
-    serde_json::json!({ "ok": false, "error": error })
+fn sync_failure(detail: &str, stage: &str) -> Value {
+    let category = match detail {
+        "unauthenticated" | "http-401" => "unauthenticated",
+        "parse" => "parse",
+        "empty" => "empty",
+        "storage" => "storage",
+        _ => "network",
+    };
+    serde_json::json!({ "ok": false, "error": category, "stage": stage, "detail": detail })
 }
 
 fn named(row: &Value) -> bool {
@@ -949,6 +957,26 @@ mod tests {
     use super::*;
     use std::path::PathBuf;
 
+    #[test]
+    fn sync_errors_retain_the_failing_stage_and_preserve_cached_inventory() {
+        let (root, files) = scratch();
+        fs::write(&files.inventory, "{}\n").unwrap();
+        let original=fs::read(&files.inventory).unwrap();
+        let denied=sync_document(&files.inventory, |_|Err("http-403".into()));
+        assert_eq!(denied["error"], "network");
+        assert_eq!(denied["stage"], "home");
+        assert_eq!(denied["detail"], "http-403");
+        let malformed=sync_document(&files.inventory, |url| {
+            if url.ends_with("/Home") { Ok(home_page()) } else { Ok("changed character page".into()) }
+        });
+        assert_eq!(malformed["error"], "parse");
+        assert_eq!(malformed["stage"], "character");
+        assert_eq!(fs::read(&files.inventory).unwrap(), original);
+        let missing_session=sync_document(&files.inventory, |_|Err("unauthenticated".into()));
+        assert_eq!(missing_session["error"], "unauthenticated");
+        fs::remove_dir_all(root).unwrap();
+    }
+
     fn scratch() -> (PathBuf, ProfileFiles) {
         static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let root = std::env::temp_dir().join(format!(
@@ -1068,7 +1096,7 @@ mod tests {
             }
             fixture_fetch(url)
         });
-        assert_eq!(result, serde_json::json!({"ok": false, "error": "network"}));
+        assert_eq!(result, serde_json::json!({"ok": false, "error": "network", "stage": "buyback", "detail": "network"}));
         assert_eq!(fs::read_to_string(&path).unwrap(), existing);
         fs::remove_file(path).unwrap();
     }

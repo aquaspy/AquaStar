@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>AquaStar</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="extensions.css" />
   </head>
   <body class="launcher">
     <div class="shell">
@@ -19,6 +20,9 @@
           </button>
           <button class="nav-button" data-panel="links">
             <span class="nav-symbol" aria-hidden="true">↗</span> Useful Pages
+          </button>
+          <button class="nav-button" data-panel="extensions">
+            <span class="nav-symbol" aria-hidden="true">◇</span> Plugins
           </button>
         </nav>
         <div class="sidebar-bottom">
@@ -125,7 +129,28 @@
             >
             <p class="hint">The launcher returns when the player exits.</p>
           </div>
+          <div class="pref">
+            <label class="check"><input type="checkbox" id="show-menu-bar" disabled /> Show menu bar</label>
+            <p class="hint">
+              Show the native application menu. Keyboard shortcuts work with the menu hidden. On macOS, the application
+              menu stays in the system menu bar.
+            </p>
+          </div>
           <button data-tool="settings">Open all settings ↗</button>
+        </section>
+        <section class="panel" id="extensions" hidden aria-label="Plugins">
+          <h2 class="panel-title">Plugins</h2>
+          <p class="description">
+            Add games and tools from authors you trust. Changes take effect after restarting AquaStar.
+          </p>
+          <div class="extension-toolbar">
+            <button id="extension-install" type="button">Install from ZIP…</button
+            ><button id="extension-refresh" type="button">Refresh</button
+            ><button id="extension-restart" type="button" hidden>Restart AquaStar</button>
+          </div>
+          <p id="extension-status" role="status" aria-live="polite"></p>
+          <div id="extension-review" class="extension-card" hidden></div>
+          <div id="extension-list"></div>
         </section>
         <p class="status" id="status" aria-live="polite"></p>
         <footer class="footer">
@@ -135,5 +160,6 @@
       </main>
     </div>
     <script src="main.js"></script>
+    <script src="extensions.js"></script>
   </body>
 </html>

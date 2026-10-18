@@ -13,5 +13,26 @@ fn main() {
         }
         println!("cargo:rerun-if-changed=src/players/flash_gtk.c");
     }
-    tauri_build::build()
+    // Keep the application ACL exhaustive as command handlers are added.
+    let source = include_str!("src/main.rs");
+    let handlers = source
+        .split_once("tauri::generate_handler![")
+        .expect("command registry")
+        .1
+        .split_once("])")
+        .expect("command registry end")
+        .0;
+    let commands: Vec<&str> = handlers
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|name| name.rsplit("::").next().unwrap())
+        .collect();
+    let commands = Box::leak(commands.into_boxed_slice());
+    println!("cargo:rerun-if-changed=src/main.rs");
+    tauri_build::try_build(
+        tauri_build::Attributes::new()
+            .app_manifest(tauri_build::AppManifest::new().commands(commands)),
+    )
+    .expect("Tauri ACL build")
 }

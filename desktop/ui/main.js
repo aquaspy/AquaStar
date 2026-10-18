@@ -1,12 +1,16 @@
 const { invoke } = window.__TAURI__.core;
 const status = document.getElementById('status');
 const hideLauncher = document.getElementById('hide-launcher');
+const showMenuBar = document.getElementById('show-menu-bar');
+let savedShowMenuBar = false;
+let menuBarSupported = true;
 const launcherHint = document.getElementById('launcher-hint');
 const playerSelect = document.getElementById('engine-select');
 const playButton = document.getElementById('play-now');
 const panels = {
   play: { title: 'Ready to play' },
   tools: { title: 'Tools' },
+  extensions: { title: 'Plugins' },
   links: { title: 'Useful Pages' },
   preferences: { title: 'Preferences' }
 };
@@ -111,6 +115,10 @@ invoke('launcher_settings')
   .then((settings) => {
     hideLauncher.checked = settings.hideLauncher;
     hideLauncher.disabled = false;
+    savedShowMenuBar = settings.showMenuBar === true;
+    showMenuBar.checked = savedShowMenuBar;
+    menuBarSupported = settings.menuBarSupported !== false;
+    showMenuBar.disabled = !menuBarSupported;
     describeLauncher();
   })
   .catch(failure);
@@ -125,6 +133,25 @@ hideLauncher.addEventListener('change', async () => {
     failure(error);
   } finally {
     hideLauncher.disabled = false;
+  }
+});
+
+showMenuBar.addEventListener('change', async () => {
+  if (!menuBarSupported) {
+    showMenuBar.checked = savedShowMenuBar;
+    return;
+  }
+  showMenuBar.disabled = true;
+  try {
+    const settings = await invoke('set_show_menu_bar', { show: showMenuBar.checked });
+    savedShowMenuBar = settings.showMenuBar === true;
+    showMenuBar.checked = savedShowMenuBar;
+    message(savedShowMenuBar ? 'Menu bar shown.' : 'Menu bar hidden. Keyboard shortcuts remain available.');
+  } catch (error) {
+    showMenuBar.checked = savedShowMenuBar;
+    failure(error);
+  } finally {
+    showMenuBar.disabled = !menuBarSupported;
   }
 });
 

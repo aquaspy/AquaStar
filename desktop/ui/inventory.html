@@ -133,6 +133,7 @@
       </div>
       <div id="syncBar">
         <span id="syncStatus"></span>
+        <button id="openAccountBtn" class="small" hidden>Open Account</button>
         <button id="syncBtn" class="primary small"></button>
       </div>
     </div>
@@ -620,23 +621,39 @@
   async function doSync() {
     const btn = document.getElementById('syncBtn');
     btn.disabled = true;
+    const accountButton = document.getElementById('openAccountBtn');
+    if (accountButton) accountButton.hidden = true;
     setStatus(messages.syncingLabel);
-    const result = await api.syncNow();
-    btn.disabled = false;
-    if (!result.ok) {
-      const text = result.error === 'unauthenticated' ? messages.syncErrorUnauthenticated
-        : result.error === 'empty' ? messages.syncErrorEmpty
-        : messages.syncErrorNetwork;
-      setStatus(text, true);
-      return;
+    try {
+      const result = await api.syncNow();
+      if (!result || !result.ok) {
+        if (accountButton && result && result.error === 'unauthenticated' && typeof api.openAccount === 'function') {
+          accountButton.hidden = false;
+        }
+        let text = result && result.error === 'unauthenticated' ? messages.syncErrorUnauthenticated
+          : result && result.error === 'empty' ? messages.syncErrorEmpty
+          : result && result.error === 'storage' ? 'Could not save your inventory. Check that the data folder is writable.'
+          : result && result.error === 'parse' ? 'The account page format was not recognized.'
+          : messages.syncErrorNetwork;
+        if (result && result.stage && result.detail && result.error !== 'unauthenticated' && result.error !== 'empty') {
+          text += ' (' + result.stage + ': ' + result.detail + ')';
+        }
+        setStatus(text, true);
+        return;
+      }
+      const reloaded = await api.getInventory();
+      if (!reloaded || !reloaded.data) throw new Error('Inventory reload failed');
+      state = reloaded.data;
+      labels = state.labels || labels;
+      activeCharId = String(result.charId);
+      renderTabs();
+      renderFilterTypeOptions();
+      renderRows();
+    } catch (_) {
+      setStatus(messages.syncErrorNetwork, true);
+    } finally {
+      btn.disabled = false;
     }
-    const reloaded = await api.getInventory();
-    state = reloaded.data;
-    labels = state.labels || labels;
-    activeCharId = String(result.charId);
-    renderTabs();
-    renderFilterTypeOptions();
-    renderRows();
   }
 
   async function init() {
@@ -656,6 +673,18 @@
     document.getElementById('description').textContent = messages.description;
     document.getElementById('syncBtn').textContent = messages.syncButton;
     document.getElementById('syncBtn').onclick = doSync;
+    document.getElementById('openAccountBtn').onclick = async () => {
+      if (typeof api.openAccount !== 'function') return;
+      const button = document.getElementById('openAccountBtn');
+      button.disabled = true;
+      try {
+        await api.openAccount();
+      } catch (_) {
+        setStatus('Could not open the Account page. Please try again.', true);
+      } finally {
+        button.disabled = false;
+      }
+    };
     document.getElementById('viewInventoryBtn').textContent = messages.inventoryTabLabel;
     document.getElementById('viewBuyBackBtn').textContent = messages.buyBackTabLabel;
     document.getElementById('viewInventoryBtn').onclick = () => setView('inventory');

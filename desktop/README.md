@@ -46,5 +46,29 @@ Archive hashes live in [`players.json`](players.json).
 
 - The app sets `WEBKIT_DISABLE_DMABUF_RENDERER=1` unless you set it yourself. Under Xvfb this took the launcher from 399 to 273 MB PSS, and the DMA-BUF renderer is a known cause of blank windows on NVIDIA. It does not fix the blank window below.
 - On Linux, unless `FONTCONFIG_FILE` is already set, the app builds a small fontconfig under `~/.cache/aquastar-lite/` (or a private `aquastar-lite-<uid>` dir in the temp dir when there is no home) and points WebKit at it. WebKitGTK scans every system font on the web-process main thread before the first paint. With a large Noto install that scan pegs a core and the window stays on the GTK background (`about:blank` never commits). The config lists one directory of symlinks to an allow-list of files (DejaVu, Liberation, Noto Sans/Serif, Noto Sans CJK, Noto Sans Thai, Noto Color Emoji, regular and bold only, at most 48) found in the usual Debian/Ubuntu, Fedora and Arch paths, plus the system alias rules from `/etc/fonts/conf.d` that add no font directories. `50-user.conf` is skipped because it adds the user font dirs. The launcher logs which config it used. Ruffle and Flash do not inherit the limit. Set `FONTCONFIG_FILE` yourself to opt out.
-- Opening a webview window from a *sync* Tauri command made the app exit silently on Linux. `open_site` is `async`.
+- Opening a webview window from a _sync_ Tauri command made the app exit silently on Linux. `open_site` is `async`.
 - The Linux Flash projector is a GTK 2 app and also needs NSS (`libnss3`). A source build uses the system copies. `desktop/scripts/bundle-flash-gtk2.sh` copies the GTK 2 libraries into `src-tauri/flash-gtk2/` before an AppImage build. The deb package depends on them instead. Ruffle opens `libxkbcommon-x11.so.0` for an X11 window, so the deb also depends on `libxkbcommon-x11-0`. Artix's `ruffle_desktop` is also linked to OpenSSL 3, ALSA, fontconfig, and it dlopens `libEGL.so.1`, so the deb depends on `libssl3`, `libasound2t64` or `libasound2`, `libfontconfig1`, and `libegl1`.
+
+## Desktop plugins
+
+Open **Plugins** to install a local ZIP, review permissions and enable or remove an extension. Changes apply after an explicit restart. Several plugins can contribute games, links, tools, menus and shortcuts together; AQW remains built in. Tools run on demand in isolated WebViews, with their own SDK storage and authorized public HTTPS requests. No Node runtime is bundled.
+
+See [the authoring guide](../docs/DESKTOP-PLUGINS.md) and `plugins/example-companion/`. Electron 2.x plugins use a different API and are not imported.
+
+Run the native isolation checks after changing the plugin host or permissions:
+
+```sh
+cd desktop/src-tauri
+cargo test --locked extensions:: -- --test-threads=1
+cargo build --locked --example extension-runtime-probe
+cd ../..
+python3 desktop/scripts/smoke/extensions.py --binary desktop/src-tauri/target/debug/examples/extension-runtime-probe
+```
+
+Windows uses `extension-runtime-probe.exe`; Linux needs an X display (CI uses Xvfb). The probe uses synthetic account data and private plugin sessions. The `AquaStar Extension Isolation` workflow runs the checks on Linux, Windows and macOS.
+
+## Menu visibility and account sync
+
+The in-window menu bar is hidden by default on Linux and Windows. Enable **Preferences → Show menu bar** to show it; keyboard shortcuts work with either setting. macOS keeps its system application menu.
+
+Inventory sync uses the saved account session. If the visible Account window is closed, the launcher initializes the account session in a hidden window using the same browser profile. An expired login offers **Open Account**; game login and account-site login are separate sessions.

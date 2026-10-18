@@ -1,0 +1,56 @@
+name: AquaStar Extension Isolation
+
+on:
+  pull_request:
+    paths: ['desktop/**', '.github/workflows/extensions-check.yml']
+  push:
+    branches: [dev]
+    paths: ['desktop/**', '.github/workflows/extensions-check.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-isolation:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libdbus-1-dev xvfb dbus-x11
+      - name: Extension lifecycle and package tests
+        working-directory: desktop/src-tauri
+        run: 'cargo test --locked extensions:: -- --test-threads=1'
+      - name: Build native security probe
+        working-directory: desktop/src-tauri
+        run: cargo build --locked --example extension-runtime-probe
+      - name: Probe Linux WebKitGTK
+        if: runner.os == 'Linux'
+        run: xvfb-run -a dbus-run-session -- python desktop/scripts/smoke/extensions.py --binary desktop/src-tauri/target/debug/examples/extension-runtime-probe --output extension-smoke
+      - name: Probe macOS WKWebView
+        if: runner.os == 'macOS'
+        run: python desktop/scripts/smoke/extensions.py --binary desktop/src-tauri/target/debug/examples/extension-runtime-probe --output extension-smoke
+      - name: Probe Windows WebView2
+        if: runner.os == 'Windows'
+        run: python desktop/scripts/smoke/extensions.py --binary desktop/src-tauri/target/debug/examples/extension-runtime-probe.exe --output extension-smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extension-isolation-${{ runner.os }}
+          path: |
+            extension-smoke/results.json
+            extension-smoke/native.log

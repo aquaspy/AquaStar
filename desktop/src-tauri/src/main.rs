@@ -1,8 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ads;
+mod account_sync;
+mod extensions;
 mod inventory;
 mod manifest;
+mod menu_visibility;
 #[cfg(target_os = "linux")]
 mod fonts;
 mod placement;
@@ -54,6 +57,10 @@ fn sync_launcher(app: &tauri::AppHandle, presence: players::Presence) {
 struct LauncherSettings {
     #[serde(rename = "hideLauncher")]
     hide_launcher: bool,
+    #[serde(rename = "showMenuBar")]
+    show_menu_bar: bool,
+    #[serde(rename = "menuBarSupported")]
+    menu_bar_supported: bool,
 }
 
 fn config_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
@@ -65,6 +72,8 @@ fn launcher_settings(app: tauri::AppHandle) -> Result<LauncherSettings, String> 
     let dir = config_dir(&app)?;
     Ok(LauncherSettings {
         hide_launcher: ruffle::load_hide_launcher(&dir),
+        show_menu_bar: app.state::<menu_visibility::Visibility>().get(),
+        menu_bar_supported: !cfg!(target_os = "macos"),
     })
 }
 
@@ -75,7 +84,30 @@ fn set_hide_launcher(app: tauri::AppHandle, hide: bool) -> Result<LauncherSettin
     sync_launcher(&app, app.state::<Players>().presence());
     Ok(LauncherSettings {
         hide_launcher: hide,
-    })
+        show_menu_bar: app.state::<menu_visibility::Visibility>().get(),
+        menu_bar_supported: !cfg!(target_os = "macos"),    })
+}
+
+#[tauri::command]
+async fn set_show_menu_bar(app: tauri::AppHandle, show: bool) -> Result<LauncherSettings, String> {
+    if cfg!(target_os = "macos") {
+        return Err("macOS manages the application menu in the system menu bar".into());
+    }
+    let dir = config_dir(&app)?;
+    let state = app.state::<menu_visibility::Visibility>();
+    let previous = state.get();
+    state.set(show);
+    if let Err(error) = menu_visibility::apply(&app) {
+        state.set(previous);
+        let _ = menu_visibility::apply(&app);
+        return Err(error);
+    }
+    if let Err(error) = ruffle::save_show_menu_bar(&dir, show) {
+        state.set(previous);
+        let _ = menu_visibility::apply(&app);
+        return Err(error);
+    }
+    launcher_settings(app)
 }
 
 fn load_ruffle_settings(app: &tauri::AppHandle) -> ruffle::RuffleSettings {
@@ -106,6 +138,18 @@ async fn play(app: tauri::AppHandle, engine: Engine, movie: MovieKind) -> Result
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+async fn play_extension(app: tauri::AppHandle, source: String, engine: Engine) -> Result<String, String> {
+    let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let resource_dir = app.path().resource_dir().ok();
+    let exe_dir = std::env::current_exe().ok().and_then(|path|path.parent().map(Path::to_path_buf));
+    let placement = app.state::<placement::Placement>().inner().clone();
+    let roots = placement.player_roots(&app_data,resource_dir.as_deref(),exe_dir.as_deref());
+    let settings = load_ruffle_settings(&app);
+    let saves = placement.ruffle_save_directory().map(Path::to_path_buf);
+    let players = app.state::<Players>().inner().clone();
+    tauri::async_runtime::spawn_blocking(move || players.launch_source(&roots,engine,&source,&settings,saves.as_deref())).await.map_err(|e|e.to_string())?
 }
 
 #[tauri::command]
@@ -316,24 +360,6 @@ fn get_inventory_item_counts(names: Option<Vec<String>>) -> serde_json::Value {
     inventory::item_counts(&profile::live_files(), names.as_deref().unwrap_or(&[]))
 }
 
-fn account_cookie_header(app: &tauri::AppHandle) -> String {
-    let Ok(url) = "https://account.aq.com/".parse::<tauri::Url>() else {
-        return String::new();
-    };
-    let mut pairs = Vec::new();
-    for (_label, window) in app.webview_windows() {
-        let Ok(cookies) = window.cookies_for_url(url.clone()) else {
-            continue;
-        };
-        for cookie in cookies {
-            let pair = format!("{}={}", cookie.name(), cookie.value());
-            if !pairs.contains(&pair) {
-                pairs.push(pair);
-            }
-        }
-    }
-    pairs.join("; ")
-}
 
 #[tauri::command]
 fn get_inventory() -> serde_json::Value {
@@ -361,14 +387,17 @@ fn set_inventory_active_char(char_id: String) -> serde_json::Value {
 }
 
 #[tauri::command]
-async fn sync_inventory_now(app: tauri::AppHandle) -> serde_json::Value {
-    let cookie = account_cookie_header(&app);
-    let inventory_file = profile::live_files().inventory;
-    tauri::async_runtime::spawn_blocking(move || {
-        inventory::sync_locked(&inventory_file, |url| inventory::live_get(url, &cookie))
-    })
-    .await
-    .unwrap_or_else(|error| serde_json::json!({ "ok": false, "error": error.to_string() }))
+async fn open_account_for_sync(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("account") {
+        window.show().map_err(|error| error.to_string())?;
+        return window.set_focus().map_err(|error| error.to_string());
+    }
+    open_site(app, "account".into(), "https://account.aq.com/".into(), Some("AQW Account".into())).await
+}
+
+#[tauri::command]
+async fn sync_inventory_now(app: tauri::AppHandle, webview: tauri::Webview) -> serde_json::Value {
+    account_sync::sync(app, Some(webview.label().to_string())).await
 }
 
 #[tauri::command]
@@ -634,6 +663,7 @@ fn open_dialog(app: &tauri::AppHandle, label: &str, dialog: manifest::Dialog, wi
 }
 
 fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
+    if extensions::dispatch_action(app, id) { return; }
     let Some(command) = manifest::command_for(id) else {
         return;
     };
@@ -745,8 +775,7 @@ fn schedule_inventory_sync(app: tauri::AppHandle) {
         loop {
             let files = profile::live_files();
             if inventory::auto_sync_enabled(&files) && inventory::auto_sync_due(&files.inventory, chrono::Utc::now().timestamp_millis()) {
-                let cookie = account_cookie_header(&app);
-                let _ = inventory::sync_locked(&files.inventory, |url| inventory::live_get(url, &cookie));
+                let _ = account_sync::sync_blocking(&app, &files.inventory, None);
             }
             std::thread::sleep(std::time::Duration::from_secs(2 * 60 * 60));
         }
@@ -788,7 +817,23 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let app = tauri::Builder::default()
+    let extension_root = match &placement {
+        placement::Placement::Portable(_) => std::env::current_exe().unwrap().parent().unwrap().join("data"),
+        placement::Placement::Installed => dirs::data_dir().expect("Application data directory").join(context.config().identifier.clone()),
+    };
+    let extension_state = extensions::Extensions::load(extension_root);
+    let extension_sources = extension_state.sources();
+    let app = extensions::runtime::configure(tauri::Builder::default(), extension_sources)
+        .manage(extension_state)
+        .manage(menu_visibility::Visibility::default())
+        .on_page_load(|webview, _| menu_visibility::apply_to_window(webview))
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app, shortcut, event| {
             if event.state != tauri_plugin_global_shortcut::ShortcutState::Pressed {
                 return;
@@ -812,19 +857,18 @@ fn main() {
                 dispatch(app, &id, false);
             }
         }).build())
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
-        }))
         .manage(placement)
         .manage(Players::default())
         .manage(TimerShortcut(std::sync::Mutex::new(None)))
         .manage(ShortcutBook(std::sync::Mutex::new(std::collections::HashMap::new())))
         .invoke_handler(tauri::generate_handler![
             play,
+            extensions::extensions_list,
+            extensions::extensions_install,
+            extensions::extensions_change,
+            extensions::extensions_action,
+            extensions::extensions_restart,
+            extensions::runtime::extension_invoke,
             engines,
             preferred_engine,
             open_site,
@@ -859,6 +903,7 @@ fn main() {
             save_inventory_labels,
             set_inventory_active_char,
             sync_inventory_now,
+            open_account_for_sync,
             fetch_wiki_page,
             match_wiki_item,
             match_wiki_items,
@@ -868,11 +913,13 @@ fn main() {
             ruffle_settings,
             set_ruffle_settings,
             launcher_settings,
+            set_show_menu_bar,
             set_hide_launcher,
             get_shell_pages,
             open_project_page
         ])
         .setup(|app| {
+            app.state::<extensions::Extensions>().finish_startup();
             let exe_dir = std::env::current_exe()
                 .ok()
                 .and_then(|path| path.parent().map(Path::to_path_buf));
@@ -880,6 +927,8 @@ fn main() {
             std::thread::spawn(move || players::warm_loader(&profile));
             schedule_smoke(app.handle().clone());
             schedule_inventory_sync(app.handle().clone());
+            let show_menu = app.path().app_config_dir().ok().map(|dir| ruffle::load_show_menu_bar(&dir)).unwrap_or(false);
+            app.state::<menu_visibility::Visibility>().set(show_menu);
             let lang = current_language();
             if let Err(err) = manifest::install_menu(app.handle(), lang.as_str()) {
                 eprintln!("aquastar-lite: menu was not installed ({err})");
@@ -888,6 +937,10 @@ fn main() {
                 dispatch(app, event.id().0.as_str(), true);
             });
             register_saved_shortcuts(app.handle());
+            extensions::install_contributions(app.handle());
+            if let Err(error) = menu_visibility::apply(app.handle()) {
+                eprintln!("AquaStar: could not apply menu visibility: {error}");
+            }
             Ok(())
         })
         .build(context)

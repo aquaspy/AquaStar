@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "extension-invoke"
+description = "Access the caller-bound AquaStar extension API"
+commands.allow = ["extension_invoke"]

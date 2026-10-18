@@ -290,6 +290,10 @@ impl Players {
         )
     }
 
+    pub(crate) fn launch_source(&self, roots: &PlayerRoots, engine: Engine, source: &str, settings: &RuffleSettings, saves: Option<&Path>) -> Result<String, String> {
+        self.launch(roots, engine, source, settings, saves)
+    }
+
     fn launch(
         &self,
         roots: &PlayerRoots,

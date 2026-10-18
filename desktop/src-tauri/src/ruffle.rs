@@ -279,6 +279,16 @@ pub fn save_hide_launcher(dir: &Path, hide: bool) -> Result<(), String> {
     write_settings(dir, &map)
 }
 
+pub fn load_show_menu_bar(dir: &Path) -> bool {
+    settings_object(dir).get("showMenuBar").and_then(serde_json::Value::as_bool).unwrap_or(false)
+}
+
+pub fn save_show_menu_bar(dir: &Path, show: bool) -> Result<(), String> {
+    let mut map = settings_object(dir);
+    map.insert("showMenuBar".into(), serde_json::Value::Bool(show));
+    write_settings(dir, &map)
+}
+
 /// Command line for one movie. The SWF is last, and only known flag values are passed.
 pub fn ruffle_args(swf: &str, settings: &RuffleSettings, platform: &str) -> Vec<String> {
     let settings = settings.for_platform(platform);
@@ -656,6 +666,26 @@ mod tests {
         assert_eq!(view.ruffle_graphics, "default");
         assert!(view.qualities.iter().any(|c| c.id == "low"));
         assert!(view.graphics_choices.iter().any(|c| c.id == "default"));
+    }
+
+    #[test]
+    fn menu_bar_defaults_hidden_and_preserves_other_preferences() {
+        let dir = std::env::temp_dir().join(format!("aquastar-menu-bar-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        assert!(!load_show_menu_bar(&dir));
+        RuffleSettings::default().save(&dir).unwrap();
+        save_hide_launcher(&dir, true).unwrap();
+        save_show_menu_bar(&dir, true).unwrap();
+        assert!(load_show_menu_bar(&dir));
+        assert!(load_hide_launcher(&dir));
+        assert_eq!(RuffleSettings::load(&dir), RuffleSettings::default());
+        RuffleSettings::default().save(&dir).unwrap();
+        assert!(load_show_menu_bar(&dir));
+        save_show_menu_bar(&dir, false).unwrap();
+        assert!(!load_show_menu_bar(&dir));
+        fs::write(dir.join(SETTINGS_FILE), r#"{"showMenuBar":"true"}"#).unwrap();
+        assert!(!load_show_menu_bar(&dir));
+        let _ = fs::remove_dir_all(dir);
     }
 
     #[test]

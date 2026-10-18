@@ -3,6 +3,11 @@ identifier = "launcher-commands"
 description = "Launcher window"
 commands.allow = [
   "play",
+  "extensions_list",
+  "extensions_install",
+  "extensions_change",
+  "extensions_action",
+  "extensions_restart",
   "engines",
   "preferred_engine",
   "open_site",
@@ -11,6 +16,7 @@ commands.allow = [
   "set_ruffle_settings",
   "launcher_settings",
   "set_hide_launcher",
+  "set_show_menu_bar",
   "get_shell_pages"
 ]
 
@@ -56,6 +62,7 @@ commands.allow = [
   "get_inventory_messages",
   "save_inventory_labels",
   "sync_inventory_now",
+  "open_account_for_sync",
   "set_inventory_active_char",
   "open_inventory_item_wiki",
   "fetch_wiki_page",
