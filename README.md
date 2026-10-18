@@ -6,31 +6,19 @@ AquaStar is a launcher for Adventure Quest Worlds.
 
 It is not a cheat and it is not a bot. It does not play the game for you. Electron's extra windows track tasks and inventory. Electron keeps drawing the game when its window is in the background. Lite runs the game in a separate player, and you can lower that player's quality.
 
-Artix does not support third-party launchers. If AquaStar breaks, open an issue on this repo. The longer history is in [MOTIVATION.MD](MOTIVATION.MD).
+Artix does not support third-party launchers. If AquaStar breaks, open an issue on this repo. The longer history is in [motivation and history](docs/MOTIVATION.md).
 
-## The two editions
+## Current development
 
-**AquaStar Electron** is the main app. It is Electron 11 with the PPAPI Flash plugin, so the game runs in Flash Player. Settings can switch a game window to Ruffle instead. That Ruffle build runs inside the page. Settings lists it as "Ruffle (Experimental)". Restart AquaStar after you switch to Ruffle.
+**AquaStar 3.0** is the active Tauri launcher in [`lite/`](lite/README.md), developed on `dev`. It uses the system webview and starts Ruffle or the Flash projector in a separate window. It includes inventory and Buy Back sync, wiki tools, reminders, to-do, and strategy. Ruffle defaults to Automatic graphics and High quality.
 
-Inventory reads your items and BuyBack from account.aq.com after you log in there once with Alt+A. The wiki can then mark items you already own. Reminders track daily and weekly tasks per character. There is a to-do list, a strategy window, a char page screenshot, Char Page Studio, game screenshots, and screen recording. Settings is Alt+9, and the shortcuts can be changed there. Other Flash games can be loaded from a custom URL or a local SWF in Settings. A plugin can add another game. The bundled plugin is Adventure Quest Worlds. See [docs/PLUGINS.md](docs/PLUGINS.md).
+**AquaStar 2.x** is the maintained Electron launcher on `2.x`, with development on `2.x-dev`. It keeps PPAPI Flash, plugins, Char Page Studio, screenshots, and screen recording. Electron is pinned to 11.5.0 for PPAPI support. Older operating systems that cannot run the 3.0 system webview stay on 2.x.
 
-Electron runs on Windows 7 and later, in 64-bit and 32-bit builds. Linux builds cover 64-bit, 32-bit, and 32-bit ARM. The Mac build is 64-bit Intel.
-
-**AquaStar Lite** is the Tauri app. It does not bundle Chromium. The launcher window is the system webview. Lite starts a bundled player as its own process. The default player is the standalone Ruffle desktop from Artix's Experimental Launcher 1.7.0. Intel Macs use the official Ruffle 0.7.1 universal build, because that Artix build is Apple Silicon only. Flash is Adobe's standalone projector 32.0.0.465, also bundled. Lite does not sync inventory. Reminders, the to-do list, the strategy window, and char page tools stay in Electron. Wiki, account, and news open in their own windows. You can hide the launcher while a player is running.
-
-Lite runs on Windows 10 and Windows 11, macOS 11 and later, and 64-bit Linux. Windows needs the system WebView2 runtime. The portable zip does not install that runtime. If it is missing, the app says "Could not find the WebView2 Runtime".
-
-## Which one should I pick
-
-Pick Electron for inventory sync, the task windows, char page tools, plugins, or a build for Windows 7, Windows 8.1, or 32-bit Windows.
-
-Pick Lite for the launcher that does not bundle Chromium. The game runs in Ruffle or the Flash projector, in its own process. Lite publishes a Linux deb named aquastar-lite, a Windows portable zip, and a Mac disk image.
-
-On Apple Silicon, both editions can play with Ruffle. Electron Flash is the x64 app under Rosetta. Lite Flash is the Intel projector, which the universal app starts on its own when Rosetta is installed. The macOS steps explain both.
+The [3.0 plan](docs/aquastar-3.0-plan.md) describes platform support and feature differences. The [repository map](docs/REPOSITORY.md) explains the shared files. Stable 3.0 publication and the merge into `main` remain pending approval; reorganizing files or branches does not publish a release.
 
 ## Install
 
-Downloads are on the [releases page](https://github.com/aquaspy/AquaStar/releases). The release marked Latest is the stable Electron build. A version with a hyphen in it, for example 2.1.1-rc.4, is a pre-release. Lite is published only as a pre-release. Its tag starts with `lite-v`.
+Downloads are on the [releases page](https://github.com/aquaspy/AquaStar/releases). The release marked Latest is the stable Electron build. A version with a hyphen in it, for example 2.1.1-rc.4, is a pre-release. AquaStar 3.0 is currently available as a pre-release. Earlier Tauri builds used `lite-v` tags and the Lite name; package names below retain that historical name.
 
 `<version>` in the names below is the version of that release.
 
@@ -73,7 +61,7 @@ For Lite, open the disk image and copy `aquastar-lite.app` into `/Applications`.
 xattr -cr /Applications/aquastar-lite.app
 ```
 
-The Lite disk image is a universal app. Ruffle is the default player. On Apple Silicon that Ruffle is Artix's arm64 `ruffle_desktop`. On an Intel Mac it is the official Ruffle 0.7.1 universal build. On macOS, Ruffle's default graphics backend is Metal. Play Flash starts the bundled Intel projector. On Apple Silicon, macOS runs that projector under Rosetta while the launcher itself stays arm64. If Rosetta is not installed, the launcher says so and names `softwareupdate --install-rosetta`. Ruffle does not need Rosetta.
+The Lite disk image is a universal app. Ruffle is the default player. On Apple Silicon that Ruffle is Artix's arm64 `ruffle_desktop`. On an Intel Mac it is the official Ruffle 0.7.1 universal build. Ruffle defaults to Automatic graphics and High quality. Play Flash starts the bundled Intel projector. On Apple Silicon, macOS runs that projector under Rosetta while the launcher itself stays arm64. If Rosetta is not installed, the launcher says so and names `softwareupdate --install-rosetta`. Ruffle does not need Rosetta.
 
 Lite launches the signed Flash projector and passes the Loader4 URL. The Mac menu bar stays. Artix's `ruffle_desktop` is started with `--title AquaStar Lite`. The Intel Ruffle build has no title flag, so on Windows and Linux an X11 window whose title starts with Ruffle is renamed from outside the process. The Flash window is titled AquaStar Lite on Windows and Linux.
 
@@ -104,15 +92,23 @@ Artix's Ruffle build is MIT or Apache-2.0. The text shipped with the binary is [
 
 ## Build from source
 
-Electron is pinned to 11.5.0. That is the last Electron release whose Chromium still loads PPAPI Flash.
+For active **3.0 development**, install Rust and the platform dependencies listed in [lite/README.md](lite/README.md), then:
 
 ```bash
-git clone https://github.com/aquaspy/AquaStar.git
+git clone --branch dev https://github.com/aquaspy/AquaStar.git
+cd AquaStar/lite/src-tauri
+cargo build --locked
+```
+
+For a local build that can also start the launcher, run `bash lite/scripts/build-local.sh --run` from the repository root. Add `--release` for an optimized build. Packaging and player setup are covered in the Lite README.
+
+For **Electron 2.x development**, use its maintained branch:
+
+```bash
+git clone --branch 2.x-dev https://github.com/aquaspy/AquaStar.git
 cd AquaStar
-npm install
+npm ci
 npm start
 ```
 
-`npm run dist` packages a build for the OS you are on. The release workflow builds the published installers when a version tag is pushed. `./build.sh` is the old local script that builds several architectures at once.
-
-Lite's build and packaging notes are in [lite/README.md](lite/README.md).
+`npm run dist` packages Electron for the current OS. The shared tooling on `dev` also includes the legacy multi-architecture entry point, `bash scripts/build-all-arch.sh`. Release workflows require a version tag; building locally does not publish a release.

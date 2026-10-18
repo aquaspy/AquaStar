@@ -16,7 +16,7 @@ const extensions = new Map([
 ]);
 const ignoredDirectories = new Set([
   '.git', 'node_modules', 'dist', 'work', 'releases', 'FlashPlayer',
-  'squashfs-root', 'Icon', 'Icon-Originals', 'ruffle', 'po'
+  'squashfs-root', 'Icon', 'icon-sources', 'ruffle', 'po'
 ]);
 const ignoredFiles = new Set([
   'package-lock.json',

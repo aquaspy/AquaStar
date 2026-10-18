@@ -5,7 +5,9 @@ set -euo pipefail
 # Outputs land in releases/ (x64 at top level, other archs in subfolders).
 
 releasefolder="releases"
-script_dir="$(cd "$(dirname "$0")" && pwd)"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd -- "$script_dir/.." && pwd)"
+cd "$repo_root"
 
 blue="\e[34m"
 yellow="\e[36m"
@@ -29,7 +31,7 @@ collect_build() {
 
     echo -e "${blue}--> Building ${platform} ${arch}...${clear}"
     rm -rf ./dist
-    bash "${script_dir}/scripts/build-arch.sh" "$platform" "$arch"
+    bash "${script_dir}/build-arch.sh" "$platform" "$arch"
 
     local dest="./${releasefolder}"
     if [ -n "$dest_subdir" ]; then

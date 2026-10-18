@@ -243,3 +243,13 @@ Stable publication remains on hold for the performance and interface review. The
 - The Artix player archive is [ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip](https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip).
 - Stock desktop builds are the `ruffle-rs/ruffle` release `v0.7.1`.
 - Player pins and the current macOS floor are `lite/players.json` and `lite/src-tauri/tauri.conf.json`.
+
+## Repository organization completed, 17 October 2026
+
+The user authorized the agreed branch cleanup and file organization before stable publication. This instruction supersedes the earlier sequencing that deferred branch organization until the stable tag.
+
+- `electron-2.x` was renamed to `2.x`; `2.x-dev` was created at the same maintenance commit.
+- The 29 previously listed and approved obsolete branches were deleted after creating and verifying a complete local Git bundle. Exact-tip leases prevented deleting a branch that had advanced after review.
+- The remote now has only `main`, `dev`, `2.x`, `2.x-dev`, and the explicitly preserved `cursor/electron-mac-zip-symlinks-99c5`.
+- `main`, existing tags, and GitHub Latest were unchanged. No stable release was published. The merge and stable publication still require their separate explicit approvals.
+- The [repository map](REPOSITORY.md) documents source, shared assets, examples, documentation, and generated files. Local builds, SDK, worktrees, backups, and reports are grouped in the sibling `AquaStar-workspace/` directory. The previous local-build path remains a compatibility link.

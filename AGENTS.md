@@ -1,6 +1,8 @@
 # AquaStar – Agent Notes
 
-Custom Electron 11 Flash (PPAPI) companion shell. Game-specific behavior lives in **plugins**; the bundled default is Adventure Quest Worlds (`plugins/adventure-quest-worlds/`).
+AquaStar 3.0 is the Tauri launcher in `lite/` on `dev`. Read [`lite/README.md`](lite/README.md) for its build commands and [`docs/REPOSITORY.md`](docs/REPOSITORY.md) for the repository map. Electron 2.x is maintained separately on `2.x` and `2.x-dev`. The root Electron code remains here because 3.0 still consumes shared plugin assets; its commands and constraints below apply when working on that code.
+
+Game-specific Electron behavior lives in **plugins**; the bundled default is Adventure Quest Worlds (`plugins/adventure-quest-worlds/`).
 
 Plugin authoring (full guide): [`docs/PLUGINS.md`](docs/PLUGINS.md). Architecture design: [`docs/design/plugin-architecture.md`](docs/design/plugin-architecture.md). Starter: `plugins/_template/`. Worked example: `plugins/example-companion/`. Smoke: `npm run smoke:plugins`.
 
@@ -13,8 +15,8 @@ Plugin authoring (full guide): [`docs/PLUGINS.md`](docs/PLUGINS.md). Architectur
 - `npm test` – run the dependency-free regression suite (domain, persistence, plugins, and window lifecycle)
 - `npm run test:ci` – run tests followed by the local Windows packaging check
 - `npm run web:build` / `web:preview` – build/serve the static tools site (plugin `contributeWebBuild`)
-- `./build.sh` – **legacy local release script** for multi-arch Linux/Windows. Prefer GitHub Releases via tag (see below).
-- **GitHub Release:** bump `version` in `package.json`, commit, then `git tag vX.Y.Z && git push origin vX.Y.Z` (matching the new version, e.g. current is `1.12.2`) — the Release workflow builds all platforms and attaches installers to the GitHub Release.
+- `./scripts/build-all-arch.sh` – **legacy local release script** for multi-arch Linux/Windows. Prefer GitHub Releases via tag (see below).
+- **GitHub Release:** follow [`docs/aquastar-3.0-plan.md`](docs/aquastar-3.0-plan.md). The Electron workflow handles 2.x tags; the Tauri workflow handles 3.x tags. Stable publication, changing Latest, and merging to `main` remain pending explicit approval. A local build does not authorize tagging a release.
 
 The test workflow runs `npm test` on pull requests and packages the Windows app separately.
 
@@ -58,7 +60,7 @@ The platform (`main.js`, `res/`, shared tooling in `scripts/`) names no game. An
 - **Override:** Settings → Custom SWF File (stored as `custom-game.swf` in AppData), or drop a file there by hand. The AQW plugin also keeps accepting `aqlite_old.swf` (its manifest `customSwfAliases`). Platform primary-game override; takes priority over `customUrl`. Restart required.
 - **Custom URL override:** `"customUrl"` in `aquastar.json` / Settings. Ignored when a custom SWF is present.
 - **SWF logging:** `"swfLog": true` logs `game.aq.com/game/*` via the AQW plugin session rule.
-- **Custom keybindings / plugin flags:** `aquastar.json` in appData (Settings Alt+9). See `aquastar_testing.json` and `KEYBINDING.md`.
+- **Custom keybindings / plugin flags:** `aquastar.json` in appData (Settings Alt+9). See [`docs/examples/aquastar.json`](docs/examples/aquastar.json) and `KEYBINDING.md`.
 - **Reminders (Alt+T):** AQW plugin feature. Stored in `aquastar_reminders.json`, seeded from `plugins/adventure-quest-worlds/features/reminders/reminders_default.json` on first run.
 - **To-Do (Alt+Y):** AQW plugin feature. `aquastar_todo.json`. Shared list kit: `plugins/adventure-quest-worlds/features/common/list_window_common.js`.
 - **Local plugins:** `%AppData%/AquaStar/plugins/<id>/` when `enableLocalPlugins` is true; must be trusted in Settings (full Node/Electron trust after prompt).
@@ -83,6 +85,6 @@ Automated: `npm test` and `npm run smoke:plugins`.
 ## Build artifacts
 
 - `dist/` – electron-builder output (gitignored)
-- `work/` – `build.sh` temp folder (gitignored)
-- `releases/` – `build.sh` final artifacts (gitignored)
+- `work-<platform>-<arch>/` – `scripts/build-arch.sh` staging folders (gitignored); `work/` is the older staging path
+- `releases/` – `scripts/build-all-arch.sh` final artifacts (gitignored)
 - `AquaStar Screenshots/` – runtime screenshots (gitignored)
