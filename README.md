@@ -6,17 +6,21 @@ AquaStar is a launcher for Adventure Quest Worlds.
 
 It is not a cheat and it is not a bot. It does not play the game for you. Electron's extra windows track tasks and inventory. Electron keeps drawing the game when its window is in the background. Lite runs the game in a separate player, and you can lower that player's quality.
 
-Artix does not support third-party launchers. If AquaStar breaks, open an issue on this repo. The longer history is in [MOTIVATION.MD](MOTIVATION.MD).
+Artix does not support third-party launchers. If AquaStar breaks, open an issue on this repo. The longer history is in [motivation and history](docs/MOTIVATION.md).
+
+## Maintained Electron 2.x
+
+This branch maintains the Electron launcher: `2.x` is the stable line and `2.x-dev` is development. AquaStar 3.0 is the Tauri launcher developed on [`dev`](https://github.com/aquaspy/AquaStar/tree/dev); use that branch for its current UI, features, and build instructions. The `lite/` tree here is historical. See the [repository map](docs/REPOSITORY.md).
 
 ## The two editions
 
-**AquaStar Electron** is the main app. It is Electron 11 with the PPAPI Flash plugin, so the game runs in Flash Player. Settings can switch a game window to Ruffle instead. That Ruffle build runs inside the page. Settings lists it as "Ruffle (Experimental)". Restart AquaStar after you switch to Ruffle.
+**AquaStar Electron** is the app maintained on this branch. It is Electron 11 with the PPAPI Flash plugin, so the game runs in Flash Player. Settings can switch a game window to Ruffle instead. That Ruffle build runs inside the page. Settings lists it as "Ruffle (Experimental)". Restart AquaStar after you switch to Ruffle.
 
 Inventory reads your items and BuyBack from account.aq.com after you log in there once with Alt+A. The wiki can then mark items you already own. Reminders track daily and weekly tasks per character. There is a to-do list, a strategy window, a char page screenshot, Char Page Studio, game screenshots, and screen recording. Settings is Alt+9, and the shortcuts can be changed there. Other Flash games can be loaded from a custom URL or a local SWF in Settings. A plugin can add another game. The bundled plugin is Adventure Quest Worlds. See [docs/PLUGINS.md](docs/PLUGINS.md).
 
 Electron runs on Windows 7 and later, in 64-bit and 32-bit builds. Linux builds cover 64-bit, 32-bit, and 32-bit ARM. The Mac build is 64-bit Intel.
 
-**AquaStar Lite** is the Tauri app. It does not bundle Chromium. The launcher window is the system webview. Lite starts a bundled player as its own process. The default player is the standalone Ruffle desktop from Artix's Experimental Launcher 1.7.0. Intel Macs use the official Ruffle 0.7.1 universal build, because that Artix build is Apple Silicon only. Flash is Adobe's standalone projector 32.0.0.465, also bundled. Lite does not sync inventory. Reminders, the to-do list, the strategy window, and char page tools stay in Electron. Wiki, account, and news open in their own windows. You can hide the launcher while a player is running.
+**AquaStar Lite** is the Tauri app. It does not bundle Chromium. The launcher window is the system webview. Lite starts a bundled player as its own process. The default player is the standalone Ruffle desktop from Artix's Experimental Launcher 1.7.0. Intel Macs use the official Ruffle 0.7.1 universal build, because that Artix build is Apple Silicon only. Flash is Adobe's standalone projector 32.0.0.465, also bundled. This historical Lite snapshot does not sync inventory; current 3.0 development on `dev` includes inventory sync. Reminders, the to-do list, the strategy window, and char page tools stay in Electron. Wiki, account, and news open in their own windows. You can hide the launcher while a player is running.
 
 Lite runs on Windows 10 and Windows 11, macOS 11 and later, and 64-bit Linux. Windows needs the system WebView2 runtime. The portable zip does not install that runtime. If it is missing, the app says "Could not find the WebView2 Runtime".
 
@@ -107,12 +111,12 @@ Artix's Ruffle build is MIT or Apache-2.0. The text shipped with the binary is [
 Electron is pinned to 11.5.0. That is the last Electron release whose Chromium still loads PPAPI Flash.
 
 ```bash
-git clone https://github.com/aquaspy/AquaStar.git
+git clone --branch 2.x-dev https://github.com/aquaspy/AquaStar.git
 cd AquaStar
 npm install
 npm start
 ```
 
-`npm run dist` packages a build for the OS you are on. The release workflow builds the published installers when a version tag is pushed. `./build.sh` is the old local script that builds several architectures at once.
+`npm run dist` packages a build for the OS you are on. The release workflow builds the published installers when a version tag is pushed. `bash scripts/build-all-arch.sh` is the old local script that builds several architectures at once.
 
 Lite's build and packaging notes are in [lite/README.md](lite/README.md).

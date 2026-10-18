@@ -884,7 +884,7 @@ Inventory sync still uses default session cookies for `account.aq.com`. No plugi
 | Activation failure | dialog + fallback |
 | Duplicate IPC | Electron throws; PR 2 test prevents |
 
-**Log collection for Flash regressions:** the repo’s `logs/log.txt` is **not** an application-managed ring buffer today (aspirational / manual). Testers should capture: terminal/`npm start` stdout, Windows Event / console, and when enabled SWF log under `Pictures/AquaStar Screenshots/SWFLogging/`. Optional follow-up: pipe `console.log` to `appDataDirectory/aquastar-debug.log` — out of scope unless a later PR adds it.
+**Log collection for Flash regressions:** the application does not maintain a repository log buffer. Local diagnostic files belong in the ignored `logs/` directory. Testers should capture: terminal/`npm start` stdout, Windows Event / console, and when enabled SWF log under `Pictures/AquaStar Screenshots/SWFLogging/`. Optional follow-up: pipe `console.log` to `appDataDirectory/aquastar-debug.log` — out of scope unless a later PR adds it.
 
 ### Flag defaults by milestone
 

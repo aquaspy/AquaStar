@@ -18,3 +18,7 @@ web-dist/
 launch.sh
 TEMP-*.txt
 swf2png-master
+
+# Local diagnostic output and architecture staging
+logs/
+work-*/
