@@ -16,11 +16,16 @@ def field(path, name):
 def normalize(path):
     path = path.resolve(strict=True)
     version = field(path, 'Version')
-    match = re.fullmatch(r'(\d+\.\d+\.\d+)-(alpha|beta|rc)([.0-9A-Za-z+-]*)', version)
+    candidate = version.replace('~', '-', 1)
+    match = re.fullmatch(r'(\d+\.\d+\.\d+)-(alpha|beta|rc)([.0-9A-Za-z+-]*)', candidate)
     if not match:
         print(f'{path.name}: Version {version} unchanged')
         return
-    normalized = version.replace('-', '~', 1)
+    normalized = candidate.replace('-', '~', 1)
+    members = subprocess.check_output(['ar', 't', str(path)], text=True).splitlines()
+    if normalized == version and 'control.tar.gz' in members and 'data.tar.xz' in members:
+        print(f'{path.name}: Version {version} and portable compression unchanged')
+        return
     subprocess.run(['dpkg', '--compare-versions', normalized, 'lt', match[1]], check=True)
     identity = (field(path, 'Package'), field(path, 'Architecture'))
     with tempfile.TemporaryDirectory(prefix='.aquastar-deb-', dir=path.parent) as scratch:
@@ -32,7 +37,7 @@ def normalize(path):
         if changed != 1:
             raise ValueError(f'{path}: expected one Version field')
         control.write_text(text)
-        subprocess.run(['dpkg-deb', '--build', '--root-owner-group', str(tree), str(result)], check=True,
+        subprocess.run(['dpkg-deb', '--build', '--root-owner-group', '--no-uniform-compression', '-Zxz', '-z6', str(tree), str(result)], check=True,
                        stdout=subprocess.DEVNULL)
         if field(result, 'Version') != normalized or (field(result, 'Package'), field(result, 'Architecture')) != identity:
             raise ValueError(f'{path}: package identity changed during normalization')
