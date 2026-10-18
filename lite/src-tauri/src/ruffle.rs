@@ -9,10 +9,9 @@
 //! values, plus `--title`. Smooth Motion (`frame_interpolation`) is a saved
 //! context-menu preference in that build, not a command-line flag.
 //!
-//! The safe backend is OpenGL on Linux and Windows, and Metal on macOS. The other
-//! backends match the Electron app (`res/ruffleGraphics.js`): Vulkan on Linux and
-//! Windows, DirectX 12 on Windows, Metal on macOS, and Automatic (`default`,
-//! Ruffle picks) everywhere.
+//! Automatic (`default`) lets Ruffle choose the backend on every platform.
+//! Crash recovery retries once with OpenGL on Linux/Windows or Metal on macOS.
+//! Explicit choices also include Vulkan on Linux/Windows and DirectX 12 on Windows.
 
 use serde::Serialize;
 use std::fs;
@@ -21,7 +20,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 pub const SETTINGS_FILE: &str = "settings.json";
-/// A backend other than the platform default that dies before this, or dies later with a graphics panic, is retried once.
+/// A backend other than the recovery backend that dies before this, or dies later with a graphics panic, is retried once.
 pub const EARLY_EXIT: Duration = Duration::from_millis(15_000);
 pub const STDERR_TAIL: usize = 8192;
 const LOG_TAIL: usize = 1000;
@@ -83,8 +82,8 @@ pub fn safe_graphics(platform: &str) -> RuffleGraphics {
 impl Default for RuffleSettings {
     fn default() -> Self {
         Self {
-            quality: RuffleQuality::Medium,
-            graphics: safe_graphics(std::env::consts::OS),
+            quality: RuffleQuality::High,
+            graphics: RuffleGraphics::Automatic,
         }
     }
 }
@@ -106,7 +105,7 @@ pub struct SettingsView {
     pub graphics_choices: Vec<SettingChoice>,
 }
 
-/// What the player process did, for the OpenGL fallback decision.
+/// What the player process did, for the platform recovery decision.
 pub struct ExitReport {
     pub graphics: RuffleGraphics,
     pub code: Option<i32>,
@@ -118,8 +117,8 @@ pub struct ExitReport {
 
 pub fn quality_choices() -> Vec<SettingChoice> {
     [
-        ("high", "High"),
-        ("medium", "Medium (default)"),
+        ("high", "High (default)"),
+        ("medium", "Medium"),
         ("low", "Low (fastest)"),
     ]
     .into_iter()
@@ -132,20 +131,18 @@ pub fn quality_choices() -> Vec<SettingChoice> {
 
 /// `platform` is `std::env::consts::OS` (`linux`, `windows`, `macos`).
 pub fn graphics_choices(platform: &str) -> Vec<SettingChoice> {
-    let gl_label = if platform == "macos" {
-        "OpenGL"
-    } else {
-        "OpenGL (default, most compatible)"
-    };
     [
-        ("gl", gl_label, &[] as &[&str]),
+        ("default", "Automatic (default, Ruffle decides)", &[] as &[&str]),
+        ("gl", "OpenGL", &[]),
         ("vulkan", "Vulkan", &["linux", "windows"]),
         ("dx12", "DirectX 12", &["windows"]),
-        ("metal", "Metal (default)", &["macos"]),
-        ("default", "Automatic (Ruffle decides)", &[]),
+        ("metal", "Metal", &["macos"]),
     ]
     .into_iter()
-    .filter(|(_, _, platforms)| platforms.is_empty() || platforms.contains(&platform))
+    .filter(|(id, _, platforms)| {
+        (*id != "gl" || platform != "macos")
+            && (platforms.is_empty() || platforms.contains(&platform))
+    })
     .map(|(id, label, _)| SettingChoice {
         id: id.into(),
         label: label.into(),
@@ -158,7 +155,7 @@ pub fn normalize_quality(value: &str) -> RuffleQuality {
         "low" => RuffleQuality::Low,
         "medium" => RuffleQuality::Medium,
         "high" => RuffleQuality::High,
-        _ => RuffleQuality::Medium,
+        _ => RuffleQuality::High,
     }
 }
 
@@ -169,7 +166,7 @@ pub fn normalize_graphics(value: &str, platform: &str) -> RuffleGraphics {
         "metal" => RuffleGraphics::Metal,
         "dx12" => RuffleGraphics::Dx12,
         "default" => RuffleGraphics::Automatic,
-        _ => return safe_graphics(platform),
+        _ => return RuffleGraphics::Automatic,
     };
     if graphics_choices(platform)
         .iter()
@@ -177,7 +174,7 @@ pub fn normalize_graphics(value: &str, platform: &str) -> RuffleGraphics {
     {
         graphics
     } else {
-        safe_graphics(platform)
+        RuffleGraphics::Automatic
     }
 }
 
@@ -204,11 +201,11 @@ impl RuffleSettings {
         let quality = raw
             .get("ruffleQuality")
             .and_then(|v| v.as_str())
-            .unwrap_or("medium");
+            .unwrap_or("high");
         let graphics = raw
             .get("ruffleGraphics")
             .and_then(|v| v.as_str())
-            .unwrap_or(safe_graphics(platform).as_str());
+            .unwrap_or("default");
         Self {
             quality: normalize_quality(quality),
             graphics: normalize_graphics(graphics, platform),
@@ -306,7 +303,7 @@ pub fn ruffle_args(swf: &str, settings: &RuffleSettings, platform: &str) -> Vec<
 
 /// A backend other than [`safe_graphics`] that exits abnormally within [`EARLY_EXIT`],
 /// or exits abnormally after printing a panic / wgpu graphics error, is relaunched
-/// with the platform default. A clean exit, a process we killed, and the safe backend
+/// with the platform recovery backend. A clean exit, a process we killed, and the safe backend
 /// itself never qualify, so the relaunch cannot loop.
 pub fn should_fallback(info: &ExitReport) -> bool {
     should_fallback_on(info, std::env::consts::OS)
@@ -415,46 +412,65 @@ mod tests {
         assert!(auto.windows(2).any(|w| w == ["--graphics", "default"]));
 
         let defaults = ruffle_args("x.swf", &RuffleSettings::default(), "linux");
-        assert!(defaults.windows(2).any(|w| w == ["--quality", "medium"]));
-        assert!(defaults.windows(2).any(|w| w == ["--graphics", "gl"]));
+        assert!(defaults.windows(2).any(|w| w == ["--quality", "high"]));
+        assert!(defaults.windows(2).any(|w| w == ["--graphics", "default"]));
     }
 
     #[test]
-    fn unknown_values_and_foreign_backends_become_safe_flags() {
+    fn unknown_values_and_foreign_backends_become_default_flags() {
         let junk = RuffleSettings::parse(
             r#"{"ruffleQuality":"best; rm -rf /","ruffleGraphics":"vulkan --evil"}"#,
             "linux",
         );
         let args = ruffle_args("x.swf", &junk, "linux");
-        assert!(args.windows(2).any(|w| w == ["--quality", "medium"]));
-        assert!(args.windows(2).any(|w| w == ["--graphics", "gl"]));
+        assert!(args.windows(2).any(|w| w == ["--quality", "high"]));
+        assert!(args.windows(2).any(|w| w == ["--graphics", "default"]));
         assert!(!args.iter().any(|a| a.contains("rm ")));
 
         assert_eq!(normalize_graphics("dx12", "windows"), RuffleGraphics::Dx12);
-        assert_eq!(normalize_graphics("dx12", "linux"), RuffleGraphics::Gl);
-        assert_eq!(normalize_graphics("dx12", "macos"), RuffleGraphics::Metal);
+        assert_eq!(normalize_graphics("dx12", "linux"), RuffleGraphics::Automatic);
+        assert_eq!(normalize_graphics("dx12", "macos"), RuffleGraphics::Automatic);
         assert_eq!(normalize_graphics("metal", "macos"), RuffleGraphics::Metal);
-        assert_eq!(normalize_graphics("metal", "linux"), RuffleGraphics::Gl);
-        assert_eq!(normalize_graphics("vulkan", "macos"), RuffleGraphics::Metal);
+        assert_eq!(normalize_graphics("metal", "linux"), RuffleGraphics::Automatic);
+        assert_eq!(normalize_graphics("vulkan", "macos"), RuffleGraphics::Automatic);
         assert_eq!(
             normalize_graphics("vulkan", "linux"),
             RuffleGraphics::Vulkan
         );
-        assert_eq!(normalize_quality("LOW"), RuffleQuality::Medium);
+        assert_eq!(normalize_quality("LOW"), RuffleQuality::High);
     }
 
     #[test]
-    fn graphics_choices_match_the_main_app() {
+    fn absent_invalid_and_saved_preferences_work_on_every_platform() {
+        for platform in ["linux", "windows", "macos"] {
+            for text in ["{}", "[]", "{", r#"{"ruffleQuality":null,"ruffleGraphics":42}"#] {
+                let settings = RuffleSettings::parse(text, platform);
+                assert_eq!(settings.quality, RuffleQuality::High);
+                assert_eq!(settings.graphics, RuffleGraphics::Automatic);
+                let args = ruffle_args("x.swf", &settings, platform);
+                assert!(args.windows(2).any(|w| w == ["--quality", "high"]));
+                assert!(args.windows(2).any(|w| w == ["--graphics", "default"]));
+            }
+            let graphics = safe_graphics(platform);
+            let saved = format!(r#"{{"ruffleQuality":"medium","ruffleGraphics":"{}"}}"#, graphics.as_str());
+            let settings = RuffleSettings::parse(&saved, platform);
+            assert_eq!(settings.quality, RuffleQuality::Medium);
+            assert_eq!(settings.graphics, graphics);
+        }
+    }
+
+    #[test]
+    fn graphics_choices_match_platform_support_and_defaults() {
         let ids = |platform| -> Vec<_> {
             graphics_choices(platform)
                 .into_iter()
                 .map(|c| c.id)
                 .collect()
         };
-        assert_eq!(ids("linux"), ["gl", "vulkan", "default"]);
-        assert_eq!(ids("macos"), ["gl", "metal", "default"]);
-        assert_eq!(ids("windows"), ["gl", "vulkan", "dx12", "default"]);
-        assert_eq!(ids("freebsd"), ["gl", "default"]);
+        assert_eq!(ids("linux"), ["default", "gl", "vulkan"]);
+        assert_eq!(ids("macos"), ["default", "metal"]);
+        assert_eq!(ids("windows"), ["default", "gl", "vulkan", "dx12"]);
+        assert_eq!(ids("freebsd"), ["default", "gl"]);
         let label = |platform: &str, id: &str| -> String {
             graphics_choices(platform)
                 .into_iter()
@@ -462,10 +478,10 @@ mod tests {
                 .expect(id)
                 .label
         };
-        assert_eq!(label("macos", "metal"), "Metal (default)");
-        assert_eq!(label("macos", "gl"), "OpenGL");
-        assert_eq!(label("windows", "gl"), "OpenGL (default, most compatible)");
-        assert_eq!(label("linux", "gl"), "OpenGL (default, most compatible)");
+        assert_eq!(label("macos", "metal"), "Metal");
+        assert_eq!(normalize_graphics("gl", "macos"), RuffleGraphics::Automatic);
+        assert_eq!(label("windows", "gl"), "OpenGL");
+        assert_eq!(label("linux", "gl"), "OpenGL");
         assert_eq!(
             quality_choices()
                 .into_iter()
@@ -477,8 +493,8 @@ mod tests {
             .into_iter()
             .map(|c| (c.id, c.label))
             .collect();
-        assert!(labels.contains(&("medium".into(), "Medium (default)".into())));
-        assert!(labels.contains(&("high".into(), "High".into())));
+        assert!(labels.contains(&("medium".into(), "Medium".into())));
+        assert!(labels.contains(&("high".into(), "High (default)".into())));
     }
 
     #[test]
@@ -547,7 +563,7 @@ mod tests {
     }
 
     #[test]
-    fn metal_is_the_mac_default_and_opengl_falls_back_to_it() {
+    fn metal_is_the_mac_recovery_backend_and_unsupported_opengl_becomes_automatic() {
         assert_eq!(safe_graphics("macos"), RuffleGraphics::Metal);
         assert_eq!(safe_graphics("linux"), RuffleGraphics::Gl);
         assert_eq!(safe_graphics("windows"), RuffleGraphics::Gl);
@@ -561,7 +577,7 @@ mod tests {
         assert!(should_fallback_on(&crashed(RuffleGraphics::Metal), "linux"));
         assert_eq!(
             RuffleSettings::parse(r#"{"ruffleQuality":"high"}"#, "macos").graphics,
-            RuffleGraphics::Metal
+            RuffleGraphics::Automatic
         );
         let mac = ruffle_args(
             "x.swf",
@@ -602,12 +618,12 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         let saved = RuffleSettings {
             quality: RuffleQuality::Low,
-            graphics: RuffleGraphics::Gl,
+            graphics: RuffleGraphics::Automatic,
         };
         saved.save(&dir).unwrap();
         let text = fs::read_to_string(dir.join(SETTINGS_FILE)).unwrap();
         assert!(text.contains("\"ruffleQuality\": \"low\""));
-        assert!(text.contains("\"ruffleGraphics\": \"gl\""));
+        assert!(text.contains("\"ruffleGraphics\": \"default\""));
         assert_eq!(RuffleSettings::load(&dir).quality, RuffleQuality::Low);
 
         assert_eq!(
@@ -635,11 +651,11 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
 
         let view = RuffleSettings::default().view();
-        assert_eq!(view.ruffle_quality, "medium");
-        assert_eq!(RuffleSettings::default().quality, RuffleQuality::Medium);
-        assert_eq!(view.ruffle_graphics, "gl");
+        assert_eq!(view.ruffle_quality, "high");
+        assert_eq!(RuffleSettings::default().quality, RuffleQuality::High);
+        assert_eq!(view.ruffle_graphics, "default");
         assert!(view.qualities.iter().any(|c| c.id == "low"));
-        assert!(view.graphics_choices.iter().any(|c| c.id == "gl"));
+        assert!(view.graphics_choices.iter().any(|c| c.id == "default"));
     }
 
     #[test]

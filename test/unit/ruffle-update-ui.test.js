@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 test('Ruffle updater exposes stable and nightly channels without labelling every update as nightly', () => {
   const settings = fs.readFileSync(path.join(__dirname, '../../res/features/settings/settings.html'), 'utf8');
@@ -19,12 +20,49 @@ test('Ruffle updater exposes stable and nightly channels without labelling every
   );
 });
 
-test('Ruffle quality setting reaches the player with a safe default', () => {
-  const root = path.join(__dirname, '../..');
-  const wrapper = fs.readFileSync(path.join(root, 'res/ruffle_wrapper.html'), 'utf8');
-  const constSrc = fs.readFileSync(path.join(root, 'res/const.js'), 'utf8');
-  assert.ok(/quality: quality/.test(wrapper));
-  assert.ok(wrapper.indexOf('/^(high|medium|low)$/') !== -1);
-  assert.ok(/ruffleQuality:\s*'high'/.test(constSrc));
-  assert.ok(constSrc.indexOf("'&quality=' + encodeURIComponent(exports.normalizeRuffleQuality(quality))") !== -1);
+test('Ruffle defaults to automatic rendering and High quality while respecting explicit quality', async () => {
+  const wrapper = fs.readFileSync(path.join(__dirname, '../../res/ruffle_wrapper.html'), 'utf8');
+  const script = wrapper.match(/<script>([\s\S]*?)<\/script>/)[1];
+  for (const [query, expectedQuality] of [
+    ['', 'high'],
+    ['&quality=invalid', 'high'],
+    ['&quality=high', 'high'],
+    ['&quality=medium', 'medium'],
+    ['&quality=low', 'low']
+  ]) {
+    let options;
+    let bootstrap;
+    const player = {
+      load: async (value) => {
+        options = value;
+      }
+    };
+    const context = {
+      URL,
+      URLSearchParams,
+      Map,
+      Set,
+      console,
+      window: {
+        location: { search: '?swf=https://example.com/game/loader.swf' + query },
+        RufflePlayer: { newest: () => ({ createPlayer: () => player }) }
+      },
+      document: {
+        createElement: () => ({}),
+        head: {
+          appendChild: (value) => {
+            bootstrap = value;
+          }
+        },
+        getElementById: () => ({ appendChild: (value) => assert.strictEqual(value, player) })
+      }
+    };
+    vm.runInNewContext(script, context);
+    await bootstrap.onload();
+    assert.strictEqual(options.quality, expectedQuality);
+    assert.strictEqual(options.base, 'https://example.com/game/');
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(options, 'preferredRenderer'), false);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(options, 'renderer'), false);
+    assert.strictEqual(context.window.RufflePlayer.config, undefined);
+  }
 });
