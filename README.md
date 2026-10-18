@@ -75,7 +75,7 @@ Stable publication, changing Latest, and merging the 3.x application into `main`
 
 | Branch | Role |
 | --- | --- |
-| `main` | Current production source; intended 3.x stable line after the separately approved application merge |
+| `main` | Default branch and release integration; the 3.x application merge is pending |
 | [`dev`](https://github.com/aquaspy/AquaStar/tree/dev) | Active 3.x development |
 | [`2.x`](https://github.com/aquaspy/AquaStar/tree/2.x) | Maintained Electron 2.x line |
 | [`2.x-dev`](https://github.com/aquaspy/AquaStar/tree/2.x-dev) | Electron maintenance development |
@@ -85,7 +85,7 @@ The old `electron-2.x` branch was renamed to `2.x`. The agreed obsolete branches
 
 ## Repository structure
 
-The following paths describe the current development branches. `main` retains the production application until the application merge.
+The following paths describe the current development branches. `main` retains the earlier Electron application sources until the application merge.
 
 | Path | Contents |
 | --- | --- |
