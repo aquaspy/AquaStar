@@ -1,61 +1,139 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<title>AquaStar</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<header><img src="logo.png" alt=""><h1>AquaStar</h1></header>
-<main>
-  <section class="play">
-    <h2>Play AdventureQuest Worlds</h2>
-    <div class="buttons">
-      <button data-engine="ruffle">Play (Ruffle)</button>
-      <button data-engine="flash" id="play-flash">Play (Flash)</button>
-      <div class="movies">
-        <button type="button" data-movie="dragonfable">DragonFable</button>
-      </div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AquaStar</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="launcher">
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand"><img src="logo.png" alt="" />AquaStar</div>
+        <nav aria-label="Main navigation">
+          <button class="nav-button" data-panel="play" aria-current="page">
+            <span class="nav-symbol" aria-hidden="true">▷</span> Play
+          </button>
+          <button class="nav-button" data-panel="tools">
+            <span class="nav-symbol" aria-hidden="true">▦</span> Tools
+          </button>
+          <button class="nav-button" data-panel="links">
+            <span class="nav-symbol" aria-hidden="true">↗</span> Useful Pages
+          </button>
+        </nav>
+        <div class="sidebar-bottom">
+          <button class="nav-button" data-panel="preferences">
+            <span class="nav-symbol" aria-hidden="true">⚙</span> Preferences
+          </button>
+          <div class="version">AquaStar 3.0</div>
+        </div>
+      </aside>
+      <main class="main">
+        <div class="top">
+          <div>
+            <p class="eyebrow">Your launcher</p>
+            <h1 id="page-title">Ready to play</h1>
+          </div>
+          <span class="small-label">Games open in a separate window</span>
+        </div>
+        <section class="panel" id="play" aria-label="Play">
+          <div class="games" aria-label="Select game">
+            <button class="game-button" data-game="primary" aria-pressed="true">AdventureQuest Worlds</button
+            ><button class="game-button" data-game="dragonfable" aria-pressed="false">DragonFable</button>
+          </div>
+          <div class="hero">
+            <img class="hero-mark" src="logo.png" alt="" />
+            <div class="hero-content">
+              <p class="game-kicker">AquaStar · Play</p>
+              <h2 id="game-title">AdventureQuest<br /><span>Worlds</span></h2>
+              <p class="hero-copy">Your game opens in a separate window.</p>
+              <div class="launch-row">
+                <button class="primary" id="play-now" disabled>Play now <span aria-hidden="true">↗</span></button
+                ><select id="engine-select" aria-label="Player" disabled>
+                  <option>Loading players…</option>
+                </select>
+              </div>
+              <p class="hint" id="launcher-hint">Loading launcher preferences…</p>
+            </div>
+          </div>
+          <div class="section-line">
+            <h2>Your tools</h2>
+            <button class="text-button" data-panel="tools">View all →</button>
+          </div>
+          <div class="tools">
+            <button class="tool" data-tool="inventory">
+              <span class="tool-icon" aria-hidden="true">▤</span><strong>Inventory</strong></button
+            ><button class="tool" data-tool="reminders">
+              <span class="tool-icon" aria-hidden="true">◷</span><strong>Reminders</strong></button
+            ><button class="tool" data-tool="todo">
+              <span class="tool-icon" aria-hidden="true">✓</span><strong>To-Do</strong></button
+            ><button class="tool" data-tool="strategy">
+              <span class="tool-icon" aria-hidden="true">◇</span><strong>Strategy</strong>
+            </button>
+          </div>
+          <div class="search-card">
+            <div>
+              <h2>Looking for an item?</h2>
+              <p>Search the AQW Wiki directly.</p>
+            </div>
+            <form class="search-box" id="wiki-search">
+              <input name="q" aria-label="Search the wiki" placeholder="Item name…" autocomplete="off" /><button
+                type="submit"
+              >
+                Search ↗
+              </button>
+            </form>
+          </div>
+        </section>
+        <section class="panel" id="tools" hidden>
+          <h2 class="panel-title">Tools</h2>
+          <p class="description">Your AquaStar tools, all in one place.</p>
+          <div class="full-grid">
+            <button data-tool="inventory">Inventory & Buy Back</button><button data-tool="reminders">Reminders</button
+            ><button data-tool="todo">To-Do List</button><button data-tool="strategy">Strategy</button>
+          </div>
+        </section>
+        <section class="panel" id="links" hidden>
+          <h2 class="panel-title">Useful Pages</h2>
+          <p class="description">Quick access to the community and your account.</p>
+          <div id="site-buttons"></div>
+          <form id="char-page" class="char-row">
+            <input
+              name="character"
+              aria-label="Character name"
+              placeholder="Character name"
+              autocomplete="off"
+              spellcheck="false"
+            /><button type="submit">Open character page ↗</button>
+          </form>
+        </section>
+        <section class="panel" id="preferences" hidden>
+          <h2 class="panel-title">Preferences</h2>
+          <p class="description">Available options depend on your system.</p>
+          <div class="pref">
+            <div class="fields">
+              <label for="ruffle-quality">Ruffle quality<select id="ruffle-quality" disabled></select></label
+              ><label for="ruffle-graphics">Graphics<select id="ruffle-graphics" disabled></select></label>
+            </div>
+            <p class="hint">
+              High quality and Automatic graphics are the defaults. Changes apply the next time you launch Ruffle.
+            </p>
+          </div>
+          <div class="pref">
+            <label class="check"
+              ><input type="checkbox" id="hide-launcher" disabled /> Hide the launcher during gameplay</label
+            >
+            <p class="hint">The launcher returns when the player exits.</p>
+          </div>
+          <button data-tool="settings">Open all settings ↗</button>
+        </section>
+        <p class="status" id="status" aria-live="polite"></p>
+        <footer class="footer">
+          <span>Your games. Your familiar tools.</span
+          ><button type="button" data-panel="preferences">Launcher preferences →</button>
+        </footer>
+      </main>
     </div>
-    <p id="status">The game opens in its own window. This window stays open, so the wiki and search stay usable.</p>
-    <label class="check"><input type="checkbox" id="hide-launcher"> Hide the launcher during gameplay</label>
-    <p class="hint" id="launcher-hint">Off by default, so this window stays open and the wiki and search stay usable. When checked, this window hides while a game is running and comes back when the player exits.</p>
-  </section>
-  <section class="sites">
-    <h2 id="sites-heading">Usefull Pages</h2>
-    <div id="site-buttons"></div>
-    <form id="wiki-search">
-      <input name="q" placeholder="Search the wiki…" autocomplete="off">
-    </form>
-    <form id="char-page" class="char-row">
-      <input name="character" placeholder="Character name" autocomplete="off" spellcheck="false">
-      <button type="submit">Char Page</button>
-    </form>
-  </section>
-  <section class="tools">
-    <h2>Windows</h2>
-    <div class="tool-grid">
-      <button type="button" data-tool="settings">Settings</button>
-      <button type="button" data-tool="reminders">Reminders</button>
-      <button type="button" data-tool="todo">To-Do</button>
-      <button type="button" data-tool="strategy">Strategy</button>
-      <button type="button" data-tool="inventory">Inventory</button>
-    </div>
-    <p class="hint">These windows open the same JSON files the Electron app uses for this profile.</p>
-  </section>
-  <section class="settings">
-    <h2>Ruffle</h2>
-    <div class="fields">
-      <label>Quality
-        <select id="ruffle-quality"></select>
-      </label>
-      <label>Graphics
-        <select id="ruffle-graphics"></select>
-      </label>
-    </div>
-    <p class="hint">High quality and Automatic graphics are the defaults. Low turns off anti-aliasing and is faster on weak GPUs. If a backend crashes right after launch, the game retries once with OpenGL on Linux/Windows or Metal on macOS. Applies the next time you press Play (Ruffle).</p>
-  </section>
-</main>
-<script src="main.js"></script>
-</body>
+    <script src="main.js"></script>
+  </body>
 </html>

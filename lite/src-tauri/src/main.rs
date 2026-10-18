@@ -950,39 +950,14 @@ mod tests {
     }
 
     #[test]
-    fn dragonfable_button_stays_off_the_smoke_colors() {
+    fn obsolete_testing_is_absent_from_the_launcher_and_manifest() {
         let ui = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../ui");
         let html = std::fs::read_to_string(ui.join("index.html")).unwrap();
-        let css = std::fs::read_to_string(ui.join("style.css")).unwrap();
-        let js = std::fs::read_to_string(ui.join("main.js")).unwrap();
         assert!(!html.contains("data-movie=\"testing\""));
         let game = include_str!("../games/adventure-quest-worlds.json");
         assert!(!game.contains("play-testing"));
         assert!(!game.contains("newTest"));
         assert!(!game.contains("Alt+Q"));
-        assert!(html.contains("data-movie=\"dragonfable\""));
-        for line in html.lines() {
-            if line.contains("data-movie") {
-                assert!(!line.contains("data-engine"), "{line}");
-            }
-        }
-        assert!(html.contains("data-engine=\"ruffle\""));
-        assert!(html.contains("data-engine=\"flash\""));
-        assert!(css.contains(".sites button, .movies button { background: #2a9d8f; }"));
-        assert!(css.contains("background: #4361ee"));
-        assert!(css.contains("button.primary { background: #f4a261;"));
-        let teal = (0x2a_i32, 0x9d_i32, 0x8f_i32);
-        for (name, target) in [("orange", (244, 162, 97)), ("blue", (67, 97, 238))] {
-            let dr = teal.0 - target.0;
-            let dg = teal.1 - target.1;
-            let db = teal.2 - target.2;
-            assert!(
-                dr * dr + dg * dg + db * db > 36 * 36,
-                "teal matches the smoke {name} finder"
-            );
-        }
-        assert!(js.contains("movie: 'primary'"));
-        assert!(js.contains("movie: button.dataset.movie"));
     }
 
     #[test]
@@ -1017,7 +992,6 @@ mod tests {
             assert!(!text.contains(&lite), "{text}");
         }
         assert!(visible[3].contains("<title>AquaStar</title>"));
-        assert!(visible[3].contains("<h1>AquaStar</h1>"));
         assert!(visible[4].contains("PLAYER_TITLE: &str = \"AquaStar\""));
         assert!(visible[2].lines().any(|line| line == "Name=AquaStar"));
         assert!(visible[7].contains("<string>AquaStar</string>"));

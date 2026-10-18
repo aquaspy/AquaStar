@@ -2,150 +2,215 @@ const { invoke } = window.__TAURI__.core;
 const status = document.getElementById('status');
 const hideLauncher = document.getElementById('hide-launcher');
 const launcherHint = document.getElementById('launcher-hint');
-let preferred = null;
-let hideTouched = false;
+const playerSelect = document.getElementById('engine-select');
+const playButton = document.getElementById('play-now');
+const panels = {
+  play: { title: 'Ready to play' },
+  tools: { title: 'Tools' },
+  links: { title: 'Useful Pages' },
+  preferences: { title: 'Preferences' }
+};
+const games = {
+  primary: { title: 'AdventureQuest Worlds' },
+  dragonfable: { title: 'DragonFable' }
+};
+const launcher = { game: 'primary', engines: [], selectedEngine: null, phase: 'loading' };
 
-function describeLauncher() {
-  const behavior = hideLauncher.checked
-    ? 'This window hides while a game is running and comes back when the player exits.'
-    : 'This window stays open while a game is running, so the wiki and search stay usable.';
-  const who = preferred === 'flash'
-    ? 'Flash is the default player. '
-    : preferred === 'ruffle'
-      ? 'Ruffle is the default player. '
-      : '';
-  status.textContent = `${who}The game opens in its own window. ${behavior}`;
-  launcherHint.textContent = hideLauncher.checked
-    ? 'This window hides while a game is running and comes back when the player exits.'
-    : 'Off by default, so this window stays open and the wiki and search stay usable. When checked, this window hides while a game is running and comes back when the player exits.';
+function message(text, error = false) {
+  status.textContent = text;
+  status.dataset.error = String(error);
 }
-
-invoke('engines').then((list) => {
-  for (const [engine, ok] of list) {
-    const b = document.querySelector(`[data-engine="${engine}"]`);
-    if (b && !ok) { b.disabled = true; b.title = 'Not available on this system'; }
-  }
-  return invoke('preferred_engine');
-}).then((engine) => {
-  preferred = engine;
-  const b = document.querySelector(`[data-engine="${engine}"]`);
-  if (b && !b.disabled) b.classList.add('primary');
-  describeLauncher();
-  document.querySelectorAll('[data-movie]').forEach((button) => {
-    if (!engine) {
-      button.disabled = true;
-      button.title = 'Not available on this system';
-      return;
-    }
-    button.addEventListener('click', async () => {
-      status.textContent = `Starting ${button.dataset.movie}…`;
-      try {
-        status.textContent = await invoke('play', { engine, movie: button.dataset.movie });
-      } catch (e) { status.textContent = `Error: ${e}`; }
-    });
+function failure(error) {
+  message(`Error: ${error}`, true);
+}
+function describeLauncher() {
+  launcherHint.textContent = hideLauncher.checked
+    ? 'The launcher hides during gameplay and returns when the player exits.'
+    : 'The launcher stays open so your tools and wiki remain within reach.';
+}
+function renderLaunch() {
+  const pending = launcher.phase === 'launching';
+  playButton.disabled = launcher.phase === 'loading' || pending || !launcher.selectedEngine;
+  playButton.textContent = pending ? 'Opening player…' : 'Play now ↗';
+  playerSelect.disabled = launcher.phase === 'loading' || pending || !launcher.engines.length;
+  document.querySelectorAll('[data-game]').forEach((button) => {
+    button.disabled = pending;
+    button.setAttribute('aria-pressed', String(button.dataset.game === launcher.game));
+  });
+  document.getElementById('game-title').textContent = games[launcher.game].title;
+}
+function showPanel(name) {
+  if (!panels[name]) return;
+  document.querySelectorAll('.panel').forEach((panel) => {
+    panel.hidden = panel.id !== name;
+  });
+  document.querySelectorAll('.nav-button').forEach((button) => {
+    if (button.dataset.panel === name) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+  document.getElementById('page-title').textContent = panels[name].title;
+}
+document.querySelectorAll('[data-panel]').forEach((button) => {
+  button.addEventListener('click', () => showPanel(button.dataset.panel));
+});
+document.querySelectorAll('[data-game]').forEach((button) => {
+  button.addEventListener('click', () => {
+    if (launcher.phase === 'launching' || !games[button.dataset.game]) return;
+    launcher.game = button.dataset.game;
+    renderLaunch();
   });
 });
+playerSelect.addEventListener('change', () => {
+  if (launcher.phase === 'launching') return;
+  launcher.selectedEngine = launcher.engines.includes(playerSelect.value) ? playerSelect.value : null;
+  renderLaunch();
+});
+playButton.addEventListener('click', async () => {
+  if (playButton.disabled || launcher.phase === 'launching') return;
+  launcher.phase = 'launching';
+  renderLaunch();
+  message(`Opening ${games[launcher.game].title}…`);
+  try {
+    message(await invoke('play', { engine: launcher.selectedEngine, movie: launcher.game }));
+  } catch (error) {
+    failure(error);
+  } finally {
+    launcher.phase = 'ready';
+    renderLaunch();
+  }
+});
+async function loadEngines() {
+  try {
+    const list = await invoke('engines');
+    launcher.engines = list.filter((entry) => entry[1]).map((entry) => entry[0]);
+    const preferred = await invoke('preferred_engine').catch((error) => {
+      failure(error);
+      return null;
+    });
+    launcher.selectedEngine = launcher.engines.includes(preferred) ? preferred : launcher.engines[0] || null;
+    playerSelect.replaceChildren();
+    for (const engine of launcher.engines) {
+      const option = document.createElement('option');
+      option.value = engine;
+      option.textContent =
+        (engine === 'ruffle' ? 'Ruffle' : 'Flash Player') + (engine === preferred ? ' · default' : '');
+      playerSelect.appendChild(option);
+    }
+    if (launcher.selectedEngine) playerSelect.value = launcher.selectedEngine;
+    else message('No supported player is available on this system.', true);
+  } catch (error) {
+    failure(error);
+  } finally {
+    launcher.phase = 'ready';
+    renderLaunch();
+  }
+}
+loadEngines();
 
-invoke('launcher_settings').then((settings) => {
-  if (hideTouched) return;
-  hideLauncher.checked = settings.hideLauncher;
-  describeLauncher();
-}).catch((e) => { status.textContent = `Error: ${e}`; });
-
+invoke('launcher_settings')
+  .then((settings) => {
+    hideLauncher.checked = settings.hideLauncher;
+    hideLauncher.disabled = false;
+    describeLauncher();
+  })
+  .catch(failure);
 hideLauncher.addEventListener('change', async () => {
-  hideTouched = true;
+  hideLauncher.disabled = true;
   try {
     const settings = await invoke('set_hide_launcher', { hide: hideLauncher.checked });
     hideLauncher.checked = settings.hideLauncher;
     describeLauncher();
-  } catch (e) { status.textContent = `Error: ${e}`; }
+  } catch (error) {
+    hideLauncher.checked = !hideLauncher.checked;
+    failure(error);
+  } finally {
+    hideLauncher.disabled = false;
+  }
 });
 
-document.querySelectorAll('[data-engine]').forEach((b) => b.addEventListener('click', async () => {
-  status.textContent = `Starting ${b.dataset.engine}…`;
-  try { status.textContent = await invoke('play', { engine: b.dataset.engine, movie: 'primary' }); }
-  catch (e) { status.textContent = `Error: ${e}`; }
-}));
-
-document.querySelectorAll('[data-tool]').forEach((button) => button.addEventListener('click', () => {
-  invoke('open_tool', { name: button.dataset.tool }).catch((e) => { status.textContent = `Error: ${e}`; });
-}));
-
-const openSite = (label, url, title) => invoke('open_site', { label, url, title }).catch((e) => { status.textContent = `Error: ${e}`; });
-let charpageUrl = 'https://account.aq.com/CharPage';
-invoke('get_shell_pages').then((shell) => {
-  const heading = document.getElementById('sites-heading');
-  if (heading && shell.heading) heading.textContent = shell.heading;
-  const mount = document.getElementById('site-buttons');
-  for (const group of shell.groups || []) {
-    const grid = document.createElement('div');
-    grid.className = group.label ? 'more-grid' : 'pair';
-    for (const page of group.pages || []) {
-      if (page.id === 'charpage') charpageUrl = page.url;
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = page.label;
-      button.addEventListener('click', () => openSite(page.id, page.url, page.label));
-      grid.appendChild(button);
-    }
-    if (group.label) {
+document.querySelectorAll('[data-tool]').forEach((button) =>
+  button.addEventListener('click', () => {
+    invoke('open_tool', { name: button.dataset.tool }).catch(failure);
+  })
+);
+const openSite = (label, url, title) => invoke('open_site', { label, url, title }).catch(failure);
+let charpageUrl = null;
+const characterButton = document.querySelector('#char-page button');
+characterButton.disabled = true;
+invoke('get_shell_pages')
+  .then((shell) => {
+    const mount = document.getElementById('site-buttons');
+    for (const group of shell.groups || []) {
       const block = document.createElement('div');
-      block.className = 'more';
-      const title = document.createElement('h3');
-      title.textContent = group.label;
-      block.appendChild(title);
+      block.className = 'site-group';
+      if (group.label) {
+        const heading = document.createElement('h3');
+        heading.textContent = group.label;
+        block.appendChild(heading);
+      }
+      const grid = document.createElement('div');
+      grid.className = 'site-grid';
+      for (const page of group.pages || []) {
+        if (page.id === 'charpage') charpageUrl = page.url;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = page.label;
+        button.addEventListener('click', () => openSite(page.id, page.url, page.label));
+        grid.appendChild(button);
+      }
       block.appendChild(grid);
       mount.appendChild(block);
-    } else {
-      mount.appendChild(grid);
     }
-  }
-}).catch((e) => { status.textContent = `Error: ${e}`; });
-document.getElementById('wiki-search').addEventListener('submit', (ev) => {
-  ev.preventDefault();
-  const q = ev.target.q.value.trim();
-  if (q) openSite('wiki', 'https://aqwwiki.wikidot.com/search:site/q/' + encodeURIComponent(q), 'AQW Wiki');
+    characterButton.disabled = !charpageUrl;
+  })
+  .catch(failure);
+document.getElementById('wiki-search').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const query = event.target.q.value.trim();
+  if (query) openSite('wiki', 'https://aqwwiki.wikidot.com/search:site/q/' + encodeURIComponent(query), 'AQW Wiki');
 });
-document.getElementById('char-page').addEventListener('submit', (ev) => {
-  ev.preventDefault();
-  const name = ev.target.character.value.trim().replace(/[^a-zA-Z0-9]/g, '');
-  const url = name ? charpageUrl + '?id=' + encodeURIComponent(name) : charpageUrl;
-  openSite('charpage', url, 'Charpages');
+document.getElementById('char-page').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!charpageUrl) return;
+  const name = event.target.character.value.trim().replace(/[^a-zA-Z0-9]/g, '');
+  openSite('charpage', name ? charpageUrl + '?id=' + encodeURIComponent(name) : charpageUrl, 'Charpages');
 });
-
 const qualitySelect = document.getElementById('ruffle-quality');
 const graphicsSelect = document.getElementById('ruffle-graphics');
-
-function fillSelect(el, choices, current) {
-  el.replaceChildren();
-  for (const c of choices) {
-    const o = document.createElement('option');
-    o.value = c.id;
-    o.textContent = c.label;
-    el.appendChild(o);
+let savedRuffleSettings = null;
+function fillSelect(element, choices, current) {
+  element.replaceChildren();
+  for (const choice of choices) {
+    const option = document.createElement('option');
+    option.value = choice.id;
+    option.textContent = choice.label;
+    element.appendChild(option);
   }
-  el.value = current;
+  element.value = current;
 }
-
-let applying = false;
-function showSettings(s) {
-  applying = true;
-  fillSelect(qualitySelect, s.qualities, s.ruffleQuality);
-  fillSelect(graphicsSelect, s.graphicsChoices, s.ruffleGraphics);
-  applying = false;
+function showSettings(settings) {
+  savedRuffleSettings = settings;
+  fillSelect(qualitySelect, settings.qualities, settings.ruffleQuality);
+  fillSelect(graphicsSelect, settings.graphicsChoices, settings.ruffleGraphics);
+  qualitySelect.disabled = false;
+  graphicsSelect.disabled = false;
 }
-
-invoke('ruffle_settings').then(showSettings).catch((e) => { status.textContent = `Error: ${e}`; });
-
+invoke('ruffle_settings').then(showSettings).catch(failure);
 async function saveSettings() {
-  if (applying) return;
+  qualitySelect.disabled = true;
+  graphicsSelect.disabled = true;
   try {
-    showSettings(await invoke('set_ruffle_settings', {
-      quality: qualitySelect.value,
-      graphics: graphicsSelect.value,
-    }));
-  } catch (e) { status.textContent = `Error: ${e}`; }
+    showSettings(
+      await invoke('set_ruffle_settings', {
+        quality: qualitySelect.value,
+        graphics: graphicsSelect.value
+      })
+    );
+    message('Ruffle preferences saved. They apply the next time you launch a game.');
+  } catch (error) {
+    if (savedRuffleSettings) showSettings(savedRuffleSettings);
+    failure(error);
+  }
 }
-
 qualitySelect.addEventListener('change', saveSettings);
 graphicsSelect.addEventListener('change', saveSettings);

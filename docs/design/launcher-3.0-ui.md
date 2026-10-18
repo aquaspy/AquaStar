@@ -1,8 +1,8 @@
 # Launcher AquaStar 3.0
 
-Status: proposta para revisão. A interface do aplicativo ainda não foi alterada.
+Status: implementado no launcher Tauri em `lite/ui/`. A prévia original permanece como referência visual.
 
-A interface padrão e a prévia usam inglês (en-US), conforme solicitado pelo usuário. O idioma desta documentação não define o idioma do produto. Português fica disponível pela localização existente.
+A interface padrão e a prévia usam inglês (en-US), conforme solicitado pelo usuário. O idioma desta documentação não define o idioma do produto. Os menus nativos e as ferramentas mantêm sua localização existente; os novos textos do launcher usam inglês.
 
 ## Objetivo
 
@@ -12,7 +12,7 @@ Dar destaque ao jogo e reduzir a quantidade de controles disputando atenção. O
 
 Azul profundo no fundo, superfícies com diferenças discretas de luminosidade e ciano para navegação e foco. O botão principal usa o laranja atual, com texto escuro. O logo existente identifica o produto; nenhuma fonte, imagem ou biblioteca externa é necessária. Não há animação contínua, vídeo de fundo, blur nem transparência da janela.
 
-A prévia está em [launcher-3.0-preview.html](launcher-3.0-preview.html). Ela permite navegar entre as áreas e trocar o jogo selecionado. Seus controles não chamam comandos do aplicativo.
+A prévia original está em [launcher-3.0-preview.html](launcher-3.0-preview.html). O aplicativo real usa os comandos existentes para jogar, abrir ferramentas e sites e salvar preferências.
 
 ## Organização
 
@@ -61,3 +61,9 @@ O status deve usar `aria-live="polite"`. Erros permanecem visíveis e não depen
 Embedding de player, alterações nos SWFs, novos sistemas de login, notícias remotas, telemetria, sincronização extra e substituição dos arquivos de perfil. A correção de dimensionamento do Flash na linha Electron 2.1.1-rc deve permanecer independente desta interface.
 
 A instância AQW Testing foi removida por ser obsoleta. Não aparece em botões, menus, preferências ou ajuda, e Alt+Q deixa de ter essa ação nas linhas 2.x e 3.x.
+
+## Verificação da implementação
+
+Em 17 de outubro de 2026, a interface real passou por um teste de interação no WebKitGTK 2.52, com respostas locais para os comandos Tauri. O teste verificou seleção de jogo e player, prevenção de lançamentos duplicados, recuperação após erro, ferramentas, grupos de páginas, pesquisa e preferências. Também verificou a ausência de rolagem horizontal nas quatro áreas, a 900 px e com zoom de 200%, além da página inicial em larguras de 640 e 400 px e zoom de 125% e 150%.
+
+O executável release também abriu com os comandos Tauri reais em um perfil temporário separado. A captura dessa execução está em [launcher-3.0-implemented.png](launcher-3.0-implemented.png). A build local usa o perfil release e os players fixados no manifesto. O teste de interface com respostas locais não substitui login, jogo e sincronização com a conta. A validação visual em WKWebView/macOS e WebView2/Windows permanece necessária antes da stable.
