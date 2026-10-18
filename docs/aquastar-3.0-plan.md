@@ -253,3 +253,7 @@ The user authorized the agreed branch cleanup and file organization before stabl
 - The remote now has only `main`, `dev`, `2.x`, `2.x-dev`, and the explicitly preserved `cursor/electron-mac-zip-symlinks-99c5`.
 - `main`, existing tags, and GitHub Latest were unchanged. No stable release was published. The merge and stable publication still require their separate explicit approvals.
 - The [repository map](REPOSITORY.md) documents source, shared assets, examples, documentation, and generated files. Local builds, SDK, worktrees, backups, and reports are grouped in the sibling `AquaStar-workspace/` directory. The previous local-build path remains a compatibility link.
+
+## Candidate releases authorized, 17 October 2026
+
+The user requested the updated public README and fresh pre-releases for both maintained lines before production testing. The next candidates are `v3.0.0-rc.2` from `dev` and `v2.1.1-rc.8` from `2.x-dev`. The existing `v2.1.0` pre-release and earlier tags remain unchanged. The README can be updated on the default branch without merging the application changes. Stable tags, promotion to production, and changing Latest remain outside this authorization.
