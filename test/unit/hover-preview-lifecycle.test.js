@@ -81,7 +81,7 @@ async function settle() {
   for (let i = 0; i < 15; i++) await Promise.resolve();
 }
 for (const file of [
-  'lite/ui/wiki/hoverPreview.js',
+  'desktop/ui/wiki/hoverPreview.js',
   'plugins/adventure-quest-worlds/features/wikiview/hoverPreview.js'
 ]) {
   test(file + ': latest hover wins, including reverse request completion', async () => {

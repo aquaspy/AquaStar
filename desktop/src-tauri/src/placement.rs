@@ -411,14 +411,14 @@ mod tests {
 
     #[test]
     fn release_workflow_publishes_the_portable_zip() {
-        let yml = include_str!("../../../.github/workflows/lite-release.yml");
+        let yml = include_str!("../../../.github/workflows/desktop-release.yml");
         assert!(yml.contains("portable.txt"));
-        assert!(yml.contains("AquaStar.Lite_"));
+        assert!(yml.contains("AquaStar_"));
         assert!(yml.contains("_x64-portable.zip"));
         assert!(yml.contains("gh release upload"));
         assert!(yml.contains("prerelease: ${{ needs.gate.outputs.kind != 'stable' }}"));
-        assert!(yml.contains("aquastar-lite-windows-portable"));
-        assert!(yml.contains("lite/src-tauri/target/release/AquaStar.Lite_"));
+        assert!(yml.contains("aquastar-desktop-windows-portable"));
+        assert!(yml.contains("desktop/src-tauri/target/release/AquaStar_"));
         assert!(!yml
             .lines()
             .any(|line| line.contains("bundle/nsis") && line.contains("portable")));
@@ -433,9 +433,9 @@ mod tests {
             .find(|line| line.contains("tar.exe"))
             .expect("portable tar.exe");
         assert!(tar_line.contains("players"), "{tar_line}");
-        let fetch = yml.find("lite/scripts/fetch-players.sh").expect("fetch sh");
+        let fetch = yml.find("desktop/scripts/fetch-players.sh").expect("fetch sh");
         let fetch_ps = yml
-            .find("lite/scripts/fetch-players.ps1")
+            .find("desktop/scripts/fetch-players.ps1")
             .expect("fetch ps1");
         let mut actions = yml.match_indices("tauri-apps/tauri-action");
         let first = actions.next().expect("first tauri-action").0;
@@ -445,17 +445,17 @@ mod tests {
         assert!(yml.contains("v3.*-*"));
         assert!(yml.contains("needs.gate.outputs.publish == 'true'"));
         assert!(!yml.contains("startsWith(github.ref, 'refs/tags/lite-v')"));
-        assert!(yml.contains("lite/scripts/finish-macos-app.sh"));
+        assert!(yml.contains("desktop/scripts/finish-macos-app.sh"));
         assert!(include_str!("../../scripts/finish-macos-app.sh")
             .contains("codesign --force --deep -s -"));
     }
 
     #[test]
     fn smoke_workflow_launches_the_release_artifacts() {
-        let yml = include_str!("../../../.github/workflows/lite-smoke.yml");
+        let yml = include_str!("../../../.github/workflows/desktop-smoke.yml");
         assert!(yml.contains("workflow_dispatch"));
         assert!(yml.contains("workflow_run"));
-        assert!(yml.contains("AquaStar Lite Release"));
+        assert!(yml.contains("AquaStar Desktop Release"));
         assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'lite-v')"));
         assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'v3.')"));
         assert!(!yml.contains("contains(github.event.workflow_run.head_branch, '-')"));
@@ -487,14 +487,14 @@ mod tests {
         let windows = include_str!("../../scripts/smoke/install-windows.ps1");
         assert!(windows.contains("/S"));
         assert!(windows.contains("portable.zip"));
-        let release = include_str!("../../../.github/workflows/lite-release.yml");
-        assert!(release.contains("lite-smoke.yml"));
+        let release = include_str!("../../../.github/workflows/desktop-release.yml");
+        assert!(release.contains("desktop-smoke.yml"));
         assert!(release.contains("gh workflow run"));
     }
 
     #[test]
     fn check_workflow_fetches_players_after_cargo() {
-        let yml = include_str!("../../../.github/workflows/lite-check.yml");
+        let yml = include_str!("../../../.github/workflows/desktop-check.yml");
         let mut steps = Vec::new();
         for line in yml.lines() {
             if line.contains("cargo test")
@@ -560,7 +560,7 @@ mod tests {
 
     #[test]
     fn stable_v3_tag_publishes_and_stays_off_latest() {
-        let yml = include_str!("../../../.github/workflows/lite-release.yml");
+        let yml = include_str!("../../../.github/workflows/desktop-release.yml");
         assert!(yml.contains("- 'v3.*'"));
         assert!(yml.contains("kind=stable"));
         assert!(yml.contains("--prerelease=false --latest=false"));

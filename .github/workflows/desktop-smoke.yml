@@ -1,6 +1,6 @@
-name: AquaStar Lite Smoke
+name: AquaStar Desktop Smoke
 
-# Launches the real Lite release artifacts and checks that Play starts a
+# Launches the real desktop release artifacts and checks that Play starts a
 # player. Screenshots are for a person. A Cloudflare block or a blank login
 # is not a failure.
 #
@@ -20,17 +20,17 @@ on:
         default: ''
         type: string
   workflow_run:
-    workflows: ['AquaStar Lite Release']
+    workflows: ['AquaStar Desktop Release']
     types: [completed]
   push:
     branches: [dev]
     paths:
-      - .github/workflows/lite-smoke.yml
-      - lite/scripts/smoke/**
+      - .github/workflows/desktop-smoke.yml
+      - desktop/scripts/smoke/**
       - scripts/smoke/**
 
 concurrency:
-  group: lite-smoke-${{ github.ref }}
+  group: desktop-smoke-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -48,14 +48,16 @@ jobs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
-      - name: Choose the Lite release
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.event.inputs.tag || 'dev' }}
+      - name: Choose the desktop release
         id: tag
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
           INPUT_TAG: ${{ github.event.inputs.tag }}
           RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
-        run: bash lite/scripts/smoke/resolve-tag.sh
+        run: bash desktop/scripts/smoke/resolve-tag.sh
 
   smoke:
     needs: resolve
@@ -89,6 +91,8 @@ jobs:
             flash_arch: x86_64
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.event.inputs.tag || 'dev' }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -96,7 +100,7 @@ jobs:
         run: python -m pip install pillow
       - name: Button finder test
         run: |
-          python lite/scripts/smoke/test_buttons.py
+          python desktop/scripts/smoke/test_buttons.py
           python scripts/smoke/test_electron_mac.py
       - name: Download the release
         env:
@@ -104,18 +108,18 @@ jobs:
           TAG: ${{ needs.resolve.outputs.tag }}
           PACKAGE: ${{ matrix.package }}
         shell: bash
-        run: bash lite/scripts/smoke/download.sh
+        run: bash desktop/scripts/smoke/download.sh
       - name: Install on Linux or macOS
         if: runner.os != 'Windows'
         env:
           PACKAGE: ${{ matrix.package }}
-        run: bash lite/scripts/smoke/install-unix.sh
+        run: bash desktop/scripts/smoke/install-unix.sh
       - name: Install on Windows
         if: runner.os == 'Windows'
         env:
           PACKAGE: ${{ matrix.package }}
         shell: pwsh
-        run: ./lite/scripts/smoke/install-windows.ps1
+        run: ./desktop/scripts/smoke/install-windows.ps1
       - name: How this job is judged
         shell: bash
         run: |
@@ -130,13 +134,13 @@ jobs:
           AQUASTAR_LITE_SMOKE: flash
           SMOKE_ARCH: ${{ matrix.flash_arch }}
         shell: bash
-        run: python -u lite/scripts/smoke/drive.py --engine flash --binary "$AQUASTAR_LITE_BIN" --out smoke-out/flash --arch "${SMOKE_ARCH:-}"
+        run: python -u desktop/scripts/smoke/drive.py --engine flash --binary "$AQUASTAR_LITE_BIN" --out smoke-out/flash --arch "${SMOKE_ARCH:-}"
       - name: Play Ruffle
         if: always()
         env:
           AQUASTAR_LITE_SMOKE: ruffle
         shell: bash
-        run: python -u lite/scripts/smoke/drive.py --engine ruffle --binary "$AQUASTAR_LITE_BIN" --out smoke-out/ruffle --arch ""
+        run: python -u desktop/scripts/smoke/drive.py --engine ruffle --binary "$AQUASTAR_LITE_BIN" --out smoke-out/ruffle --arch ""
       - name: Upload Flash screenshot and log
         if: always()
         uses: actions/upload-artifact@v4
@@ -161,6 +165,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.event.inputs.tag || 'dev' }}
       - name: Judge the embed measurement
         run: python3 scripts/smoke/test_electron_mac.py
       - name: Launch the newest Electron mac zip

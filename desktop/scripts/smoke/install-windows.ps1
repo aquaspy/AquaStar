@@ -4,6 +4,8 @@ if (-not $pkg) { throw 'PACKAGE is not set' }
 
 function Find-Launcher {
   $candidates = @(
+    "$env:LOCALAPPDATA\AquaStar\aquastar-lite.exe",
+    "$env:LOCALAPPDATA\Programs\AquaStar\aquastar-lite.exe",
     "$env:LOCALAPPDATA\aquastar-lite\aquastar-lite.exe",
     "$env:LOCALAPPDATA\Programs\aquastar-lite\aquastar-lite.exe"
   )

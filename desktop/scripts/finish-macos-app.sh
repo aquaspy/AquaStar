@@ -2,8 +2,8 @@
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
-lite=$(cd "$here/.." && pwd)
-target="$lite/src-tauri/target"
+desktop=$(cd "$here/.." && pwd)
+target="$desktop/src-tauri/target"
 
 app=""
 while IFS= read -r candidate; do
@@ -13,10 +13,10 @@ while IFS= read -r candidate; do
   if [[ -z "$app" ]]; then
     app="$candidate"
   fi
-done < <(find "$target" -type d -name "aquastar-lite.app")
+done < <(find "$target" -type d -name "AquaStar.app")
 
 if [[ -z "$app" ]]; then
-  echo "aquastar-lite.app not found under $target" >&2
+  echo "AquaStar.app not found under $target" >&2
   exit 1
 fi
 
@@ -47,8 +47,8 @@ codesign --force --deep -s - "$app"
 bundle=$(cd "$(dirname "$app")/.." && pwd)
 dmg_dir="$bundle/dmg"
 mkdir -p "$dmg_dir"
-ver=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$lite/src-tauri/tauri.conf.json")
-dmg="$dmg_dir/AquaStar.Lite_${ver}_universal.dmg"
+ver=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$desktop/src-tauri/tauri.conf.json")
+dmg="$dmg_dir/AquaStar_${ver}_universal.dmg"
 stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
 cp -R "$app" "$stage/"

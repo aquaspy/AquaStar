@@ -968,11 +968,11 @@ mod tests {
         let cargo = read("Cargo.toml");
         let conf = read("tauri.conf.json");
         assert!(cargo.contains("name = \"aquastar-lite\""));
-        assert!(cargo.contains("version = \"3.0.0\""));
+        assert!(cargo.contains(&format!("version = \"{}\"", env!("CARGO_PKG_VERSION"))));
         assert!(!cargo.contains(&lite));
         let parsed: serde_json::Value = serde_json::from_str(&conf).unwrap();
-        assert_eq!(parsed["version"], "3.0.0");
-        assert_eq!(parsed["productName"], "aquastar-lite");
+        assert_eq!(parsed["version"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(parsed["productName"], "AquaStar");
         assert_eq!(parsed["mainBinaryName"], "aquastar-lite");
         assert_eq!(parsed["identifier"], "io.github.aquaspy.aquastar-lite");
         assert_eq!(parsed["app"]["windows"][0]["title"], "AquaStar");

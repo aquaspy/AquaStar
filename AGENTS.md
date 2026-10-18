@@ -1,6 +1,6 @@
 # AquaStar – Agent Notes
 
-AquaStar 3.0 is the Tauri launcher in `lite/` on `dev`. Read [`lite/README.md`](lite/README.md) for its build commands and [`docs/REPOSITORY.md`](docs/REPOSITORY.md) for the repository map. Electron 2.x is maintained separately on `2.x` and `2.x-dev`. The root Electron code remains here because 3.0 still consumes shared plugin assets; its commands and constraints below apply when working on that code.
+AquaStar 3.0 is the Tauri launcher in `desktop/` on `dev`. Read [`desktop/README.md`](desktop/README.md) for its build commands and [`docs/REPOSITORY.md`](docs/REPOSITORY.md) for the repository map. Electron 2.x is maintained separately on `2.x` and `2.x-dev`. The root Electron code remains here because 3.0 still consumes shared plugin assets; its commands and constraints below apply when working on that code.
 
 Game-specific Electron behavior lives in **plugins**; the bundled default is Adventure Quest Worlds (`plugins/adventure-quest-worlds/`).
 

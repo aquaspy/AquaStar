@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the downloaded Lite package and, on Linux, a virtual display.
+# Install the downloaded desktop package and, on Linux, a virtual display.
 set -euo pipefail
 
 pkg="${PACKAGE:?}"
@@ -60,17 +60,17 @@ case "$(uname -s)" in
     rm -rf "$mount"
     mkdir -p "$mount"
     hdiutil attach dist/*.dmg -nobrowse -mountpoint "$mount"
-    app=$(find "$mount" -maxdepth 2 -name 'aquastar-lite.app' -print -quit)
+    app=$(find "$mount" -maxdepth 2 \( -name 'AquaStar.app' -o -name 'aquastar-lite.app' \) -print -quit)
     if [ -z "$app" ]; then
-      echo "no aquastar-lite.app in the disk image" >&2
+      echo "no AquaStar.app in the disk image" >&2
       ls -la "$mount" >&2
       exit 1
     fi
-    rm -rf "$HOME/aquastar-lite.app"
-    cp -R "$app" "$HOME/aquastar-lite.app"
+    rm -rf "$HOME/AquaStar.app"
+    cp -R "$app" "$HOME/AquaStar.app"
     hdiutil detach "$mount"
-    xattr -cr "$HOME/aquastar-lite.app"
-    bin="$HOME/aquastar-lite.app/Contents/MacOS/aquastar-lite"
+    xattr -cr "$HOME/AquaStar.app"
+    bin="$HOME/AquaStar.app/Contents/MacOS/aquastar-lite"
     ;;
   *)
     echo "install-unix.sh does not install on $(uname -s)" >&2

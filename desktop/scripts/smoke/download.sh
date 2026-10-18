@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Download one real release asset. The smoke test does not build Lite.
+# Download one real release asset. The smoke test does not build the desktop app.
 set -euo pipefail
 
 tag="${TAG:?}"

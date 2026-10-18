@@ -2,9 +2,9 @@
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
-lite=$(cd "$here/.." && pwd)
-json="$lite/players.json"
-dest="$lite/src-tauri/players"
+desktop=$(cd "$here/.." && pwd)
+json="$desktop/players.json"
+dest="$desktop/src-tauri/players"
 mkdir -p "$dest"
 
 case "$(uname -s)" in

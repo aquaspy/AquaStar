@@ -1,8 +1,8 @@
 $ErrorActionPreference = "Stop"
 
-$lite = Split-Path -Parent $PSScriptRoot
-$jsonPath = Join-Path $lite "players.json"
-$dest = Join-Path $lite "src-tauri\players"
+$desktop = Split-Path -Parent $PSScriptRoot
+$jsonPath = Join-Path $desktop "players.json"
+$dest = Join-Path $desktop "src-tauri\players"
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
 $json = Get-Content -Raw $jsonPath | ConvertFrom-Json
 

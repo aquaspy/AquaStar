@@ -2,7 +2,7 @@
 
 **All implementation work on AquaStar 3.0 is done in pstack poteto-mode.** Use the pstack principles, and the pstack skills when a task calls for one.
 
-AquaStar 3.0 replaces the Electron app. People who want the old launcher stay on a maintained 2.x branch. The `lite/` tree becomes 3.0. The `lite-v0.2.0` pre-releases were the lab. Lite is not a separate product.
+AquaStar 3.0 replaces the Electron app. People who want the old launcher stay on a maintained 2.x branch. The `desktop/` tree becomes 3.0. The `lite-v0.2.0` pre-releases were the lab. Lite is not a separate product.
 
 ## Goals
 
@@ -47,9 +47,9 @@ The shell uses the operating system's webview. Windows uses WebView2, macOS uses
 
 The default player is the Artix custom `ruffle_desktop` 1.7.0 wherever Artix ships a build. Stock Ruffle covers the targets Artix does not build. The Flash projector 32.0.0.465 stays available where a build exists, and it is never the default.
 
-Artix builds are extracted from [ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip](https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip). The same directory has per-platform zips for windows-x64, macOS-arm64, and linux-x64. Current pins live in `lite/players.json`.
+Artix builds are extracted from [ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip](https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip). The same directory has per-platform zips for windows-x64, macOS-arm64, and linux-x64. Current pins live in `desktop/players.json`.
 
-`lite/players.json` already pins stock Ruffle 0.7.1 for macOS universal. The same GitHub release also publishes `windows-x86_32`, `linux-i686`, and `linux-aarch64`. Phase 1 adds those pins. That release has no Windows ARM desktop build.
+`desktop/players.json` already pins stock Ruffle 0.7.1 for macOS universal. The same GitHub release also publishes `windows-x86_32`, `linux-i686`, and `linux-aarch64`. Phase 1 adds those pins. That release has no Windows ARM desktop build.
 
 | Target | Default | Also available |
 | --- | --- | --- |
@@ -92,7 +92,7 @@ The Artix binary accepts `--title`, `--companion`, `--companion-name`, `--tcp-co
 
 ## Architecture
 
-3.0 grows out of `lite/`. The shell is a Tauri 2 window. The game is a separate process started with `std::process::Command`. The shell watches that process and closes it when the game window closes.
+3.0 grows out of `desktop/`. The shell is a Tauri 2 window. The game is a separate process started with `std::process::Command`. The shell watches that process and closes it when the game window closes.
 
 Each game is a JSON manifest. The manifest lists URLs, menu entries, player flags, and which first-party pages exist. Those pages ship with the app. They call a fixed set of Tauri commands. Each window has a capability file that allows only the commands that page needs. The shell ships its own pages and loads no outside plugin code.
 
@@ -108,7 +108,7 @@ Before the first commit that changes the product, cut `electron-2.x` from `dev`.
 
 Work lands on `dev` by direct commit. Do not open pull requests for 3.0 work.
 
-`release.yml` builds the Electron app for `v*` tags, and a stable `v*` tag can become Latest. The Tauri workflow builds `lite/` for `lite-v*` tags and publishes a prerelease. A 3.0 phase tag stays on the Tauri workflow. Do not push a `v*` tag for a 3.0 build while `release.yml` still owns that pattern.
+`release.yml` builds the Electron app for `v*` tags, and a stable `v*` tag can become Latest. The Tauri workflow builds `desktop/` for `lite-v*` tags and publishes a prerelease. A 3.0 phase tag stays on the Tauri workflow. Do not push a `v*` tag for a 3.0 build while `release.yml` still owns that pattern.
 
 Each finished phase is a pre-release. The smoke workflow has to pass on the tagged commit. Latest stays on the current stable release until the 3.0 final.
 
@@ -120,7 +120,7 @@ Each phase ends the same way. The smoke workflow passes, the phase is tagged as 
 
 ### 1. Player matrix
 
-Keep growing `lite/` into the 3.0 shell. Launch the Artix binary by default on Windows x64, Linux x64, and macOS arm64. Launch the stock binary on Windows x86, Linux i686, Linux aarch64, and Intel Mac. Keep the projector selectable and off by default. Carry over the live loader, custom SWF, custom URL, and DragonFable.
+Keep growing `desktop/` into the 3.0 shell. Launch the Artix binary by default on Windows x64, Linux x64, and macOS arm64. Launch the stock binary on Windows x86, Linux i686, Linux aarch64, and Intel Mac. Keep the projector selectable and off by default. Carry over the live loader, custom SWF, custom URL, and DragonFable.
 
 The check is that `cargo test` passes, smoke passes for an Artix launch on Linux x64, Windows x64, and macOS arm64, and a test launches the stock binary without `--title` and `--companion`.
 
@@ -157,7 +157,7 @@ Delete old unused branches only after listing them and getting the user's explic
 
 Inventory sync reported success and wrote no items. The account page now returns rows from `https://account.aq.com/AQW/InventoryData` as arrays (`Name xN`, type, code, Inv or Bank, Gold or AC, Free or Member, date). 3.0 was still calling `myapi/inventory/InventoryData` and treating `{ "data": [] }` as a finished sync. The button then said `AquaStar: Synced!`. Alpha.7 reads the account-page URL, still accepts the older object rows when that URL is empty, and refuses to write or report success when both lists have no named item. The inventory window also ships `inventory_worker.js`, which the page already starts. A saved array fixture covers the account-page shape.
 
-The stable tag path is prepared in `lite-release.yml` and is not executed. A `v3.0.0` tag publishes a release that is not a prerelease and is not Latest. A `v3.*-*` tag stays a prerelease and is not Latest. Electron's release workflow still ignores every `v3.` tag. Moving Latest, tagging `v3.0.0`, merging to `main`, and renaming or deleting branches each still need their own yes.
+The stable tag path is prepared in `desktop-release.yml` and is not executed. A `v3.0.0` tag publishes a release that is not a prerelease and is not Latest. A `v3.*-*` tag stays a prerelease and is not Latest. Electron's release workflow still ignores every `v3.` tag. Moving Latest, tagging `v3.0.0`, merging to `main`, and renaming or deleting branches each still need their own yes.
 
 Branches that stay:
 
@@ -180,7 +180,7 @@ Tips already contained in `dev` and `electron-2.x`:
 No shared history with `main`, `dev`, or `electron-2.x`. Deleting the branch drops those commits. A tag named below keeps the tip commit if the tag stays.
 
 - `1.10`. Old 1.10 line from August 2026. The `v1.10.*` tags are separate.
-- `aquastar-lite`. First Tauri proof of concept. The current `lite/` tree is on `dev`.
+- `aquastar-lite`. First Tauri proof of concept. The current `desktop/` tree is on `dev`.
 - `bump-2.1.1-rc.1`. Version-bump branch. `main` already carries the 2.1.1-rc.1 release.
 - `cursor/lite-port-plan-391a`. Early Lite port notes. The 3.0 plan replaced them. The branch still has text that is not in `electron-2.x`.
 - `cursor/lite-ruffle-settings-c45f`. Ruffle quality settings. Those settings are on `dev`.
@@ -229,7 +229,7 @@ Stable publication remains on hold for the performance and interface review. The
 
 ## Resolved decisions
 
-1. AquaStar 3.0 fully replaces the Electron app. The 2.x line stays maintained on `electron-2.x` for people who prefer the old launcher. `lite/` evolves into 3.0. The `lite-v0.2.0` pre-releases were the lab. Lite is not released as a separate product.
+1. AquaStar 3.0 fully replaces the Electron app. The 2.x line stays maintained on `electron-2.x` for people who prefer the old launcher. `desktop/` evolves into 3.0. The `lite-v0.2.0` pre-releases were the lab. Lite is not released as a separate product.
 2. Support as many desktop systems as the matrix above allows. The default player is the Artix custom `ruffle_desktop`, taken from the 1.7.0 ALL zip or the matching per-platform zip. Stock Ruffle covers Intel Mac, 32-bit, and ARM where a stock desktop build exists. The Flash projector remains an option where the platform has one, and it is never the default. PPAPI is dropped. There is no Android build. Windows 7, Windows 8.1, and macOS below 10.15 stay on 2.x unless a Tauri build is shown to run. WebView2 runtime 109 is the last runtime for Windows 7 and 8.1.
 3. Char Page Studio, Alt+K char page print, and screen recording, including F2 capture, are dropped for 3.0. Native MP4 recording of the standalone player window is a possible 3.1 item.
 4. The UI matches the Electron UI as closely as possible. No SWF is modified.
@@ -242,7 +242,7 @@ Stable publication remains on hold for the performance and interface review. The
 - WebView2 runtime 109 is the last runtime for Windows 7 and 8.1, per [Introduction to Microsoft Edge WebView2](https://learn.microsoft.com/en-us/microsoft-edge/webview2/).
 - The Artix player archive is [ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip](https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip).
 - Stock desktop builds are the `ruffle-rs/ruffle` release `v0.7.1`.
-- Player pins and the current macOS floor are `lite/players.json` and `lite/src-tauri/tauri.conf.json`.
+- Player pins and the current macOS floor are `desktop/players.json` and `desktop/src-tauri/tauri.conf.json`.
 
 ## Repository organization completed, 17 October 2026
 
@@ -257,3 +257,9 @@ The user authorized the agreed branch cleanup and file organization before stabl
 ## Candidate releases authorized, 17 October 2026
 
 The user requested the updated public README and fresh pre-releases for both maintained lines before production testing. The next candidates are `v3.0.0-rc.2` from `dev` and `v2.1.1-rc.8` from `2.x-dev`. The existing `v2.1.0` pre-release and earlier tags remain unchanged. The README can be updated on the default branch without merging the application changes. Stable tags, promotion to production, and changing Latest remain outside this authorization.
+
+## Desktop naming and candidate update, 17 October 2026
+
+The user requested renaming the active `lite/` source to `desktop/`, removing retired Tauri snapshots from the other branches, and deleting the previously preserved cursor branch. That branch tip is preserved in the verified pre-cleanup bundle. The final candidate tags for this revision are `v3.0.0-rc.3` and `v2.1.1-rc.9`; the already pushed `rc.2` and `rc.8` builds were canceled before publication when these changes were requested. Tags are retained as history, not moved.
+
+The public 3.x product name is AquaStar. Internal application identifiers and the existing binary name are retained to preserve profile/resource compatibility. Debian candidate control versions use the `~rc` form so that a later stable version sorts after its candidate. Public filenames identify the product, candidate, and architecture. The README compares the Artix/AE patched standalone player in 3.x with the browser Ruffle used in 2.x; Intel Mac uses the official standalone pin.

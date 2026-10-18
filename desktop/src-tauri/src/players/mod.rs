@@ -185,7 +185,7 @@ fn scrub_player_env(vars: Vec<(String, String)>) -> Vec<(String, String)> {
     out
 }
 
-/// GTK 2 libraries copied by `lite/scripts/bundle-flash-gtk2.sh` and packed into
+/// GTK 2 libraries copied by `desktop/scripts/bundle-flash-gtk2.sh` and packed into
 /// the AppImage. The deb uses the system packages instead, so this stays empty
 /// unless `APPDIR` is set.
 const FLASH_RUNTIME_DIR: &str = "usr/lib/aquastar-lite/flash-gtk2";

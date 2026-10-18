@@ -17,8 +17,8 @@
           "libegl1",
           "libfontconfig1"
         ],
-        "conflicts": ["aqua-star-lite"],
-        "replaces": ["aqua-star-lite"],
+        "conflicts": ["aquastar-lite", "aqua-star-lite"],
+        "replaces": ["aquastar-lite", "aqua-star-lite"],
         "desktopTemplate": "assets/aquastar-lite.desktop"
       }
     }

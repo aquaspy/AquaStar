@@ -1,6 +1,6 @@
 # Launcher AquaStar 3.0
 
-Status: implementado no launcher Tauri em `lite/ui/`. A prévia original permanece como referência visual.
+Status: implementado no launcher Tauri em `desktop/ui/`. A prévia original permanece como referência visual.
 
 A interface padrão e a prévia usam inglês (en-US), conforme solicitado pelo usuário. O idioma desta documentação não define o idioma do produto. Os menus nativos e as ferramentas mantêm sua localização existente; os novos textos do launcher usam inglês.
 
@@ -50,7 +50,7 @@ O status deve usar `aria-live="polite"`. Erros permanecem visíveis e não depen
 ## Implementação em etapas
 
 1. Revisar a prévia e escolher a organização visual antes de alterar o launcher real.
-2. Aplicar estrutura e estilos em `lite/ui/index.html` e `style.css`. Adaptar os seletores de `main.js` e preservar as chamadas existentes.
+2. Aplicar estrutura e estilos em `desktop/ui/index.html` e `style.css`. Adaptar os seletores de `main.js` e preservar as chamadas existentes.
 3. Integrar estados, traduções e ações. Validar cada ferramenta, link, preferência e comportamento de encerramento do player.
 4. Atualizar o smoke visual para localizar a ação principal sem depender de textos em inglês. Preservar a distinção atual entre os botões de abrir jogo e os links.
 5. Comparar abertura e memória do launcher antes/depois em builds release, com os mesmos players e perfil. Sem prometer ganho numérico a partir de uma prévia estática.

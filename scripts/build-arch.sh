@@ -92,6 +92,9 @@ fi
 
 cd "$WORKDIR"
 "${BUILD_ARGS[@]}"
+if [ "$PLATFORM" = "linux" ] && compgen -G "dist/*.deb" > /dev/null; then
+    python3 "$ROOT/scripts/normalize-deb-version.py" dist/*.deb
+fi
 
 mkdir -p "${ROOT}/dist"
 if compgen -G "dist/*" > /dev/null; then
