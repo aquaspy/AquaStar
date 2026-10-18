@@ -34,5 +34,14 @@ fn main() {
         tauri_build::Attributes::new()
             .app_manifest(tauri_build::AppManifest::new().commands(commands)),
     )
-    .expect("Tauri ACL build")
+    .expect("Tauri ACL build");
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows")
+        && std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc")
+    {
+        let manifest = std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
+            .join("examples/windows.manifest.xml");
+        println!("cargo:rerun-if-changed=examples/windows.manifest.xml");
+        println!("cargo:rustc-link-arg-examples=/MANIFEST:EMBED");
+        println!("cargo:rustc-link-arg-examples=/MANIFESTINPUT:{}", manifest.display());
+    }
 }
