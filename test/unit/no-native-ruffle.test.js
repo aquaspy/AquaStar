@@ -3,7 +3,16 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '../..');
-const skipDirs = new Set(['.git', 'node_modules', 'lite', 'dist', 'work', 'web-dist', 'squashfs-root', 'res/ruffle']);
+const skipDirs = new Set([
+  '.git',
+  'node_modules',
+  'desktop',
+  'dist',
+  'work',
+  'web-dist',
+  'squashfs-root',
+  'res/ruffle'
+]);
 const allowed = {
   'res/platform/settings-merge.js': new Set(['ruffle-native']),
   'test/unit/settings-merge.test.js': new Set(['ruffle-native', 'ruffleGraphics'])

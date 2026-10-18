@@ -1,6 +1,6 @@
 # AquaStar – Agent Notes
 
-This is the maintained AquaStar Electron 2.x line (`2.x` stable, `2.x-dev` development). Active Tauri 3.0 development is on `dev`; the `lite/` tree on this branch is historical. See [`docs/REPOSITORY.md`](docs/REPOSITORY.md) for the repository map.
+This is the maintained AquaStar Electron 2.x line (`2.x` stable, `2.x-dev` development). Active Tauri 3.0 development is on `dev`; the current Tauri source is in `desktop/` on that branch. Historical Tauri snapshots have been removed from this maintenance branch. See [`docs/REPOSITORY.md`](docs/REPOSITORY.md) for the repository map.
 
 Custom Electron 11 Flash (PPAPI) companion shell. Game-specific behavior lives in **plugins**; the bundled default is Adventure Quest Worlds (`plugins/adventure-quest-worlds/`).
 

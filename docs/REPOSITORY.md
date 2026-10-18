@@ -1,6 +1,6 @@
 # Repository map
 
-This is the maintained Electron 2.x source tree. Use `2.x-dev` for maintenance development and `2.x` for its stable line. Current Tauri 3.0 development lives on `dev`; the `lite/` snapshot on this branch is historical.
+This is the maintained Electron 2.x source tree. Use `2.x-dev` for maintenance development and `2.x` for its stable line. Current Tauri 3.0 development lives on `dev`; the active code is in `desktop/` on that branch. Historical Tauri snapshots were removed from this maintenance branch.
 
 | Path | Purpose |
 | --- | --- |
@@ -9,7 +9,6 @@ This is the maintained Electron 2.x source tree. Use `2.x-dev` for maintenance d
 | `FlashPlayer/`, `Icon/`, `build/` | Runtime Flash binaries and packaging resources; `build/` contains source-controlled icons |
 | `scripts/` | Build and verification tooling; `build-all-arch.sh` is the legacy multi-architecture entry point |
 | `test/` | Regression tests and fixtures |
-| `lite/` | Historical Tauri snapshot; use `dev` for current 3.0 work |
 | `docs/` | Guides, plans, and historical documentation |
 | `docs/design/icon-sources/` | Editable Krita logo sources |
 | `docs/examples/aquastar.json` | Example profile; real profiles belong in application data |
@@ -24,7 +23,6 @@ The root runtime and plugin paths remain intact. The 3.0 branch also consumes sh
 - `dev`: 3.x development.
 - `2.x`: maintained 2.x stable line, renamed from `electron-2.x`.
 - `2.x-dev`: 2.x development.
-- `cursor/electron-mac-zip-symlinks-99c5`: preserved exception with maintenance commits pending review.
 
 The agreed branch cleanup was authorized. File organization does not authorize a release tag, a change to GitHub Latest, or a merge into `main`. Those release actions remain pending explicit approval.
 
