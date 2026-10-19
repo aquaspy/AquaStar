@@ -418,7 +418,11 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
                         "The game was minimized. The completed portion has been saved.".into(),
                     );
                 }
-                let frame = source.frame()?;
+                let frame = match source.frame() {
+                    Ok(frame) => frame,
+                    Err(_) if state.0.stop.load(Ordering::SeqCst) => break,
+                    Err(error) => return Err(error),
+                };
                 while frames <= due {
                     encoder.write(&frame)?;
                     frames += 1;

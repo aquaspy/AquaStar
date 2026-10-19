@@ -18,9 +18,9 @@ if ! command -v cargo >/dev/null; then
   exit 1
 fi
 if [[ $(uname -s) == Linux ]]; then
-  if ! pkg-config --exists webkit2gtk-4.1 gtk+-3.0 dbus-1; then
+  if ! pkg-config --exists webkit2gtk-4.1 gtk+-3.0 dbus-1 libpipewire-0.3 libspa-0.2 libpulse; then
     echo 'Install the Linux build dependencies first:' >&2
-    echo 'sudo apt-get install -y build-essential pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libdbus-1-dev' >&2
+    echo 'sudo apt-get install -y build-essential pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libdbus-1-dev libpipewire-0.3-dev libspa-0.2-dev libpulse-dev libclang-dev nasm' >&2
     exit 1
   fi
 fi
@@ -31,7 +31,8 @@ media_arch=$(uname -m)
 case "$media_arch" in arm64|aarch64) media_arch=aarch64;; amd64|x86_64) media_arch=x86_64;; esac
 media_suffix=
 [[ "$media_os" != windows ]] || media_suffix=.exe
-if [[ ! -f "media/ffmpeg-${media_os}-${media_arch}${media_suffix}" ]]; then
+media_binary="media/ffmpeg-${media_os}-${media_arch}${media_suffix}"
+if [[ ! -f "$media_binary" || ../scripts/build-media.py -nt "$media_binary" || ( "$media_os" == macos && ../native/capture-macos.swift -nt "media/capture-${media_os}-${media_arch}" ) ]]; then
   python3 ../scripts/build-media.py
 fi
 cargo "${args[@]}"

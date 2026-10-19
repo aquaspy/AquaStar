@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import platform
 import shutil
+import sys
 import subprocess
 import tarfile
 import urllib.request
@@ -78,7 +79,13 @@ def main():
         options += [f'--arch={arch}',f'--cc=clang -arch {arch}',f'--cxx=clang++ -arch {arch}', '--enable-cross-compile', '--target-os=darwin']
     if host == 'windows':
         options += ['--target-os=mingw32', '--extra-ldexeflags=-static']
-    run(['bash','configure',*options],sources['ffmpeg'],env)
+    bash = 'bash'
+    if host == 'windows':
+        msys_bash = Path(sys.executable).resolve().parents[2] / 'usr/bin/bash.exe'
+        if not msys_bash.is_file():
+            raise RuntimeError('Run the Windows media build using the MSYS2 MINGW64 Python toolchain.')
+        bash = str(msys_bash)
+    run([bash,'configure',*options],sources['ffmpeg'],env)
     run(['make','-j'+jobs],sources['ffmpeg'],env)
     destination = ROOT / 'src-tauri/media'
     destination.mkdir(exist_ok=True)

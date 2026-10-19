@@ -43,3 +43,6 @@ x11rb = { version = "0.13.2", features = ["composite"] }
 [target.'cfg(target_os = "windows")'.dependencies]
 wasapi = "=0.23.0"
 windows-capture = "=1.5.0"
+
+[patch.crates-io]
+libspa = { path = "../vendor/libspa" }

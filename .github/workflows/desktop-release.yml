@@ -82,7 +82,7 @@ jobs:
         with:
           msystem: MINGW64
           update: true
-          install: make nasm pkgconf mingw-w64-x86_64-gcc mingw-w64-x86_64-python mingw-w64-x86_64-pkgconf
+          install: make nasm pkgconf git mingw-w64-x86_64-gcc mingw-w64-x86_64-python mingw-w64-x86_64-pkgconf
       - name: Build offline recording component
         if: runner.os != 'Windows'
         run: |
