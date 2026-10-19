@@ -309,6 +309,29 @@ pub fn save_game_engine(dir: &Path, key: &str, engine: &str) -> Result<(), Strin
     write_settings(dir, &map)
 }
 
+/// Game opened at start-up instead of the launcher: (plugin id, game id).
+pub fn load_startup(dir: &Path) -> Option<(String, String)> {
+    let map = settings_object(dir);
+    let startup = map.get("startup")?;
+    let plugin = startup.get("plugin")?.as_str()?;
+    let game = startup.get("game")?.as_str()?;
+    (!plugin.is_empty() && !game.is_empty()).then(|| (plugin.to_string(), game.to_string()))
+}
+
+/// `None` goes back to showing the launcher.
+pub fn save_startup(dir: &Path, target: Option<(&str, &str)>) -> Result<(), String> {
+    let mut map = settings_object(dir);
+    match target {
+        Some((plugin, game)) => {
+            map.insert("startup".into(), serde_json::json!({ "plugin": plugin, "game": game }));
+        }
+        None => {
+            map.remove("startup");
+        }
+    }
+    write_settings(dir, &map)
+}
+
 /// Command line for one movie. The SWF is last, and only known flag values are passed.
 pub fn ruffle_args(swf: &str, settings: &RuffleSettings, platform: &str) -> Vec<String> {
     let settings = settings.for_platform(platform);

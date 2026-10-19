@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ads;
+mod cli;
 mod account_sync;
 mod extensions;
 mod inventory;
@@ -12,6 +13,7 @@ mod fonts;
 mod placement;
 mod players;
 mod profile;
+mod startup;
 mod ruffle;
 
 use std::path::Path;
@@ -35,6 +37,14 @@ fn hide_launcher_enabled(app: &tauri::AppHandle) -> bool {
 }
 
 fn sync_launcher(app: &tauri::AppHandle, presence: players::Presence) {
+    // Started straight into a game: there is no launcher to bring back, so AquaStar ends
+    // with the game.
+    if app.state::<startup::StartupState>().is_direct() {
+        if presence == players::Presence::Idle {
+            app.exit(0);
+        }
+        return;
+    }
     let Some(window) = app.get_webview_window("main") else {
         return;
     };
@@ -841,6 +851,14 @@ fn main() {
             std::process::exit(1);
         }
     };
+    // Going straight into a game: keep the launcher window from ever appearing.
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let has_saved_startup = ruffle::load_startup(&placement::launcher_config_dir()).is_some();
+    if startup::probably_direct(&cli::parse(&args), has_saved_startup) {
+        if let Some(window) = context.config_mut().app.windows.first_mut() {
+            window.visible = false;
+        }
+    }
     let extension_root = match &placement {
         placement::Placement::Portable(_) => std::env::current_exe().unwrap().parent().unwrap().join("data"),
         placement::Placement::Installed => dirs::data_dir().expect("Application data directory").join(context.config().identifier.clone()),
@@ -851,8 +869,13 @@ fn main() {
         .manage(extension_state)
         .manage(menu_visibility::Visibility::default())
         .on_page_load(|webview, _| menu_visibility::apply_to_window(webview))
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // A second launch with options (`aquastar --aqw`) is carried out here; a plain
+            // second launch just brings the launcher forward.
+            let args: Vec<String> = argv.into_iter().skip(1).collect();
+            if args.iter().any(|arg| arg.starts_with("--")) {
+                startup::apply(app, &args, false);
+            } else if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
                 let _ = window.show();
                 let _ = window.set_focus();
@@ -883,6 +906,7 @@ fn main() {
         }).build())
         .manage(placement)
         .manage(Players::default())
+        .manage(startup::StartupState::default())
         .manage(TimerShortcut(std::sync::Mutex::new(None)))
         .manage(ShortcutBook(std::sync::Mutex::new(std::collections::HashMap::new())))
         .invoke_handler(tauri::generate_handler![
@@ -890,6 +914,7 @@ fn main() {
             launcher::launcher_model,
             launcher::play_game,
             launcher::launcher_search,
+            launcher::set_startup,
             extensions::extensions_list,
             extensions::extensions_install,
             extensions::extensions_change,
@@ -945,7 +970,7 @@ fn main() {
             get_shell_pages,
             open_project_page
         ])
-        .setup(|app| {
+        .setup(move |app| {
             app.state::<extensions::Extensions>().finish_startup();
             let exe_dir = std::env::current_exe()
                 .ok()
@@ -965,6 +990,7 @@ fn main() {
             });
             register_saved_shortcuts(app.handle());
             extensions::install_contributions(app.handle());
+            startup::apply(app.handle(), &args, true);
             if let Err(error) = menu_visibility::apply(app.handle()) {
                 eprintln!("AquaStar: could not apply menu visibility: {error}");
             }

@@ -38,6 +38,18 @@ pub struct Manifest {
     /// API 2: declarative launcher page. Without it the host builds a default one.
     #[serde(default)]
     pub launcher: Option<Launcher>,
+    /// API 2: how the command line and the start-up setting refer to this plugin.
+    #[serde(default)]
+    pub launcher_parameters: Option<LauncherParameters>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LauncherParameters {
+    /// Short command id: `--<id>` on the command line. Lowercase letters, digits and hyphens.
+    pub id: String,
+    /// Game that `--<id>` opens when no `--game` is given. Defaults to the first game.
+    #[serde(default)]
+    pub default_game: Option<String>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -342,6 +354,7 @@ impl Manifest {
         self.icon.is_some()
             || !self.searches.is_empty()
             || self.launcher.is_some()
+            || self.launcher_parameters.is_some()
             || self.games.iter().any(|g| {
                 g.description.is_some() || g.icon.is_some() || !g.engines.is_empty() || g.resolver.is_some()
             })
@@ -488,6 +501,19 @@ impl Manifest {
         }
         if let Some(launcher) = &self.launcher {
             self.validate_launcher(launcher, bundled)?;
+        }
+        if let Some(parameters) = &self.launcher_parameters {
+            if !crate::cli::valid_command_id(&parameters.id) {
+                return Err(
+                    "Launcher command ids use lowercase letters, digits and hyphens, and cannot be a reserved word"
+                        .into(),
+                );
+            }
+            if let Some(game) = &parameters.default_game {
+                if !self.games.iter().any(|g| &g.id == game) {
+                    return Err("The default game is not one of the plugin's games".into());
+                }
+            }
         }
         for action in &self.actions {
             let exists = match action.kind.as_str() {
@@ -655,5 +681,32 @@ mod tests {
         assert!(bad("https://example.com/?q="));
         assert!(bad("https://example.com/{q}/{q}"));
         assert!(!bad("https://example.com/?q={q}"));
+    }
+}
+
+#[cfg(test)]
+mod launcher_parameter_tests {
+    use super::*;
+
+    fn with(parameters: &str, api: u32) -> Result<(), String> {
+        let manifest: Manifest = serde_json::from_str(&format!(
+            r#"{{"format":"aquastar-desktop-plugin","apiVersion":{api},"id":"demo","name":"Demo","version":"1.0.0",
+            "permissions":["launch"],"games":[{{"id":"g","name":"G","url":"https://example.com/g.swf"}}],
+            "launcherParameters":{parameters}}}"#
+        ))
+        .unwrap();
+        manifest.validate("3.0.0")
+    }
+
+    #[test]
+    fn launcher_parameters_need_api_2_a_free_command_id_and_a_real_default_game() {
+        assert!(with(r#"{"id":"demo-game","defaultGame":"g"}"#, 2).is_ok());
+        assert!(with(r#"{"id":"demo-game"}"#, 2).is_ok());
+        assert!(with(r#"{"id":"demo-game"}"#, 1).unwrap_err().contains("apiVersion 2"));
+        for bad in ["game", "launcher", "ruffle", "flash32", "Demo", "has space", ""] {
+            assert!(with(&format!(r#"{{"id":"{bad}"}}"#), 2).is_err(), "{bad}");
+        }
+        assert!(with(r#"{"id":"demo-game","defaultGame":"missing"}"#, 2).is_err());
+        assert!(with(r#"{"id":"demo-game","surprise":1}"#, 2).is_err());
     }
 }

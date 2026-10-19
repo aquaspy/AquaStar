@@ -372,6 +372,41 @@ label.check input {
   margin: 0;
   flex: none;
 }
+.command {
+  font-size: 12px;
+  color: var(--muted);
+}
+code {
+  font-family: Consolas, 'SFMono-Regular', Menlo, monospace;
+  font-size: 12px;
+  padding: 1px 6px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: #0e1824;
+  color: var(--text);
+}
+.pref-title {
+  font-size: 15px;
+}
+.command-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.command-list span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.pref label:not(.check) {
+  display: block;
+  color: var(--muted);
+}
+.pref select {
+  width: 100%;
+  margin-top: 8px;
+}
 .empty {
   padding: 26px;
   border: 1px dashed var(--edge);

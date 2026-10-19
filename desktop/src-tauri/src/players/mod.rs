@@ -70,6 +70,13 @@ impl Engine {
         }
     }
 
+    /// Version of the player AquaStar ships for this system (`1.7.0`, `32.0.0.465`).
+    pub fn version_on(&self, os: catalog::Os, arch: catalog::Arch) -> Option<String> {
+        catalog::Catalog::pinned()
+            .select(*self, os, arch)
+            .map(|pin| pin.version.clone())
+    }
+
     pub fn supported_on(&self, os: catalog::Os, arch: catalog::Arch) -> bool {
         catalog::Catalog::pinned().select(*self, os, arch).is_some()
     }

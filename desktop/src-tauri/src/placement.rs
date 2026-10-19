@@ -188,6 +188,14 @@ fn electron_app_data_root() -> PathBuf {
     }
 }
 
+/// Folder of the launcher's own `settings.json`, known before the app is built.
+pub fn launcher_config_dir() -> PathBuf {
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(Path::to_path_buf));
+    shell_config_dir(exe_dir.as_deref())
+}
+
 fn tauri_config_dir() -> PathBuf {
     #[cfg(target_os = "windows")]
     {

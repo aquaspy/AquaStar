@@ -6,6 +6,8 @@ const pluginNav = document.getElementById('plugin-nav');
 const hideLauncher = document.getElementById('hide-launcher');
 const showMenuBar = document.getElementById('show-menu-bar');
 const launcherHint = document.getElementById('launcher-hint');
+const startupSelect = document.getElementById('startup-game');
+const commandList = document.getElementById('command-list');
 const ENGINE_NAMES = { ruffle: 'Ruffle', flash: 'Flash Player' };
 const GLOBAL_PANELS = ['preferences', 'extensions'];
 
@@ -186,7 +188,8 @@ function gameCard(plugin, game) {
     el('h3', { text: game.name }),
     el('p', { text: game.description || '' }),
     el('div', { class: 'launch' }, play, el('label', { class: 'loader', for: selectId }, 'Player', select)),
-    el('p', { class: 'state', 'data-tone': tone, text: note })
+    el('p', { class: 'state', 'data-tone': tone, text: note }),
+    game.command ? el('p', { class: 'command' }, 'Command line: ', el('code', { text: 'aquastar ' + game.command })) : ''
   );
 }
 
@@ -287,7 +290,8 @@ function renderPlugin() {
         {},
         el('p', { class: 'eyebrow', text: plugin.builtIn ? 'Built-in plugin' : 'Plugin · v' + plugin.version }),
         el('h1', { text: plugin.name }),
-        plugin.description ? el('p', { class: 'lead', text: plugin.description }) : ''
+        plugin.description ? el('p', { class: 'lead', text: plugin.description }) : '',
+        plugin.command ? el('p', { class: 'command' }, 'Command: ', el('code', { text: '--' + plugin.command })) : ''
       )
     )
   );
@@ -342,9 +346,60 @@ async function loadModel() {
   renderNav();
   renderBanner();
   renderBuiltin();
-  const wanted = GLOBAL_PANELS.includes(view) ? view : view || savedView();
+  renderStartup();
+  const start = model.startup || {};
+  const wanted = start.show || (GLOBAL_PANELS.includes(view) ? view : view || savedView());
   const target = GLOBAL_PANELS.includes(wanted) || model.plugins.some((plugin) => plugin.id === wanted) ? wanted : null;
   showView(target || (model.plugins[0] && model.plugins[0].id) || 'extensions', false);
+  if (start.notice) message(start.notice, true);
+}
+
+// What the user can pick for "On start-up", and the command lines that exist.
+function renderStartup() {
+  startupSelect.replaceChildren(el('option', { value: '', text: 'Show the launcher' }));
+  commandList.replaceChildren();
+  const saved = model.startup || {};
+  let selected = '';
+  for (const plugin of model.plugins) {
+    for (const block of plugin.blocks) {
+      for (const game of block.games || []) {
+        if (!game.launchable) continue;
+        const value = plugin.id + '|' + game.id;
+        if (saved.plugin === plugin.id && saved.game === game.id) selected = value;
+        startupSelect.append(el('option', { value, text: 'Open ' + game.name + ' (' + plugin.name + ')' }));
+        if (game.command) {
+          commandList.append(
+            el('li', {}, el('code', { text: 'aquastar ' + game.command }), el('span', { text: ' ' + game.name }))
+          );
+        }
+      }
+    }
+  }
+  startupSelect.value = selected;
+  startupSelect.disabled = false;
+  if (!commandList.childElementCount) commandList.append(el('li', { text: 'No plugin offers a command yet.' }));
+}
+startupSelect.addEventListener('change', async () => {
+  const [pluginId, gameId] = startupSelect.value ? startupSelect.value.split('|') : [null, null];
+  try {
+    await invoke('set_startup', { pluginId, gameId });
+    message(
+      pluginId
+        ? 'AquaStar will open this game on start-up. Start it with --launcher to see the launcher.'
+        : 'AquaStar will show the launcher on start-up.'
+    );
+  } catch (error) {
+    failure(error);
+    renderStartup();
+  }
+});
+// A second launch (`aquastar --aqw --launcher`) reaches the running launcher through this event.
+if (window.__TAURI__.event) {
+  window.__TAURI__.event.listen('aquastar://start', (event) => {
+    const { plugin, notice } = event.payload || {};
+    if (plugin && model.plugins.some((entry) => entry.id === plugin)) showView(plugin);
+    if (notice) message(notice, true);
+  });
 }
 
 function renderBuiltin() {

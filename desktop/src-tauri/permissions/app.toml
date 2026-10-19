@@ -20,7 +20,8 @@ commands.allow = [
   "get_shell_pages",
   "launcher_model",
   "play_game",
-  "launcher_search"
+  "launcher_search",
+  "set_startup"
 ]
 
 [[permission]]

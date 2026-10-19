@@ -5,6 +5,7 @@
   "name": "Adventure Quest Worlds",
   "version": "1.0.0",
   "description": "AdventureQuest Worlds and DragonFable, with the inventory, reminders, to-do and strategy tools.",
+  "launcherParameters": { "id": "aqw", "defaultGame": "aqw" },
   "games": [
     {
       "id": "aqw",

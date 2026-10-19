@@ -51,6 +51,21 @@
             <p class="hint" id="launcher-hint">Loading launcher preferences…</p>
           </div>
           <div class="pref">
+            <label for="startup-game">On start-up<select id="startup-game" disabled></select></label>
+            <p class="hint" id="startup-hint">
+              Open a game straight away, without showing the launcher. AquaStar closes when the game does.
+            </p>
+          </div>
+          <div class="pref">
+            <h2 class="pref-title">Command line</h2>
+            <p class="hint">
+              Name a plugin to open its game directly. Add <code>--game=&lt;id&gt;</code> to pick another game,
+              <code>--ruffle</code> or <code>--flash</code> (optionally with a version, such as
+              <code>--ruffle1.7</code>) to pick the player, and <code>--launcher</code> to show the launcher instead.
+            </p>
+            <ul class="command-list" id="command-list"></ul>
+          </div>
+          <div class="pref">
             <label class="check"><input type="checkbox" id="show-menu-bar" disabled /> Show menu bar</label>
             <p class="hint">
               Show the native application menu. Keyboard shortcuts work with the menu hidden. On macOS, the application

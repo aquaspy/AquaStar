@@ -107,6 +107,7 @@ pub(super) struct Pin {
     pub kind: ArchiveKind,
     pub extract: Extract,
     pub cli: Cli,
+    pub version: String,
 }
 
 pub(super) const STAMP_NAME: &str = ".aquastar-pin";
@@ -157,9 +158,11 @@ impl Catalog {
                 Some(other) => return Err(format!("unknown engine {other}")),
                 None => return Err("player is missing engine".into()),
             };
-            if player.get("version").and_then(|v| v.as_str()).is_none() {
-                return Err("player is missing version".into());
-            }
+            let version = player
+                .get("version")
+                .and_then(|v| v.as_str())
+                .ok_or("player is missing version")?
+                .to_string();
             let artifacts = player
                 .get("artifacts")
                 .and_then(|v| v.as_array())
@@ -247,6 +250,7 @@ impl Catalog {
                     kind,
                     extract,
                     cli,
+                    version: version.clone(),
                 };
                 let mut claims = vec![(native, ClaimRank::Native)];
                 for arch in also {
@@ -1341,6 +1345,7 @@ mod tests {
             kind: ArchiveKind::TarGz,
             extract: Extract::Archive,
             cli: Cli::Stock,
+            version: String::new(),
         }
     }
 
@@ -1378,6 +1383,7 @@ mod tests {
             kind: ArchiveKind::Zip,
             extract: Extract::SingleExe,
             cli: Cli::Artix,
+            version: String::new(),
         };
         arrange(&pin, &dir).unwrap();
         assert_eq!(
@@ -1403,6 +1409,7 @@ mod tests {
             kind: ArchiveKind::Zip,
             extract: Extract::MacosCli,
             cli: Cli::Artix,
+            version: String::new(),
         };
         arrange(&pin, &dir).unwrap();
         assert_eq!(
@@ -1425,6 +1432,7 @@ mod tests {
             kind: ArchiveKind::Zip,
             extract: Extract::SingleExe,
             cli: Cli::Artix,
+            version: String::new(),
         };
         assert!(arrange(&pin, &dir).is_err());
     }

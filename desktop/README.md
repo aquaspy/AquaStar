@@ -67,6 +67,10 @@ python3 desktop/scripts/smoke/extensions.py --binary desktop/src-tauri/target/de
 
 Windows uses `extension-runtime-probe.exe`; Linux needs an X display (CI uses Xvfb). The probe uses synthetic account data and private plugin sessions. The `AquaStar Extension Isolation` workflow runs the checks on Linux, Windows and macOS.
 
+## Command line
+
+`aquastar --aqw` opens a plugin's game without the launcher; `--game=<id>`, `--ruffle[<version>]`, `--flash[<version>]` and `--launcher` refine it, and Preferences > On start-up saves a game to open by default. Each plugin's command id comes from `launcherParameters.id`. See [the plugin guide](../docs/DESKTOP-PLUGINS.md#command-line-and-start-up).
+
 ## Menu visibility and account sync
 
 The in-window menu bar is hidden by default on Linux and Windows. Enable **Preferences → Show menu bar** to show it; keyboard shortcuts work with either setting. macOS keeps its system application menu.

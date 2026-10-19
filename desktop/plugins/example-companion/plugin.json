@@ -1,9 +1,10 @@
 {
   "format": "aquastar-desktop-plugin",
-  "apiVersion": 1,
+  "apiVersion": 2,
   "id": "example-companion",
   "name": "Example Companion",
   "version": "1.0.0",
+  "launcherParameters": { "id": "example-plugin" },
   "permissions": ["storage", "network", "links"],
   "origins": ["https://api.github.com"],
   "tools": [{ "id": "companion", "name": "Example Companion", "entry": "index.html" }],

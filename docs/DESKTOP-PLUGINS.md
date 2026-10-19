@@ -35,11 +35,29 @@ Permissions are `storage`, `network`, `launch` and `links`. Network access addit
 - `games[].engines`: `[{ "engine": "ruffle" | "flash", "platforms": ["windows","linux","macos"], "arch": ["x86","x86_64","aarch64"], "default": true }]`. Order is the order shown. `platforms` and `arch` are optional filters. Without `engines`, a game offers every player AquaStar ships for the system. The list the user sees is always intersected with what is available on that system, so a plugin cannot offer a player AquaStar does not have.
 - `links[].group`: heading the launcher lists the link under.
 - `searches`: `{ id, name, placeholder, urlTemplate, sanitize }`. `urlTemplate` is an HTTPS URL with exactly one `{q}`; the query is percent-encoded. `sanitize: "alphanumeric"` keeps only ASCII letters and digits. Results open in the default browser and need the `links` permission.
+- `launcherParameters`: `{ "id": "aqw", "defaultGame": "aqw" }`. `id` is the plugin's command id on the command line (`--aqw`): lowercase letters, digits and hyphens, at most 32, and not one of the words AquaStar already uses (`game`, `launcher`, `no-launcher`, `help`, `version`, `ruffle`, `flash` and those followed by a version). It is separate from the plugin's stable `id`, which names its saved data. `defaultGame` is what `--<id>` opens; without it, the first game that has a launcher action. If two plugins ask for the same command id, the first keeps it (the bundled plugin, then installed ones by id) and the other is reported.
 - `launcher.blocks`: the page layout, in order. `type` is `games`, `tools`, `links` or `search`; `title` is optional; `items` lists ids of that kind (empty means all). Without `launcher`, AquaStar shows games, tools, links and searches in that order. The layout is data: plugin code never runs in the launcher.
 
 Global preferences (hiding the launcher, the menu bar, language, Ruffle quality and graphics, plugin management) stay in AquaStar and are not part of a layout a plugin declares.
 
 The launcher reads the result of the `launcher_model` command: for each active plugin, its blocks with games (each with the players available here, the default and the saved choice), tools, link groups and searches. `play_game` opens a game with a chosen player and `launcher_search` runs a search.
+
+## Command line and start-up
+
+Every plugin with `launcherParameters` can be started from the command line, and the same words work for all of them:
+
+```
+aquastar --aqw                           open AdventureQuest Worlds, no launcher window
+aquastar --aqw --game=dragonfable        another game of the plugin
+aquastar --aqw --ruffle1.7               pick the player and its version (also --ruffle=1.7, --flash, --flash32)
+aquastar --aqw --launcher                show the launcher on that plugin's page instead
+aquastar --example-plugin                a plugin without games shows its page
+aquastar --no-launcher                   open the game saved under Preferences > On start-up
+```
+
+A command that names a plugin goes straight to its default game; AquaStar then closes when the game does. `--launcher` shows the launcher once. A player or version AquaStar does not ship for the system (`--ruffle9.9`), an unknown plugin or game, or a game without a launcher action falls back to the launcher with a message instead of failing silently. Players are chosen from the game's `engines`; a version matches whole components (`1.7` matches `1.7.0`).
+
+**Preferences > On start-up** saves one game to open every time AquaStar starts without arguments, which gives the behaviour of the old Electron app: no launcher, straight into the game. `--launcher` overrides it. A second `aquastar --...` while AquaStar is running is carried out by the running instance.
 
 ### Built-in example plugin
 

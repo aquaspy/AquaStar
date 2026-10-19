@@ -118,7 +118,7 @@ fn icon_uri(root: Option<&Path>, relative: Option<&String>) -> Value {
     }
 }
 
-fn action_for<'a>(manifest: &'a Manifest, kind: &str, target: &str) -> Option<&'a str> {
+pub(crate) fn action_for<'a>(manifest: &'a Manifest, kind: &str, target: &str) -> Option<&'a str> {
     manifest
         .actions
         .iter()
@@ -141,6 +141,21 @@ pub struct Context<'a> {
     pub saved_engine: &'a dyn Fn(&str) -> Option<String>,
     /// `manifest::shell_pages` for the bundled plugin's `menu:useful` blocks.
     pub useful_pages: &'a Value,
+    /// Command id → plugin id, after conflicts were settled (see `startup::command_table`).
+    pub commands: &'a std::collections::BTreeMap<String, String>,
+}
+
+/// The command line that opens this game: `--aqw`, or `--aqw --game=dragonfable`.
+fn game_command(source: &Source, game: &Game, ctx: &Context) -> Option<String> {
+    let id = active_command(source.manifest, ctx)?;
+    let plugin = crate::startup::Plugin { manifest: source.manifest, bundled: source.bundled };
+    let is_default = crate::startup::default_game(&plugin).is_some_and(|default| default.id == game.id);
+    Some(if is_default { format!("--{id}") } else { format!("--{id} --game={}", game.id) })
+}
+
+fn active_command<'a>(manifest: &'a Manifest, ctx: &Context) -> Option<&'a str> {
+    let parameters = manifest.launcher_parameters.as_ref()?;
+    (ctx.commands.get(&parameters.id) == Some(&manifest.id)).then_some(parameters.id.as_str())
 }
 
 fn game_view(source: &Source, game: &Game, ctx: &Context) -> Value {
@@ -159,6 +174,7 @@ fn game_view(source: &Source, game: &Game, ctx: &Context) -> Value {
         "icon": icon_uri(source.root, game.icon.as_ref()),
         "launchable": launchable,
         "actionId": action,
+        "command": game_command(source, game, ctx).filter(|_| launchable),
         "engines": available.iter().map(|e| e.id()).collect::<Vec<_>>(),
         "defaultEngine": default.map(|e| e.id()),
         "selectedEngine": saved.or(default).map(|e| e.id()),
@@ -310,12 +326,13 @@ pub fn plugin_view(source: &Source, ctx: &Context) -> Value {
         "description": manifest.description,
         "bundled": source.bundled,
         "builtIn": source.bundled || source.built_in,
+        "command": active_command(manifest, ctx),
         "icon": icon_uri(source.root, manifest.icon.as_ref()),
         "blocks": blocks.iter().filter_map(|block| block_view(source, block, ctx)).collect::<Vec<_>>(),
     })
 }
 
-fn config_dir(app: &tauri::AppHandle) -> Option<std::path::PathBuf> {
+pub(crate) fn config_dir(app: &tauri::AppHandle) -> Option<std::path::PathBuf> {
     app.path().app_config_dir().ok()
 }
 
@@ -326,22 +343,37 @@ pub async fn launcher_model(app: tauri::AppHandle) -> Result<Value, String> {
     let dir = config_dir(&app);
     let saved = |key: &str| dir.as_deref().and_then(|dir| crate::ruffle::load_game_engine(dir, key));
     let (os, arch) = (Os::host(), Arch::host());
-    let ctx = Context { os, arch, saved_engine: &saved, useful_pages: &useful };
     let state = app.state::<Extensions>();
+    let installed = state.active_plugins();
+    let all: Vec<crate::startup::Plugin> = std::iter::once(crate::startup::Plugin { manifest: bundled(), bundled: true })
+        .chain(installed.iter().map(|(manifest, _)| crate::startup::Plugin { manifest, bundled: false }))
+        .collect();
+    let (commands, command_problems) = crate::startup::command_table(&all);
+    let ctx = Context { os, arch, saved_engine: &saved, useful_pages: &useful, commands: &commands };
     let mut plugins = vec![plugin_view(
         &Source { manifest: bundled(), root: None, bundled: true, built_in: false },
         &ctx,
     )];
-    for (manifest, root) in state.active_plugins() {
+    for (manifest, root) in installed.iter() {
         let built_in = extensions::builtin::is_builtin(&manifest.id);
-        plugins.push(plugin_view(&Source { manifest: &manifest, root: Some(&root), bundled: false, built_in }, &ctx));
+        plugins.push(plugin_view(&Source { manifest, root: Some(root), bundled: false, built_in }, &ctx));
     }
+    let saved_startup = dir.as_deref().and_then(crate::ruffle::load_startup);
+    let (show, notice) = app.state::<crate::startup::StartupState>().take();
+    let mut errors = state.error_messages();
+    errors.extend(command_problems);
     Ok(json!({
         "platform": { "os": os.map(|o| o.as_str()), "arch": arch.map(|a| a.as_str()) },
         "restartRequired": state.restart_pending(),
         "safeMode": state.is_safe_mode(),
-        "errors": state.error_messages(),
+        "errors": errors,
         "plugins": plugins,
+        "startup": {
+            "plugin": saved_startup.as_ref().map(|(plugin, _)| plugin),
+            "game": saved_startup.as_ref().map(|(_, game)| game),
+            "show": show,
+            "notice": notice,
+        },
     }))
 }
 
@@ -353,7 +385,7 @@ fn movie_for(resolver: &str) -> Option<MovieKind> {
     }
 }
 
-fn manifest_for(app: &tauri::AppHandle, plugin_id: &str) -> Result<(Manifest, bool), String> {
+pub(crate) fn manifest_for(app: &tauri::AppHandle, plugin_id: &str) -> Result<(Manifest, bool), String> {
     if plugin_id == BUNDLED_ID {
         return Ok((bundled().clone(), true));
     }
@@ -373,6 +405,17 @@ pub async fn play_game(
     game_id: String,
     engine: Engine,
 ) -> Result<String, String> {
+    launch_game(app, plugin_id, game_id, engine, true).await
+}
+
+/// Open a game with a player. `remember` keeps the player as that game's choice.
+pub(crate) async fn launch_game(
+    app: tauri::AppHandle,
+    plugin_id: String,
+    game_id: String,
+    engine: Engine,
+    remember: bool,
+) -> Result<String, String> {
     let (manifest, is_bundled) = manifest_for(&app, &plugin_id)?;
     let game = manifest
         .games
@@ -383,8 +426,10 @@ pub async fn play_game(
     if !available.contains(&engine) {
         return Err(format!("{} is not available for {} on this system", engine.id(), game.name));
     }
-    if let Some(dir) = config_dir(&app) {
-        let _ = crate::ruffle::save_game_engine(&dir, &format!("{plugin_id}/{game_id}"), engine.id());
+    if remember {
+        if let Some(dir) = config_dir(&app) {
+            let _ = crate::ruffle::save_game_engine(&dir, &format!("{plugin_id}/{game_id}"), engine.id());
+        }
     }
     if is_bundled {
         let movie = game
@@ -399,6 +444,48 @@ pub async fn play_game(
         Value::String(message) => Ok(message),
         _ => Ok(format!("Opening {}…", game.name)),
     }
+}
+
+/// Open a game the way a command line or the start-up setting asks: the requested player if
+/// there is one, otherwise the game's saved or default player.
+pub(crate) async fn launch_target(
+    app: &tauri::AppHandle,
+    plugin_id: &str,
+    game_id: &str,
+    request: Option<&crate::cli::EngineRequest>,
+) -> Result<String, String> {
+    let (manifest, _) = manifest_for(app, plugin_id)?;
+    let game = manifest.games.iter().find(|game| game.id == game_id).ok_or("Unknown game")?;
+    let (os, arch) = (Os::host(), Arch::host());
+    let available = effective_engines(game, os, arch);
+    let engine = match request {
+        Some(request) => request.engine,
+        None => {
+            let saved = config_dir(app)
+                .and_then(|dir| crate::ruffle::load_game_engine(&dir, &format!("{plugin_id}/{game_id}")))
+                .and_then(|id| Engine::from_id(&id))
+                .filter(|engine| available.contains(engine));
+            saved
+                .or_else(|| default_engine(game, os, arch, &available))
+                .ok_or_else(|| format!("No player is available for {} on this system", game.name))?
+        }
+    };
+    launch_game(app.clone(), plugin_id.to_string(), game_id.to_string(), engine, false).await
+}
+
+/// Open a game at start-up instead of the launcher, or go back to the launcher with `None`.
+#[tauri::command]
+pub fn set_startup(app: tauri::AppHandle, plugin_id: Option<String>, game_id: Option<String>) -> Result<(), String> {
+    let dir = config_dir(&app).ok_or("No settings folder")?;
+    let (Some(plugin_id), Some(game_id)) = (plugin_id, game_id) else {
+        return crate::ruffle::save_startup(&dir, None);
+    };
+    let (manifest, bundled) = manifest_for(&app, &plugin_id)?;
+    let plugin = crate::startup::Plugin { manifest: &manifest, bundled };
+    if !crate::startup::playable(&plugin).iter().any(|game| game.id == game_id) {
+        return Err("That game cannot be opened at start-up".into());
+    }
+    crate::ruffle::save_startup(&dir, Some((&plugin_id, &game_id)))
 }
 
 #[tauri::command]
@@ -430,6 +517,8 @@ pub async fn launcher_search(
 mod tests {
     use super::*;
 
+    static EMPTY: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
+
     const PLATFORMS: [(Os, Arch); 8] = [
         (Os::Windows, Arch::X86_64),
         (Os::Windows, Arch::X86),
@@ -448,7 +537,7 @@ mod tests {
     }
 
     fn context<'a>(os: Os, arch: Arch, useful: &'a Value, saved: &'a dyn Fn(&str) -> Option<String>) -> Context<'a> {
-        Context { os: Some(os), arch: Some(arch), saved_engine: saved, useful_pages: useful }
+        Context { os: Some(os), arch: Some(arch), saved_engine: saved, useful_pages: useful, commands: &EMPTY }
     }
 
     #[test]
