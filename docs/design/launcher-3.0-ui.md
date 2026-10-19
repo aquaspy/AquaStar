@@ -4,6 +4,8 @@ Status: implementado no launcher Tauri em `desktop/ui/`. A prévia original perm
 
 A interface padrão e a prévia usam inglês (en-US), conforme solicitado pelo usuário. O idioma desta documentação não define o idioma do produto. Os menus nativos e as ferramentas mantêm sua localização existente; os novos textos do launcher usam inglês.
 
+> Nota (3.1): a próxima direção está em [launcher-3.1-plugins-preview.html](launcher-3.1-plugins-preview.html). O launcher passa a listar cada plugin na barra lateral e a desenhar a página de cada um a partir do que o plugin declara (jogos com seu player por plataforma, ferramentas, links e buscas). Só as preferências globais do AquaStar ficam fixas. O comando `launcher_model` já fornece esses dados; a interface publicada ainda é a do 3.0.
+
 ## Objetivo
 
 Dar destaque ao jogo e reduzir a quantidade de controles disputando atenção. O launcher continua disponível para ferramentas e páginas enquanto o jogo roda em outra janela. A decoração e os controles da janela continuam nativos do sistema.

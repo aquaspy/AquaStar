@@ -26,6 +26,25 @@ Declare an action for each contribution that should be accessible in the launche
 
 Permissions are `storage`, `network`, `launch` and `links`. Network access additionally requires exact HTTPS origins in `origins`, such as `https://api.github.com`. Request only what the plugin needs. Storage is namespaced by plugin identity and limited to 1 MiB per plugin. Package paths cannot escape the archive directory.
 
+## API 2: launcher layout, icons and players
+
+`apiVersion: 2` adds optional fields. API 1 packages keep working and cannot use them.
+
+- `icon`: package-relative PNG or SVG, at most 64 KB. AquaStar reads it and hands the launcher a data URI.
+- `games[].description`, `games[].icon`.
+- `games[].engines`: `[{ "engine": "ruffle" | "flash", "platforms": ["windows","linux","macos"], "arch": ["x86","x86_64","aarch64"], "default": true }]`. Order is the order shown. `platforms` and `arch` are optional filters. Without `engines`, a game offers every player AquaStar ships for the system. The list the user sees is always intersected with what is available on that system, so a plugin cannot offer a player AquaStar does not have.
+- `links[].group`: heading the launcher lists the link under.
+- `searches`: `{ id, name, placeholder, urlTemplate, sanitize }`. `urlTemplate` is an HTTPS URL with exactly one `{q}`; the query is percent-encoded. `sanitize: "alphanumeric"` keeps only ASCII letters and digits. Results open in the default browser and need the `links` permission.
+- `launcher.blocks`: the page layout, in order. `type` is `games`, `tools`, `links` or `search`; `title` is optional; `items` lists ids of that kind (empty means all). Without `launcher`, AquaStar shows games, tools, links and searches in that order. The layout is data: plugin code never runs in the launcher.
+
+Global preferences (hiding the launcher, the menu bar, language, Ruffle quality and graphics, plugin management) stay in AquaStar and are not part of a layout a plugin declares.
+
+The launcher reads the result of the `launcher_model` command: for each active plugin, its blocks with games (each with the players available here, the default and the saved choice), tools, link groups and searches. `play_game` opens a game with a chosen player and `launcher_search` runs a search.
+
+### The bundled plugin
+
+AQW is described by `desktop/plugins/adventure-quest-worlds/plugin.json` and compiled into the binary. It is listed like any plugin but cannot be disabled or removed. Only it may use `tools[].builtin` (windows implemented by AquaStar), `games[].resolver` (host movie resolvers such as the live AQW loader and the custom SWF/URL override) and `links` blocks with `source: "menu:useful"`. Packages that use these are rejected, and the ids `adventure-quest-worlds` and `aquastar` stay reserved for the host.
+
 ## Tool SDK
 
 The host injects a frozen `window.aquastar` API. Every method is asynchronous:

@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AquaStar · Plugin-driven launcher</title>
+<style>
+:root{color-scheme:dark;--bg:#0d1520;--surface:#141f2d;--raised:#1a293a;--edge:#263449;--text:#edf3fa;--muted:#a6b7ca;--cyan:#6bd6ef;--orange:#f4a261;--ok:#7bd88f;--warn:#f2c96b;--bad:#ff8f8f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+button,input,select{font:inherit;color:inherit;border:1px solid var(--edge);border-radius:8px}
+button{background:var(--raised);padding:10px 14px;cursor:pointer}
+button:hover:not(:disabled){background:#24364a}
+button:disabled{cursor:default;opacity:.55}
+input,select{background:#0e1824;padding:10px 12px;min-width:0}
+input{width:100%}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+h1,h2,h3,p{margin:0}
+.study{padding:7px 16px;background:#192632;color:#b8ccdc;font-size:11px;letter-spacing:.04em;text-align:center;border-bottom:1px solid var(--edge)}
+.demo{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:8px 16px;background:#0f1a26;border-bottom:1px solid var(--edge);font-size:12px;color:var(--muted)}
+.demo label{display:flex;align-items:center;gap:6px}
+.demo select{padding:4px 8px}
+.shell{display:grid;grid-template-columns:216px minmax(0,1fr);min-height:calc(100vh - 90px)}
+.sidebar{background:#101b27;border-right:1px solid var(--edge);padding:24px 14px;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:22px;font-size:21px;font-weight:700;letter-spacing:-.5px}
+.brand i{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#6bd6ef,#2b6f93);display:inline-block}
+.nav-label{margin:14px 12px 4px;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:#7f93a8}
+.nav{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border-color:transparent;color:var(--muted);padding:9px 12px}
+.nav[aria-current=page]{background:#193044;color:#a4eafa;border-color:#294a60}
+.nav .mark{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex:none;font-size:12px;font-weight:700;color:#0d1520;background:var(--cyan)}
+.nav .mark img{width:26px;height:26px;border-radius:7px}
+.nav .sub{display:block;font-size:11px;color:#7f93a8}
+.nav .name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar .grow{flex:1}
+.version{color:#7f93a8;font-size:11px;padding:10px 12px 0}
+.main{padding:28px 34px;max-width:1100px;width:100%;margin:0 auto}
+.banner{margin-bottom:18px;padding:10px 14px;border:1px solid var(--edge);border-radius:10px;background:var(--surface);display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.banner[data-tone=warn]{border-color:#6b5a2a}
+.banner[data-tone=bad]{border-color:#6b3a3a}
+.head{display:flex;align-items:center;gap:16px;margin-bottom:22px}
+.head .mark{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;font-size:22px;font-weight:700;color:#0d1520;background:var(--cyan);flex:none}
+.eyebrow{color:#8fa8bd;font-size:11px;letter-spacing:.13em;text-transform:uppercase}
+h1{font-size:25px;line-height:1.2;letter-spacing:-.5px}
+.lead{color:var(--muted);margin-top:2px}
+.badge{display:inline-block;margin-left:8px;padding:1px 8px;font-size:11px;border:1px solid var(--edge);border-radius:20px;color:var(--muted);vertical-align:middle}
+.block{margin-bottom:26px}
+.block>h2{font-size:15px;margin-bottom:10px}
+.games{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.game{background:linear-gradient(115deg,#1b3447,#182537 70%);border:1px solid #355069;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.game h3{font-size:22px;letter-spacing:-.4px}
+.game p{color:var(--muted)}
+.launch{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.primary{background:var(--orange);color:#10151b;border-color:var(--orange);font-weight:700;padding:11px 20px}
+.primary:hover:not(:disabled){background:#f7b27a}
+.loader{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--muted)}
+.loader select{padding:8px 10px;font-size:14px;color:var(--text)}
+.state{font-size:12px;color:var(--muted);min-height:18px}
+.state[data-tone=ok]{color:var(--ok)}
+.state[data-tone=warn]{color:var(--warn)}
+.state[data-tone=bad]{color:var(--bad)}
+.grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.tool{display:flex;flex-direction:column;gap:6px;text-align:left;padding:14px;background:var(--surface)}
+.tool .glyph{color:var(--cyan);font-size:18px}
+.group{margin-bottom:12px}
+.group h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8fa8bd;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{padding:7px 12px;font-size:13px}
+.search{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--edge);border-radius:12px;padding:14px}
+.search form{display:flex;gap:8px;flex:1 1 280px}
+.card{background:var(--surface);border:1px solid var(--edge);border-radius:12px;padding:16px;margin-bottom:12px}
+.card h2{font-size:16px}
+.card .meta{color:var(--muted);font-size:12px;margin:2px 0 8px}
+.pref{display:grid;gap:4px;margin-bottom:14px}
+.pref .hint{color:var(--muted);font-size:12px}
+.pref label.check{display:flex;gap:8px;align-items:center}
+.pref input[type=checkbox]{width:auto}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.empty{padding:26px;border:1px dashed var(--edge);border-radius:12px;color:var(--muted);text-align:center}
+.status{min-height:20px;margin-top:6px;font-size:12px;color:var(--muted)}
+@media(max-width:760px){
+  .shell{grid-template-columns:1fr}
+  .sidebar{flex-direction:row;flex-wrap:wrap;padding:12px 16px;border-right:0;border-bottom:1px solid var(--edge);gap:4px}
+  .brand{width:100%;margin-bottom:6px}
+  .nav-label,.version,.sidebar .grow{display:none}
+  .nav{width:auto;padding:7px 10px}
+  .nav .sub{display:none}
+  .main{padding:20px 16px}
+  .head .mark{width:44px;height:44px}
+  h1{font-size:21px}
+}
+</style>
+</head>
+<body>
+<div class="study">DESIGN PREVIEW · controls here are not connected to the app. Data has the shape returned by <code>launcher_model</code>.</div>
+<div class="demo" role="group" aria-label="Preview controls">
+  <label>Platform <select id="demo-platform"><option value="windows">Windows</option><option value="linux">Linux</option><option value="macos">macOS</option></select></label>
+  <label>Scenario <select id="demo-scenario">
+    <option value="normal">Plugins active</option>
+    <option value="restart">Restart pending</option>
+    <option value="safe">Safe mode</option>
+    <option value="error">A plugin failed to load</option>
+    <option value="empty">No plugin is active</option>
+  </select></label>
+</div>
+<div class="shell">
+  <aside class="sidebar" aria-label="Launcher">
+    <div class="brand"><i aria-hidden="true"></i>AquaStar</div>
+    <p class="nav-label">Plugins</p>
+    <nav id="plugin-nav" aria-label="Plugins"></nav>
+    <div class="grow"></div>
+    <button class="nav" data-view="manager"><span class="mark" aria-hidden="true">◇</span><span class="name">Manage plugins</span></button>
+    <button class="nav" data-view="preferences"><span class="mark" aria-hidden="true">⚙</span><span class="name">Preferences</span></button>
+    <div class="version">AquaStar 3.1 preview</div>
+  </aside>
+  <main class="main" id="main" tabindex="-1"></main>
+</div>
+<script>
+/* Mock of launcher_model(). `enginesByPlatform` exists only in this preview: the real command
+   already returns the players for the host in `engines`. */
+const MODEL = {
+  platform: { os: 'windows', arch: 'x86_64' },
+  restartRequired: false, safeMode: false, errors: [],
+  plugins: [
+    { id: 'adventure-quest-worlds', name: 'Adventure Quest Worlds', version: '1.0.0', bundled: true, icon: null,
+      description: 'AdventureQuest Worlds and DragonFable, with the inventory, reminders, to-do and strategy tools.',
+      blocks: [
+        { type: 'games', title: null, games: [
+          { id: 'aqw', name: 'AdventureQuest Worlds', description: 'Opens the game in its own window.', launchable: true,
+            enginesByPlatform: { windows: ['ruffle', 'flash'], linux: ['ruffle', 'flash'], macos: ['ruffle', 'flash'] }, defaultEngine: 'ruffle' },
+          { id: 'dragonfable', name: 'DragonFable', description: 'Opens the game in its own window.', launchable: true,
+            enginesByPlatform: { windows: ['ruffle', 'flash'], linux: ['ruffle', 'flash'], macos: ['ruffle', 'flash'] }, defaultEngine: 'ruffle' } ] },
+        { type: 'tools', title: 'Your tools', tools: [
+          { id: 'inventory', name: 'Inventory & Buy Back', builtin: 'inventory' }, { id: 'reminders', name: 'Reminders', builtin: 'reminders' },
+          { id: 'todo', name: 'To-Do List', builtin: 'todo' }, { id: 'strategy', name: 'Strategy', builtin: 'strategy' } ] },
+        { type: 'search', title: 'Looking for an item?', searches: [{ id: 'wiki', name: 'AQW Wiki', placeholder: 'Item name…' }] },
+        { type: 'links', title: 'Useful Pages', groups: [
+          { label: null, links: ['Wiki', 'Design Notes', 'Balance Patch Notes', 'Account', 'Character page'].map((n) => ({ id: n, name: n, kind: 'site' })) },
+          { label: 'Other useful pages', links: ['Daily Gifts', 'Calendar', 'Forge', 'HeroMart', 'Portal'].map((n) => ({ id: n, name: n, kind: 'site' })) },
+          { label: 'Social media', links: ['Twitter', 'Reddit'].map((n) => ({ id: n, name: n, kind: 'site' })) } ] },
+        { type: 'search', title: 'Character page', searches: [{ id: 'charpage', name: 'Character page', placeholder: 'Character name' }] } ] },
+    { id: 'example-companion', name: 'Example Companion', version: '1.0.0', bundled: false, icon: null,
+      description: 'A starter plugin with one tool and one link. It declares no game, so it shows no player.',
+      blocks: [
+        { type: 'tools', title: 'Tools', tools: [{ id: 'companion', name: 'Example Companion', actionId: 'open-companion' }] },
+        { type: 'links', title: 'Links', groups: [{ label: null, links: [{ id: 'project', name: 'AquaStar on GitHub', kind: 'external', actionId: 'open-project' }] }] } ] },
+    { id: 'flash-arcade', name: 'Flash Arcade', version: '0.4.2', bundled: false, icon: null,
+      description: 'Classic SWF games from a local package. Needs Flash Player on Windows and Linux; macOS uses Ruffle only.',
+      blocks: [
+        { type: 'games', title: 'Games', games: [
+          { id: 'tower', name: 'Tower Rush', description: 'A SWF that ships inside the plugin package.', launchable: true,
+            enginesByPlatform: { windows: ['flash', 'ruffle'], linux: ['flash', 'ruffle'], macos: ['ruffle'] }, defaultEngine: 'flash' },
+          { id: 'sequel', name: 'Tower Rush 2', description: 'Declares no launcher action, so the host cannot open it.', launchable: false,
+            enginesByPlatform: { windows: ['ruffle'], linux: ['ruffle'], macos: ['ruffle'] }, defaultEngine: 'ruffle' } ] } ] }
+  ]
+};
+const ENGINE_NAMES = { ruffle: 'Ruffle', flash: 'Flash Player' };
+const ui = { view: 'plugin:adventure-quest-worlds', states: {}, selected: {} };
+const $ = (selector, root = document) => root.querySelector(selector);
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(props)) {
+    if (key === 'text') node.textContent = value;
+    else if (key === 'class') node.className = value;
+    else if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
+    else if (value === true) node.setAttribute(key, '');
+    else if (value !== false && value != null) node.setAttribute(key, value);
+  }
+  node.append(...children);
+  return node;
+}
+function visiblePlugins() {
+  const scenario = $('#demo-scenario').value;
+  if (scenario === 'empty') return [];
+  if (scenario === 'safe') return MODEL.plugins.filter((p) => p.bundled);
+  return MODEL.plugins;
+}
+function engines(game) { return game.enginesByPlatform[$('#demo-platform').value] || []; }
+function mark(plugin) { return el('span', { class: 'mark', 'aria-hidden': 'true', text: plugin.name.charAt(0) }); }
+
+function renderNav() {
+  const nav = $('#plugin-nav');
+  nav.replaceChildren();
+  for (const plugin of visiblePlugins()) {
+    const key = 'plugin:' + plugin.id;
+    nav.append(el('button', { class: 'nav', 'data-view': key, 'aria-current': ui.view === key ? 'page' : null, onclick: () => show(key) },
+      mark(plugin), el('span', { class: 'name' }, el('span', { text: plugin.name }), el('span', { class: 'sub', text: plugin.bundled ? 'Built in' : 'v' + plugin.version }))));
+  }
+  document.querySelectorAll('.sidebar > .nav').forEach((button) => {
+    if (button.dataset.view === ui.view) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
+  });
+}
+function banner() {
+  const scenario = $('#demo-scenario').value;
+  if (scenario === 'restart') return el('div', { class: 'banner', 'data-tone': 'warn', role: 'status' }, el('span', { text: 'Changes to your plugins are saved. Restart AquaStar to apply them.' }), el('button', { text: 'Restart AquaStar' }));
+  if (scenario === 'safe') return el('div', { class: 'banner', 'data-tone': 'warn', role: 'status' }, el('span', { text: 'Safe mode: third-party plugins are disabled. The built-in plugin is still available.' }));
+  if (scenario === 'error') return el('div', { class: 'banner', 'data-tone': 'bad', role: 'alert' }, el('span', { text: 'flash-arcade: installed package is missing. Open Manage plugins to remove or reinstall it.' }), el('button', { text: 'Manage plugins', onclick: () => show('manager') }));
+  return null;
+}
+function gameCard(plugin, game) {
+  const key = plugin.id + '/' + game.id;
+  const list = engines(game);
+  const state = ui.states[key] || 'ready';
+  const selected = list.includes(ui.selected[key]) ? ui.selected[key] : (list.includes(game.defaultEngine) ? game.defaultEngine : list[0]);
+  const noLoader = !list.length;
+  const busy = state === 'opening';
+  const play = el('button', { class: 'primary', disabled: !game.launchable || noLoader || busy, onclick: () => launch(key) },
+    busy ? 'Opening game window…' : 'Open game window ↗');
+  const select = el('select', { id: 'engine-' + key.replace('/', '-'), disabled: noLoader || busy,
+    onchange: (event) => { ui.selected[key] = event.target.value; } });
+  for (const engine of list) select.append(el('option', { value: engine, selected: engine === selected, text: ENGINE_NAMES[engine] + (engine === game.defaultEngine ? ' · default' : '') }));
+  if (noLoader) select.append(el('option', { text: 'No player for this system' }));
+  const label = el('label', { class: 'loader', for: select.id }, 'Player', select);
+  const messages = {
+    ready: [game.launchable ? '' : 'This plugin declares no launcher action for this game.', game.launchable ? '' : 'warn'],
+    opening: ['Starting ' + ENGINE_NAMES[selected] + '…', ''],
+    open: ['Game open in a separate window.', 'ok'],
+    download: ['Downloading ' + ENGINE_NAMES[selected] + ' for the first time…', ''],
+    failed: [ENGINE_NAMES[selected] + ' exited at start-up. Try the other player.', 'bad'],
+    offline: ['Cannot reach the game server. Check your connection.', 'bad']
+  };
+  const [text, tone] = noLoader ? ['No player is available for this game on this system.', 'bad'] : (messages[state] || messages.ready);
+  return el('article', { class: 'game', 'aria-label': game.name },
+    el('h3', { text: game.name }), el('p', { text: game.description || '' }),
+    el('div', { class: 'launch' }, play, label),
+    el('p', { class: 'state', 'data-tone': tone, 'aria-live': 'polite', text: text }),
+    el('div', {}, el('select', { 'aria-label': 'Preview state for ' + game.name, class: 'demo-state', onchange: (event) => { ui.states[key] = event.target.value; render(); } },
+      ...['ready', 'opening', 'download', 'open', 'failed', 'offline'].map((value) => el('option', { value, selected: value === state, text: 'Preview state: ' + value })))));
+}
+function launch(key) {
+  ui.states[key] = 'opening'; render();
+  setTimeout(() => { ui.states[key] = 'open'; render(); }, 900);
+}
+function renderBlock(plugin, block) {
+  const section = el('section', { class: 'block' });
+  if (block.title) section.append(el('h2', { text: block.title }));
+  if (block.games) section.append(el('div', { class: 'games' }, ...block.games.map((game) => gameCard(plugin, game))));
+  if (block.tools) section.append(el('div', { class: 'grid' }, ...block.tools.map((tool) =>
+    el('button', { class: 'tool' }, el('span', { class: 'glyph', 'aria-hidden': 'true', text: '▦' }), el('strong', { text: tool.name })))));
+  if (block.groups) for (const group of block.groups) section.append(el('div', { class: 'group' },
+    group.label ? el('h3', { text: group.label }) : '',
+    el('div', { class: 'chips' }, ...group.links.map((link) => el('button', { text: link.name + (link.kind === 'external' ? ' ↗' : '') })))));
+  if (block.searches) for (const search of block.searches) {
+    const input = el('input', { name: 'q', placeholder: search.placeholder, 'aria-label': search.name, autocomplete: 'off' });
+    section.append(el('div', { class: 'search' }, el('form', { onsubmit: (event) => event.preventDefault() }, input, el('button', { type: 'submit', text: 'Search ↗' }))));
+  }
+  return section;
+}
+function renderPlugin(plugin) {
+  const wrap = el('div');
+  wrap.append(el('div', { class: 'head' }, el('span', { class: 'mark', 'aria-hidden': 'true', text: plugin.name.charAt(0) }),
+    el('div', {}, el('p', { class: 'eyebrow', text: plugin.bundled ? 'Built-in plugin' : 'Plugin · v' + plugin.version }),
+      el('h1', { text: plugin.name }), el('p', { class: 'lead', text: plugin.description }))));
+  for (const block of plugin.blocks) wrap.append(renderBlock(plugin, block));
+  return wrap;
+}
+function renderManager() {
+  const wrap = el('div');
+  wrap.append(el('div', { class: 'head' }, el('div', {}, el('p', { class: 'eyebrow', text: 'AquaStar' }), el('h1', { text: 'Manage plugins' }),
+    el('p', { class: 'lead', text: 'Add games and tools from authors you trust. Changes take effect after restarting AquaStar.' }))));
+  wrap.append(el('div', { class: 'launch', style: 'margin-bottom:16px' }, el('button', { text: 'Install from ZIP…' }), el('button', { text: 'Refresh' })));
+  for (const plugin of MODEL.plugins) {
+    const disabled = $('#demo-scenario').value === 'safe' && !plugin.bundled;
+    wrap.append(el('article', { class: 'card' }, el('h2', {}, plugin.name, el('span', { class: 'badge', text: plugin.bundled ? 'Built in' : (disabled ? 'Disabled · safe mode' : 'Active') })),
+      el('p', { class: 'meta', text: plugin.id + ' · ' + plugin.version }),
+      plugin.bundled ? el('p', { class: 'meta', text: 'The built-in plugin cannot be removed.' }) : el('div', { class: 'launch' }, el('button', { text: 'Disable' }), el('button', { text: 'Remove plugin…' }))));
+  }
+  return wrap;
+}
+function renderPreferences() {
+  const wrap = el('div');
+  wrap.append(el('div', { class: 'head' }, el('div', {}, el('p', { class: 'eyebrow', text: 'AquaStar' }), el('h1', { text: 'Preferences' }),
+    el('p', { class: 'lead', text: 'Settings for AquaStar itself. Each plugin lists its own settings on its page.' }))));
+  const check = (id, label, hint, checked) => el('div', { class: 'pref' }, el('label', { class: 'check' }, el('input', { type: 'checkbox', id, checked }), label), el('p', { class: 'hint', text: hint }));
+  const select = (id, label, options) => el('label', { for: id }, label, el('select', { id }, ...options.map((o) => el('option', { text: o }))));
+  wrap.append(
+    el('div', { class: 'pref' }, el('div', { class: 'fields' },
+      select('quality', 'Ruffle quality', ['High (default)', 'Medium', 'Low (fastest)']),
+      select('graphics', 'Graphics', ['Automatic (default)', 'OpenGL', 'Vulkan', 'DirectX 12']),
+      select('language', 'Language', ['System default', 'English', 'Português (Brasil)'])),
+      el('p', { class: 'hint', text: 'Player options apply to every plugin the next time a game opens.' })),
+    check('hide', 'Hide the launcher during gameplay', 'The launcher returns when the player exits.', false),
+    check('menu', 'Show menu bar', 'Keyboard shortcuts work with the menu hidden.', false),
+    el('button', { text: 'Open all settings ↗' }));
+  return wrap;
+}
+function show(view) { ui.view = view; render(); $('#main').focus(); }
+function render() {
+  renderNav();
+  const main = $('#main');
+  main.replaceChildren();
+  const note = banner();
+  if (note) main.append(note);
+  const plugins = visiblePlugins();
+  if (ui.view === 'manager') main.append(renderManager());
+  else if (ui.view === 'preferences') main.append(renderPreferences());
+  else {
+    const plugin = plugins.find((p) => 'plugin:' + p.id === ui.view) || plugins[0];
+    if (plugin) { ui.view = 'plugin:' + plugin.id; renderNav(); main.append(renderPlugin(plugin)); }
+    else main.append(el('div', { class: 'empty' }, el('p', { text: 'No plugins are active.' }), el('p', { text: 'Open Manage plugins to enable one or install a ZIP package.' }), el('button', { text: 'Manage plugins', onclick: () => show('manager') })));
+  }
+  main.append(el('p', { class: 'status', 'aria-live': 'polite' }));
+}
+document.querySelectorAll('.sidebar > .nav').forEach((button) => button.addEventListener('click', () => show(button.dataset.view)));
+$('#demo-platform').addEventListener('change', render);
+$('#demo-scenario').addEventListener('change', render);
+render();
+</script>
+</body>
+</html>

@@ -7,6 +7,7 @@ AquaStar 3.0 lives in `desktop/`. The root still contains the Electron platform 
 | `desktop/src-tauri/` | Tauri launcher, Rust commands, capabilities, and native configuration |
 | `desktop/ui/` | Shipped 3.0 launcher and tool pages |
 | `desktop/src-tauri/games/`, `desktop/players.json`, `desktop/licenses/` | Game manifests, pinned standalone players, and their notices |
+| `desktop/plugins/` | Desktop plugin manifests: `adventure-quest-worlds/` is the bundled AQW plugin compiled into the binary; `example-companion/` is the starter for packages |
 | `desktop/scripts/` | Local Tauri builds, player preparation, packaging, and smoke checks |
 | `main.js`, `res/` | Electron entry point and platform code |
 | `plugins/` | Electron plugins and shared first-party assets consumed by 3.0 |
@@ -19,7 +20,7 @@ AquaStar 3.0 lives in `desktop/`. The root still contains the Electron platform 
 | `.github/` | CI and release workflows |
 | `LICENSE.md` | Original project license notice |
 
-`docs/design/launcher-3.0-preview.html` is a design artifact. The installed launcher is built from `desktop/ui/`, which now implements the approved design.
+`docs/design/launcher-3.0-preview.html` and `docs/design/launcher-3.1-plugins-preview.html` are design artifacts. The second shows the plugin-driven launcher that the `launcher_model` command feeds; it is not wired to the shipped UI yet. The installed launcher is built from `desktop/ui/`, which now implements the approved design.
 
 ## Branch contract
 
