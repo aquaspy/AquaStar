@@ -37,7 +37,7 @@ The installer includes a minimal standalone FFmpeg 8.1.3/OpenH264 2.6.0 build. N
 
 Build it with `python3 desktop/scripts/build-media.py`. Sources, checksums and configure flags are pinned in the build script. Source downloads and compiler output live outside the checkout in the sibling workspace. Generated binaries and license manifests are placed in the ignored `desktop/src-tauri/media/` directory. macOS universal packages include both native architectures; Windows portable ZIPs include the media directory beside the executable. See [media notices](../desktop/licenses/media.md).
 
-The local build script prepares the media component when missing. For a manual optimized binary, copy `src-tauri/media/` beside the executable, or use a normal Tauri bundle. `AQUASTAR_CAPTURE_FFMPEG` is a debug-only encoder override, not a plugin or production API.
+The local build script prepares the media component when missing or its build recipe/native helper changes. For a manual optimized binary, copy `src-tauri/media/` beside the executable, or use a normal Tauri bundle. `AQUASTAR_CAPTURE_FFMPEG` is a debug-only encoder override, not a plugin or production API.
 
 ## Validation
 

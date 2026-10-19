@@ -5,6 +5,8 @@ AquaStar 3.0 lives in `desktop/`. The root still contains the Electron platform 
 | Path | Purpose |
 | --- | --- |
 | `desktop/src-tauri/` | Tauri launcher, Rust commands, capabilities, and native configuration |
+| `desktop/native/` | Platform capture helper sources |
+| `desktop/vendor/` | Licensed dependency sources with documented compatibility patches |
 | `desktop/ui/` | Shipped 3.0 launcher and tool pages |
 | `desktop/src-tauri/games/`, `desktop/players.json`, `desktop/licenses/` | Game manifests, pinned standalone players, and their notices |
 | `desktop/plugins/` | Desktop plugin manifests: `adventure-quest-worlds/` is the bundled AQW plugin compiled into the binary; `example-companion/` is the starter for packages |
@@ -33,6 +35,6 @@ The user authorized the agreed branch cleanup. This repository organization does
 
 ## Generated files
 
-Keep generated output out of version control: `node_modules/`, `dist/`, `work/`, `work-*/`, `releases/`, `web-dist/`, `desktop/src-tauri/target/`, and downloaded player caches. Local diagnostic output belongs in ignored `logs/`; the application does not maintain a log buffer in the repository. Screenshots and recordings belong in the application's configured output directory.
+Keep generated output out of version control: `node_modules/`, `dist/`, `work/`, `work-*/`, `releases/`, `web-dist/`, `desktop/src-tauri/target/`, downloaded player caches, and generated binaries in `desktop/src-tauri/media/`. Local diagnostic output belongs in ignored `logs/`; the application does not maintain a log buffer in the repository. Screenshots and recordings belong in the application's configured output directory.
 
 Local test builds, SDK files, and branch-history backups can live beside the checkout instead of inside the source tree. Keep backups until the retained branches and local test builds have been verified. Do not remove bundled players, Flash binaries, SWFs, or shared assets as part of artifact cleanup.

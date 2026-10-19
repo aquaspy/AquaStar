@@ -28,7 +28,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libdbus-1-dev libpipewire-0.3-dev libpulse-dev libxcb-randr0-dev libgbm-dev libclang-dev nasm xvfb dbus-x11 python3-gi python3-cairo openbox
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libdbus-1-dev libpipewire-0.3-dev libpulse-dev libxcb-randr0-dev libgbm-dev libclang-dev nasm xvfb dbus-x11 python3-gi python3-cairo python3-gi-cairo openbox
       - name: Windows media compiler
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
