@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include <dlfcn.h>
+#include <stdlib.h>
 
 typedef unsigned long GType;
 typedef int gboolean;
@@ -108,11 +109,21 @@ static void force_title(void *window) {
     if (real_set_title) real_set_title(window, "AquaStar");
 }
 
+/* The launcher passes a PNG path in AQUASTAR_FLASH_ICON. */
+static void force_icon(void *window) {
+    static gboolean (*set_icon_from_file)(void *, const char *, void *);
+    if (!set_icon_from_file)
+        set_icon_from_file = dlsym(RTLD_DEFAULT, "gtk_window_set_icon_from_file");
+    const char *path = getenv("AQUASTAR_FLASH_ICON");
+    if (set_icon_from_file && path && *path) set_icon_from_file(window, path, 0);
+}
+
 static gboolean strip(gpointer data) {
     void *window = data;
     if (!is_a(window, window_type)) return 0;
     hide_chrome(window);
     force_title(window);
+    force_icon(window);
     fit_stage(window);
     return 0;
 }

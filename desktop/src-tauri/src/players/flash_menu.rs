@@ -19,7 +19,7 @@ pub fn replacement_title(current: &str, flash: bool) -> Option<&'static str> {
     replace.then_some(PLAYER_TITLE)
 }
 
-/// Keep the player's window title, and on Windows also drop the Flash menu.
+/// Keep the player's window title and icon, and on Windows also drop the Flash menu.
 ///
 /// The watch runs until the process exits so a title the player writes when
 /// the movie opens is replaced again. On Linux the Flash projector is handled
@@ -93,6 +93,7 @@ extern "system" fn visit_window(hwnd: isize, lp: isize) -> i32 {
         }
         if flash_window || replacement_title(&title, false).is_some() {
             set_title(hwnd);
+            super::window_icon::apply(hwnd);
         }
     }
     1
@@ -208,6 +209,7 @@ fn retitle_pid(display: *mut std::ffi::c_void, pid: u32) {
                     let title = window_title(display, window);
                     if replacement_title(&title, false).is_some() {
                         set_window_title(display, window);
+                        set_window_icon(display, window);
                     }
                 }
             }
@@ -335,6 +337,63 @@ fn set_window_title(display: *mut std::ffi::c_void, window: u64) {
             0,
             c_title.as_ptr() as *const u8,
             PLAYER_TITLE.len() as i32,
+        );
+    }
+}
+
+/// Replace `_NET_WM_ICON` unless the window already carries ours. The watch
+/// runs every 250 ms, so an unchanged icon is not rewritten.
+#[cfg(target_os = "linux")]
+fn set_window_icon(display: *mut std::ffi::c_void, window: u64) {
+    let icon = super::window_icon::net_wm_icon();
+    if icon.is_empty() {
+        return;
+    }
+    let property = intern(display, "_NET_WM_ICON");
+    let cardinal = intern(display, "CARDINAL");
+    let mut actual_type = 0u64;
+    let mut actual_format = 0i32;
+    let mut nitems = 0u64;
+    let mut bytes_after = 0u64;
+    let mut prop: *mut u8 = std::ptr::null_mut();
+    let status = unsafe {
+        XGetWindowProperty(
+            display,
+            window,
+            property,
+            0,
+            icon.len() as i64,
+            0,
+            cardinal,
+            &mut actual_type,
+            &mut actual_format,
+            &mut nitems,
+            &mut bytes_after,
+            &mut prop,
+        )
+    };
+    let current = status == 0
+        && !prop.is_null()
+        && actual_format == 32
+        && nitems as usize == icon.len()
+        && bytes_after == 0
+        && unsafe { std::slice::from_raw_parts(prop as *const i64, icon.len()) } == icon;
+    if !prop.is_null() {
+        unsafe { XFree(prop as *mut std::ffi::c_void) };
+    }
+    if current {
+        return;
+    }
+    unsafe {
+        XChangeProperty(
+            display,
+            window,
+            property,
+            cardinal,
+            32,
+            0,
+            icon.as_ptr() as *const u8,
+            icon.len() as i32,
         );
     }
 }

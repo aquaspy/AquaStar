@@ -1,6 +1,7 @@
 mod catalog;
 mod flash_menu;
 mod movie;
+mod window_icon;
 
 pub use movie::MovieKind;
 pub(crate) use catalog::{Arch, Os};
@@ -246,18 +247,37 @@ fn apply_player_env(cmd: &mut Command, engine: Engine) {
         }
         if let Some(preload) = flash_gtk_preload(&scrubbed) {
             cmd.env("LD_PRELOAD", preload);
+            if let Some(icon) = flash_icon_file() {
+                cmd.env("AQUASTAR_FLASH_ICON", icon);
+            }
         }
     }
 }
 
 #[cfg(target_os = "linux")]
-fn flash_gtk_library() -> Option<PathBuf> {
-    const BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/libaquastar_flash_gtk.so"));
+fn flash_cache_dir() -> Option<PathBuf> {
     let base = std::env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))?;
     let dir = base.join("aquastar-lite");
     std::fs::create_dir_all(&dir).ok()?;
+    Some(dir)
+}
+
+/// The icon the GTK helper gives the Flash projector window. GTK loads it from a file.
+#[cfg(target_os = "linux")]
+fn flash_icon_file() -> Option<PathBuf> {
+    let path = flash_cache_dir()?.join("aquastar-icon.png");
+    if std::fs::read(&path).ok().as_deref() != Some(window_icon::PNG_64) {
+        std::fs::write(&path, window_icon::PNG_64).ok()?;
+    }
+    Some(path)
+}
+
+#[cfg(target_os = "linux")]
+fn flash_gtk_library() -> Option<PathBuf> {
+    const BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/libaquastar_flash_gtk.so"));
+    let dir = flash_cache_dir()?;
     let path = dir.join("libaquastar_flash_gtk.so");
     if std::fs::read(&path).ok().as_deref() != Some(BYTES) {
         let tmp = dir.join(format!(
@@ -274,6 +294,11 @@ fn flash_gtk_library() -> Option<PathBuf> {
 
 #[cfg(not(target_os = "linux"))]
 fn flash_gtk_library() -> Option<PathBuf> {
+    None
+}
+
+#[cfg(not(target_os = "linux"))]
+fn flash_icon_file() -> Option<PathBuf> {
     None
 }
 
