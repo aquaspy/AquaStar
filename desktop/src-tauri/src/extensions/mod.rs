@@ -1,3 +1,4 @@
+pub mod builtin;
 pub mod model;
 mod network;
 pub mod package;
@@ -32,13 +33,17 @@ impl Extensions {
             Default::default()
         });
         let safe = std::env::var("AQUASTAR_DISABLE_PLUGINS").as_deref() == Ok("1");
-        let active = if safe {
+        let mut active: BTreeMap<String, InstalledPlugin> = if safe {
             BTreeMap::new()
         } else {
             registry
                 .plugins
                 .into_iter()
                 .filter(|(id, p)| {
+                    if builtin::is_builtin(id) {
+                        // The built-in copy wins over an installed package with the same id.
+                        return false;
+                    }
                     if !p.enabled {
                         return false;
                     }
@@ -54,6 +59,26 @@ impl Extensions {
                 })
                 .collect()
         };
+        // Built-in plugins are first-party and stay available in safe mode, like AQW.
+        for embedded in builtin::EMBEDDED {
+            match embedded
+                .manifest(env!("CARGO_PKG_VERSION"))
+                .and_then(|manifest| embedded.materialize(&root.join("extensions")).map(|_| manifest))
+            {
+                Ok(manifest) => {
+                    active.insert(
+                        embedded.id.to_string(),
+                        InstalledPlugin {
+                            manifest,
+                            version_dir: String::new(),
+                            enabled: true,
+                            pending_restart: false,
+                        },
+                    );
+                }
+                Err(error) => errors.push(format!("{}: {error}", embedded.id)),
+            }
+        }
         Self {
             root,
             active,
@@ -70,22 +95,29 @@ impl Extensions {
             self.error(error);
         }
     }
+    /// Where a plugin's files are: its installed package, or the folder a built-in one is
+    /// written to at start-up.
+    fn plugin_folder(&self, plugin: &InstalledPlugin) -> PathBuf {
+        if builtin::is_builtin(&plugin.manifest.id) {
+            builtin::folder(&self.root.join("extensions"), &plugin.manifest.id)
+        } else {
+            PackageStore::new(&self.root).plugin_dir(plugin)
+        }
+    }
     pub fn sources(&self) -> Vec<runtime::PluginSource> {
-        let store = PackageStore::new(&self.root);
         self.active
             .iter()
             .map(|(id, p)| runtime::PluginSource {
                 id: id.clone(),
-                root: store.plugin_dir(p),
+                root: self.plugin_folder(p),
             })
             .collect()
     }
     /// Active third-party plugins with their installed folders.
     pub fn active_plugins(&self) -> Vec<(model::Manifest, PathBuf)> {
-        let store = PackageStore::new(&self.root);
         self.active
             .values()
-            .map(|plugin| (plugin.manifest.clone(), store.plugin_dir(plugin)))
+            .map(|plugin| (plugin.manifest.clone(), self.plugin_folder(plugin)))
             .collect()
     }
     pub fn is_safe_mode(&self) -> bool {
@@ -118,6 +150,7 @@ pub fn extensions_list(app: tauri::AppHandle) -> Result<Value, String> {
     let plugins: Vec<_> = registry
         .plugins
         .values()
+        .filter(|plugin| !builtin::is_builtin(&plugin.manifest.id))
         .map(|plugin| {
             let mut value = serde_json::to_value(&plugin.manifest).unwrap_or(json!({}));
             let object = value.as_object_mut().unwrap();
@@ -162,6 +195,12 @@ pub async fn extensions_install(
         })
         .await
         .map_err(|e| e.to_string())??;
+        if builtin::is_builtin(&review.manifest.id) {
+            return Err(format!(
+                "{} is built into AquaStar and cannot be replaced by a package",
+                review.manifest.name
+            ));
+        }
         static TOKEN: AtomicU64 = AtomicU64::new(1);
         let token = TOKEN.fetch_add(1, Ordering::SeqCst).to_string();
         let result = json!({"reviewToken":token,"manifest":review.manifest,"permissions":review.manifest.permissions,"origins":review.manifest.origins});
@@ -202,6 +241,9 @@ pub async fn extensions_change(
     remove: Option<bool>,
     delete_data: Option<bool>,
 ) -> Result<Value, String> {
+    if builtin::is_builtin(&id) {
+        return Err("Built-in plugins cannot be disabled or removed".into());
+    }
     let state = app.state::<Extensions>();
     let _gate = state.gate.lock().map_err(|_| "Plugin state unavailable")?;
     let store = PackageStore::new(&state.root);
@@ -306,7 +348,6 @@ async fn run_action(
         .iter()
         .find(|action| action.id == action_id)
         .ok_or("Unknown plugin action")?;
-    let store = PackageStore::new(&state.root);
     match action.kind.as_str() {
         "tool" => {
             let tool = manifest
@@ -314,7 +355,7 @@ async fn run_action(
                 .iter()
                 .find(|tool| tool.id == action.target)
                 .ok_or("Unknown tool")?;
-            runtime::open_tool(app, id, &tool.id, &store.plugin_dir(plugin), &tool.entry)?;
+            runtime::open_tool(app, id, &tool.id, &state.plugin_folder(plugin), &tool.entry)?;
             Ok(Value::Null)
         }
         "link" => {
@@ -344,8 +385,8 @@ async fn run_action(
             let source = if let Some(url) = &game.url {
                 url.clone()
             } else {
-                store
-                    .plugin_dir(plugin)
+                state
+                    .plugin_folder(plugin)
                     .join(game.file.as_ref().ok_or("Missing SWF")?)
                     .display()
                     .to_string()
@@ -461,6 +502,38 @@ mod lifecycle_tests {
     use std::{fs, io::Write};
 
     #[test]
+    fn a_built_in_plugin_is_active_and_wins_over_an_installed_copy() {
+        let root = std::env::temp_dir().join(format!(
+            "aquastar-builtin-wins-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let archive = root.join("copy.zip");
+        let mut zip = zip::ZipWriter::new(fs::File::create(&archive).unwrap());
+        zip.start_file("plugin.json", zip::write::SimpleFileOptions::default()).unwrap();
+        zip.write_all(br#"{"format":"aquastar-desktop-plugin","apiVersion":1,"id":"example-companion","name":"Old copy","version":"0.0.1"}"#)
+            .unwrap();
+        zip.finish().unwrap();
+        let store = PackageStore::new(&root);
+        let review = store.review(&archive, env!("CARGO_PKG_VERSION")).unwrap();
+        store.install(&archive, &review).unwrap();
+
+        let loaded = Extensions::load(root.clone());
+        let plugin = loaded.active.get("example-companion").expect("built-in plugin is active");
+        assert_eq!(plugin.manifest.name, "Example Companion", "the installed copy is ignored");
+        let folder = loaded.plugin_folder(plugin);
+        assert_eq!(folder, builtin::folder(&root.join("extensions"), "example-companion"));
+        assert!(folder.join("plugin.json").is_file());
+        let sources = loaded.sources();
+        assert!(sources.iter().any(|source| source.id == "example-companion" && source.root == folder));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn loading_a_second_instance_defers_cleanup_until_primary_startup() {
         let root = std::env::temp_dir().join(format!(
             "aquastar-plugin-lifecycle-{}-{}",
@@ -493,7 +566,7 @@ mod lifecycle_tests {
         let registry_before = fs::read(root.join("extensions/registry.json")).unwrap();
 
         let next_instance = Extensions::load(root.clone());
-        assert!(next_instance.active.is_empty());
+        assert!(next_instance.active.keys().all(|id| builtin::is_builtin(id)));
         assert!(code.join("plugin.json").exists());
         assert!(data.join("storage.json").exists());
         assert_eq!(

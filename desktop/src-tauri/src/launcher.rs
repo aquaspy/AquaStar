@@ -130,6 +130,8 @@ pub struct Source<'a> {
     pub manifest: &'a Manifest,
     pub root: Option<&'a Path>,
     pub bundled: bool,
+    /// Shipped inside AquaStar and not removable, but run like an installed plugin.
+    pub built_in: bool,
 }
 
 pub struct Context<'a> {
@@ -307,6 +309,7 @@ pub fn plugin_view(source: &Source, ctx: &Context) -> Value {
         "version": manifest.version,
         "description": manifest.description,
         "bundled": source.bundled,
+        "builtIn": source.bundled || source.built_in,
         "icon": icon_uri(source.root, manifest.icon.as_ref()),
         "blocks": blocks.iter().filter_map(|block| block_view(source, block, ctx)).collect::<Vec<_>>(),
     })
@@ -326,11 +329,12 @@ pub async fn launcher_model(app: tauri::AppHandle) -> Result<Value, String> {
     let ctx = Context { os, arch, saved_engine: &saved, useful_pages: &useful };
     let state = app.state::<Extensions>();
     let mut plugins = vec![plugin_view(
-        &Source { manifest: bundled(), root: None, bundled: true },
+        &Source { manifest: bundled(), root: None, bundled: true, built_in: false },
         &ctx,
     )];
     for (manifest, root) in state.active_plugins() {
-        plugins.push(plugin_view(&Source { manifest: &manifest, root: Some(&root), bundled: false }, &ctx));
+        let built_in = extensions::builtin::is_builtin(&manifest.id);
+        plugins.push(plugin_view(&Source { manifest: &manifest, root: Some(&root), bundled: false, built_in }, &ctx));
     }
     Ok(json!({
         "platform": { "os": os.map(|o| o.as_str()), "arch": arch.map(|a| a.as_str()) },
@@ -517,7 +521,7 @@ mod tests {
         let useful = json!({"groups":[{"id":"top","label":null,"pages":[{"id":"wiki","label":"Wiki","url":"https://aqwwiki.wikidot.com/"}]}]});
         let saved = |key: &str| (key == "adventure-quest-worlds/aqw").then(|| "flash".to_string());
         let ctx = context(Os::Windows, Arch::X86_64, &useful, &saved);
-        let view = plugin_view(&Source { manifest: bundled(), root: None, bundled: true }, &ctx);
+        let view = plugin_view(&Source { manifest: bundled(), root: None, bundled: true, built_in: false }, &ctx);
         let blocks = view["blocks"].as_array().unwrap();
         let kinds: Vec<_> = blocks.iter().map(|b| b["type"].as_str().unwrap()).collect();
         assert_eq!(kinds, ["games", "tools", "search", "links", "search"]);
@@ -537,7 +541,7 @@ mod tests {
         let useful = json!({});
         let saved = |_: &str| Some("not-a-player".to_string());
         let ctx = context(Os::Macos, Arch::Aarch64, &useful, &saved);
-        let view = plugin_view(&Source { manifest: bundled(), root: None, bundled: true }, &ctx);
+        let view = plugin_view(&Source { manifest: bundled(), root: None, bundled: true, built_in: false }, &ctx);
         let game = &view["blocks"][0]["games"][0];
         assert_eq!(game["selectedEngine"], game["defaultEngine"]);
     }
@@ -554,7 +558,7 @@ mod tests {
         let useful = json!({});
         let saved = |_: &str| None;
         let ctx = context(Os::Linux, Arch::X86_64, &useful, &saved);
-        let view = plugin_view(&Source { manifest: &manifest, root: None, bundled: false }, &ctx);
+        let view = plugin_view(&Source { manifest: &manifest, root: None, bundled: false, built_in: false }, &ctx);
         let blocks = view["blocks"].as_array().unwrap();
         assert_eq!(blocks.iter().map(|b| b["type"].as_str().unwrap()).collect::<Vec<_>>(), ["games", "links"]);
         let games = blocks[0]["games"].as_array().unwrap();

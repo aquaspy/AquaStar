@@ -41,6 +41,10 @@ Global preferences (hiding the launcher, the menu bar, language, Ruffle quality 
 
 The launcher reads the result of the `launcher_model` command: for each active plugin, its blocks with games (each with the players available here, the default and the saved choice), tools, link groups and searches. `play_game` opens a game with a chosen player and `launcher_search` runs a search.
 
+### Built-in example plugin
+
+`example-companion` also ships inside the executable (`src/extensions/builtin.rs` embeds `desktop/plugins/example-companion/`). Unlike AQW it is an ordinary package: same manifest rules, permissions and isolated tool windows. It is written to `extensions/builtin/example-companion/` at start-up, listed as built in, and cannot be disabled or removed. An installed package with the same id is ignored, and a ZIP with that id is refused at review. It stays available in safe mode. Its saved data is kept under the same id.
+
 ### The bundled plugin
 
 AQW is described by `desktop/plugins/adventure-quest-worlds/plugin.json` and compiled into the binary. It is listed like any plugin but cannot be disabled or removed. Only it may use `tools[].builtin` (windows implemented by AquaStar), `games[].resolver` (host movie resolvers such as the live AQW loader and the custom SWF/URL override) and `links` blocks with `source: "menu:useful"`. Packages that use these are rejected, and the ids `adventure-quest-worlds` and `aquastar` stay reserved for the host.

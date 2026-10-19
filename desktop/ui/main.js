@@ -69,7 +69,7 @@ function renderNav() {
           'span',
           { class: 'name' },
           el('span', { text: plugin.name }),
-          el('span', { class: 'sub', text: plugin.bundled ? 'Built in' : 'v' + plugin.version })
+          el('span', { class: 'sub', text: plugin.builtIn ? 'Built in' : 'v' + plugin.version })
         )
       )
     );
@@ -285,7 +285,7 @@ function renderPlugin() {
       el(
         'div',
         {},
-        el('p', { class: 'eyebrow', text: plugin.bundled ? 'Built-in plugin' : 'Plugin · v' + plugin.version }),
+        el('p', { class: 'eyebrow', text: plugin.builtIn ? 'Built-in plugin' : 'Plugin · v' + plugin.version }),
         el('h1', { text: plugin.name }),
         plugin.description ? el('p', { class: 'lead', text: plugin.description }) : ''
       )
@@ -350,7 +350,7 @@ async function loadModel() {
 function renderBuiltin() {
   const mount = document.getElementById('extension-builtin');
   mount.replaceChildren();
-  for (const plugin of model.plugins.filter((entry) => entry.bundled)) {
+  for (const plugin of model.plugins.filter((entry) => entry.builtIn)) {
     mount.append(
       el(
         'article',

@@ -121,7 +121,7 @@ const MODEL = {
   platform: { os: 'windows', arch: 'x86_64' },
   restartRequired: false, safeMode: false, errors: [],
   plugins: [
-    { id: 'adventure-quest-worlds', name: 'Adventure Quest Worlds', version: '1.0.0', bundled: true, icon: null,
+    { id: 'adventure-quest-worlds', name: 'Adventure Quest Worlds', version: '1.0.0', builtIn: true, icon: null,
       description: 'AdventureQuest Worlds and DragonFable, with the inventory, reminders, to-do and strategy tools.',
       blocks: [
         { type: 'games', title: null, games: [
@@ -138,12 +138,12 @@ const MODEL = {
           { label: 'Other useful pages', links: ['Daily Gifts', 'Calendar', 'Forge', 'HeroMart', 'Portal'].map((n) => ({ id: n, name: n, kind: 'site' })) },
           { label: 'Social media', links: ['Twitter', 'Reddit'].map((n) => ({ id: n, name: n, kind: 'site' })) } ] },
         { type: 'search', title: 'Character page', searches: [{ id: 'charpage', name: 'Character page', placeholder: 'Character name' }] } ] },
-    { id: 'example-companion', name: 'Example Companion', version: '1.0.0', bundled: false, icon: null,
+    { id: 'example-companion', name: 'Example Companion', version: '1.0.0', builtIn: true, icon: null,
       description: 'A starter plugin with one tool and one link. It declares no game, so it shows no player.',
       blocks: [
         { type: 'tools', title: 'Tools', tools: [{ id: 'companion', name: 'Example Companion', actionId: 'open-companion' }] },
         { type: 'links', title: 'Links', groups: [{ label: null, links: [{ id: 'project', name: 'AquaStar on GitHub', kind: 'external', actionId: 'open-project' }] }] } ] },
-    { id: 'flash-arcade', name: 'Flash Arcade', version: '0.4.2', bundled: false, icon: null,
+    { id: 'flash-arcade', name: 'Flash Arcade', version: '0.4.2', builtIn: false, icon: null,
       description: 'Classic SWF games from a local package. Needs Flash Player on Windows and Linux; macOS uses Ruffle only.',
       blocks: [
         { type: 'games', title: 'Games', games: [
@@ -171,7 +171,7 @@ function el(tag, props = {}, ...children) {
 function visiblePlugins() {
   const scenario = $('#demo-scenario').value;
   if (scenario === 'empty') return [];
-  if (scenario === 'safe') return MODEL.plugins.filter((p) => p.bundled);
+  if (scenario === 'safe') return MODEL.plugins.filter((p) => p.builtIn);
   return MODEL.plugins;
 }
 function engines(game) { return game.enginesByPlatform[$('#demo-platform').value] || []; }
@@ -183,7 +183,7 @@ function renderNav() {
   for (const plugin of visiblePlugins()) {
     const key = 'plugin:' + plugin.id;
     nav.append(el('button', { class: 'nav', 'data-view': key, 'aria-current': ui.view === key ? 'page' : null, onclick: () => show(key) },
-      mark(plugin), el('span', { class: 'name' }, el('span', { text: plugin.name }), el('span', { class: 'sub', text: plugin.bundled ? 'Built in' : 'v' + plugin.version }))));
+      mark(plugin), el('span', { class: 'name' }, el('span', { text: plugin.name }), el('span', { class: 'sub', text: plugin.builtIn ? 'Built in' : 'v' + plugin.version }))));
   }
   document.querySelectorAll('.sidebar > .nav').forEach((button) => {
     if (button.dataset.view === ui.view) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
@@ -248,7 +248,7 @@ function renderBlock(plugin, block) {
 function renderPlugin(plugin) {
   const wrap = el('div');
   wrap.append(el('div', { class: 'head' }, el('span', { class: 'mark', 'aria-hidden': 'true', text: plugin.name.charAt(0) }),
-    el('div', {}, el('p', { class: 'eyebrow', text: plugin.bundled ? 'Built-in plugin' : 'Plugin · v' + plugin.version }),
+    el('div', {}, el('p', { class: 'eyebrow', text: plugin.builtIn ? 'Built-in plugin' : 'Plugin · v' + plugin.version }),
       el('h1', { text: plugin.name }), el('p', { class: 'lead', text: plugin.description }))));
   for (const block of plugin.blocks) wrap.append(renderBlock(plugin, block));
   return wrap;
@@ -259,10 +259,10 @@ function renderManager() {
     el('p', { class: 'lead', text: 'Add games and tools from authors you trust. Changes take effect after restarting AquaStar.' }))));
   wrap.append(el('div', { class: 'launch', style: 'margin-bottom:16px' }, el('button', { text: 'Install from ZIP…' }), el('button', { text: 'Refresh' })));
   for (const plugin of MODEL.plugins) {
-    const disabled = $('#demo-scenario').value === 'safe' && !plugin.bundled;
-    wrap.append(el('article', { class: 'card' }, el('h2', {}, plugin.name, el('span', { class: 'badge', text: plugin.bundled ? 'Built in' : (disabled ? 'Disabled · safe mode' : 'Active') })),
+    const disabled = $('#demo-scenario').value === 'safe' && !plugin.builtIn;
+    wrap.append(el('article', { class: 'card' }, el('h2', {}, plugin.name, el('span', { class: 'badge', text: plugin.builtIn ? 'Built in' : (disabled ? 'Disabled · safe mode' : 'Active') })),
       el('p', { class: 'meta', text: plugin.id + ' · ' + plugin.version }),
-      plugin.bundled ? el('p', { class: 'meta', text: 'The built-in plugin cannot be removed.' }) : el('div', { class: 'launch' }, el('button', { text: 'Disable' }), el('button', { text: 'Remove plugin…' }))));
+      plugin.builtIn ? el('p', { class: 'meta', text: 'The built-in plugin cannot be removed.' }) : el('div', { class: 'launch' }, el('button', { text: 'Disable' }), el('button', { text: 'Remove plugin…' }))));
   }
   return wrap;
 }
