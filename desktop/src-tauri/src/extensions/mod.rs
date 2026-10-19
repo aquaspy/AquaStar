@@ -142,10 +142,14 @@ pub async fn extensions_install(
     review_token: Option<String>,
 ) -> Result<Value, String> {
     if !approved {
-        let path = rfd::AsyncFileDialog::new()
-            .add_filter("AquaStar plugin ZIP", &["zip"])
-            .pick_file()
-            .await;
+        // An ownerless dialog can open behind the launcher on Windows, so the user never
+        // sees it. Parent it to the launcher window.
+        let mut dialog = rfd::AsyncFileDialog::new().add_filter("AquaStar plugin ZIP", &["zip"]);
+        let parent = app.get_webview_window("main");
+        if let Some(parent) = &parent {
+            dialog = dialog.set_parent(parent);
+        }
+        let path = dialog.pick_file().await;
         let Some(path) = path else {
             return Ok(Value::Null);
         };
