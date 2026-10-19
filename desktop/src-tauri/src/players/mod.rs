@@ -3,6 +3,7 @@ mod flash_menu;
 mod movie;
 
 pub use movie::MovieKind;
+pub(crate) use catalog::{Arch, Os};
 
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -27,6 +28,17 @@ pub enum Engine {
 
 impl Engine {
     pub const ALL: [Engine; 2] = [Engine::Ruffle, Engine::Flash];
+
+    pub fn id(&self) -> &'static str {
+        match self {
+            Engine::Ruffle => "ruffle",
+            Engine::Flash => "flash",
+        }
+    }
+
+    pub fn from_id(id: &str) -> Option<Engine> {
+        Engine::ALL.into_iter().find(|engine| engine.id() == id)
+    }
 
     pub fn preferred() -> Option<Engine> {
         match (catalog::Os::host(), catalog::Arch::host()) {

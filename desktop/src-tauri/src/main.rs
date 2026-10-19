@@ -4,6 +4,7 @@ mod ads;
 mod account_sync;
 mod extensions;
 mod inventory;
+mod launcher;
 mod manifest;
 mod menu_visibility;
 #[cfg(target_os = "linux")]
@@ -886,6 +887,9 @@ fn main() {
         .manage(ShortcutBook(std::sync::Mutex::new(std::collections::HashMap::new())))
         .invoke_handler(tauri::generate_handler![
             play,
+            launcher::launcher_model,
+            launcher::play_game,
+            launcher::launcher_search,
             extensions::extensions_list,
             extensions::extensions_install,
             extensions::extensions_change,

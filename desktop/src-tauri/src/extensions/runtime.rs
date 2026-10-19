@@ -102,7 +102,7 @@ fn decode_path(raw: &str) -> Result<String, String> {
     String::from_utf8(decoded).map_err(|_| "invalid extension asset name".into())
 }
 
-fn asset_path(root: &Path, raw: &str) -> Result<PathBuf, String> {
+pub(crate) fn asset_path(root: &Path, raw: &str) -> Result<PathBuf, String> {
     let relative = relative_path(&decode_path(raw)?)?;
     let target = root
         .join(relative)
@@ -117,7 +117,7 @@ fn asset_path(root: &Path, raw: &str) -> Result<PathBuf, String> {
     Ok(target)
 }
 
-fn content_type(path: &Path) -> &'static str {
+pub(crate) fn content_type(path: &Path) -> &'static str {
     match path.extension().and_then(|s| s.to_str()).unwrap_or("") {
         "html" | "htm" => "text/html; charset=utf-8",
         "js" | "mjs" => "text/javascript; charset=utf-8",

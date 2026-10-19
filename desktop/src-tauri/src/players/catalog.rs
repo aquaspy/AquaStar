@@ -49,7 +49,7 @@ impl Os {
         Self::parse(std::env::consts::OS)
     }
 
-    fn as_str(self) -> &'static str {
+    pub(crate) fn as_str(self) -> &'static str {
         match self {
             Self::Linux => "linux",
             Self::Windows => "windows",
@@ -70,6 +70,14 @@ impl Arch {
 
     pub fn host() -> Option<Self> {
         Self::parse(std::env::consts::ARCH)
+    }
+
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::X86 => "x86",
+            Self::X86_64 => "x86_64",
+            Self::Aarch64 => "aarch64",
+        }
     }
 }
 

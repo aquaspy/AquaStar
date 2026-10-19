@@ -80,6 +80,23 @@ impl Extensions {
             })
             .collect()
     }
+    /// Active third-party plugins with their installed folders.
+    pub fn active_plugins(&self) -> Vec<(model::Manifest, PathBuf)> {
+        let store = PackageStore::new(&self.root);
+        self.active
+            .values()
+            .map(|plugin| (plugin.manifest.clone(), store.plugin_dir(plugin)))
+            .collect()
+    }
+    pub fn is_safe_mode(&self) -> bool {
+        self.safe
+    }
+    pub fn restart_pending(&self) -> bool {
+        self.pending.load(Ordering::SeqCst)
+    }
+    pub fn error_messages(&self) -> Vec<String> {
+        self.errors.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
     fn plugin(&self, id: &str) -> Result<&InstalledPlugin, String> {
         self.active
             .get(id)
@@ -342,7 +359,7 @@ async fn run_action(
     }
 }
 
-fn open_external(url: &str) -> Result<(), String> {
+pub(crate) fn open_external(url: &str) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     let result = std::process::Command::new("xdg-open").arg(url).status();
     #[cfg(target_os = "macos")]

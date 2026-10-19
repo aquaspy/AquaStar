@@ -289,6 +289,26 @@ pub fn save_show_menu_bar(dir: &Path, show: bool) -> Result<(), String> {
     write_settings(dir, &map)
 }
 
+/// Player chosen for one game, keyed `<plugin>/<game>`. Unknown or malformed values are ignored by callers.
+pub fn load_game_engine(dir: &Path, key: &str) -> Option<String> {
+    settings_object(dir)
+        .get("gameEngine")?
+        .get(key)?
+        .as_str()
+        .map(str::to_string)
+}
+
+pub fn save_game_engine(dir: &Path, key: &str, engine: &str) -> Result<(), String> {
+    let mut map = settings_object(dir);
+    let mut engines = match map.remove("gameEngine") {
+        Some(serde_json::Value::Object(existing)) => existing,
+        _ => serde_json::Map::new(),
+    };
+    engines.insert(key.into(), serde_json::Value::String(engine.into()));
+    map.insert("gameEngine".into(), serde_json::Value::Object(engines));
+    write_settings(dir, &map)
+}
+
 /// Command line for one movie. The SWF is last, and only known flag values are passed.
 pub fn ruffle_args(swf: &str, settings: &RuffleSettings, platform: &str) -> Vec<String> {
     let settings = settings.for_platform(platform);

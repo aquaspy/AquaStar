@@ -17,7 +17,10 @@ commands.allow = [
   "launcher_settings",
   "set_hide_launcher",
   "set_show_menu_bar",
-  "get_shell_pages"
+  "get_shell_pages",
+  "launcher_model",
+  "play_game",
+  "launcher_search"
 ]
 
 [[permission]]
