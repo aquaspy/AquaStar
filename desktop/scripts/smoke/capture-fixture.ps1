@@ -13,5 +13,6 @@ $form.Add_Paint({
 $timer = New-Object System.Windows.Forms.Timer
 $timer.Interval = 33
 $timer.Add_Tick({ $script:position = ($script:position + 2) % 300; $form.Invalidate() })
+$form.Add_Shown({ [Console]::WriteLine('AquaStar fixture ready'); [Console]::Out.Flush() })
 $timer.Start()
 [System.Windows.Forms.Application]::Run($form)

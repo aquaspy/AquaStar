@@ -56,5 +56,5 @@ GLib.timeout_add(33, lambda: (area.queue_draw(), True)[1])
 window.show_all()
 if args.audio:
     threading.Thread(target=tone, daemon=True).start()
-print(f'Fixture PID: {os.getpid()}', flush=True)
+GLib.idle_add(lambda: print(f'AquaStar fixture ready: {os.getpid()}', flush=True))
 Gtk.main()

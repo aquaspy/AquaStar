@@ -37,9 +37,19 @@ def main():
     with (args.output / 'fixture.log').open('w') as log:
         process = subprocess.Popen(fixture, env=env, stdout=log, stderr=log)
         try:
-            time.sleep(2)
-            result = subprocess.run([str(args.binary.resolve()), str(process.pid), str(args.encoder.resolve()), str(args.output.resolve())], env=env, check=True, text=True, capture_output=True, timeout=args.seconds + 60)
+            deadline = time.monotonic() + 30
+            fixture_log = args.output / 'fixture.log'
+            while 'AquaStar fixture ready' not in fixture_log.read_text(errors='replace'):
+                if process.poll() is not None:
+                    raise RuntimeError(f'Fixture exited before showing its window: {fixture_log.read_text(errors="replace")}')
+                if time.monotonic() >= deadline:
+                    raise RuntimeError(f'Fixture did not show its window: {fixture_log.read_text(errors="replace")}')
+                time.sleep(.1)
+            time.sleep(.5)
+            result = subprocess.run([str(args.binary.resolve()), str(process.pid), str(args.encoder.resolve()), str(args.output.resolve())], env=env, check=False, text=True, capture_output=True, timeout=args.seconds + 60)
             (args.output / 'native.log').write_text(result.stdout + result.stderr)
+            if result.returncode:
+                raise RuntimeError(f'Native capture failed: {result.stdout}{result.stderr}')
         finally:
             process.terminate()
             process.wait(timeout=5)
