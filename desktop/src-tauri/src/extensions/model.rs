@@ -694,7 +694,7 @@ mod launcher_parameter_tests {
             "permissions":["launch"],"games":[{{"id":"g","name":"G","url":"https://example.com/g.swf"}}],
             "launcherParameters":{parameters}}}"#
         ))
-        .unwrap();
+        .map_err(|error| error.to_string())?;
         manifest.validate("3.0.0")
     }
 
