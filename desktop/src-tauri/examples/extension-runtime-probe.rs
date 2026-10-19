@@ -123,6 +123,11 @@ fn probe_secret() -> Value {
     json!({"secret":"unlisted command must remain inaccessible"})
 }
 
+#[tauri::command]
+fn capture_info() -> Value { json!({"secret":"Capture capabilities must remain private"}) }
+#[tauri::command]
+fn capture_start() -> Value { json!({"secret":"Capture must not start from plugins"}) }
+
 fn main() {
     eprintln!("Starting native extension isolation probe");
     let base = std::path::PathBuf::from(std::env::var("AQUASTAR_PROBE_PACKAGES").unwrap());
@@ -159,7 +164,9 @@ fn main() {
         runtime::extension_invoke,
         get_inventory,
         play,
-        probe_secret
+        probe_secret,
+        capture_info,
+        capture_start
     ])
     .setup(move |app| {
         let submenu = tauri::menu::SubmenuBuilder::new(app, "Probe")

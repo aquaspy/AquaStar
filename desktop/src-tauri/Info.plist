@@ -4,5 +4,9 @@
 <dict>
   <key>CFBundleDisplayName</key>
   <string>AquaStar</string>
+  <key>NSScreenCaptureUsageDescription</key>
+  <string>AquaStar captures the game window for screenshots and recordings you request.</string>
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>AquaStar records game audio when you enable it.</string>
 </dict>
 </plist>

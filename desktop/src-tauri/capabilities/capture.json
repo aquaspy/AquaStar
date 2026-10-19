@@ -1,0 +1,1 @@
+{ "identifier": "capture", "windows": ["capture"], "permissions": ["core:default", "capture-controls"] }

@@ -61,7 +61,7 @@ jobs:
 
   smoke:
     needs: resolve
-    if: needs.resolve.result == 'success'
+    if: needs.resolve.result == 'success' && needs.resolve.outputs.tag != ''
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:

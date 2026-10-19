@@ -889,7 +889,7 @@ mod tests {
     }
 
     #[test]
-    fn package_lists_no_recording_or_alt_k() {
+    fn package_does_not_restore_character_page_printing() {
         let needles = [
             format!("{}{}", "Alt+", "K"),
             format!("{}{}", "cp", "Sshot"),
@@ -903,8 +903,7 @@ mod tests {
         files.push(root.join("tauri.conf.json"));
         for path in &files {
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            let lower = name.to_ascii_lowercase();
-            assert!(!lower.contains("recording"), "{}", path.display());
+            let _ = name;
             let Ok(bytes) = std::fs::read(path) else { continue };
             let Ok(text) = String::from_utf8(bytes) else { continue };
             for needle in &needles {
@@ -913,14 +912,13 @@ mod tests {
         }
         let banned_ids = [
             format!("{}{}", "cp", "Sshot"),
-            "record".to_string(),
-            "sshot".to_string(),
+
         ];
         let banned_accel = format!("{}{}", "Alt+", "K");
         for bind in keybinds() {
             assert!(!banned_ids.iter().any(|id| id == &bind.id), "{}", bind.id);
             assert!(!bind.defaults.iter().any(|accel| accel == &banned_accel));
-            assert_ne!(bind.action, "record");
+
         }
         let help = help_dialog("en-US", None);
         for needle in &needles {
@@ -928,7 +926,7 @@ mod tests {
             assert!(!help.message.contains(needle));
         }
         let permissions = std::fs::read_to_string(root.join("permissions/app.toml")).unwrap();
-        assert!(!permissions.contains("record"));
+        assert!(permissions.contains("capture_start"));
     }
 
     fn collect_files(path: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {

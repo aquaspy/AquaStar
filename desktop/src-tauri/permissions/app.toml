@@ -3,6 +3,14 @@ identifier = "launcher-commands"
 description = "Launcher window"
 commands.allow = [
   "play",
+  "capture_show",
+  "capture_info",
+  "capture_choose_folder",
+  "capture_set_audio",
+  "capture_open_folder",
+  "capture_screenshot",
+  "capture_start",
+  "capture_stop",
   "extensions_list",
   "extensions_install",
   "extensions_change",
@@ -121,3 +129,8 @@ commands.allow = [
   "set_strategy_timer_shortcut",
   "clear_strategy_timer_shortcut"
 ]
+
+[[permission]]
+identifier = "capture-controls"
+description = "Built-in capture control window"
+commands.allow = ["capture_info", "capture_choose_folder", "capture_set_audio", "capture_open_folder", "capture_screenshot", "capture_start", "capture_stop"]

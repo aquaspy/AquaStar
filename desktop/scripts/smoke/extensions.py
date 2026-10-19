@@ -28,6 +28,8 @@ PROBE = r"""(async () => {
     check('simultaneous plugin storage isolated', localStorage.getItem('plugin-marker') === info.pluginId);
     await denied('inventory command denied', () => call('get_inventory'));
     await denied('player command denied', () => call('play'));
+    await denied('capture capabilities denied', () => call('capture_info'));
+    await denied('capture start denied', () => call('capture_start'));
     await denied('unlisted application command denied', () => call('probe_secret'));
     await denied('native window creation denied', () => call('plugin:window|create', { options: { label: 'evil' } }));
     await denied('event listeners denied', () => call('plugin:event|listen', { event: 'inventory', target: { kind: 'Any' }, handler: 123 }));

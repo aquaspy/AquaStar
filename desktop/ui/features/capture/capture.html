@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AquaStar — Capture</title>
+    <link rel="stylesheet" href="capture.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <span id="indicator" aria-hidden="true">●</span>
+        <h1>Capture your game</h1>
+        <time id="elapsed">00:00</time>
+      </header>
+      <p id="status" role="status" aria-live="polite">Loading capture controls…</p>
+      <p id="notice" role="status"></p>
+      <label
+        >Game window<select id="target">
+          <option value="">Choose a running game</option>
+        </select></label
+      >
+      <div class="actions">
+        <button id="screenshot">Take Screenshot · F2</button><button id="record">Start Recording · Ctrl+J</button
+        ><button id="stop" hidden>Stop Recording</button>
+      </div>
+      <label class="audio"><input id="audio" type="checkbox" /> Include game audio</label>
+      <p class="hint">Only the game window and its sound are captured. Microphone recording is off.</p>
+      <button id="silent" hidden>Record Without Audio</button>
+      <details>
+        <summary>Capture folders</summary>
+        <p>
+          <span id="screenshots"></span><button data-folder="screenshots">Change screenshots folder</button
+          ><button data-open="screenshots">Open screenshots folder</button>
+        </p>
+        <p>
+          <span id="videos"></span><button data-folder="videos">Change videos folder</button
+          ><button data-open="videos">Open videos folder</button>
+        </p>
+      </details>
+      <p class="hint">PNG screenshots · MP4 video · up to 1080p at 30 FPS</p>
+    </main>
+    <script src="capture.js"></script>
+  </body>
+</html>

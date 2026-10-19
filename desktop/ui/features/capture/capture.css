@@ -1,0 +1,88 @@
+:root {
+  font:
+    14px system-ui,
+    sans-serif;
+  color: #e2e8f0;
+  background: #0e1824;
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+}
+main {
+  padding: 20px;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+h1 {
+  font-size: 18px;
+  margin: 0;
+}
+time {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+#indicator {
+  color: #91a5b9;
+}
+body[data-active='true'] #indicator {
+  color: #ff6868;
+}
+label {
+  display: block;
+  margin: 12px 0;
+}
+select {
+  display: block;
+  width: 100%;
+  padding: 9px;
+  margin-top: 5px;
+}
+button {
+  padding: 9px 12px;
+  border: 1px solid #47617b;
+  border-radius: 7px;
+  background: #253f57;
+  color: inherit;
+  cursor: pointer;
+}
+button:hover {
+  background: #355470;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.audio {
+  display: flex;
+  gap: 8px;
+}
+.hint {
+  color: #a3b5c6;
+  font-size: 12px;
+}
+#status {
+  overflow-wrap: anywhere;
+}
+details p {
+  display: grid;
+  gap: 6px;
+}
+details span {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+[hidden] {
+  display: none !important;
+}
+#stop {
+  background: #7c2636;
+}

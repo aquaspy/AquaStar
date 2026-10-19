@@ -80,3 +80,7 @@ The bundled AQW plugin has a **Char Page Studio** tool (`aquastar --aqw --tool=s
 The in-window menu bar is hidden by default on Linux and Windows. Enable **Preferences → Show menu bar** to show it; keyboard shortcuts work with either setting. macOS keeps its system application menu.
 
 Inventory sync uses the saved account session. If the visible Account window is closed, the launcher initializes the account session in a hidden window using the same browser profile. An expired login offers **Open Account**; game login and account-site login are separate sessions.
+
+## Game capture
+
+The development launcher includes **Preferences → Screenshots and recording**, PNG screenshots (F2) and MP4 recording (Ctrl+J). The recording component ships with the application. Audio is restricted to the game process where supported; silent recording is an explicit fallback. See [capture capabilities and native testing](../docs/CAPTURE.md).

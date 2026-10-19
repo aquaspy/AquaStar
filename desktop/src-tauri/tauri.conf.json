@@ -4,11 +4,18 @@
   "mainBinaryName": "aquastar-lite",
   "version": "3.0.0-rc.4",
   "identifier": "io.github.aquaspy.aquastar-lite",
-  "build": { "frontendDist": "../ui" },
+  "build": {
+    "frontendDist": "../ui"
+  },
   "app": {
     "withGlobalTauri": true,
     "windows": [
-      { "label": "main", "title": "AquaStar", "width": 900, "height": 860 }
+      {
+        "label": "main",
+        "title": "AquaStar",
+        "width": 900,
+        "height": 860
+      }
     ],
     "security": {
       "csp": "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'"
@@ -16,7 +23,12 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "appimage", "nsis", "dmg"],
+    "targets": [
+      "deb",
+      "appimage",
+      "nsis",
+      "dmg"
+    ],
     "category": "Game",
     "macOS": {
       "signingIdentity": "-",
@@ -35,6 +47,9 @@
       "icons/512x512.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "resources": {
+      "media/": "media/"
+    }
   }
 }

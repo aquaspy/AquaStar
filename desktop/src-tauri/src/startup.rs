@@ -294,6 +294,7 @@ fn show_main(app: &tauri::AppHandle) {
 /// In a direct start there is no launcher to go back to, so AquaStar ends when the last
 /// window is closed and no game is running.
 pub fn exit_when_finished(app: &tauri::AppHandle, closed: &str) {
+    if app.state::<crate::capture::CaptureState>().active() { return; }
     if !app.state::<StartupState>().is_direct() {
         return;
     }

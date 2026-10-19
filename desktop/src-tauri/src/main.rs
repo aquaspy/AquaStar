@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ads;
+mod capture;
 mod cli;
 mod account_sync;
 mod extensions;
@@ -38,6 +39,8 @@ fn hide_launcher_enabled(app: &tauri::AppHandle) -> bool {
 }
 
 fn sync_launcher(app: &tauri::AppHandle, presence: players::Presence) {
+    if presence == players::Presence::Idle && app.state::<capture::CaptureState>().active() { return; }
+    register_saved_shortcuts(app);
     // Started straight into a game: there is no launcher to bring back, so AquaStar ends
     // with the game.
     if app.state::<startup::StartupState>().is_direct() {
@@ -769,6 +772,25 @@ fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
                 let _ = open_site(app, label, url, Some(title)).await;
             });
         }
+        "capture" => {
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move { capture::open_controls(&app).await; });
+        }
+        "sshot" => {
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move {
+                match capture::screenshot(app.clone(), None).await {
+                    Ok(_) => capture::open_controls(&app).await,
+                    Err(error) => {
+                        let _ = rfd::AsyncMessageDialog::new().set_title("Screenshot").set_description(&error).show().await;
+                    }
+                }
+            });
+        }
+        "record" => {
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move { capture::toggle(app).await; });
+        }
         "play-primary" => spawn_play(app, MovieKind::Primary),
         "play-dragonfable" => spawn_play(app, MovieKind::DragonFable),
         _ => {}
@@ -785,9 +807,13 @@ fn spawn_play(app: &tauri::AppHandle, movie: MovieKind) {
 
 fn register_saved_shortcuts(app: &tauri::AppHandle) {
     use tauri_plugin_global_shortcut::GlobalShortcutExt;
+    let old = std::mem::take(&mut *app.state::<ShortcutBook>().0.lock().unwrap_or_else(|e|e.into_inner()));
+    for shortcut in old.keys() { let _=app.global_shortcut().unregister(*shortcut); }
+    let running = !app.state::<Players>().capture_pids().is_empty();
     let merged = profile::merged_settings(&profile::live_files());
     let mut map = std::collections::HashMap::new();
     for bind in manifest::keybinds() {
+        if matches!(bind.id.as_str(), "sshot" | "record") && !running { continue; }
         for accel in manifest::accelerators(&bind, merged.get(&bind.id)) {
             let Some(parsed) = profile::parse_accelerator(&accel) else {
                 eprintln!("aquastar-lite: skipping invalid shortcut {accel} for {}", bind.id);
@@ -919,9 +945,18 @@ fn main() {
         .manage(Players::default())
         .manage(startup::StartupState::default())
         .manage(studio::StudioState::default())
+        .manage(capture::CaptureState::default())
         .manage(TimerShortcut(std::sync::Mutex::new(None)))
         .manage(ShortcutBook(std::sync::Mutex::new(std::collections::HashMap::new())))
         .invoke_handler(tauri::generate_handler![
+            capture::capture_show,
+            capture::capture_info,
+            capture::capture_choose_folder,
+            capture::capture_set_audio,
+            capture::capture_open_folder,
+            capture::capture_screenshot,
+            capture::capture_start,
+            capture::capture_stop,
             play,
             launcher::launcher_model,
             launcher::play_game,
@@ -1023,6 +1058,12 @@ fn main() {
         })
         .expect("presence hook");
     app.run(|app, event| {
+        if let RunEvent::WindowEvent { label, event: tauri::WindowEvent::CloseRequested { api, .. }, .. } = &event {
+            if label == "capture" && app.state::<capture::CaptureState>().active() {
+                api.prevent_close();
+                if let Some(window) = app.get_webview_window(label) { let _ = window.hide(); }
+            }
+        }
         let main_gone = matches!(
             &event,
             RunEvent::WindowEvent { label, event: tauri::WindowEvent::Destroyed, .. } if label == "main"
@@ -1036,6 +1077,7 @@ fn main() {
             }
         }
         if main_gone || matches!(event, RunEvent::Exit) {
+            app.state::<capture::CaptureState>().shutdown();
             app.state::<Players>().kill_all();
             app.state::<studio::StudioState>().stop_preview();
             if main_gone {

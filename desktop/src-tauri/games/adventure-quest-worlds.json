@@ -55,7 +55,10 @@
       "items": [
         { "id": "reload", "labelKey": "menuReloadPage", "keybind": "reload", "action": "reload" },
         { "id": "reloadCache", "labelKey": "menuReloadCache", "keybind": "reloadCache", "action": "reload-cache" },
-        { "id": "fullscreen", "labelKey": "menuFullscreen", "keybind": "fullscreen", "action": "fullscreen" }
+        { "id": "fullscreen", "labelKey": "menuFullscreen", "keybind": "fullscreen", "action": "fullscreen" },
+        { "id": "capture", "fallback": "Screenshots and Recording", "action": "capture" },
+        { "id": "sshot", "fallback": "Take Screenshot", "keybind": "sshot", "action": "sshot" },
+        { "id": "record", "fallback": "Start/Stop Recording", "keybind": "record", "action": "record" }
       ]
     },
     {
@@ -89,6 +92,8 @@
     }
   ],
   "keybinds": [
+    { "id": "sshot", "default": "F2", "action": "sshot" },
+    { "id": "record", "default": "Ctrl+J", "action": "record" },
     { "id": "about", "default": "F9", "action": "about" },
     { "id": "fullscreen", "default": "F11", "action": "fullscreen" },
     { "id": "reload", "default": ["CmdOrCtrl+F5", "CmdOrCtrl+R"], "action": "reload" },

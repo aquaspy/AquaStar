@@ -31,7 +31,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libdbus-1-dev xvfb dbus-x11
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libdbus-1-dev xvfb dbus-x11 libpipewire-0.3-dev libpulse-dev libxcb-randr0-dev libgbm-dev libclang-dev
       - name: Extension lifecycle and package tests
         working-directory: desktop/src-tauri
         run: 'cargo test --locked extensions:: -- --test-threads=1'

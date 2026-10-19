@@ -11,6 +11,15 @@ AquaStar 3.0 is the Tauri launcher in `desktop/` on `dev`. Read [`desktop/README
 - Ruffle defaults are **High** quality and **Automatic** graphics. Preserve valid saved choices. Platform-specific crash recovery is separate from the user's default graphics setting. See `desktop/README.md` and the pinned player catalog before changing player arguments or compatibility.
 - Public branding is AquaStar and the source directory is `desktop/`. Internal names such as the `aquastar-lite` binary/Cargo package and `io.github.aquaspy.aquastar-lite` identifier remain for compatibility; do not rename them without a data/resource migration.
 
+### Game capture
+
+- `capture/` owns screenshots, recording and capture settings. Capture is a host feature: only the launcher and built-in `capture` control window receive its commands. Never grant them to plugin WebViews or account/wiki windows.
+- Resolve targets from `Players.capture_pids()` and recheck window ownership. Studio's separate preview processes are not game targets. Use native window capture; never silently fall back to monitor capture or whole-system audio.
+- Native video frames and isolated game audio feed the bundled minimal FFmpeg/OpenH264 sidecar. Keep encoding off the UI thread, buffers bounded, stderr bounded and finalization time-limited. Keep the audio/video clocks aligned through silence; finalize audio before waiting for video flush.
+- Capture must work with the launcher hidden and during direct startup. Finalize before automatic player-exit shutdown. A replacement player PID requires a new recording. Preserve recoverable temporary files on encoding failures.
+- Build media with `python3 desktop/scripts/build-media.py`; generated binaries belong in ignored `src-tauri/media/`, source/compiler caches in the sibling workspace. Include the sidecars, architecture-specific notices and source bundle when packaging. Debug overrides must not become production executable discovery.
+- See [capture behavior and validation](docs/CAPTURE.md). Native fixture success, cross-compilation and CI are separate evidence from Mac permissions, Wayland compositor support and real game-renderer tests.
+
 ### Desktop plugin boundary
 
 Desktop plugins use the isolated launcher API in `desktop/src-tauri/src/extensions/`. Read [the authoring guide](docs/DESKTOP-PLUGINS.md); the starter is `desktop/plugins/example-companion/`. They are independent of the Electron plugin host described below.

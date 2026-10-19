@@ -643,6 +643,11 @@ impl Players {
         self.launch_hold.store(false, Ordering::SeqCst);
     }
 
+    pub fn capture_pids(&self) -> Vec<u32> {
+        self.children.lock().unwrap_or_else(|e| e.into_inner()).iter_mut()
+            .filter_map(|tracked| matches!(tracked.child.try_wait(), Ok(None)).then(|| tracked.child.id())).collect()
+    }
+
     pub fn presence(&self) -> Presence {
         self.last_presence.lock().unwrap().unwrap_or(Presence::Idle)
     }

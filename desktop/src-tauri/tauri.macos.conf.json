@@ -1,5 +1,5 @@
 {
   "bundle": {
-    "resources": ["players/"]
+    "resources": ["players/", "media/"]
   }
 }

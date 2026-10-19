@@ -42,6 +42,9 @@ if [[ -d "$players" ]]; then
     codesign --force -s - "$loose"
   done < <(find "$players" -type f \( -name 'ruffle_desktop' -o -name '*.dylib' \))
 fi
+if [[ -d "$app/Contents/Resources/media" ]]; then
+  while IFS= read -r media; do codesign --force -s - "$media"; done < <(find "$app/Contents/Resources/media" -type f \( -name 'ffmpeg-macos-*' -o -name 'capture-macos-*' \))
+fi
 codesign --force --deep -s - "$app"
 
 bundle=$(cd "$(dirname "$app")/.." && pwd)

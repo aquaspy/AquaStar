@@ -26,8 +26,19 @@ if [[ $(uname -s) == Linux ]]; then
 fi
 
 cd "$root/src-tauri"
+media_os=$(case "$(uname -s)" in Darwin) echo macos;; Linux) echo linux;; *) echo windows;; esac)
+media_arch=$(uname -m)
+case "$media_arch" in arm64|aarch64) media_arch=aarch64;; amd64|x86_64) media_arch=x86_64;; esac
+media_suffix=
+[[ "$media_os" != windows ]] || media_suffix=.exe
+if [[ ! -f "media/ffmpeg-${media_os}-${media_arch}${media_suffix}" ]]; then
+  python3 ../scripts/build-media.py
+fi
 cargo "${args[@]}"
 binary="${CARGO_TARGET_DIR:-$PWD/target}/$profile/aquastar-lite"
+mkdir -p "$(dirname "$binary")/media"
+cp -R media/. "$(dirname "$binary")/media/"
+[[ "$media_os" != windows ]] || binary="${binary}.exe"
 echo "Local build: $binary"
 if [[ $run == true ]]; then
   exec "$binary"

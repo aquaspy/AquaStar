@@ -11,6 +11,12 @@ if [ -z "$tag" ]; then
     --jq '[.[] | select(.tagName | test("^(lite-v[0-9A-Za-z._+-]+|v3\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?)$"))] | sort_by(.publishedAt) | reverse | .[0].tagName')
 fi
 
+if [ "${EVENT_NAME:-}" = "push" ] && { [ -z "$tag" ] || [ "$tag" = "null" ]; }; then
+  echo "No published desktop release; artifact smoke is skipped."
+  echo "tag=" >> "$GITHUB_OUTPUT"
+  exit 0
+fi
+
 if ! printf '%s\n' "$tag" | grep -Eq '^(lite-v[0-9A-Za-z._+-]+|v3\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?)$'; then
   echo "no lite-v* or v3 release to test (got '${tag}')" >&2
   exit 1
