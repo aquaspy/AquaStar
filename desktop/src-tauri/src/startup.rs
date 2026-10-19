@@ -141,9 +141,9 @@ pub fn probably_direct(cli: &Cli, has_saved: bool) -> bool {
     match cli.launcher {
         LauncherMode::Show => false,
         LauncherMode::Skip => true,
-        LauncherMode::Default => {
-            cli.plugin.is_some() || has_saved
-        }
+        // Naming a plugin shows the launcher on its page; only `--no-launcher` skips it. The
+        // saved start-up game applies when nothing is named.
+        LauncherMode::Default => cli.plugin.is_none() && has_saved,
     }
 }
 
@@ -179,7 +179,7 @@ pub fn decide(
             }
             None => {
                 if cli.launcher == LauncherMode::Skip || asks_for_a_game {
-                    notes.push("No start-up game is set. Name a plugin, for example --aqw.".into());
+                    notes.push("No start-up game is set. Name a plugin, for example --aqw --no-launcher.".into());
                 }
                 None
             }
@@ -193,6 +193,14 @@ pub fn decide(
     let name = plugin.manifest.name.clone();
     let page = Some(plugin.manifest.id.clone());
     if cli.launcher == LauncherMode::Show {
+        return Decision { direct: None, show_plugin: page, notice: join(notes) };
+    }
+    // `aquastar --aqw` shows the launcher on that plugin's page. Going straight to a game or
+    // tool is what `--no-launcher` is for.
+    if cli.plugin.is_some() && cli.launcher != LauncherMode::Skip {
+        if asks_for_a_game {
+            notes.push("Add --no-launcher to open it without the launcher.".into());
+        }
         return Decision { direct: None, show_plugin: page, notice: join(notes) };
     }
 
@@ -406,15 +414,27 @@ mod tests {
     #[test]
     fn naming_a_plugin_opens_its_default_game_with_the_requested_player() {
         assert_eq!(
-            run("--aqw --ruffle1.7", None),
+            run("--aqw --no-launcher --ruffle1.7", None),
             direct("adventure-quest-worlds", "aqw", Some((Engine::Ruffle, Some("1.7"))))
         );
-        assert_eq!(run("--aqw", None), direct("adventure-quest-worlds", "aqw", None));
+        assert_eq!(run("--aqw --no-launcher", None), direct("adventure-quest-worlds", "aqw", None));
         assert_eq!(
             run("--aqw --game=dragonfable --no-launcher", None),
             direct("adventure-quest-worlds", "dragonfable", None)
         );
-        assert_eq!(run("--arcade", None), direct("flash-arcade", "tower", None), "the plugin's default game");
+        assert_eq!(run("--arcade --no-launcher", None), direct("flash-arcade", "tower", None), "the plugin's default game");
+    }
+
+    #[test]
+    fn naming_a_plugin_alone_shows_its_page_and_player_options_ask_for_no_launcher() {
+        let page = run("--aqw", None);
+        assert_eq!(page.direct, None);
+        assert_eq!(page.show_plugin.as_deref(), Some("adventure-quest-worlds"));
+        assert_eq!(page.notice, None);
+        let hinted = run("--aqw --ruffle1.7", None);
+        assert_eq!(hinted.direct, None);
+        assert!(hinted.notice.unwrap().contains("--no-launcher"));
+        assert_eq!(run("--aqw --game=dragonfable", Some(("adventure-quest-worlds", "aqw"))).direct, None);
     }
 
     #[test]
@@ -432,15 +452,15 @@ mod tests {
         let notice = unknown.notice.unwrap();
         assert!(notice.contains("--nope") && notice.contains("--aqw") && notice.contains("--arcade"), "{notice}");
 
-        let no_games = run("--example-plugin", None);
+        let no_games = run("--example-plugin --no-launcher", None);
         assert_eq!(no_games.show_plugin.as_deref(), Some("companion"));
         assert!(no_games.notice.unwrap().contains("no game to open"));
 
-        let wrong_game = run("--aqw --game=nope", None);
+        let wrong_game = run("--aqw --game=nope --no-launcher", None);
         assert_eq!(wrong_game.show_plugin.as_deref(), Some("adventure-quest-worlds"));
         assert!(wrong_game.notice.unwrap().contains("Games: aqw, dragonfable"));
 
-        let no_action = run("--arcade --game=hidden", None);
+        let no_action = run("--arcade --game=hidden --no-launcher", None);
         assert_eq!(no_action.direct, None, "a game without a launcher action is not playable");
     }
 
@@ -448,14 +468,14 @@ mod tests {
     fn player_requests_are_checked_against_the_platform_and_the_shipped_version() {
         let shipped = Engine::Ruffle.version_on(Os::Windows, Arch::X86_64).unwrap();
         let major_minor: String = shipped.split('.').take(2).collect::<Vec<_>>().join(".");
-        assert!(run(&format!("--aqw --ruffle{major_minor}"), None).direct.is_some());
-        let wrong = run("--aqw --ruffle9.9", None);
+        assert!(run(&format!("--aqw --no-launcher --ruffle{major_minor}"), None).direct.is_some());
+        let wrong = run("--aqw --no-launcher --ruffle9.9", None);
         assert_eq!(wrong.direct, None);
         assert!(wrong.notice.unwrap().contains("9.9 is not available"));
-        let not_offered = run("--arcade --game=plain --ruffle", None);
+        let not_offered = run("--arcade --game=plain --no-launcher --ruffle", None);
         assert_eq!(not_offered.direct, None, "the game only lists Flash Player");
         assert!(not_offered.notice.unwrap().contains("Ruffle is not available for Plain"));
-        assert!(run("--arcade --game=plain --flash", None).direct.is_some());
+        assert!(run("--arcade --game=plain --no-launcher --flash", None).direct.is_some());
     }
 
     #[test]
@@ -467,7 +487,7 @@ mod tests {
             direct("adventure-quest-worlds", "dragonfable", Some((Engine::Ruffle, None)))
         );
         assert_eq!(run("--launcher", saved).direct, None);
-        assert_eq!(run("--aqw", saved), direct("adventure-quest-worlds", "aqw", None), "a named plugin wins");
+        assert_eq!(run("--aqw --no-launcher", saved), direct("adventure-quest-worlds", "aqw", None), "a named plugin wins");
         let gone = run("", Some(("removed-plugin", "x")));
         assert_eq!(gone, Decision::default(), "a saved game of a removed plugin quietly shows the launcher");
         let skip = run("--no-launcher", None);
@@ -484,9 +504,9 @@ mod tests {
 
     #[test]
     fn a_tool_opens_directly_and_unknown_tools_fall_back_to_the_page() {
-        assert_eq!(run("--aqw --tool=inventory", None), tool("adventure-quest-worlds", "inventory"));
+        assert_eq!(run("--aqw --no-launcher --tool=inventory", None), tool("adventure-quest-worlds", "inventory"));
         assert_eq!(run("--aqw --tool=todo --no-launcher", None), tool("adventure-quest-worlds", "todo"));
-        let missing = run("--aqw --tool=nope", None);
+        let missing = run("--aqw --no-launcher --tool=nope", None);
         assert_eq!(missing.direct, None);
         assert_eq!(missing.show_plugin.as_deref(), Some("adventure-quest-worlds"));
         let notice = missing.notice.unwrap();
@@ -494,7 +514,7 @@ mod tests {
         assert_eq!(run("--aqw --tool=inventory --launcher", None).direct, None, "--launcher shows the page");
         let saved = Some(("adventure-quest-worlds", "aqw"));
         assert_eq!(run("--tool=reminders", saved), tool("adventure-quest-worlds", "reminders"));
-        let no_action = run("--arcade --tool=anything", None);
+        let no_action = run("--arcade --no-launcher --tool=anything", None);
         assert_eq!(no_action.direct, None);
         assert!(no_action.notice.unwrap().contains("Tools: none"));
     }
@@ -514,7 +534,9 @@ mod tests {
     #[test]
     fn the_window_stays_hidden_only_when_the_words_point_at_a_game() {
         assert!(!probably_direct(&parse(&[]), false));
-        assert!(probably_direct(&parse(&["--aqw".into()]), false));
+        assert!(!probably_direct(&parse(&["--aqw".into()]), false), "naming a plugin shows its page");
+        assert!(probably_direct(&parse(&["--aqw".into(), "--no-launcher".into()]), false));
+        assert!(!probably_direct(&parse(&["--aqw".into()]), true), "a named plugin beats the saved game");
         assert!(probably_direct(&parse(&[]), true));
         assert!(!probably_direct(&parse(&["--launcher".into()]), true));
         assert!(probably_direct(&parse(&["--no-launcher".into()]), false));

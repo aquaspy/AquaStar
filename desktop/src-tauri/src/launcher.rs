@@ -150,7 +150,11 @@ fn game_command(source: &Source, game: &Game, ctx: &Context) -> Option<String> {
     let id = active_command(source.manifest, ctx)?;
     let plugin = crate::startup::Plugin { manifest: source.manifest, bundled: source.bundled };
     let is_default = crate::startup::default_game(&plugin).is_some_and(|default| default.id == game.id);
-    Some(if is_default { format!("--{id}") } else { format!("--{id} --game={}", game.id) })
+    Some(if is_default {
+        format!("--{id} --no-launcher")
+    } else {
+        format!("--{id} --game={} --no-launcher", game.id)
+    })
 }
 
 fn active_command<'a>(manifest: &'a Manifest, ctx: &Context) -> Option<&'a str> {
@@ -264,7 +268,7 @@ fn block_view(source: &Source, block: &Block, ctx: &Context) -> Option<Value> {
                     let action = action_for(manifest, "tool", &tool.id);
                     let command = active_command(manifest, ctx)
                         .filter(|_| source.bundled || action.is_some())
-                        .map(|id| format!("--{id} --tool={}", tool.id));
+                        .map(|id| format!("--{id} --tool={} --no-launcher", tool.id));
                     json!({
                         "id": tool.id,
                         "name": tool.name,

@@ -128,13 +128,13 @@ const MODEL = {
       description: 'AdventureQuest Worlds and DragonFable, with the inventory, reminders, to-do and strategy tools.',
       blocks: [
         { type: 'games', title: null, games: [
-          { id: 'aqw', name: 'AdventureQuest Worlds', description: 'Opens the game in its own window.', launchable: true, command: '--aqw',
+          { id: 'aqw', name: 'AdventureQuest Worlds', description: 'Opens the game in its own window.', launchable: true, command: '--aqw --no-launcher',
             enginesByPlatform: { windows: ['ruffle', 'flash'], linux: ['ruffle', 'flash'], macos: ['ruffle', 'flash'] }, defaultEngine: 'ruffle' },
-          { id: 'dragonfable', name: 'DragonFable', description: 'Opens the game in its own window.', launchable: true, command: '--aqw --game=dragonfable',
+          { id: 'dragonfable', name: 'DragonFable', description: 'Opens the game in its own window.', launchable: true, command: '--aqw --game=dragonfable --no-launcher',
             enginesByPlatform: { windows: ['ruffle', 'flash'], linux: ['ruffle', 'flash'], macos: ['ruffle', 'flash'] }, defaultEngine: 'ruffle' } ] },
         { type: 'tools', title: 'Your tools', tools: [
-          { id: 'inventory', name: 'Inventory & Buy Back', builtin: 'inventory', command: '--aqw --tool=inventory' }, { id: 'reminders', name: 'Reminders', builtin: 'reminders', command: '--aqw --tool=reminders' },
-          { id: 'todo', name: 'To-Do List', builtin: 'todo', command: '--aqw --tool=todo' }, { id: 'strategy', name: 'Strategy', builtin: 'strategy', command: '--aqw --tool=strategy' } ] },
+          { id: 'inventory', name: 'Inventory & Buy Back', builtin: 'inventory', command: '--aqw --tool=inventory --no-launcher' }, { id: 'reminders', name: 'Reminders', builtin: 'reminders', command: '--aqw --tool=reminders --no-launcher' },
+          { id: 'todo', name: 'To-Do List', builtin: 'todo', command: '--aqw --tool=todo --no-launcher' }, { id: 'strategy', name: 'Strategy', builtin: 'strategy', command: '--aqw --tool=strategy --no-launcher' } ] },
         { type: 'search', title: 'Looking for an item?', searches: [{ id: 'wiki', name: 'AQW Wiki', placeholder: 'Item name…' }] },
         { type: 'links', title: 'Useful Pages', groups: [
           { label: null, links: ['Wiki', 'Design Notes', 'Balance Patch Notes', 'Account', 'Character page'].map((n) => ({ id: n, name: n, kind: 'site' })) },
@@ -144,7 +144,7 @@ const MODEL = {
     { id: 'example-companion', name: 'Example Companion', version: '1.0.0', builtIn: true, icon: null,
       description: 'A starter plugin with one tool and one link. It declares no game, so it shows no player.',
       blocks: [
-        { type: 'tools', title: 'Tools', tools: [{ id: 'companion', name: 'Example Companion', actionId: 'open-companion', command: '--example-plugin --tool=companion' }] },
+        { type: 'tools', title: 'Tools', tools: [{ id: 'companion', name: 'Example Companion', actionId: 'open-companion', command: '--example-plugin --tool=companion --no-launcher' }] },
         { type: 'links', title: 'Links', groups: [{ label: null, links: [{ id: 'project', name: 'AquaStar on GitHub', kind: 'external', actionId: 'open-project' }] }] } ] },
     { id: 'flash-arcade', name: 'Flash Arcade', version: '0.4.2', builtIn: false, icon: null,
       description: 'Classic SWF games from a local package. Needs Flash Player on Windows and Linux; macOS uses Ruffle only.',
