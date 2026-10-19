@@ -73,6 +73,12 @@ impl CaptureState {
         self.0.stop.store(false, Ordering::SeqCst);
         Ok(())
     }
+    fn finish(&self, app: &tauri::AppHandle) {
+        self.0.busy.store(false, Ordering::SeqCst);
+        if app.state::<crate::players::Players>().presence() == crate::players::Presence::Idle {
+            crate::sync_launcher(app, crate::players::Presence::Idle);
+        }
+    }
     fn status(&self) -> Status {
         self.0
             .status
@@ -291,18 +297,18 @@ pub async fn start(app: tauri::AppHandle, id: Option<String>, silent: bool) -> R
         Err(error) => {
             if state.0.stop.load(Ordering::SeqCst) {
                 state.update(&app, "canceled", 0, None, None, false);
-                state.0.busy.store(false, Ordering::SeqCst);
+                state.finish(&app);
                 return Ok(());
             }
             state.update(&app, "failed", 0, None, Some(error.clone()), false);
-            state.0.busy.store(false, Ordering::SeqCst);
+            state.finish(&app);
             return Err(error);
         }
     };
     let controls = show_controls(&app).await;
     if let Err(error) = controls {
         state.update(&app, "failed", 0, None, Some(error.clone()), false);
-        state.0.busy.store(false, Ordering::SeqCst);
+        state.finish(&app);
         return Err(error);
     }
     std::thread::spawn(move || {
@@ -318,15 +324,7 @@ pub async fn start(app: tauri::AppHandle, id: Option<String>, silent: bool) -> R
         if let Err(error) = result {
             state.update(&app, "failed", 0, None, Some(error), false);
         }
-        state.0.busy.store(false, Ordering::SeqCst);
-        if app.state::<crate::players::Players>().presence() == crate::players::Presence::Idle {
-            crate::sync_launcher(&app, crate::players::Presence::Idle);
-        }
-        if app.state::<crate::startup::StartupState>().is_direct()
-            && app.state::<crate::players::Players>().presence() == crate::players::Presence::Idle
-        {
-            app.exit(0);
-        }
+        state.finish(&app);
     });
     Ok(())
 }
