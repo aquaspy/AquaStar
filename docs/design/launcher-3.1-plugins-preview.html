@@ -58,9 +58,12 @@ h1{font-size:25px;line-height:1.2;letter-spacing:-.5px}
 .state[data-tone=ok]{color:var(--ok)}
 .state[data-tone=warn]{color:var(--warn)}
 .state[data-tone=bad]{color:var(--bad)}
-.grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
 .tool{display:flex;flex-direction:column;gap:6px;text-align:left;padding:14px;background:var(--surface)}
 .tool .glyph{color:var(--cyan);font-size:18px}
+.command{font-size:12px;color:var(--muted)}
+code{font:12px Consolas,Menlo,monospace;padding:1px 6px;border:1px solid var(--edge);border-radius:6px;background:#0e1824;color:var(--text)}
+.tool-command{font:11px Consolas,Menlo,monospace;color:var(--muted);overflow-wrap:anywhere}
 .group{margin-bottom:12px}
 .group h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8fa8bd;margin-bottom:6px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -125,13 +128,13 @@ const MODEL = {
       description: 'AdventureQuest Worlds and DragonFable, with the inventory, reminders, to-do and strategy tools.',
       blocks: [
         { type: 'games', title: null, games: [
-          { id: 'aqw', name: 'AdventureQuest Worlds', description: 'Opens the game in its own window.', launchable: true,
+          { id: 'aqw', name: 'AdventureQuest Worlds', description: 'Opens the game in its own window.', launchable: true, command: '--aqw',
             enginesByPlatform: { windows: ['ruffle', 'flash'], linux: ['ruffle', 'flash'], macos: ['ruffle', 'flash'] }, defaultEngine: 'ruffle' },
-          { id: 'dragonfable', name: 'DragonFable', description: 'Opens the game in its own window.', launchable: true,
+          { id: 'dragonfable', name: 'DragonFable', description: 'Opens the game in its own window.', launchable: true, command: '--aqw --game=dragonfable',
             enginesByPlatform: { windows: ['ruffle', 'flash'], linux: ['ruffle', 'flash'], macos: ['ruffle', 'flash'] }, defaultEngine: 'ruffle' } ] },
         { type: 'tools', title: 'Your tools', tools: [
-          { id: 'inventory', name: 'Inventory & Buy Back', builtin: 'inventory' }, { id: 'reminders', name: 'Reminders', builtin: 'reminders' },
-          { id: 'todo', name: 'To-Do List', builtin: 'todo' }, { id: 'strategy', name: 'Strategy', builtin: 'strategy' } ] },
+          { id: 'inventory', name: 'Inventory & Buy Back', builtin: 'inventory', command: '--aqw --tool=inventory' }, { id: 'reminders', name: 'Reminders', builtin: 'reminders', command: '--aqw --tool=reminders' },
+          { id: 'todo', name: 'To-Do List', builtin: 'todo', command: '--aqw --tool=todo' }, { id: 'strategy', name: 'Strategy', builtin: 'strategy', command: '--aqw --tool=strategy' } ] },
         { type: 'search', title: 'Looking for an item?', searches: [{ id: 'wiki', name: 'AQW Wiki', placeholder: 'Item name…' }] },
         { type: 'links', title: 'Useful Pages', groups: [
           { label: null, links: ['Wiki', 'Design Notes', 'Balance Patch Notes', 'Account', 'Character page'].map((n) => ({ id: n, name: n, kind: 'site' })) },
@@ -141,7 +144,7 @@ const MODEL = {
     { id: 'example-companion', name: 'Example Companion', version: '1.0.0', builtIn: true, icon: null,
       description: 'A starter plugin with one tool and one link. It declares no game, so it shows no player.',
       blocks: [
-        { type: 'tools', title: 'Tools', tools: [{ id: 'companion', name: 'Example Companion', actionId: 'open-companion' }] },
+        { type: 'tools', title: 'Tools', tools: [{ id: 'companion', name: 'Example Companion', actionId: 'open-companion', command: '--example-plugin --tool=companion' }] },
         { type: 'links', title: 'Links', groups: [{ label: null, links: [{ id: 'project', name: 'AquaStar on GitHub', kind: 'external', actionId: 'open-project' }] }] } ] },
     { id: 'flash-arcade', name: 'Flash Arcade', version: '0.4.2', builtIn: false, icon: null,
       description: 'Classic SWF games from a local package. Needs Flash Player on Windows and Linux; macOS uses Ruffle only.',
@@ -223,6 +226,7 @@ function gameCard(plugin, game) {
     el('h3', { text: game.name }), el('p', { text: game.description || '' }),
     el('div', { class: 'launch' }, play, label),
     el('p', { class: 'state', 'data-tone': tone, 'aria-live': 'polite', text: text }),
+    game.command ? el('p', { class: 'command' }, 'Command line: ', el('code', { text: 'aquastar ' + game.command })) : '',
     el('div', {}, el('select', { 'aria-label': 'Preview state for ' + game.name, class: 'demo-state', onchange: (event) => { ui.states[key] = event.target.value; render(); } },
       ...['ready', 'opening', 'download', 'open', 'failed', 'offline'].map((value) => el('option', { value, selected: value === state, text: 'Preview state: ' + value })))));
 }
@@ -235,7 +239,8 @@ function renderBlock(plugin, block) {
   if (block.title) section.append(el('h2', { text: block.title }));
   if (block.games) section.append(el('div', { class: 'games' }, ...block.games.map((game) => gameCard(plugin, game))));
   if (block.tools) section.append(el('div', { class: 'grid' }, ...block.tools.map((tool) =>
-    el('button', { class: 'tool' }, el('span', { class: 'glyph', 'aria-hidden': 'true', text: '▦' }), el('strong', { text: tool.name })))));
+    el('button', { class: 'tool' }, el('span', { class: 'glyph', 'aria-hidden': 'true', text: '▦' }), el('strong', { text: tool.name }),
+      tool.command ? el('span', { class: 'tool-command', text: 'aquastar ' + tool.command }) : ''))));
   if (block.groups) for (const group of block.groups) section.append(el('div', { class: 'group' },
     group.label ? el('h3', { text: group.label }) : '',
     el('div', { class: 'chips' }, ...group.links.map((link) => el('button', { text: link.name + (link.kind === 'external' ? ' ↗' : '') })))));

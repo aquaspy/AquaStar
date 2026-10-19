@@ -2,6 +2,7 @@
 //!
 //! * `--<plugin>`      a plugin's command id (its `launcherParameters.id`)
 //! * `--game=<id>`     a game of that plugin; without it the plugin's default game
+//! * `--tool=<id>`     one of that plugin's tools instead of a game (`--aqw --tool=inventory`)
 //! * `--ruffle[<v>]`, `--flash[<v>]`   the player, optionally a version (`--ruffle1.7`, `--ruffle=1.7`)
 //! * `--launcher`      show the launcher instead of going straight to the game
 //! * `--no-launcher`   skip the launcher, using the saved start-up game if no plugin is named
@@ -29,6 +30,7 @@ pub struct EngineRequest {
 pub struct Cli {
     pub plugin: Option<String>,
     pub game: Option<String>,
+    pub tool: Option<String>,
     pub engine: Option<EngineRequest>,
     pub launcher: LauncherMode,
     pub problems: Vec<String>,
@@ -115,6 +117,19 @@ pub fn parse(args: &[String]) -> Cli {
                     None => cli.problems.push("--game needs a game id, for example --game=dragonfable".into()),
                 }
             }
+            "tool" => {
+                let value = value.or_else(|| {
+                    let next = args.get(index).filter(|next| !next.starts_with('-')).cloned();
+                    if next.is_some() {
+                        index += 1;
+                    }
+                    next
+                });
+                match value.filter(|value| !value.trim().is_empty()) {
+                    Some(value) => cli.tool = Some(value.trim().to_ascii_lowercase()),
+                    None => cli.problems.push("--tool needs a tool id, for example --tool=inventory".into()),
+                }
+            }
             other => {
                 if let Some((engine, version)) = player_flag(other) {
                     let version = match (version, value) {
@@ -143,6 +158,10 @@ pub fn parse(args: &[String]) -> Cli {
                 }
             }
         }
+    }
+    if cli.game.is_some() && cli.tool.is_some() {
+        cli.problems.push("--game and --tool cannot be used together; the game is opened".into());
+        cli.tool = None;
     }
     cli
 }
@@ -175,6 +194,20 @@ mod tests {
         assert_eq!(parse_str("--no-launcher").launcher, LauncherMode::Skip);
         assert_eq!(parse_str("--nolauncher").launcher, LauncherMode::Skip);
         assert_eq!(parse_str("--aqw --launcher").launcher, LauncherMode::Show);
+    }
+
+    #[test]
+    fn tools_are_named_with_tool() {
+        let cli = parse_str("--aqw --tool=Inventory --no-launcher");
+        assert_eq!(cli.plugin.as_deref(), Some("aqw"));
+        assert_eq!(cli.tool.as_deref(), Some("inventory"));
+        assert_eq!(cli.launcher, LauncherMode::Skip);
+        assert_eq!(parse_str("--aqw --tool todo").tool.as_deref(), Some("todo"));
+        assert!(parse_str("--tool").problems.iter().any(|p| p.contains("--tool needs")));
+        let both = parse_str("--aqw --game=dragonfable --tool=todo");
+        assert_eq!(both.tool, None);
+        assert_eq!(both.game.as_deref(), Some("dragonfable"));
+        assert!(both.problems.iter().any(|p| p.contains("cannot be used together")));
     }
 
     #[test]

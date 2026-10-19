@@ -44,18 +44,20 @@ The launcher reads the result of the `launcher_model` command: for each active p
 
 ## Command line and start-up
 
-Every plugin with `launcherParameters` can be started from the command line, and the same words work for all of them:
+Every plugin with `launcherParameters` can be started from the command line, and the same words work for all of them. The launcher lists them: on the plugin page (the command under each game and each tool) and under Preferences > Command line.
+
 
 ```
 aquastar --aqw                           open AdventureQuest Worlds, no launcher window
 aquastar --aqw --game=dragonfable        another game of the plugin
 aquastar --aqw --ruffle1.7               pick the player and its version (also --ruffle=1.7, --flash, --flash32)
-aquastar --aqw --launcher                show the launcher on that plugin's page instead
+aquastar --aqw --tool=inventory          open a tool instead of a game (any tool the plugin lists)
+aquastar --aqw --tool=todo --launcher    show the launcher on that plugin's page instead
 aquastar --example-plugin                a plugin without games shows its page
 aquastar --no-launcher                   open the game saved under Preferences > On start-up
 ```
 
-A command that names a plugin goes straight to its default game; AquaStar then closes when the game does. `--launcher` shows the launcher once. A player or version AquaStar does not ship for the system (`--ruffle9.9`), an unknown plugin or game, or a game without a launcher action falls back to the launcher with a message instead of failing silently. Players are chosen from the game's `engines`; a version matches whole components (`1.7` matches `1.7.0`).
+A command that names a plugin goes straight to its default game; AquaStar then closes when the game does. With `--tool=<id>` it opens that tool's window instead and closes when the last window is closed. A tool is any `tools[]` entry of the plugin that has a launcher action (every tool of the bundled plugin), so each plugin's tools get commands without declaring anything. `--game` and `--tool` cannot be combined; the game wins. `--launcher` shows the launcher once. A player or version AquaStar does not ship for the system (`--ruffle9.9`), an unknown plugin, game or tool, or a game or tool without a launcher action falls back to the launcher with a message instead of failing silently. Players are chosen from the game's `engines`; a version matches whole components (`1.7` matches `1.7.0`).
 
 **Preferences > On start-up** saves one game to open every time AquaStar starts without arguments, which gives the behaviour of the old Electron app: no launcher, straight into the game. `--launcher` overrides it. A second `aquastar --...` while AquaStar is running is carried out by the running instance.
 

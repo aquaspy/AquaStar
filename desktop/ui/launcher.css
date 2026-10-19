@@ -290,7 +290,13 @@ h1 {
 .grid {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+.tool-command {
+  font-family: Consolas, 'SFMono-Regular', Menlo, monospace;
+  font-size: 11px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 .tool {
   display: flex;

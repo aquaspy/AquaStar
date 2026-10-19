@@ -1009,6 +1009,11 @@ fn main() {
             &event,
             RunEvent::WindowEvent { label, event: tauri::WindowEvent::Destroyed, .. } if label == "main"
         );
+        if let RunEvent::WindowEvent { label, event: tauri::WindowEvent::Destroyed, .. } = &event {
+            if label != "main" {
+                startup::exit_when_finished(app, label);
+            }
+        }
         if main_gone || matches!(event, RunEvent::Exit) {
             app.state::<Players>().kill_all();
             if main_gone {

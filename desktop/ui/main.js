@@ -208,7 +208,8 @@ function toolButton(plugin, tool) {
       }
     },
     el('span', { class: 'glyph', 'aria-hidden': 'true', text: '▦' }),
-    el('strong', { text: tool.name })
+    el('strong', { text: tool.name }),
+    tool.command ? el('span', { class: 'tool-command', text: 'aquastar ' + tool.command }) : ''
   );
 }
 
@@ -372,6 +373,12 @@ function renderStartup() {
             el('li', {}, el('code', { text: 'aquastar ' + game.command }), el('span', { text: ' ' + game.name }))
           );
         }
+      }
+      for (const tool of block.tools || []) {
+        if (!tool.command) continue;
+        commandList.append(
+          el('li', {}, el('code', { text: 'aquastar ' + tool.command }), el('span', { text: ' ' + tool.name + ' (tool)' }))
+        );
       }
     }
   }

@@ -69,7 +69,7 @@ Windows uses `extension-runtime-probe.exe`; Linux needs an X display (CI uses Xv
 
 ## Command line
 
-`aquastar --aqw` opens a plugin's game without the launcher; `--game=<id>`, `--ruffle[<version>]`, `--flash[<version>]` and `--launcher` refine it, and Preferences > On start-up saves a game to open by default. Each plugin's command id comes from `launcherParameters.id`. See [the plugin guide](../docs/DESKTOP-PLUGINS.md#command-line-and-start-up).
+`aquastar --aqw` opens a plugin's game without the launcher; `--game=<id>`, `--tool=<id>` (a tool window instead of a game), `--ruffle[<version>]`, `--flash[<version>]` and `--launcher` refine it, and Preferences > On start-up saves a game to open by default. Each plugin's command id comes from `launcherParameters.id`. See [the plugin guide](../docs/DESKTOP-PLUGINS.md#command-line-and-start-up).
 
 ## Menu visibility and account sync
 

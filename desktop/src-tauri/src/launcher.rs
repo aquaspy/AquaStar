@@ -261,11 +261,16 @@ fn block_view(source: &Source, block: &Block, ctx: &Context) -> Option<Value> {
             let tools: Vec<Value> = pick(&manifest.tools, &block.items, |t| t.id.as_str())
                 .into_iter()
                 .map(|tool| {
+                    let action = action_for(manifest, "tool", &tool.id);
+                    let command = active_command(manifest, ctx)
+                        .filter(|_| source.bundled || action.is_some())
+                        .map(|id| format!("--{id} --tool={}", tool.id));
                     json!({
                         "id": tool.id,
                         "name": tool.name,
                         "builtin": tool.builtin,
-                        "actionId": action_for(manifest, "tool", &tool.id),
+                        "actionId": action,
+                        "command": command,
                     })
                 })
                 .collect();
@@ -471,6 +476,20 @@ pub(crate) async fn launch_target(
         }
     };
     launch_game(app.clone(), plugin_id.to_string(), game_id.to_string(), engine, false).await
+}
+
+/// Open a tool the way a command line asks: its window, with no launcher.
+pub(crate) async fn launch_tool(app: &tauri::AppHandle, plugin_id: &str, tool_id: &str) -> Result<String, String> {
+    let (manifest, bundled) = manifest_for(app, plugin_id)?;
+    let tool = manifest.tools.iter().find(|tool| tool.id == tool_id).ok_or("Unknown tool")?;
+    if bundled {
+        let window = tool.builtin.as_deref().ok_or("This tool has no window")?;
+        crate::open_tool_window(app, window)?;
+        return Ok(format!("Opened {}", tool.name));
+    }
+    let action = action_for(&manifest, "tool", tool_id).ok_or("No launcher action is declared for this tool")?;
+    extensions::extensions_action(app.clone(), plugin_id.to_string(), action.to_string(), None).await?;
+    Ok(format!("Opened {}", tool.name))
 }
 
 /// Open a game at start-up instead of the launcher, or go back to the launcher with `None`.

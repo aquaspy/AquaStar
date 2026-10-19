@@ -12,7 +12,7 @@ use serde_json::json;
 use tauri::{Emitter, Manager};
 
 use crate::cli::{self, Cli, EngineRequest, LauncherMode};
-use crate::extensions::model::{Game, Manifest};
+use crate::extensions::model::{Game, Manifest, Tool};
 use crate::extensions::Extensions;
 use crate::launcher;
 use crate::players::{Arch, Engine, Os};
@@ -51,10 +51,15 @@ pub struct Plugin<'a> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Action {
+    Game { game: String, engine: Option<EngineRequest> },
+    Tool { tool: String },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Target {
     pub plugin: String,
-    pub game: String,
-    pub engine: Option<EngineRequest>,
+    pub action: Action,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -72,6 +77,17 @@ pub fn playable<'a>(plugin: &Plugin<'a>) -> Vec<&'a Game> {
         .games
         .iter()
         .filter(|game| plugin.bundled || launcher::action_for(plugin.manifest, "game", &game.id).is_some())
+        .collect()
+}
+
+/// Tools the launcher can open: every tool of the bundled plugin, and the tools an installed
+/// plugin gave an action to.
+pub fn openable_tools<'a>(plugin: &Plugin<'a>) -> Vec<&'a Tool> {
+    plugin
+        .manifest
+        .tools
+        .iter()
+        .filter(|tool| plugin.bundled || launcher::action_for(plugin.manifest, "tool", &tool.id).is_some())
         .collect()
 }
 
@@ -141,7 +157,7 @@ pub fn decide(
     let (table, _) = command_table(plugins);
     let find = |id: &str| plugins.iter().find(|plugin| plugin.manifest.id == id);
     let mut notes = cli.problems.clone();
-    let asks_for_a_game = cli.game.is_some() || cli.engine.is_some();
+    let asks_for_a_game = cli.game.is_some() || cli.tool.is_some() || cli.engine.is_some();
 
     let mut saved_game: Option<&str> = None;
     let plugin = if let Some(command) = &cli.plugin {
@@ -178,6 +194,28 @@ pub fn decide(
     let page = Some(plugin.manifest.id.clone());
     if cli.launcher == LauncherMode::Show {
         return Decision { direct: None, show_plugin: page, notice: join(notes) };
+    }
+
+    if let Some(wanted) = cli.tool.as_deref() {
+        let tools = openable_tools(plugin);
+        return match tools.iter().find(|tool| tool.id == wanted) {
+            Some(tool) => Decision {
+                direct: Some(Target {
+                    plugin: plugin.manifest.id.clone(),
+                    action: Action::Tool { tool: tool.id.clone() },
+                }),
+                show_plugin: None,
+                notice: join(notes),
+            },
+            None => {
+                let ids: Vec<&str> = tools.iter().map(|tool| tool.id.as_str()).collect();
+                notes.push(format!(
+                    "{name} has no tool \"{wanted}\". Tools: {}.",
+                    if ids.is_empty() { "none".to_string() } else { ids.join(", ") }
+                ));
+                Decision { direct: None, show_plugin: page, notice: join(notes) }
+            }
+        };
     }
 
     let games = playable(plugin);
@@ -230,8 +268,7 @@ pub fn decide(
     Decision {
         direct: Some(Target {
             plugin: plugin.manifest.id.clone(),
-            game: game.id.clone(),
-            engine: cli.engine.clone(),
+            action: Action::Game { game: game.id.clone(), engine: cli.engine.clone() },
         }),
         show_plugin: None,
         notice: join(notes),
@@ -243,6 +280,23 @@ fn show_main(app: &tauri::AppHandle) {
         let _ = window.unminimize();
         let _ = window.show();
         let _ = window.set_focus();
+    }
+}
+
+/// In a direct start there is no launcher to go back to, so AquaStar ends when the last
+/// window is closed and no game is running.
+pub fn exit_when_finished(app: &tauri::AppHandle, closed: &str) {
+    if !app.state::<StartupState>().is_direct() {
+        return;
+    }
+    if app.state::<crate::players::Players>().presence() == crate::players::Presence::Running {
+        return;
+    }
+    let anything_open = app.webview_windows().into_iter().any(|(label, window)| {
+        label != closed && window.is_visible().unwrap_or(false)
+    });
+    if !anything_open {
+        app.exit(0);
     }
 }
 
@@ -271,7 +325,12 @@ pub fn apply(app: &tauri::AppHandle, args: &[String], first: bool) {
     }
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-        let result = launcher::launch_target(&app, &target.plugin, &target.game, target.engine.as_ref()).await;
+        let result = match &target.action {
+            Action::Game { game, engine } => {
+                launcher::launch_target(&app, &target.plugin, game, engine.as_ref()).await
+            }
+            Action::Tool { tool } => launcher::launch_tool(&app, &target.plugin, tool).await,
+        };
         if let Err(error) = result {
             let state = app.state::<StartupState>();
             state.direct.store(false, Ordering::SeqCst);
@@ -330,8 +389,10 @@ mod tests {
         Decision {
             direct: Some(Target {
                 plugin: plugin.into(),
-                game: game.into(),
-                engine: engine.map(|(engine, version)| EngineRequest { engine, version: version.map(str::to_string) }),
+                action: Action::Game {
+                    game: game.into(),
+                    engine: engine.map(|(engine, version)| EngineRequest { engine, version: version.map(str::to_string) }),
+                },
             }),
             ..Decision::default()
         }
@@ -412,6 +473,30 @@ mod tests {
         let skip = run("--no-launcher", None);
         assert_eq!(skip.direct, None);
         assert!(skip.notice.unwrap().contains("No start-up game"));
+    }
+
+    fn tool(plugin: &str, tool: &str) -> Decision {
+        Decision {
+            direct: Some(Target { plugin: plugin.into(), action: Action::Tool { tool: tool.into() } }),
+            ..Decision::default()
+        }
+    }
+
+    #[test]
+    fn a_tool_opens_directly_and_unknown_tools_fall_back_to_the_page() {
+        assert_eq!(run("--aqw --tool=inventory", None), tool("adventure-quest-worlds", "inventory"));
+        assert_eq!(run("--aqw --tool=todo --no-launcher", None), tool("adventure-quest-worlds", "todo"));
+        let missing = run("--aqw --tool=nope", None);
+        assert_eq!(missing.direct, None);
+        assert_eq!(missing.show_plugin.as_deref(), Some("adventure-quest-worlds"));
+        let notice = missing.notice.unwrap();
+        assert!(notice.contains("no tool \"nope\"") && notice.contains("inventory, reminders, todo, strategy"), "{notice}");
+        assert_eq!(run("--aqw --tool=inventory --launcher", None).direct, None, "--launcher shows the page");
+        let saved = Some(("adventure-quest-worlds", "aqw"));
+        assert_eq!(run("--tool=reminders", saved), tool("adventure-quest-worlds", "reminders"));
+        let no_action = run("--arcade --tool=anything", None);
+        assert_eq!(no_action.direct, None);
+        assert!(no_action.notice.unwrap().contains("Tools: none"));
     }
 
     #[test]
