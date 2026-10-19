@@ -51,32 +51,9 @@
     if ((manifest.origins || []).length)
       parent.appendChild(node('p', 'Network destinations: ' + manifest.origins.join(', ')));
   }
-  async function act(plugin, action) {
-    const engine = document.getElementById('engine-select').value;
-    const result = await invoke('extensions_action', {
-      pluginId: plugin.id,
-      actionId: action.id,
-      engine: engine === 'flash' ? 'flash' : 'ruffle'
-    });
-    message(typeof result === 'string' ? result : 'Action opened.');
-  }
-  function contributions(card, plugin) {
-    const actions = plugin.actions || [];
-    for (const [kind, title, values] of [
-      ['game', 'Games', plugin.games],
-      ['tool', 'Tools', plugin.tools],
-      ['link', 'Links', plugin.links]
-    ]) {
-      if (!values || !values.length) continue;
-      card.appendChild(node('h3', title));
-      const group = node('div', undefined, 'extension-actions');
-      for (const item of values) {
-        const action = actions.find((entry) => entry.kind === kind && entry.target === item.id);
-        if (action) group.appendChild(button(item.name, () => act(plugin, action)));
-      }
-      if (group.childElementCount) card.appendChild(group);
-      else card.appendChild(node('p', 'No launcher action declared.'));
-    }
+  // The launcher reloads its model so the restart notice appears on every page.
+  function changed() {
+    document.dispatchEvent(new CustomEvent('aquastar:plugins-changed'));
   }
   async function refresh() {
     const data = await invoke('extensions_list');
@@ -102,6 +79,7 @@
         button(plugin.enabled ? 'Disable' : 'Enable', async () => {
           await invoke('extensions_change', { id: plugin.id, enabled: !plugin.enabled });
           await refresh();
+          changed();
         })
       );
       const remove = node('details');
@@ -115,11 +93,11 @@
         button('Confirm removal', async () => {
           await invoke('extensions_change', { id: plugin.id, remove: true, deleteData: checkbox.checked });
           await refresh();
+          changed();
         })
       );
       controls.appendChild(remove);
       card.appendChild(controls);
-      if (plugin.active && !plugin.pending) contributions(card, plugin);
       list.appendChild(card);
     }
   }
@@ -143,6 +121,7 @@
           await invoke('extensions_install', { approved: true, reviewToken: result.reviewToken });
           review.hidden = true;
           await refresh();
+          changed();
         })
       );
       review.appendChild(

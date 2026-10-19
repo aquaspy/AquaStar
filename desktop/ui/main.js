@@ -1,25 +1,33 @@
 const { invoke } = window.__TAURI__.core;
 const status = document.getElementById('status');
+const banner = document.getElementById('banner');
+const pluginPage = document.getElementById('plugin-page');
+const pluginNav = document.getElementById('plugin-nav');
 const hideLauncher = document.getElementById('hide-launcher');
 const showMenuBar = document.getElementById('show-menu-bar');
+const launcherHint = document.getElementById('launcher-hint');
+const ENGINE_NAMES = { ruffle: 'Ruffle', flash: 'Flash Player' };
+const GLOBAL_PANELS = ['preferences', 'extensions'];
+
 let savedShowMenuBar = false;
 let menuBarSupported = true;
-const launcherHint = document.getElementById('launcher-hint');
-const playerSelect = document.getElementById('engine-select');
-const playButton = document.getElementById('play-now');
-const panels = {
-  play: { title: 'Ready to play' },
-  tools: { title: 'Tools' },
-  extensions: { title: 'Plugins' },
-  links: { title: 'Useful Pages' },
-  preferences: { title: 'Preferences' }
-};
-const games = {
-  primary: { title: 'AdventureQuest Worlds' },
-  dragonfable: { title: 'DragonFable' }
-};
-const launcher = { game: 'primary', engines: [], selectedEngine: null, phase: 'loading' };
+let model = { plugins: [], errors: [], restartRequired: false, safeMode: false };
+let view = null; // a plugin id, or one of GLOBAL_PANELS
+const choice = {}; // "<plugin>/<game>" -> engine picked this session
+const opening = new Set(); // "<plugin>/<game>" while the player starts
 
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(props)) {
+    if (key === 'text') node.textContent = value;
+    else if (key === 'class') node.className = value;
+    else if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
+    else if (value === true) node.setAttribute(key, '');
+    else if (value !== false && value != null) node.setAttribute(key, value);
+  }
+  node.append(...children);
+  return node;
+}
 function message(text, error = false) {
   status.textContent = text;
   status.dataset.error = String(error);
@@ -27,90 +35,346 @@ function message(text, error = false) {
 function failure(error) {
   message(`Error: ${error}`, true);
 }
+function rememberView(id) {
+  try {
+    localStorage.setItem('aquastar.view', id);
+  } catch (_) {
+    /* storage can be unavailable */
+  }
+}
+function savedView() {
+  try {
+    return localStorage.getItem('aquastar.view');
+  } catch (_) {
+    return null;
+  }
+}
+
+function markFor(plugin) {
+  const mark = el('span', { class: 'mark', 'aria-hidden': 'true' });
+  if (plugin.icon) mark.append(el('img', { src: plugin.icon, alt: '' }));
+  else mark.textContent = (plugin.name || '?').charAt(0).toUpperCase();
+  return mark;
+}
+
+function renderNav() {
+  pluginNav.replaceChildren();
+  for (const plugin of model.plugins) {
+    pluginNav.append(
+      el(
+        'button',
+        { type: 'button', class: 'nav', 'data-plugin': plugin.id, onclick: () => showView(plugin.id) },
+        markFor(plugin),
+        el(
+          'span',
+          { class: 'name' },
+          el('span', { text: plugin.name }),
+          el('span', { class: 'sub', text: plugin.bundled ? 'Built in' : 'v' + plugin.version })
+        )
+      )
+    );
+  }
+  markCurrent();
+}
+function markCurrent() {
+  document.querySelectorAll('.nav').forEach((button) => {
+    const id = button.dataset.plugin || button.dataset.panel;
+    if (id === view) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+}
+
+function renderBanner() {
+  banner.replaceChildren();
+  let tone = null;
+  const lines = [];
+  if (model.safeMode) {
+    tone = 'warn';
+    lines.push('Safe mode: third-party plugins are disabled. The built-in plugin is still available.');
+  }
+  if (model.restartRequired) {
+    tone = 'warn';
+    lines.push('Changes to your plugins are saved. Restart AquaStar to apply them.');
+  }
+  const errors = model.errors || [];
+  if (errors.length) tone = 'bad';
+  if (!tone) {
+    banner.hidden = true;
+    return;
+  }
+  const text = el('div');
+  for (const line of lines) text.append(el('p', { text: line }));
+  if (errors.length) {
+    text.append(el('p', { text: 'Some plugins could not be loaded:' }));
+    const list = el('ul');
+    for (const error of errors) list.append(el('li', { text: String(error) }));
+    text.append(list);
+  }
+  banner.dataset.tone = tone;
+  banner.setAttribute('role', tone === 'bad' ? 'alert' : 'status');
+  banner.append(text);
+  if (model.restartRequired) {
+    banner.append(
+      el('button', { type: 'button', text: 'Restart AquaStar', onclick: () => invoke('extensions_restart').catch(failure) })
+    );
+  }
+  banner.hidden = false;
+}
+
+function runPluginAction(pluginId, actionId) {
+  invoke('extensions_action', { pluginId, actionId })
+    .then((result) => message(typeof result === 'string' ? result : 'Opened.'))
+    .catch(failure);
+}
+
+function gameCard(plugin, game) {
+  const key = `${plugin.id}/${game.id}`;
+  const engines = game.engines || [];
+  const picked = engines.includes(choice[key]) ? choice[key] : game.selectedEngine;
+  const pending = opening.has(key);
+  const missing = !engines.length;
+  const play = el('button', {
+    type: 'button',
+    class: 'primary',
+    disabled: !game.launchable || pending,
+    text: pending ? 'Opening game window…' : 'Open game window ↗',
+    onclick: async () => {
+      if (pending) return;
+      opening.add(key);
+      renderPlugin();
+      message(`Opening ${game.name}…`);
+      try {
+        message(await invoke('play_game', { pluginId: plugin.id, gameId: game.id, engine: picked }));
+      } catch (error) {
+        failure(error);
+      } finally {
+        opening.delete(key);
+        renderPlugin();
+      }
+    }
+  });
+  const selectId = 'engine-' + key.replace(/[^a-z0-9-]/gi, '-');
+  const select = el('select', {
+    id: selectId,
+    disabled: missing || pending,
+    onchange: (event) => {
+      choice[key] = event.target.value;
+    }
+  });
+  for (const engine of engines) {
+    select.append(
+      el('option', {
+        value: engine,
+        selected: engine === picked,
+        text: (ENGINE_NAMES[engine] || engine) + (engine === game.defaultEngine ? ' · default' : '')
+      })
+    );
+  }
+  if (missing) select.append(el('option', { text: 'No player for this system' }));
+  let note = '';
+  let tone = '';
+  if (missing) {
+    note = 'No player is available for this game on this system.';
+    tone = 'bad';
+  } else if (!game.launchable) {
+    note = 'This plugin declares no launcher action for this game.';
+    tone = 'warn';
+  }
+  return el(
+    'article',
+    { class: 'game', 'aria-label': game.name },
+    el('h3', { text: game.name }),
+    el('p', { text: game.description || '' }),
+    el('div', { class: 'launch' }, play, el('label', { class: 'loader', for: selectId }, 'Player', select)),
+    el('p', { class: 'state', 'data-tone': tone, text: note })
+  );
+}
+
+function toolButton(plugin, tool) {
+  const available = tool.builtin || tool.actionId;
+  return el(
+    'button',
+    {
+      type: 'button',
+      class: 'tool',
+      disabled: !available,
+      title: available ? null : 'No launcher action declared',
+      onclick: () => {
+        if (tool.builtin) invoke('open_tool', { name: tool.builtin }).catch(failure);
+        else runPluginAction(plugin.id, tool.actionId);
+      }
+    },
+    el('span', { class: 'glyph', 'aria-hidden': 'true', text: '▦' }),
+    el('strong', { text: tool.name })
+  );
+}
+
+function linkButton(plugin, link) {
+  const external = link.kind === 'external';
+  const available = link.kind === 'site' || (external && link.actionId);
+  return el('button', {
+    type: 'button',
+    disabled: !available,
+    title: available ? null : 'No launcher action declared',
+    text: link.name + (external ? ' ↗' : ''),
+    onclick: () => {
+      if (link.kind === 'site') invoke('open_site', { label: link.id, url: link.url, title: link.name }).catch(failure);
+      else runPluginAction(plugin.id, link.actionId);
+    }
+  });
+}
+
+function searchForm(plugin, search) {
+  const input = el('input', {
+    type: 'text',
+    name: 'q',
+    placeholder: search.placeholder || '',
+    'aria-label': search.name,
+    autocomplete: 'off',
+    spellcheck: 'false'
+  });
+  return el(
+    'div',
+    { class: 'search' },
+    el(
+      'form',
+      {
+        onsubmit: (event) => {
+          event.preventDefault();
+          if (!input.value.trim()) return;
+          invoke('launcher_search', { pluginId: plugin.id, searchId: search.id, query: input.value }).catch(failure);
+        }
+      },
+      input,
+      el('button', { type: 'submit', text: 'Search ↗' })
+    )
+  );
+}
+
+function renderBlock(plugin, block) {
+  const section = el('section', { class: 'block' });
+  if (block.title) section.append(el('h2', { text: block.title }));
+  if (block.games) section.append(el('div', { class: 'games' }, ...block.games.map((game) => gameCard(plugin, game))));
+  if (block.tools) section.append(el('div', { class: 'grid' }, ...block.tools.map((tool) => toolButton(plugin, tool))));
+  for (const group of block.groups || []) {
+    section.append(
+      el(
+        'div',
+        { class: 'group' },
+        group.label ? el('h3', { text: group.label }) : '',
+        el('div', { class: 'chips' }, ...group.links.map((link) => linkButton(plugin, link)))
+      )
+    );
+  }
+  for (const search of block.searches || []) section.append(searchForm(plugin, search));
+  return section;
+}
+
+function renderPlugin() {
+  const plugin = model.plugins.find((entry) => entry.id === view);
+  // Keep focus and typed text when only a game card changes state.
+  const focused = document.activeElement && document.activeElement.id;
+  const typed = [...pluginPage.querySelectorAll('input[name="q"]')].map((input) => input.value);
+  pluginPage.replaceChildren();
+  if (!plugin) return;
+  pluginPage.append(
+    el(
+      'div',
+      { class: 'head' },
+      markFor(plugin),
+      el(
+        'div',
+        {},
+        el('p', { class: 'eyebrow', text: plugin.bundled ? 'Built-in plugin' : 'Plugin · v' + plugin.version }),
+        el('h1', { text: plugin.name }),
+        plugin.description ? el('p', { class: 'lead', text: plugin.description }) : ''
+      )
+    )
+  );
+  if (!plugin.blocks.length) {
+    pluginPage.append(el('div', { class: 'empty' }, el('p', { text: 'This plugin has nothing to show on the launcher.' })));
+  }
+  for (const block of plugin.blocks) pluginPage.append(renderBlock(plugin, block));
+  pluginPage.querySelectorAll('input[name="q"]').forEach((input, index) => {
+    if (typed[index]) input.value = typed[index];
+  });
+  if (focused) {
+    const again = document.getElementById(focused);
+    if (again) again.focus();
+  }
+}
+
+function renderEmpty() {
+  pluginPage.replaceChildren(
+    el(
+      'div',
+      { class: 'empty' },
+      el('p', { text: 'No plugins are active.' }),
+      el('p', { text: 'Open Manage plugins to enable one or install a ZIP package.' }),
+      el('button', { type: 'button', text: 'Manage plugins', onclick: () => showView('extensions') })
+    )
+  );
+}
+
+function showView(id, focus = true) {
+  const isGlobal = GLOBAL_PANELS.includes(id);
+  view = id;
+  pluginPage.hidden = isGlobal;
+  GLOBAL_PANELS.forEach((name) => {
+    document.getElementById(name).hidden = name !== id;
+  });
+  if (!isGlobal) {
+    rememberView(id);
+    if (model.plugins.some((plugin) => plugin.id === id)) renderPlugin();
+    else renderEmpty();
+  }
+  markCurrent();
+  if (focus) document.getElementById('main').focus();
+}
+
+async function loadModel() {
+  try {
+    model = await invoke('launcher_model');
+  } catch (error) {
+    failure(error);
+    model = { plugins: [], errors: [String(error)], restartRequired: false, safeMode: false };
+  }
+  renderNav();
+  renderBanner();
+  renderBuiltin();
+  const wanted = GLOBAL_PANELS.includes(view) ? view : view || savedView();
+  const target = GLOBAL_PANELS.includes(wanted) || model.plugins.some((plugin) => plugin.id === wanted) ? wanted : null;
+  showView(target || (model.plugins[0] && model.plugins[0].id) || 'extensions', false);
+}
+
+function renderBuiltin() {
+  const mount = document.getElementById('extension-builtin');
+  mount.replaceChildren();
+  for (const plugin of model.plugins.filter((entry) => entry.bundled)) {
+    mount.append(
+      el(
+        'article',
+        { class: 'extension-card' },
+        el('h2', { text: plugin.name }),
+        el('p', { text: `${plugin.id} · ${plugin.version}` }),
+        el('p', { class: 'extension-state', text: 'Built in. It is always active and cannot be removed.' })
+      )
+    );
+  }
+}
+
+document.querySelectorAll('[data-panel]').forEach((button) => {
+  button.addEventListener('click', () => showView(button.dataset.panel));
+});
+document.addEventListener('aquastar:plugins-changed', () => {
+  loadModel();
+});
+
 function describeLauncher() {
   launcherHint.textContent = hideLauncher.checked
     ? 'The launcher hides during gameplay and returns when the player exits.'
     : 'The launcher stays open so your tools and wiki remain within reach.';
 }
-function renderLaunch() {
-  const pending = launcher.phase === 'launching';
-  playButton.disabled = launcher.phase === 'loading' || pending || !launcher.selectedEngine;
-  playButton.textContent = pending ? 'Opening player…' : 'Play now ↗';
-  playerSelect.disabled = launcher.phase === 'loading' || pending || !launcher.engines.length;
-  document.querySelectorAll('[data-game]').forEach((button) => {
-    button.disabled = pending;
-    button.setAttribute('aria-pressed', String(button.dataset.game === launcher.game));
-  });
-  document.getElementById('game-title').textContent = games[launcher.game].title;
-}
-function showPanel(name) {
-  if (!panels[name]) return;
-  document.querySelectorAll('.panel').forEach((panel) => {
-    panel.hidden = panel.id !== name;
-  });
-  document.querySelectorAll('.nav-button').forEach((button) => {
-    if (button.dataset.panel === name) button.setAttribute('aria-current', 'page');
-    else button.removeAttribute('aria-current');
-  });
-  document.getElementById('page-title').textContent = panels[name].title;
-}
-document.querySelectorAll('[data-panel]').forEach((button) => {
-  button.addEventListener('click', () => showPanel(button.dataset.panel));
-});
-document.querySelectorAll('[data-game]').forEach((button) => {
-  button.addEventListener('click', () => {
-    if (launcher.phase === 'launching' || !games[button.dataset.game]) return;
-    launcher.game = button.dataset.game;
-    renderLaunch();
-  });
-});
-playerSelect.addEventListener('change', () => {
-  if (launcher.phase === 'launching') return;
-  launcher.selectedEngine = launcher.engines.includes(playerSelect.value) ? playerSelect.value : null;
-  renderLaunch();
-});
-playButton.addEventListener('click', async () => {
-  if (playButton.disabled || launcher.phase === 'launching') return;
-  launcher.phase = 'launching';
-  renderLaunch();
-  message(`Opening ${games[launcher.game].title}…`);
-  try {
-    message(await invoke('play', { engine: launcher.selectedEngine, movie: launcher.game }));
-  } catch (error) {
-    failure(error);
-  } finally {
-    launcher.phase = 'ready';
-    renderLaunch();
-  }
-});
-async function loadEngines() {
-  try {
-    const list = await invoke('engines');
-    launcher.engines = list.filter((entry) => entry[1]).map((entry) => entry[0]);
-    const preferred = await invoke('preferred_engine').catch((error) => {
-      failure(error);
-      return null;
-    });
-    launcher.selectedEngine = launcher.engines.includes(preferred) ? preferred : launcher.engines[0] || null;
-    playerSelect.replaceChildren();
-    for (const engine of launcher.engines) {
-      const option = document.createElement('option');
-      option.value = engine;
-      option.textContent =
-        (engine === 'ruffle' ? 'Ruffle' : 'Flash Player') + (engine === preferred ? ' · default' : '');
-      playerSelect.appendChild(option);
-    }
-    if (launcher.selectedEngine) playerSelect.value = launcher.selectedEngine;
-    else message('No supported player is available on this system.', true);
-  } catch (error) {
-    failure(error);
-  } finally {
-    launcher.phase = 'ready';
-    renderLaunch();
-  }
-}
-loadEngines();
-
 invoke('launcher_settings')
   .then((settings) => {
     hideLauncher.checked = settings.hideLauncher;
@@ -135,7 +399,6 @@ hideLauncher.addEventListener('change', async () => {
     hideLauncher.disabled = false;
   }
 });
-
 showMenuBar.addEventListener('change', async () => {
   if (!menuBarSupported) {
     showMenuBar.checked = savedShowMenuBar;
@@ -160,57 +423,16 @@ document.querySelectorAll('[data-tool]').forEach((button) =>
     invoke('open_tool', { name: button.dataset.tool }).catch(failure);
   })
 );
-const openSite = (label, url, title) => invoke('open_site', { label, url, title }).catch(failure);
-let charpageUrl = null;
-const characterButton = document.querySelector('#char-page button');
-characterButton.disabled = true;
-invoke('get_shell_pages')
-  .then((shell) => {
-    const mount = document.getElementById('site-buttons');
-    for (const group of shell.groups || []) {
-      const block = document.createElement('div');
-      block.className = 'site-group';
-      if (group.label) {
-        const heading = document.createElement('h3');
-        heading.textContent = group.label;
-        block.appendChild(heading);
-      }
-      const grid = document.createElement('div');
-      grid.className = 'site-grid';
-      for (const page of group.pages || []) {
-        if (page.id === 'charpage') charpageUrl = page.url;
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.textContent = page.label;
-        button.addEventListener('click', () => openSite(page.id, page.url, page.label));
-        grid.appendChild(button);
-      }
-      block.appendChild(grid);
-      mount.appendChild(block);
-    }
-    characterButton.disabled = !charpageUrl;
-  })
-  .catch(failure);
-document.getElementById('wiki-search').addEventListener('submit', (event) => {
-  event.preventDefault();
-  const query = event.target.q.value.trim();
-  if (query) openSite('wiki', 'https://aqwwiki.wikidot.com/search:site/q/' + encodeURIComponent(query), 'AQW Wiki');
-});
-document.getElementById('char-page').addEventListener('submit', (event) => {
-  event.preventDefault();
-  if (!charpageUrl) return;
-  const name = event.target.character.value.trim().replace(/[^a-zA-Z0-9]/g, '');
-  openSite('charpage', name ? charpageUrl + '?id=' + encodeURIComponent(name) : charpageUrl, 'Charpages');
-});
+
 const qualitySelect = document.getElementById('ruffle-quality');
 const graphicsSelect = document.getElementById('ruffle-graphics');
 let savedRuffleSettings = null;
 function fillSelect(element, choices, current) {
   element.replaceChildren();
-  for (const choice of choices) {
+  for (const entry of choices) {
     const option = document.createElement('option');
-    option.value = choice.id;
-    option.textContent = choice.label;
+    option.value = entry.id;
+    option.textContent = entry.label;
     element.appendChild(option);
   }
   element.value = current;
@@ -241,3 +463,5 @@ async function saveSettings() {
 }
 qualitySelect.addEventListener('change', saveSettings);
 graphicsSelect.addEventListener('change', saveSettings);
+
+loadModel();

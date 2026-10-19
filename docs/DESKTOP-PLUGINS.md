@@ -6,7 +6,7 @@ Desktop plugins extend the launcher with games, links and isolated web tools. Th
 
 Open **Plugins → Install from ZIP…**, choose a package, review its requested permissions and approve installation. Install packages only from authors you trust. Restart using the displayed button to apply installations, updates, removals and enable/disable changes. Nothing restarts automatically.
 
-The manager lists each plugin's tools, games and links. Actions open tools in separate windows, links in the default browser and games in the selected external player. Games do not inherit the main game's custom SWF/URL override.
+**Manage plugins** installs, enables and removes plugins. Each active plugin has its own page in the launcher's sidebar, where its tools open in separate windows, its links in the default browser and its games in the player chosen on the game's card. Games do not inherit the main game's custom SWF/URL override.
 
 Removal preserves saved data unless **Also delete saved plugin data** is selected. Updating preserves data and requires reviewing permissions again. For recovery, start AquaStar with `AQUASTAR_DISABLE_PLUGINS=1`; third-party plugins will not activate.
 

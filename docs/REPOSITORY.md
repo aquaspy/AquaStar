@@ -20,7 +20,7 @@ AquaStar 3.0 lives in `desktop/`. The root still contains the Electron platform 
 | `.github/` | CI and release workflows |
 | `LICENSE.md` | Original project license notice |
 
-`docs/design/launcher-3.0-preview.html` and `docs/design/launcher-3.1-plugins-preview.html` are design artifacts. The second shows the plugin-driven launcher that the `launcher_model` command feeds; it is not wired to the shipped UI yet. The installed launcher is built from `desktop/ui/`, which now implements the approved design.
+`docs/design/launcher-3.0-preview.html` and `docs/design/launcher-3.1-plugins-preview.html` are design artifacts. The second shows the plugin-driven launcher; `desktop/ui/index.html` and `main.js` now render the data from the `launcher_model` command. The installed launcher is built from `desktop/ui/`, which now implements the approved design.
 
 ## Branch contract
 
