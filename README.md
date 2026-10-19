@@ -35,8 +35,8 @@ Artix does not support third-party launchers. Report AquaStar issues in this rep
 | Custom SWF and URL overrides                   | Yes                                           | Yes                                                                                                                        |
 | Configurable supported shortcuts               | Yes                                           | Yes, with a smaller action set                                                                                             |
 | Game screenshots and screen recording          | Yes                                           | Not included                                                                                                               |
-| Char Page Studio and character-page printing   | Yes                                           | Not included                                                                                                               |
-| Plugins                                        | Electron plugin host and local plugins        | Desktop plugin API v1: games, links and isolated web tools; incompatible with Electron plugins                             |
+| Char Page Studio and character-page printing   | Yes                                           | Char Page Studio (own Ruffle window; PNG/GIF saving on Windows). Alt+K character-page printing is not included            |
+| Plugins                                        | Electron plugin host and local plugins        | Desktop plugin API v2: games, links and isolated web tools; incompatible with Electron plugins                             |
 | Launcher interface                             | Embedded game and companion windows           | Play, Tools, Useful Pages, Plugins, and Preferences                                                                        |
 
 In 3.x, the launcher can stay open during gameplay or hide until the player exits. Its supported tools reuse the compatible JSON profile files from 2.x. The standalone player remains a separate window.
@@ -59,23 +59,17 @@ The [3.0 platform matrix](https://github.com/aquaspy/AquaStar/blob/dev/docs/aqua
 
 On Apple Silicon, 3.x runs the launcher and Artix Ruffle natively. The Flash projector is Intel and requires Rosetta. Intel Macs use the pinned official Ruffle build. The macOS builds are not notarized; installation details are in the [3.x build and player guide](https://github.com/aquaspy/AquaStar/blob/dev/desktop/README.md).
 
-## Download and test
+## Downloads
 
-Download installers and portable packages from [GitHub Releases](https://github.com/aquaspy/AquaStar/releases).
+**[Download AquaStar 2.1.0](https://github.com/aquaspy/AquaStar/releases/tag/v2.1.0)**, the current stable Electron release.
 
-- **Latest** identifies the current production release. It remains `v2.0.0` while the new candidates are tested.
-- **3.x candidate:** [v3.0.0-rc.4 (Tauri)](https://github.com/aquaspy/AquaStar/releases/tag/v3.0.0-rc.4).
-- **2.x candidate:** [v2.1.1-rc.10 (Electron)](https://github.com/aquaspy/AquaStar/releases/tag/v2.1.1-rc.10). These are separate pre-releases and do not replace Latest.
-- The existing `v2.1.0` tag is already a pre-release. The maintenance candidates continue under `2.1.1` without replacing that tag.
-- Older `lite-v*` releases were the Tauri prototype. AquaStar 3.x is its successor, not a third product.
+Choose the installer or portable package for your system and architecture. The macOS ZIP contains an Intel application; Apple Silicon uses Rosetta. On Linux, mark an AppImage executable before opening it, or install the Debian package with your package manager.
 
-For 3.x, choose the Windows setup or portable zip, the macOS universal DMG, or the Linux AppImage or Debian package. Keep `portable.txt` and `players/` beside the Windows portable executable.
+**AquaStar 3.x is in development** on [`dev`](https://github.com/aquaspy/AquaStar/tree/dev). Its earlier test releases have been retired; new builds will be announced on [GitHub Releases](https://github.com/aquaspy/AquaStar/releases). Local build instructions are in the [3.x guide](https://github.com/aquaspy/AquaStar/blob/dev/desktop/README.md).
 
-For 2.x, choose the installer or portable package for your system and architecture. The macOS ZIP contains an Intel application. On Linux, mark an AppImage executable before opening it, or install the Debian package with your package manager.
+The older AquaStar Lite prototype has been replaced by the 3.x line. The project maintains two lines: Electron 2.x and Tauri 3.x.
 
-Candidate testing should cover login, game launch and exit, inventory and Buy Back sync, wiki previews, tools, shortcuts, and saved preferences. For 3.x, also test sync with the Account window closed, menu visibility, and desktop plugin installation and removal. On macOS, also check game sizing, menus, and switching the Electron player to Ruffle. Automated launch smoke checks do not replace an authenticated gameplay test.
-
-Stable publication, changing Latest, and merging the 3.x application into `main` are separate steps after candidate testing.
+The 3.x stable release and application merge into `main` remain pending testing and approval.
 
 ## Branches
 
