@@ -1,48 +1,191 @@
-.extension-toolbar,
-.extension-actions {
+.extension-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+#extension-restart {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #10151b;
+  font-weight: 700;
+}
+#extension-status {
+  min-height: 20px;
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: #afc7dc;
+}
+#extension-status[data-error='true'] {
+  color: var(--bad);
 }
 .extension-card {
-  padding: 22px;
-  margin: 18px 0;
-  border: 1px solid var(--border, #394550);
+  padding: 20px 22px;
+  margin: 0 0 14px;
+  border: 1px solid var(--edge);
   border-radius: 14px;
-  background: var(--card, #182431);
+  background: var(--surface);
+  display: grid;
+  gap: 12px;
 }
-.extension-card h2 {
-  margin-top: 0;
-  font-size: 20px;
+.extension-card[hidden] {
+  display: none;
+}
+#extension-review {
+  border-color: #6b5a2a;
+  background: linear-gradient(180deg, #1c2430, var(--surface));
+}
+.extension-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--warn);
+}
+.extension-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.extension-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0d1520;
+  background: var(--cyan);
+}
+.extension-title {
+  min-width: 0;
+  flex: 1;
+}
+.extension-title h2 {
+  font-size: 18px;
+  letter-spacing: -0.3px;
+  overflow-wrap: anywhere;
 }
 .extension-card h3 {
-  font-size: 15px;
-  margin-bottom: 10px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8fa8bd;
+  margin: 0;
 }
 .extension-card p {
   overflow-wrap: anywhere;
 }
-.extension-state {
-  color: #a7d8c1;
+.extension-muted {
+  color: var(--muted);
+  font-size: 12px;
 }
-.extension-error,
-#extension-status[data-error='true'] {
-  color: #ffb1a9;
+.extension-badge {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid var(--edge);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.extension-badge[data-tone='ok'] {
+  color: var(--ok);
+  border-color: #2f5a3b;
+}
+.extension-badge[data-tone='warn'] {
+  color: var(--warn);
+  border-color: #6b5a2a;
+}
+.extension-permissions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.extension-permissions li {
+  display: grid;
+  gap: 1px;
+  padding: 9px 12px;
+  background: #101b27;
+  border: 1px solid var(--edge);
+  border-radius: 9px;
+}
+.extension-origins {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.extension-origins code {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #0e1824;
+  border: 1px solid var(--edge);
+  font-size: 12px;
+}
+.extension-callout {
+  padding: 10px 12px;
+  border-left: 3px solid var(--warn);
+  background: #19202b;
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  color: #d9e3ee;
+}
+.extension-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+}
+.extension-actions .primary {
+  padding: 10px 18px;
+}
+.extension-remove {
+  margin-left: auto;
+}
+.extension-remove summary {
+  cursor: pointer;
+  padding: 10px 6px;
+  color: var(--muted);
+  border-radius: 8px;
+}
+.extension-remove summary:hover {
+  color: var(--bad);
+}
+.extension-remove[open] {
+  flex-basis: 100%;
+  margin-left: 0;
+  padding: 10px 14px 14px;
+  border: 1px solid #5a3535;
+  border-radius: 10px;
+  background: #1c1519;
+}
+.extension-remove[open] summary {
+  padding-left: 0;
+  color: var(--bad);
 }
 .extension-delete-data {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 14px 0;
+  margin: 6px 0 12px;
 }
-.extension-card summary {
-  cursor: pointer;
-  padding: 10px 0;
+.extension-delete-data input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
 }
-#extension-review {
-  border-color: #f3ab62;
+button.danger {
+  background: #4a2630;
+  border-color: #7a3b48;
+  color: #ffd5d9;
 }
-.extension-actions details {
-  width: 100%;
+button.danger:hover:not(:disabled) {
+  background: #5a2d39;
+}
+.extension-error {
+  color: var(--bad);
 }

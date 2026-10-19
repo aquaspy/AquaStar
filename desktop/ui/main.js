@@ -355,9 +355,20 @@ function renderBuiltin() {
       el(
         'article',
         { class: 'extension-card' },
-        el('h2', { text: plugin.name }),
-        el('p', { text: `${plugin.id} · ${plugin.version}` }),
-        el('p', { class: 'extension-state', text: 'Built in. It is always active and cannot be removed.' })
+        el(
+          'div',
+          { class: 'extension-head' },
+          el('span', { class: 'extension-mark', 'aria-hidden': 'true', text: plugin.name.charAt(0).toUpperCase() }),
+          el(
+            'div',
+            { class: 'extension-title' },
+            el('h2', { text: plugin.name }),
+            el('p', { class: 'extension-muted', text: `${plugin.id} · v${plugin.version}` })
+          ),
+          el('span', { class: 'extension-badge', 'data-tone': 'ok', text: 'Built in' })
+        ),
+        plugin.description ? el('p', { text: plugin.description }) : '',
+        el('p', { class: 'extension-muted', text: 'Always active. It cannot be disabled or removed.' })
       )
     );
   }

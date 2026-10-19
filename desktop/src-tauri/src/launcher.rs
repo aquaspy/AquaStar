@@ -278,9 +278,14 @@ fn block_view(source: &Source, block: &Block, ctx: &Context) -> Option<Value> {
 }
 
 fn default_blocks(manifest: &Manifest) -> Vec<Block> {
-    ["games", "tools", "links", "search"]
+    [("games", None), ("tools", Some("Tools")), ("links", Some("Links")), ("search", Some("Search"))]
         .into_iter()
-        .map(|kind| Block { kind: kind.into(), title: None, items: Vec::new(), source: None })
+        .map(|(kind, title)| Block {
+            kind: kind.into(),
+            title: title.map(str::to_string),
+            items: Vec::new(),
+            source: None,
+        })
         .filter(|block| match block.kind.as_str() {
             "games" => !manifest.games.is_empty(),
             "tools" => !manifest.tools.is_empty(),

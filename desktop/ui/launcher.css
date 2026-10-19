@@ -163,6 +163,9 @@ input:not([type]) {
   padding: 28px 34px;
   display: block;
 }
+.main:focus {
+  outline: none;
+}
 .panel[hidden],
 .banner[hidden] {
   display: none;
