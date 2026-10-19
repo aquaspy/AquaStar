@@ -61,6 +61,11 @@ pub fn live_files() -> ProfileFiles {
     files_from(&crate::placement::electron_profile(exe_dir.as_deref()))
 }
 
+/// Path of a feature window's page inside the bundled UI (`features/<name>/<name>.html`).
+pub fn feature_page(name: &str) -> String {
+    format!("features/{name}/{name}.html")
+}
+
 pub fn tool_spec(name: &str) -> Option<(&'static str, f64, f64)> {
     Some(match name {
         "settings" => ("AquaStar - Settings", 640.0, 680.0),
@@ -898,13 +903,22 @@ mod tests {
     }
 
     #[test]
+    fn every_feature_window_has_its_page() {
+        let ui = Path::new(env!("CARGO_MANIFEST_DIR")).join("../ui");
+        for name in ["settings", "reminders", "todo", "strategy", "inventory", "about", "help"] {
+            let page = ui.join(feature_page(name));
+            assert!(page.is_file(), "missing {}", page.display());
+        }
+    }
+
+    #[test]
     fn windows_use_the_electron_editors() {
         let ui = Path::new(env!("CARGO_MANIFEST_DIR")).join("../ui");
-        let settings = fs::read_to_string(ui.join("settings.html")).unwrap();
-        let reminders = fs::read_to_string(ui.join("reminders.html")).unwrap();
-        let todo = fs::read_to_string(ui.join("todo.html")).unwrap();
-        let strategy = fs::read_to_string(ui.join("strategy.html")).unwrap();
-        let extra = fs::read_to_string(ui.join("strategy-extra.js")).unwrap();
+        let settings = fs::read_to_string(ui.join("features/settings/settings.html")).unwrap();
+        let reminders = fs::read_to_string(ui.join("features/reminders/reminders.html")).unwrap();
+        let todo = fs::read_to_string(ui.join("features/todo/todo.html")).unwrap();
+        let strategy = fs::read_to_string(ui.join("features/strategy/strategy.html")).unwrap();
+        let extra = fs::read_to_string(ui.join("features/strategy/strategy-extra.js")).unwrap();
         assert!(settings.contains("settings-bridge.js"));
         assert!(settings.contains("id=\"saveBtn\""));
         assert!(settings.contains("data-tab=\"keybinds\""));
@@ -915,7 +929,7 @@ mod tests {
         assert!(strategy.contains("id=\"shortcutInput\""));
         assert!(extra.contains("timerRolesPanel"));
         assert!(extra.contains("startRoleRunner"));
-        let bridge = fs::read_to_string(ui.join("strategy-bridge.js")).unwrap();
+        let bridge = fs::read_to_string(ui.join("features/strategy/strategy-bridge.js")).unwrap();
         assert!(bridge.contains("set_strategy_timer_shortcut"));
         assert!(bridge.contains("__aquastarTimerToggle"));
     }

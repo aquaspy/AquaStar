@@ -1199,12 +1199,12 @@ mod tests {
         assert!(wiki.contains("aquastarCharSwitcher"));
         assert!(wiki.contains("fetch_wiki_page"));
         assert!(wiki.contains("renderMergeShopCalculator"));
-        let ui = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../ui/inventory.html");
+        let ui = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../ui/features/inventory/inventory.html");
         let html = fs::read_to_string(ui).unwrap();
         assert!(html.contains("inventory-bridge.js"));
         assert!(html.contains("id=\"syncBtn\""));
-        assert!(fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../ui/inventory-bridge.js")).unwrap().contains("sync_inventory_now"));
-        let worker = fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../ui/inventory_worker.js")).unwrap();
+        assert!(fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../ui/features/inventory/inventory-bridge.js")).unwrap().contains("sync_inventory_now"));
+        let worker = fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../ui/features/inventory/inventory_worker.js")).unwrap();
         assert!(worker.contains("self.onmessage"));
         assert!(html.contains("new Worker('inventory_worker.js')"));
     }

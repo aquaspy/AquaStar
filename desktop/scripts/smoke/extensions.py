@@ -34,11 +34,11 @@ PROBE = r"""(async () => {
     await denied('browser HTTPS denied', () => fetch('https://example.com/'));
     await denied('browser localhost denied', () => fetch('http://127.0.0.1/'));
     await denied('local files denied', () => fetch('file:///etc/passwd'));
-    await denied('application assets denied', () => fetch('tauri://localhost/settings.html'));
+    await denied('application assets denied', () => fetch('tauri://localhost/features/settings/settings.html'));
     await denied('unknown bridge method denied', () => call('extension_invoke', { method: 'get_inventory', args: {} }));
     check('popups denied', window.open('https://example.com/') === null);
     const original = location.href;
-    location.href = 'tauri://localhost/settings.html';
+    location.href = 'tauri://localhost/features/settings/settings.html';
     await new Promise(resolve => setTimeout(resolve, 300));
     check('navigation restricted to plugin', location.href === original);
   } catch (error) { check('probe completed', false, String(error)); }

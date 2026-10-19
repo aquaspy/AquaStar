@@ -192,7 +192,7 @@ fn open_tool(app: tauri::AppHandle, name: String) -> Result<(), String> {
         let _ = window.set_focus();
         return Ok(());
     }
-    WebviewWindowBuilder::new(&app, &name, WebviewUrl::App(format!("{name}.html").into()))
+    WebviewWindowBuilder::new(&app, &name, WebviewUrl::App(profile::feature_page(&name).into()))
         .title(title)
         .inner_size(width, height)
         .build()
@@ -655,7 +655,7 @@ fn open_dialog(app: &tauri::AppHandle, label: &str, dialog: manifest::Dialog, wi
         "window.__aquastarDialog = {};",
         serde_json::to_string(&dialog).unwrap_or_else(|_| "{}".into())
     );
-    let _ = WebviewWindowBuilder::new(app, label, WebviewUrl::App(format!("{label}.html").into()))
+    let _ = WebviewWindowBuilder::new(app, label, WebviewUrl::App(profile::feature_page(label).into()))
         .title(dialog.title)
         .inner_size(width, height)
         .initialization_script(script)
