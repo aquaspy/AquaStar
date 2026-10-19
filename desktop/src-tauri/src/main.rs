@@ -184,15 +184,31 @@ fn allowed_site(url: &str) -> Result<tauri::Url, String> {
     manifest::accept_site(url)
 }
 
+/// Windows deadlocks when a window is built on the main thread, which is where Tauri
+/// runs synchronous commands and menu handlers. Window-building commands are `async`
+/// and handler paths go through `spawn_tool` / `open_dialog`.
 #[tauri::command]
-fn open_tool(app: tauri::AppHandle, name: String) -> Result<(), String> {
+async fn open_tool(app: tauri::AppHandle, name: String) -> Result<(), String> {
+    open_tool_window(&app, &name)
+}
+
+fn spawn_tool(app: &tauri::AppHandle, name: String) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Err(error) = open_tool_window(&app, &name) {
+            eprintln!("aquastar-lite: could not open {name}: {error}");
+        }
+    });
+}
+
+fn open_tool_window(app: &tauri::AppHandle, name: &str) -> Result<(), String> {
     let (title, width, height) =
-        profile::tool_spec(&name).ok_or_else(|| format!("unknown window {name}"))?;
-    if let Some(window) = app.get_webview_window(&name) {
+        profile::tool_spec(name).ok_or_else(|| format!("unknown window {name}"))?;
+    if let Some(window) = app.get_webview_window(name) {
         let _ = window.set_focus();
         return Ok(());
     }
-    WebviewWindowBuilder::new(&app, &name, WebviewUrl::App(profile::feature_page(&name).into()))
+    WebviewWindowBuilder::new(app, name, WebviewUrl::App(profile::feature_page(name).into()))
         .title(title)
         .inner_size(width, height)
         .build()
@@ -316,7 +332,7 @@ fn save_todo(state: serde_json::Value) -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-fn open_todo_link(app: tauri::AppHandle, url: String) -> Result<(), String> {
+async fn open_todo_link(app: tauri::AppHandle, url: String) -> Result<(), String> {
     let parsed: tauri::Url = url.parse().map_err(|_| "bad url".to_string())?;
     if parsed.scheme() != "https" && parsed.scheme() != "http" {
         return Err("only http(s) links open".into());
@@ -655,11 +671,14 @@ fn open_dialog(app: &tauri::AppHandle, label: &str, dialog: manifest::Dialog, wi
         "window.__aquastarDialog = {};",
         serde_json::to_string(&dialog).unwrap_or_else(|_| "{}".into())
     );
-    let _ = WebviewWindowBuilder::new(app, label, WebviewUrl::App(profile::feature_page(label).into()))
-        .title(dialog.title)
-        .inner_size(width, height)
-        .initialization_script(script)
-        .build();
+    let (app, label) = (app.clone(), label.to_string());
+    tauri::async_runtime::spawn(async move {
+        let _ = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(profile::feature_page(&label).into()))
+            .title(dialog.title)
+            .inner_size(width, height)
+            .initialization_script(script)
+            .build();
+    });
 }
 
 fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
@@ -705,10 +724,10 @@ fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
             }
         }
         "settings" => {
-            let _ = open_tool(app.clone(), "settings".into());
+            spawn_tool(app, "settings".into());
         }
         "tool" => {
-            let _ = open_tool(app.clone(), command.target);
+            spawn_tool(app, command.target);
         }
         "page" => {
             let lang = current_language();

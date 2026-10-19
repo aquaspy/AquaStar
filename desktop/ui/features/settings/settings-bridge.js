@@ -1,5 +1,5 @@
 const { invoke } = window.__TAURI__.core;
-const platform = /Mac/i.test(navigator.userAgent) ? 'darwin' : 'linux';
+const platform = /Mac/i.test(navigator.userAgent) ? 'darwin' : /Win/i.test(navigator.userAgent) ? 'win32' : 'linux';
 window.aquastarSettings = {
   platform,
   getKeybindings: () => invoke('get_keybindings'),

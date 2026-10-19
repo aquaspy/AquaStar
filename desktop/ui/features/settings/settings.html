@@ -1208,7 +1208,9 @@
     document.getElementById('restartBtn').onclick = () => api.restartApp();
   }
 
-  init();
+  init().catch((error) => {
+    setStatus('Could not load settings: ' + (error && error.message ? error.message : error), true);
+  });
 })();
 </script>
 </body>
