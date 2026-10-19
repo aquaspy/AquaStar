@@ -262,6 +262,21 @@ pub fn charpage_url(name: &str) -> String {
     if id.is_empty() { base } else { format!("{base}?id={id}") }
 }
 
+/// Texts of the Char Page Studio window, in the chosen language.
+pub fn studio_messages(lang: &str) -> Value {
+    let source = if lang == "pt-BR" { GAME_PT } else { GAME_EN };
+    let mut map = Map::new();
+    for (key, value) in string_object(GAME_EN, "charPageStudioMessages") {
+        map.insert(key, Value::String(value));
+    }
+    for (key, value) in string_object(source, "charPageStudioMessages") {
+        map.insert(key, Value::String(value));
+    }
+    // The Electron text says "native Flash Player"; the player is Ruffle in its own window here.
+    map.remove("description");
+    Value::Object(map)
+}
+
 pub fn releases_url() -> &'static str {
     manifest().about.releases_url.as_str()
 }
@@ -874,13 +889,10 @@ mod tests {
     }
 
     #[test]
-    fn package_lists_no_studio_recording_or_alt_k() {
+    fn package_lists_no_recording_or_alt_k() {
         let needles = [
             format!("{}{}", "Alt+", "K"),
             format!("{}{}", "cp", "Sshot"),
-            format!("{} {}", "Char Page", "Studio"),
-            format!("{}-{}", "charpage", "studio"),
-            format!("{}_{}", "charpage", "studio"),
         ];
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
         let mut files = Vec::new();
@@ -892,7 +904,6 @@ mod tests {
         for path in &files {
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
             let lower = name.to_ascii_lowercase();
-            assert!(!lower.contains("studio"), "{}", path.display());
             assert!(!lower.contains("recording"), "{}", path.display());
             let Ok(bytes) = std::fs::read(path) else { continue };
             let Ok(text) = String::from_utf8(bytes) else { continue };
@@ -901,7 +912,6 @@ mod tests {
             }
         }
         let banned_ids = [
-            "studio".to_string(),
             format!("{}{}", "cp", "Sshot"),
             "record".to_string(),
             "sshot".to_string(),
@@ -918,7 +928,6 @@ mod tests {
             assert!(!help.message.contains(needle));
         }
         let permissions = std::fs::read_to_string(root.join("permissions/app.toml")).unwrap();
-        assert!(!permissions.to_ascii_lowercase().contains("studio"));
         assert!(!permissions.contains("record"));
     }
 

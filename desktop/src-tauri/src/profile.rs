@@ -73,6 +73,7 @@ pub fn tool_spec(name: &str) -> Option<(&'static str, f64, f64)> {
         "todo" => ("AquaStar - To-Do List", 960.0, 620.0),
         "strategy" => ("AquaStar - Strategy", 1040.0, 680.0),
         "inventory" => ("AquaStar - Inventory", 1040.0, 620.0),
+        "studio" => ("AquaStar - Char Page Studio", 560.0, 900.0),
         _ => return None,
     })
 }
@@ -905,7 +906,7 @@ mod tests {
     #[test]
     fn every_feature_window_has_its_page() {
         let ui = Path::new(env!("CARGO_MANIFEST_DIR")).join("../ui");
-        for name in ["settings", "reminders", "todo", "strategy", "inventory", "about", "help"] {
+        for name in ["settings", "reminders", "todo", "strategy", "inventory", "studio", "about", "help"] {
             let page = ui.join(feature_page(name));
             assert!(page.is_file(), "missing {}", page.display());
         }

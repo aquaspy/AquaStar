@@ -85,7 +85,7 @@ The Artix binary accepts `--title`, `--companion`, `--companion-name`, `--tcp-co
 | PPAPI Flash and the in-page Ruffle | Drop | The game runs in a standalone player. |
 | Socket proxy and Pepper trust | Drop | The player opens its own sockets. |
 | Plugin host and local plugins | Drop | A game JSON file plus first-party pages. |
-| Char Page Studio | Drop | Stays on the 2.x branch. |
+| Char Page Studio | Drop (superseded) | Originally dropped. The 3.x launcher now ships it as a tool of the bundled plugin: the scene opens in its own Ruffle window instead of an embedded Flash. See `desktop/README.md`. |
 | Alt+K char page print | Drop | Stays on the 2.x branch. |
 | Screen recording and F2 capture | Drop | Stays on the 2.x branch. |
 | Record the player window to MP4 | 3.1 | Native capture of the standalone player window. |

@@ -14,6 +14,7 @@ mod placement;
 mod players;
 mod profile;
 mod startup;
+mod studio;
 mod ruffle;
 
 use std::path::Path;
@@ -119,6 +120,16 @@ async fn set_show_menu_bar(app: tauri::AppHandle, show: bool) -> Result<Launcher
         return Err(error);
     }
     launcher_settings(app)
+}
+
+fn player_roots(app: &tauri::AppHandle) -> Result<placement::PlayerRoots, String> {
+    let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let resource_dir = app.path().resource_dir().ok();
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(Path::to_path_buf));
+    let placement = app.state::<placement::Placement>().inner().clone();
+    Ok(placement.player_roots(&app_data, resource_dir.as_deref(), exe_dir.as_deref()))
 }
 
 fn load_ruffle_settings(app: &tauri::AppHandle) -> ruffle::RuffleSettings {
@@ -907,6 +918,7 @@ fn main() {
         .manage(placement)
         .manage(Players::default())
         .manage(startup::StartupState::default())
+        .manage(studio::StudioState::default())
         .manage(TimerShortcut(std::sync::Mutex::new(None)))
         .manage(ShortcutBook(std::sync::Mutex::new(std::collections::HashMap::new())))
         .invoke_handler(tauri::generate_handler![
@@ -915,6 +927,12 @@ fn main() {
             launcher::play_game,
             launcher::launcher_search,
             launcher::set_startup,
+            studio::studio_defaults,
+            studio::studio_messages,
+            studio::studio_load_character,
+            studio::studio_render,
+            studio::studio_capture,
+            studio::studio_close_preview,
             extensions::extensions_list,
             extensions::extensions_install,
             extensions::extensions_change,
@@ -1010,12 +1028,16 @@ fn main() {
             RunEvent::WindowEvent { label, event: tauri::WindowEvent::Destroyed, .. } if label == "main"
         );
         if let RunEvent::WindowEvent { label, event: tauri::WindowEvent::Destroyed, .. } = &event {
+            if label == "studio" {
+                app.state::<studio::StudioState>().stop_preview();
+            }
             if label != "main" {
                 startup::exit_when_finished(app, label);
             }
         }
         if main_gone || matches!(event, RunEvent::Exit) {
             app.state::<Players>().kill_all();
+            app.state::<studio::StudioState>().stop_preview();
             if main_gone {
                 app.exit(0);
             }

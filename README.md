@@ -35,7 +35,7 @@ Artix does not support third-party launchers. Report AquaStar issues in this rep
 | Custom SWF and URL overrides                   | Yes                                           | Yes                                                                                                                        |
 | Configurable supported shortcuts               | Yes                                           | Yes, with a smaller action set                                                                                             |
 | Game screenshots and screen recording          | Yes                                           | Not included                                                                                                               |
-| Char Page Studio and character-page printing   | Yes                                           | Not included                                                                                                               |
+| Char Page Studio and character-page printing   | Yes                                           | Char Page Studio (own Ruffle window; PNG/GIF saving on Windows). Alt+K character-page printing is not included            |
 | Plugins                                        | Electron plugin host and local plugins        | Desktop plugin API v1: games, links and isolated web tools; incompatible with Electron plugins                             |
 | Launcher interface                             | Embedded game and companion windows           | Play, Tools, Useful Pages, Plugins, and Preferences                                                                        |
 

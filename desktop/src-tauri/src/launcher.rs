@@ -570,7 +570,7 @@ mod tests {
         let games: Vec<_> = manifest.games.iter().map(|g| g.id.as_str()).collect();
         assert_eq!(games, ["aqw", "dragonfable"]);
         let tools: Vec<_> = manifest.tools.iter().filter_map(|t| t.builtin.as_deref()).collect();
-        assert_eq!(tools, ["inventory", "reminders", "todo", "strategy"]);
+        assert_eq!(tools, ["inventory", "reminders", "todo", "strategy", "studio"]);
         for tool in tools {
             assert!(crate::profile::tool_spec(tool).is_some(), "{tool} has no window");
         }
@@ -643,7 +643,7 @@ mod tests {
         assert_eq!(games[0]["selectedEngine"], "flash");
         assert_eq!(games[1]["selectedEngine"], "ruffle");
         assert_eq!(games[0]["launchable"], true);
-        assert_eq!(blocks[1]["tools"].as_array().unwrap().len(), 4);
+        assert_eq!(blocks[1]["tools"].as_array().unwrap().len(), 5);
         assert_eq!(blocks[3]["groups"][0]["links"][0]["kind"], "site");
         assert_eq!(blocks[4]["searches"][0]["id"], "charpage");
     }

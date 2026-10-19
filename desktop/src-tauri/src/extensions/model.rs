@@ -336,7 +336,7 @@ pub fn version_at_least(current: &str, minimum: &str) -> Result<bool, String> {
     }
 }
 pub const BUNDLED_RESOLVERS: [&str; 2] = ["aqw-primary", "dragonfable"];
-pub const BUNDLED_TOOLS: [&str; 5] = ["inventory", "reminders", "todo", "strategy", "settings"];
+pub const BUNDLED_TOOLS: [&str; 6] = ["inventory", "reminders", "todo", "strategy", "studio", "settings"];
 const BLOCK_KINDS: [&str; 4] = ["games", "tools", "links", "search"];
 
 impl Manifest {

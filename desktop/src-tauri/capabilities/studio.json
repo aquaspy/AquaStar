@@ -1,0 +1,6 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "studio",
+  "windows": ["studio"],
+  "permissions": ["core:default", "studio-commands"]
+}

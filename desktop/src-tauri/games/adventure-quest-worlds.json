@@ -73,7 +73,8 @@
         { "id": "reminders", "labelKey": "menuReminders", "keybind": "reminders", "action": "tool" },
         { "id": "todo", "labelKey": "menuTodo", "keybind": "todo", "action": "tool" },
         { "id": "inventory", "labelKey": "menuInventory", "keybind": "inventory", "action": "tool" },
-        { "id": "strategy", "labelKey": "menuStrategy", "keybind": "strategy", "action": "tool" }
+        { "id": "strategy", "labelKey": "menuStrategy", "keybind": "strategy", "action": "tool" },
+        { "id": "studio", "labelKey": "menuCharPageStudio", "action": "tool" }
       ]
     },
     {

@@ -49,6 +49,18 @@ commands.allow = [
 ]
 
 [[permission]]
+identifier = "studio-commands"
+description = "Char Page Studio window"
+commands.allow = [
+  "studio_defaults",
+  "studio_messages",
+  "studio_load_character",
+  "studio_render",
+  "studio_capture",
+  "studio_close_preview"
+]
+
+[[permission]]
 identifier = "reminders-commands"
 description = "Reminders window"
 commands.allow = ["get_reminders", "get_reminders_messages", "save_reminders"]

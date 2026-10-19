@@ -67,6 +67,10 @@ python3 desktop/scripts/smoke/extensions.py --binary desktop/src-tauri/target/de
 
 Windows uses `extension-runtime-probe.exe`; Linux needs an X display (CI uses Xvfb). The probe uses synthetic account data and private plugin sessions. The `AquaStar Extension Isolation` workflow runs the checks on Linux, Windows and macOS.
 
+## Char Page Studio
+
+The bundled AQW plugin has a **Char Page Studio** tool (`aquastar --aqw --tool=studio --no-launcher`). The Studio window loads a public Char Page (`account.aq.com/CharPage?id=<name>`), lets you edit its FlashVars, and renders the character in a **separate Ruffle window**, not in the page. Two SWFs ship inside the executable (`plugins/adventure-quest-worlds/features/charpage/`): `characterB-studio.swf`, the Char Page itself, and `characterB-empty-scene.swf`, a clean compositor derived from SWF2PNG (MIT, see `empty-scene/SWF2PNG-NOTICE.md`). FlashVars reach them as `-P key=value`. The Char Page SWF calls `ExternalInterface.addCallback` before it reads them, which fails outside a browser, so the window starts Ruffle with `--dummy-external-interface`; the Flash projector cannot run that movie. Saving a PNG (3× the 715×455 stage) or a GIF (8 s, 10–60 FPS, 64–256 colors) opens a second, hidden-off-screen Ruffle window and reads it with `PrintWindow`; this is **Windows only** for now, while the preview works wherever Ruffle does. `AQUASTAR_STUDIO_SAVE_DIR=<folder>` skips the save dialog (smoke tests). The preview window is closed with the Studio window and when AquaStar exits.
+
 ## Command line
 
 `aquastar --aqw` opens the launcher on a plugin's page and `aquastar --aqw --no-launcher` opens its game without the launcher; `--game=<id>`, `--tool=<id>` (a tool window instead of a game), `--ruffle[<version>]`, `--flash[<version>]` and `--launcher` refine it, and Preferences > On start-up saves a game to open by default. Each plugin's command id comes from `launcherParameters.id`. See [the plugin guide](../docs/DESKTOP-PLUGINS.md#command-line-and-start-up).

@@ -26,7 +26,8 @@
     { "id": "inventory", "name": "Inventory & Buy Back", "builtin": "inventory" },
     { "id": "reminders", "name": "Reminders", "builtin": "reminders" },
     { "id": "todo", "name": "To-Do List", "builtin": "todo" },
-    { "id": "strategy", "name": "Strategy", "builtin": "strategy" }
+    { "id": "strategy", "name": "Strategy", "builtin": "strategy" },
+    { "id": "studio", "name": "Char Page Studio", "builtin": "studio" }
   ],
   "searches": [
     {

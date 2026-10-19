@@ -694,6 +694,27 @@ impl Players {
     }
 }
 
+/// Start a Ruffle window of this system's pinned build with arguments the caller built, outside
+/// the game tracking (no presence, no relaunch). `build` is told whether it is Artix's build, which
+/// accepts `--title`.
+pub(crate) fn start_ruffle(
+    roots: &PlayerRoots,
+    build: impl FnOnce(bool) -> Vec<String>,
+) -> Result<Child, String> {
+    let (Some(os), Some(arch)) = (catalog::Os::host(), catalog::Arch::host()) else {
+        return Err("Ruffle is not available on this platform".into());
+    };
+    let pin = catalog::Catalog::pinned()
+        .select(Engine::Ruffle, os, arch)
+        .ok_or("Ruffle is not available on this platform")?;
+    let exe = match locate(pin, roots) {
+        Some(source) => source.path().to_path_buf(),
+        None => catalog::publish(&pin, roots.app_data())?,
+    };
+    let args = build(pin.cli == catalog::Cli::Artix);
+    spawn_player(&exe, Engine::Ruffle, &args, false)
+}
+
 pub fn warm_loader(paths: &crate::placement::ProfilePaths) {
     if let Err(err) = movie::refresh(paths) {
         eprintln!("aquastar-lite: loader refresh skipped: {err}");
