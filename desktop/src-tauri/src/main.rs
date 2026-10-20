@@ -779,11 +779,8 @@ fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
         "sshot" => {
             let app = app.clone();
             tauri::async_runtime::spawn(async move {
-                match capture::screenshot(app.clone(), None).await {
-                    Ok(_) => capture::open_controls(&app).await,
-                    Err(error) => {
-                        let _ = rfd::AsyncMessageDialog::new().set_title("Screenshot").set_description(&error).show().await;
-                    }
+                if let Err(error) = capture::screenshot(app.clone(), None).await {
+                    capture::screenshot_failed(&app, error);
                 }
             });
         }

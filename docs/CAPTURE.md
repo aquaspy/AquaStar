@@ -2,7 +2,7 @@
 
 Open **Preferences → Screenshots and recording → Open Capture Controls**, or use the Tools menu. Start a game first. **F2** saves a PNG; **Ctrl+J** starts or stops an MP4 recording. These shortcuts follow the saved keybindings and are registered while a player is running. With several game windows, choose the target in Capture Controls.
 
-The capture window shows REC, elapsed time and Stop Recording while the launcher is hidden. Closing the controls hides them during recording; it does not silently stop the recording. Closing the game finalizes the completed portion. The launcher returns afterwards, or exits after a direct `--no-launcher` session.
+Shortcuts act directly: neither F2 nor Ctrl+J opens a control window or an AquaStar message dialog. The Wayland system picker may still appear when authorization is needed. Status, saved paths, errors and a Stop Recording button are available in the existing launcher Preferences. Open Capture Controls manually if you want the optional separate controls, including REC and elapsed time while the launcher is hidden. Closing the controls hides them during recording; it does not silently stop the recording. Closing the game finalizes the completed portion. The launcher returns afterwards, or exits after a direct `--no-launcher` session.
 
 ## Files and defaults
 

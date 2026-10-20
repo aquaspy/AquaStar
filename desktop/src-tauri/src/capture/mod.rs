@@ -302,6 +302,7 @@ pub async fn screenshot(app: tauri::AppHandle, id: Option<String>) -> Result<Pat
         let state = app.state::<CaptureState>();
         *state.0.screenshot.lock().unwrap() = Some(path.clone());
         let _ = app.emit_to("capture", "capture-screenshot", &path);
+        let _ = app.emit_to("main", "capture-screenshot", &path);
         if !state.active() {
             state.update(&app, "saved", 0, Some(path.clone()), None, false);
         }
@@ -309,6 +310,16 @@ pub async fn screenshot(app: tauri::AppHandle, id: Option<String>) -> Result<Pat
     })
     .await
     .map_err(|e| e.to_string())?
+}
+pub fn screenshot_failed(app: &tauri::AppHandle, error: String) {
+    let state = app.state::<CaptureState>();
+    if state.active() {
+        // A failed screenshot must not replace the active recording's state.
+        let _ = app.emit_to("main", "capture-screenshot-error", &error);
+        let _ = app.emit_to("capture", "capture-screenshot-error", &error);
+    } else {
+        state.update(app, "failed", 0, None, Some(error), false);
+    }
 }
 #[tauri::command]
 pub async fn capture_start(
@@ -344,12 +355,6 @@ pub async fn start(app: tauri::AppHandle, id: Option<String>, silent: bool) -> R
             return Err(error);
         }
     };
-    let controls = show_controls(&app).await;
-    if let Err(error) = controls {
-        state.update(&app, "failed", 0, None, Some(error.clone()), false);
-        state.finish(&app);
-        return Err(error);
-    }
     std::thread::spawn(move || {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             record(&app, &state, prepared)
@@ -535,7 +540,6 @@ pub async fn toggle(app: tauri::AppHandle) {
             .stop
             .store(true, Ordering::SeqCst);
     } else if let Err(error) = start(app.clone(), None, false).await {
-        let _ = show_controls(&app).await;
         app.state::<CaptureState>()
             .update(&app, "failed", 0, None, Some(error), false);
     }

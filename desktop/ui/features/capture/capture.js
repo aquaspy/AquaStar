@@ -102,3 +102,7 @@ window.__TAURI__.event
   .catch(showError);
 
 $('remember').onchange = () => action(() => invoke('capture_set_remember_authorization', { enabled: $('remember').checked }));
+
+window.__TAURI__.event.listen('capture-screenshot-error', (event) => {
+  $('notice').textContent = String(event.payload);
+}).catch(showError);
