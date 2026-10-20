@@ -1,3 +1,6 @@
+#[cfg(target_os = "linux")]
+#[path = "../src/capture/feedback.rs"]
+mod capture_feedback;
 #[path = "../src/menu_visibility.rs"]
 mod menu_visibility;
 #[path = "../src/extensions/runtime.rs"]
@@ -128,6 +131,8 @@ fn capture_info() -> Value { json!({"secret":"Capture capabilities must remain p
 #[tauri::command]
 fn capture_set_remember_authorization() -> Value { json!({"secret":"Portal authorization must remain private"}) }
 #[tauri::command]
+fn capture_set_gnome_shortcuts() -> Value { json!({"secret":"Desktop shortcut settings must remain private"}) }
+#[tauri::command]
 fn capture_start() -> Value { json!({"secret":"Capture must not start from plugins"}) }
 
 fn main() {
@@ -169,9 +174,14 @@ fn main() {
         probe_secret,
         capture_info,
         capture_start,
-        capture_set_remember_authorization
+        capture_set_remember_authorization,
+        capture_set_gnome_shortcuts
     ])
     .setup(move |app| {
+        #[cfg(target_os = "linux")]
+        if std::env::var_os("AQUASTAR_PROBE_CAPTURE_FEEDBACK").is_some() {
+            capture_feedback::show(app.handle(), "AquaStar · Feedback test", "Short silent capture notification.");
+        }
         let submenu = tauri::menu::SubmenuBuilder::new(app, "Probe")
             .text("probe-action", "Probe action")
             .build()?;

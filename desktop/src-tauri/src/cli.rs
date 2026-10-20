@@ -36,7 +36,7 @@ pub struct Cli {
     pub problems: Vec<String>,
 }
 
-const RESERVED: [&str; 7] = ["game", "launcher", "no-launcher", "nolauncher", "help", "version", "plugin"];
+const RESERVED: [&str; 9] = ["capture-screenshot", "capture-record", "game", "launcher", "no-launcher", "nolauncher", "help", "version", "plugin"];
 
 fn version_text(text: &str) -> bool {
     !text.is_empty()
@@ -250,5 +250,21 @@ mod tests {
         assert!(version_matches("32.0.0.465", "32"));
         assert!(!version_matches("1.70.0", "1.7"));
         assert!(!version_matches("0.7.1", "1.7"));
+    }
+}
+
+/// Capture commands are host actions, never plugin launches or mixed command lines.
+pub fn capture_action(args: &[String]) -> Option<&'static str> {
+    match args { [arg] if arg == "--capture-screenshot" => Some("sshot"), [arg] if arg == "--capture-record" => Some("record"), _ => None }
+}
+#[cfg(test)]
+mod capture_command_tests {
+    #[test]
+    fn capture_commands_are_exact_and_cannot_be_plugin_identifiers() {
+        assert_eq!(super::capture_action(&["--capture-screenshot".into()]),Some("sshot"));
+        assert_eq!(super::capture_action(&["--capture-record".into()]),Some("record"));
+        assert!(super::capture_action(&["--capture-record".into(),"--aqw".into()]).is_none());
+        assert!(super::reserved_command("capture-record"));
+        assert!(super::reserved_command("capture-screenshot"));
     }
 }

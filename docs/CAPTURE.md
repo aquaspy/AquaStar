@@ -60,3 +60,9 @@ On Wayland, Capture Controls offers **Remember window authorization**, off by de
 A grant is bound to the player's PID, process start time and boot identity. A different/restarted game requires a new selection; the most recently authorized game is remembered. Turning the option off deletes the locally saved token; it does not promise to revoke the portal's own permission records. Your desktop may ask again after permission revocation, missing/unsupported tokens or session changes. No background capture stream stays running between captures.
 
 GNOME/Zorin was tested with two consecutive native captures: the first returned a token and the second restored it without picker delay. This confirms reuse for the same still-open window, not a permanent grant for future game processes or every compositor.
+
+### GNOME Wayland capture shortcuts
+
+On GNOME Wayland without the GlobalShortcuts portal, enable **Use GNOME shortcuts for capture** in Preferences. This opt-in creates two AquaStar custom keyboard shortcuts, preserves unrelated entries, and activates the configured capture keys while a tracked game runs. Normal shutdown suspends the bindings; disabling the option removes AquaStar's entries. Local builds must remain at their current executable path while the integration is enabled. Other Wayland desktops may require their own shortcut setup.
+
+Preferences also provides direct screenshot/recording buttons and displays the actual output folders. Defaults are `Pictures/AquaStar Screenshots` (PNG) and `Videos/AquaStar Recordings` (MP4), using the OS user directories. Capture feedback uses desktop notifications without opening a window: Linux requests a silent, transient notification for 2.5 seconds, replacing the previous capture notification. Desktop notification policy may suppress it or control its duration.

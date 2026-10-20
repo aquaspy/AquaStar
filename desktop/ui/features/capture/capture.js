@@ -46,6 +46,8 @@ async function refresh() {
   $('screenshots').textContent = info.settings.screenshots;
   $('videos').textContent = info.settings.videos;
   $('audio').checked = info.settings.audio;
+  $('gnome-shortcuts').hidden = !info.gnomeShortcutsAvailable;
+  $('gnome-shortcut-toggle').checked = info.settings.gnomeShortcuts;
   $('wayland-authorization').hidden = !info.wayland;
   $('remember').checked = info.settings.rememberAuthorization;
   $('remember').disabled = active || pending;
@@ -106,3 +108,5 @@ $('remember').onchange = () => action(() => invoke('capture_set_remember_authori
 window.__TAURI__.event.listen('capture-screenshot-error', (event) => {
   $('notice').textContent = String(event.payload);
 }).catch(showError);
+
+$('gnome-shortcut-toggle').onchange = () => action(() => invoke('capture_set_gnome_shortcuts', { enabled: $('gnome-shortcut-toggle').checked }));

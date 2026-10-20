@@ -806,11 +806,12 @@ fn register_saved_shortcuts(app: &tauri::AppHandle) {
     use tauri_plugin_global_shortcut::GlobalShortcutExt;
     let old = std::mem::take(&mut *app.state::<ShortcutBook>().0.lock().unwrap_or_else(|e|e.into_inner()));
     for shortcut in old.keys() { let _=app.global_shortcut().unregister(*shortcut); }
+    capture::sync_shortcuts(app);
     let running = !app.state::<Players>().capture_pids().is_empty();
     let merged = profile::merged_settings(&profile::live_files());
     let mut map = std::collections::HashMap::new();
     for bind in manifest::keybinds() {
-        if matches!(bind.id.as_str(), "sshot" | "record") && !running { continue; }
+        if matches!(bind.id.as_str(), "sshot" | "record") && (!running || capture::gnome_shortcuts_enabled(app)) { continue; }
         for accel in manifest::accelerators(&bind, merged.get(&bind.id)) {
             let Some(parsed) = profile::parse_accelerator(&accel) else {
                 eprintln!("aquastar-lite: skipping invalid shortcut {accel} for {}", bind.id);
@@ -888,7 +889,7 @@ fn main() {
     // Going straight into a game: keep the launcher window from ever appearing.
     let args: Vec<String> = std::env::args().skip(1).collect();
     let has_saved_startup = ruffle::load_startup(&placement::launcher_config_dir()).is_some();
-    if startup::probably_direct(&cli::parse(&args), has_saved_startup) {
+    if cli::capture_action(&args).is_some() || startup::probably_direct(&cli::parse(&args), has_saved_startup) {
         if let Some(window) = context.config_mut().app.windows.first_mut() {
             window.visible = false;
         }
@@ -899,7 +900,10 @@ fn main() {
     };
     let extension_state = extensions::Extensions::load(extension_root);
     let extension_sources = extension_state.sources();
-    let app = extensions::runtime::configure(tauri::Builder::default(), extension_sources)
+    let builder = tauri::Builder::default();
+    #[cfg(not(target_os = "linux"))]
+    let builder = builder.plugin(tauri_plugin_notification::init());
+    let app = extensions::runtime::configure(builder, extension_sources)
         .manage(extension_state)
         .manage(menu_visibility::Visibility::default())
         .on_page_load(|webview, _| menu_visibility::apply_to_window(webview))
@@ -907,7 +911,9 @@ fn main() {
             // A second launch with options (`aquastar --aqw`) is carried out here; a plain
             // second launch just brings the launcher forward.
             let args: Vec<String> = argv.into_iter().skip(1).collect();
-            if args.iter().any(|arg| arg.starts_with("--")) {
+            if let Some(action) = cli::capture_action(&args) {
+                dispatch(app, action, false);
+            } else if args.iter().any(|arg| arg.starts_with("--")) {
                 startup::apply(app, &args, false);
             } else if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
@@ -950,6 +956,7 @@ fn main() {
             capture::capture_info,
             capture::capture_choose_folder,
             capture::capture_set_audio,
+            capture::capture_set_gnome_shortcuts,
             capture::capture_set_remember_authorization,
             capture::capture_open_folder,
             capture::capture_screenshot,
@@ -1041,7 +1048,16 @@ fn main() {
             });
             register_saved_shortcuts(app.handle());
             extensions::install_contributions(app.handle());
-            startup::apply(app.handle(), &args, true);
+            if cli::capture_action(&args).is_some() {
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    capture::no_game_feedback(&handle);
+                    std::thread::sleep(std::time::Duration::from_millis(800));
+                    handle.exit(0);
+                });
+            } else {
+                startup::apply(app.handle(), &args, true);
+            }
             if let Err(error) = menu_visibility::apply(app.handle()) {
                 eprintln!("AquaStar: could not apply menu visibility: {error}");
             }
@@ -1075,6 +1091,7 @@ fn main() {
             }
         }
         if main_gone || matches!(event, RunEvent::Exit) {
+            capture::suspend_shortcuts(app);
             app.state::<capture::CaptureState>().shutdown();
             app.state::<Players>().kill_all();
             app.state::<studio::StudioState>().stop_preview();

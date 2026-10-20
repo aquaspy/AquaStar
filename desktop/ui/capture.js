@@ -28,9 +28,29 @@
   stop.onclick = () => window.__TAURI__.core.invoke('capture_stop').catch((error) => {
     feedback.textContent = String(error);
   });
+  const screenshot = document.createElement('button');
+  screenshot.type = 'button'; screenshot.textContent = 'Take Screenshot';
+  screenshot.onclick = () => window.__TAURI__.core.invoke('capture_screenshot', { id: null }).catch((e) => { feedback.textContent = String(e); });
+  const record = document.createElement('button');
+  record.type = 'button'; record.textContent = 'Start Recording';
+  record.onclick = () => window.__TAURI__.core.invoke('capture_start', { id: null, silent: false }).catch((e) => { feedback.textContent = String(e); });
+  const folders = document.createElement('p');
+  const shortcutLabel = document.createElement('label');
+  shortcutLabel.hidden = true;
+  const shortcutToggle = document.createElement('input'); shortcutToggle.type = 'checkbox';
+  shortcutLabel.append(shortcutToggle, ' Use GNOME shortcuts for capture');
+  const shortcutHint = document.createElement('p'); shortcutHint.hidden = true;
+  shortcutHint.textContent = 'Registers screenshot and recording shortcuts with GNOME while a game is open. Existing desktop shortcuts are preserved. Disable this option to remove AquaStar’s entries.';
+  shortcutToggle.onchange = async () => {
+    shortcutToggle.disabled = true;
+    try { await window.__TAURI__.core.invoke('capture_set_gnome_shortcuts', { enabled: shortcutToggle.checked }); }
+    catch (error) { feedback.textContent = String(error); shortcutToggle.checked = !shortcutToggle.checked; }
+    finally { shortcutToggle.disabled = false; }
+  };
   function render(state) {
     const active = ['preparing', 'recording', 'finalizing'].includes(state.phase);
     stop.hidden = !active;
+    record.hidden = active;
     stop.disabled = state.phase === 'finalizing';
     if (state.phase === 'recording') {
       const seconds = state.elapsedSeconds || 0;
@@ -50,8 +70,15 @@
   });
   window.__TAURI__.core.invoke('capture_info').then((info) => {
     render(info.status);
+    folders.textContent = `Screenshots: ${info.settings.screenshots} · Videos: ${info.settings.videos}`;
+    shortcutLabel.hidden = !info.gnomeShortcutsAvailable;
+    shortcutHint.hidden = !info.gnomeShortcutsAvailable;
+    shortcutToggle.checked = info.settings.gnomeShortcuts;
+    if (info.wayland && !info.settings.gnomeShortcuts) {
+      feedback.textContent = 'Global capture shortcuts may require desktop setup on Wayland. You can also use the buttons here.';
+    }
     if (info.lastScreenshot) screenshotNotice.textContent = `Screenshot saved: ${info.lastScreenshot}`;
   }).catch((error) => { feedback.textContent = String(error); });
-  section.append(title, text, feedback, screenshotNotice, stop, button);
+  section.append(title, text, feedback, screenshotNotice, screenshot, record, stop, folders, shortcutLabel, shortcutHint, button);
   preferences.append(section);
 })();

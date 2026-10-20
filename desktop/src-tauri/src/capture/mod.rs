@@ -1,6 +1,9 @@
 mod audio;
 mod backend;
 mod encoder;
+mod feedback;
+#[cfg(target_os = "linux")]
+mod shortcuts;
 
 use serde::{Deserialize, Serialize};
 use std::{
@@ -32,6 +35,8 @@ pub struct Settings {
     pub audio: bool,
     #[serde(default)]
     pub remember_authorization: bool,
+    #[serde(default)]
+    pub gnome_shortcuts: bool,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -45,6 +50,7 @@ impl Default for Settings {
                 .join("AquaStar Recordings"),
             audio: true,
             remember_authorization: false,
+            gnome_shortcuts: false,
         }
     }
 }
@@ -105,7 +111,42 @@ impl CaptureState {
             error,
             audio,
         };
-        *self.0.status.lock().unwrap_or_else(|e| e.into_inner()) = status.clone();
+        let previous = {
+            let mut current = self.0.status.lock().unwrap_or_else(|e| e.into_inner());
+            let previous = current.phase.clone();
+            *current = status.clone();
+            previous
+        };
+        if phase != previous || phase == "failed" {
+            match phase {
+                "recording" => feedback::show(
+                    app,
+                    "AquaStar · Recording",
+                    "Recording started. Press Ctrl+J again to stop.",
+                ),
+                "failed" => feedback::show(
+                    app,
+                    "AquaStar · Capture failed",
+                    status
+                        .error
+                        .as_deref()
+                        .unwrap_or("Open Capture Controls for details."),
+                ),
+                "saved"
+                    if status
+                        .path
+                        .as_ref()
+                        .is_some_and(|p| p.extension().is_some_and(|e| e == "mp4")) =>
+                {
+                    feedback::show(
+                        app,
+                        "AquaStar · Video saved",
+                        &status.path.as_ref().unwrap().display().to_string(),
+                    )
+                }
+                _ => {}
+            }
+        }
         let _ = app.emit_to("main", EVENT, &status);
         let _ = app.emit_to("capture", EVENT, &status);
     }
@@ -141,6 +182,7 @@ pub struct Capabilities {
     status: Status,
     last_screenshot: Option<PathBuf>,
     wayland: bool,
+    gnome_shortcuts_available: bool,
 }
 #[tauri::command]
 pub async fn capture_info(
@@ -157,6 +199,7 @@ pub async fn capture_info(
         let last_screenshot = state.0.screenshot.lock().unwrap().clone();
         Ok(Capabilities {
             wayland: backend::is_wayland(),
+            gnome_shortcuts_available: gnome_shortcuts_available(),
             screenshot: !targets.is_empty(),
             video: reason.is_none() && !targets.is_empty(),
             audio,
@@ -301,6 +344,11 @@ pub async fn screenshot(app: tauri::AppHandle, id: Option<String>) -> Result<Pat
         fs::rename(&temporary, &path).map_err(|e| e.to_string())?;
         let state = app.state::<CaptureState>();
         *state.0.screenshot.lock().unwrap() = Some(path.clone());
+        feedback::show(
+            &app,
+            "AquaStar · Screenshot saved",
+            &path.display().to_string(),
+        );
         let _ = app.emit_to("capture", "capture-screenshot", &path);
         let _ = app.emit_to("main", "capture-screenshot", &path);
         if !state.active() {
@@ -315,6 +363,7 @@ pub fn screenshot_failed(app: &tauri::AppHandle, error: String) {
     let state = app.state::<CaptureState>();
     if state.active() {
         // A failed screenshot must not replace the active recording's state.
+        feedback::show(app, "AquaStar · Screenshot failed", &error);
         let _ = app.emit_to("main", "capture-screenshot-error", &error);
         let _ = app.emit_to("capture", "capture-screenshot-error", &error);
     } else {
@@ -609,4 +658,63 @@ mod tests {
         assert_eq!(successes, 1);
         assert!(state.active());
     }
+}
+
+pub fn no_game_feedback(app: &tauri::AppHandle) {
+    feedback::show(
+        app,
+        "AquaStar · No game running",
+        "Open a game in AquaStar before using capture shortcuts.",
+    );
+}
+
+fn gnome_shortcuts_available() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        shortcuts::supported()
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        false
+    }
+}
+pub fn gnome_shortcuts_enabled(app: &tauri::AppHandle) -> bool {
+    backend::is_wayland() && settings(app).gnome_shortcuts && gnome_shortcuts_available()
+}
+pub fn sync_shortcuts(app: &tauri::AppHandle) {
+    #[cfg(target_os = "linux")]
+    shortcuts::sync(app);
+    #[cfg(not(target_os = "linux"))]
+    let _ = app;
+}
+pub fn suspend_shortcuts(app: &tauri::AppHandle) {
+    #[cfg(target_os = "linux")]
+    shortcuts::suspend(app);
+    #[cfg(not(target_os = "linux"))]
+    let _ = app;
+}
+#[tauri::command]
+pub async fn capture_set_gnome_shortcuts(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+    enabled: bool,
+) -> Result<(), String> {
+    host(&window)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(target_os = "linux")]
+        shortcuts::configure(&app, enabled)?;
+        #[cfg(not(target_os = "linux"))]
+        return Err("GNOME integration is only available on Linux.".into());
+        let mut saved = settings(&app);
+        saved.gnome_shortcuts = enabled;
+        if let Err(error) = save_settings(&app, &saved) {
+            #[cfg(target_os = "linux")]
+            let _ = shortcuts::configure(&app, !enabled);
+            return Err(error);
+        }
+        crate::register_saved_shortcuts(&app);
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }

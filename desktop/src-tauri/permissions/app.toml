@@ -6,7 +6,7 @@ commands.allow = [
   "capture_show",
   "capture_info",
   "capture_choose_folder",
-  "capture_set_audio",
+  "capture_set_audio", "capture_set_gnome_shortcuts",
   "capture_set_remember_authorization",
   "capture_open_folder",
   "capture_screenshot",
@@ -134,4 +134,4 @@ commands.allow = [
 [[permission]]
 identifier = "capture-controls"
 description = "Built-in capture control window"
-commands.allow = ["capture_info", "capture_choose_folder", "capture_set_audio", "capture_set_remember_authorization", "capture_open_folder", "capture_screenshot", "capture_start", "capture_stop"]
+commands.allow = ["capture_info", "capture_choose_folder", "capture_set_audio", "capture_set_gnome_shortcuts", "capture_set_remember_authorization", "capture_open_folder", "capture_screenshot", "capture_start", "capture_stop"]
