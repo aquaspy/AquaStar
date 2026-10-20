@@ -11,12 +11,17 @@ pub fn show(app: &tauri::AppHandle, title: &str, body: &str) {
             let (sender, receiver) = std::sync::mpsc::sync_channel::<(String, String)>(8);
             std::thread::spawn(move || {
                 let mut previous = 0u32;
+                // GNOME binds notification IDs and source lifetime to this D-Bus sender.
+                // Keep the connection alive across messages and while the app is idle.
+                let mut connection = None;
                 for (title, body) in receiver {
                     let result = tauri::async_runtime::block_on(async {
                         use ashpd::zvariant::{OwnedValue, Value};
-                        let connection = ashpd::zbus::Connection::session().await?;
+                        if connection.is_none() {
+                            connection = Some(ashpd::zbus::Connection::session().await?);
+                        }
                         let proxy = ashpd::zbus::Proxy::new(
-                            &connection,
+                            connection.as_ref().unwrap(),
                             "org.freedesktop.Notifications",
                             "/org/freedesktop/Notifications",
                             "org.freedesktop.Notifications",
@@ -42,8 +47,13 @@ pub fn show(app: &tauri::AppHandle, title: &str, body: &str) {
                             )
                             .await
                     });
-                    if let Ok(id) = result {
-                        previous = id;
+                    match result {
+                        Ok(id) => previous = id,
+                        Err(error) => {
+                            eprintln!("AquaStar: desktop notification failed: {error}");
+                            previous = 0;
+                            connection = None;
+                        }
                     }
                 }
             });

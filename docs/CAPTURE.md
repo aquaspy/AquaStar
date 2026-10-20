@@ -69,3 +69,5 @@ Preferences also provides direct screenshot/recording buttons and displays the a
 
 
 Current recordings are always silent. The removed `audio` preference is accepted only for compatibility and is omitted when capture settings are saved again.
+
+Linux notification delivery uses a persistent D-Bus sender so GNOME does not immediately destroy the source and subsequent capture notifications can replace the previous one. Sending errors are logged to stderr. The native probe checks consecutive messages; visible banners were confirmed by the GNOME Wayland tester after this fix. Desktop policy can still hide banners, particularly during fullscreen or Do Not Disturb.

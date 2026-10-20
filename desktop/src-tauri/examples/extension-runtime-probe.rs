@@ -117,7 +117,16 @@ async fn dispatch_extension(
         std::fs::write(path, serde_json::to_vec_pretty(&*all).unwrap()).unwrap();
         if all.len() == 2 {
             let passed = all.values().all(|result| result["ok"] == true);
-            app.exit(if passed { 0 } else { 1 });
+            let code = if passed { 0 } else { 1 };
+            if std::env::var_os("AQUASTAR_PROBE_CAPTURE_FEEDBACK").is_some() {
+                let app = app.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(7));
+                    app.exit(code);
+                });
+            } else {
+                app.exit(code);
+            }
         }
     }
     Ok(json!({"pluginId":id,"apiVersion":1}))
@@ -192,7 +201,12 @@ fn main() {
     .setup(move |app| {
         #[cfg(target_os = "linux")]
         if std::env::var_os("AQUASTAR_PROBE_CAPTURE_FEEDBACK").is_some() {
-            capture_feedback::show(app.handle(), "AquaStar · Feedback test", "Short silent capture notification.");
+            capture_feedback::show(app.handle(), "AquaStar · Feedback test 1", "First silent capture notification.");
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(3));
+                capture_feedback::show(&handle, "AquaStar · Feedback test 2", "Second silent capture notification, same sender.");
+            });
         }
         let submenu = tauri::menu::SubmenuBuilder::new(app, "Probe")
             .text("probe-action", "Probe action")
