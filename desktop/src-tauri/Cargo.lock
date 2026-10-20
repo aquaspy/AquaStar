@@ -73,6 +73,7 @@ dependencies = [
  "dirs",
  "flate2",
  "gif",
+ "gtk",
  "libpulse-binding",
  "pipewire",
  "png 0.17.16",

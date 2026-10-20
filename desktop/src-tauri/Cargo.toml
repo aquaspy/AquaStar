@@ -35,6 +35,7 @@ codegen-units = 1
 opt-level = "s"
 
 [target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"
 libpulse-binding = "2.30"
 ashpd = { version = "0.11.1", default-features = false, features = ["async-std"] }
 pipewire = "0.10"

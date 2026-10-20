@@ -55,6 +55,18 @@ async fn dispatch_extension(
                 "existing native menu can be hidden again",
                 !seed.is_menu_visible().map_err(|error| error.to_string())?,
             ));
+            #[cfg(target_os = "linux")]
+            {
+                let (send, receive) = std::sync::mpsc::channel();
+                let window = seed.clone();
+                app.run_on_main_thread(move || {
+                    use gtk::prelude::*;
+                    window.gtk_window().unwrap().show_all();
+                    let _ = send.send(());
+                }).map_err(|e| e.to_string())?;
+                receive.recv_timeout(std::time::Duration::from_secs(5)).map_err(|e| e.to_string())?;
+                checks.push(menu_check("hidden menu survives GTK show_all", !seed.is_menu_visible().map_err(|e| e.to_string())?));
+            }
             *app.state::<MenuChecks>()
                 .0
                 .lock()
