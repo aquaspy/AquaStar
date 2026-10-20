@@ -105,6 +105,7 @@ impl Source {
     pub fn new(
         target: &Target,
         cancel: Option<Arc<std::sync::atomic::AtomicBool>>,
+        _authorization: Option<std::path::PathBuf>,
     ) -> Result<Self, String> {
         #[cfg(windows)]
         {
@@ -118,7 +119,7 @@ impl Source {
         if is_wayland() {
             return Ok(Self {
                 target: target.clone(),
-                native: Some(wayland::start()?),
+                native: Some(wayland::start(target.pid, _authorization)?),
                 cancel,
             });
         }

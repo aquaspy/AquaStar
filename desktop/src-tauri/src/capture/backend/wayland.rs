@@ -1,3 +1,5 @@
+#[path = "authorization.rs"]
+mod authorization;
 use super::Frames;
 use ashpd::desktop::{
     screencast::{CursorMode, Screencast, SourceType},
@@ -21,7 +23,7 @@ use pipewire::{
     stream::{StreamFlags, StreamRc},
 };
 use std::{io::Cursor, sync::atomic::Ordering, time::Duration};
-pub fn start() -> Result<Frames, String> {
+pub fn start(pid: u32, authorization_path: Option<std::path::PathBuf>) -> Result<Frames, String> {
     let frames = Frames::new();
     let latest = frames.latest.clone();
     let error = frames.error.clone();
@@ -38,14 +40,21 @@ pub fn start() -> Result<Frames, String> {
                 return Err("This desktop does not support window capture. Monitor capture will not be used instead.".into());
             }
             let session = proxy.create_session().await.map_err(|e| e.to_string())?;
+            let restore_token = authorization_path
+                .as_ref()
+                .and_then(|p| authorization::take(p, pid));
             proxy
                 .select_sources(
                     &session,
                     CursorMode::Hidden,
                     SourceType::Window.into(),
                     false,
-                    None,
-                    PersistMode::DoNot,
+                    restore_token.as_deref(),
+                    if authorization_path.is_some() {
+                        PersistMode::ExplicitlyRevoked
+                    } else {
+                        PersistMode::DoNot
+                    },
                 )
                 .await
                 .map_err(|e| e.to_string())?;
@@ -55,6 +64,11 @@ pub fn start() -> Result<Frames, String> {
                 .map_err(|e| e.to_string())?
                 .response()
                 .map_err(|e| e.to_string())?;
+            if let (Some(path), Some(token)) =
+                (authorization_path.as_ref(), response.restore_token())
+            {
+                authorization::save(path, pid, token)?;
+            }
             let selected = response
                 .streams()
                 .first()

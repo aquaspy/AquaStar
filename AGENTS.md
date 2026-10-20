@@ -18,6 +18,7 @@ AquaStar 3.0 is the Tauri launcher in `desktop/` on `dev`. Read [`desktop/README
 - Native video frames and isolated game audio feed the bundled minimal FFmpeg/OpenH264 sidecar. Keep encoding off the UI thread, buffers bounded, stderr bounded and finalization time-limited. Keep the audio/video clocks aligned through silence; finalize audio before waiting for video flush.
 - Capture must work with the launcher hidden and during direct startup. Finalize before automatic player-exit shutdown. A replacement player PID requires a new recording. Preserve recoverable temporary files on encoding failures.
 - Build media with `python3 desktop/scripts/build-media.py`; generated binaries belong in ignored `src-tauri/media/`, source/compiler caches in the sibling workspace. Include the sidecars, architecture-specific notices and source bundle when packaging. Debug overrides must not become production executable discovery.
+- Wayland remembered authorization is opt-in. Keep restore tokens out of WebView responses/logs, store them privately, consume/rotate them once, and bind them to PID + process start time + boot identity. Never apply a remembered window grant to a replacement player. Turning it off forgets the local token; no idle capture stream should remain.
 - See [capture behavior and validation](docs/CAPTURE.md). Native fixture success, cross-compilation and CI are separate evidence from Mac permissions, Wayland compositor support and real game-renderer tests.
 
 ### Desktop plugin boundary

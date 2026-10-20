@@ -30,6 +30,8 @@ pub struct Settings {
     pub screenshots: PathBuf,
     pub videos: PathBuf,
     pub audio: bool,
+    #[serde(default)]
+    pub remember_authorization: bool,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -42,6 +44,7 @@ impl Default for Settings {
                 .unwrap_or(home)
                 .join("AquaStar Recordings"),
             audio: true,
+            remember_authorization: false,
         }
     }
 }
@@ -137,6 +140,7 @@ pub struct Capabilities {
     settings: Settings,
     status: Status,
     last_screenshot: Option<PathBuf>,
+    wayland: bool,
 }
 #[tauri::command]
 pub async fn capture_info(
@@ -152,6 +156,7 @@ pub async fn capture_info(
         let status = state.status();
         let last_screenshot = state.0.screenshot.lock().unwrap().clone();
         Ok(Capabilities {
+            wayland: backend::is_wayland(),
             screenshot: !targets.is_empty(),
             video: reason.is_none() && !targets.is_empty(),
             audio,
@@ -212,6 +217,40 @@ pub async fn capture_set_audio(
     saved.audio = enabled;
     save_settings(&app, &saved)
 }
+fn authorization_path(app: &tauri::AppHandle) -> Option<PathBuf> {
+    (backend::is_wayland() && settings(app).remember_authorization)
+        .then(|| {
+            app.path()
+                .app_config_dir()
+                .ok()
+                .map(|p| p.join("capture-wayland-authorization.json"))
+        })
+        .flatten()
+}
+#[tauri::command]
+pub async fn capture_set_remember_authorization(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+    enabled: bool,
+) -> Result<(), String> {
+    host(&window)?;
+    if app.state::<CaptureState>().active() {
+        return Err("Stop the recording before changing its authorization setting.".into());
+    }
+    let mut saved = settings(&app);
+    saved.remember_authorization = enabled;
+    save_settings(&app, &saved)?;
+    if !enabled {
+        if let Ok(dir) = app.path().app_config_dir() {
+            match fs::remove_file(dir.join("capture-wayland-authorization.json")) {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => return Err(e.to_string()),
+            }
+        }
+    }
+    Ok(())
+}
 #[tauri::command]
 pub async fn capture_open_folder(
     app: tauri::AppHandle,
@@ -253,7 +292,7 @@ pub async fn capture_screenshot(
 pub async fn screenshot(app: tauri::AppHandle, id: Option<String>) -> Result<PathBuf, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let target = target(&app, id)?;
-        let image = backend::Source::new(&target, None)?.frame()?;
+        let image = backend::Source::new(&target, None, authorization_path(&app))?.frame()?;
         let path = destination(&settings(&app).screenshots, "png")?;
         let temporary = path.with_extension("png.partial");
         image
@@ -339,8 +378,11 @@ struct Prepared {
 fn prepare(app: &tauri::AppHandle, id: Option<String>, silent: bool) -> Result<Prepared, String> {
     let target = target(app, id)?;
     let binary = encoder::binary(app)?;
-    let mut source =
-        backend::Source::new(&target, Some(app.state::<CaptureState>().0.stop.clone()))?;
+    let mut source = backend::Source::new(
+        &target,
+        Some(app.state::<CaptureState>().0.stop.clone()),
+        authorization_path(app),
+    )?;
     let first = source.frame()?;
     let audio = settings(app).audio && !silent;
     if audio && !audio::available(target.pid) {

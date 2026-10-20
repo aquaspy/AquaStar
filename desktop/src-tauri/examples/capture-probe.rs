@@ -19,7 +19,7 @@ fn main() -> Result<(), String> {
     let directory = PathBuf::from(args.get(3).ok_or("Expected output directory")?);
     std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
     let target = backend::select(backend::targets(&[pid])?, None)?;
-    let mut source = backend::Source::new(&target, None)?;
+    let mut source = backend::Source::new(&target, None, std::env::var_os("AQUASTAR_PROBE_AUTHORIZATION").map(PathBuf::from))?;
     let first = source.frame()?;
     first
         .save(directory.join("screenshot.png"))

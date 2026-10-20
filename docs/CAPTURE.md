@@ -52,3 +52,11 @@ An interactive portal test found that Mutter rejects the earlier frame-rate cons
 Validated on GNOME/Zorin Wayland: PNG, a ten-second H.264/AAC recording with a process-owned tone on a private silent sink, and motion in all 20 sampled frames. Track durations differed by approximately 27 ms. A separate three-second capture of Artix Ruffle using Automatic/Vulkan and a local sample SWF also succeeded. This does not establish authenticated AQW gameplay, every compositor, or long-session performance on Wayland. macOS recording still needs a real test.
 
 These fixes are newer than the published v3.0.0-rc.5 installers. Use an updated development build for Wayland capture.
+
+### Remembering Wayland authorization
+
+On Wayland, Capture Controls offers **Remember window authorization**, off by default. AquaStar requests a persistent ScreenCast permission and stores a returned restore token with owner-only file permissions. Subsequent captures of that same live game can restore the selection without another picker, if supported by the desktop. The latest returned token replaces the single-use token. Tokens are never exposed to plugin or tool WebViews.
+
+A grant is bound to the player's PID, process start time and boot identity. A different/restarted game requires a new selection; the most recently authorized game is remembered. Turning the option off deletes the locally saved token; it does not promise to revoke the portal's own permission records. Your desktop may ask again after permission revocation, missing/unsupported tokens or session changes. No background capture stream stays running between captures.
+
+GNOME/Zorin was tested with two consecutive native captures: the first returned a token and the second restored it without picker delay. This confirms reuse for the same still-open window, not a permanent grant for future game processes or every compositor.

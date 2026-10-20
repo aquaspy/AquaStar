@@ -19,6 +19,7 @@ function render(status) {
   $('record').disabled = pending;
   $('target').disabled = active || pending;
   $('audio').disabled = active || pending;
+  $('remember').disabled = active || pending;
   $('silent').hidden = true;
   if (status.phase === 'recording') $('status').textContent = `REC · ${status.audio ? 'Game audio on' : 'No audio'}`;
   else if (status.phase === 'preparing') $('status').textContent = 'Preparing capture…';
@@ -45,6 +46,9 @@ async function refresh() {
   $('screenshots').textContent = info.settings.screenshots;
   $('videos').textContent = info.settings.videos;
   $('audio').checked = info.settings.audio;
+  $('wayland-authorization').hidden = !info.wayland;
+  $('remember').checked = info.settings.rememberAuthorization;
+  $('remember').disabled = active || pending;
   $('screenshot').disabled = pending || !info.screenshot;
   $('record').disabled = pending || !info.video;
   if (!active && !lastSaved && !info.status.error)
@@ -96,3 +100,5 @@ window.__TAURI__.event
     $('notice').textContent = `Screenshot saved: ${event.payload}`;
   })
   .catch(showError);
+
+$('remember').onchange = () => action(() => invoke('capture_set_remember_authorization', { enabled: $('remember').checked }));

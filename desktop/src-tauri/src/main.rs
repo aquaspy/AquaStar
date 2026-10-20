@@ -953,6 +953,7 @@ fn main() {
             capture::capture_info,
             capture::capture_choose_folder,
             capture::capture_set_audio,
+            capture::capture_set_remember_authorization,
             capture::capture_open_folder,
             capture::capture_screenshot,
             capture::capture_start,

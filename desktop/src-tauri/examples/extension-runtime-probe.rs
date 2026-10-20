@@ -126,6 +126,8 @@ fn probe_secret() -> Value {
 #[tauri::command]
 fn capture_info() -> Value { json!({"secret":"Capture capabilities must remain private"}) }
 #[tauri::command]
+fn capture_set_remember_authorization() -> Value { json!({"secret":"Portal authorization must remain private"}) }
+#[tauri::command]
 fn capture_start() -> Value { json!({"secret":"Capture must not start from plugins"}) }
 
 fn main() {
@@ -166,7 +168,8 @@ fn main() {
         play,
         probe_secret,
         capture_info,
-        capture_start
+        capture_start,
+        capture_set_remember_authorization
     ])
     .setup(move |app| {
         let submenu = tauri::menu::SubmenuBuilder::new(app, "Probe")

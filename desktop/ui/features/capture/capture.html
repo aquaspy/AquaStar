@@ -26,6 +26,10 @@
       </div>
       <label class="audio"><input id="audio" type="checkbox" /> Include game audio</label>
       <p class="hint">Only the game window and its sound are captured. Microphone recording is off.</p>
+      <div id="wayland-authorization" hidden>
+        <label class="audio"><input id="remember" type="checkbox" /> Remember window authorization</label>
+        <p class="hint">Reuse permission for this game while it remains open, when supported by your desktop. Closing the game requires a new selection. Turning this off forgets the saved authorization.</p>
+      </div>
       <button id="silent" hidden>Record Without Audio</button>
       <details>
         <summary>Capture folders</summary>
