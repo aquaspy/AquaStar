@@ -2,6 +2,7 @@ mod audio;
 mod backend;
 mod encoder;
 mod feedback;
+mod recording_audio;
 #[cfg(target_os = "linux")]
 mod shortcuts;
 
@@ -118,12 +119,15 @@ impl CaptureState {
             *current = status.clone();
             previous
         };
+        if phase == "failed" {
+            eprintln!("AquaStar capture failed: {}", status.error.as_deref().unwrap_or("Unknown capture error"));
+        }
         if phase != previous || phase == "failed" {
             match phase {
                 "recording" => feedback::show(
                     app,
                     "AquaStar · Recording",
-                    "Recording started. Press Ctrl+J again to stop.",
+                    if status.audio { "Recording started. Press Ctrl+J again to stop." } else { "Recording started without audio. Press Ctrl+J again to stop." },
                 ),
                 "failed" => feedback::show(
                     app,
@@ -440,12 +444,6 @@ fn prepare(app: &tauri::AppHandle, id: Option<String>, silent: bool) -> Result<P
     )?;
     let first = source.frame()?;
     let audio = settings(app).audio && !silent;
-    if audio && !audio::available(target.pid) {
-        return Err(
-            "Game audio is unavailable on this system. Choose Record Without Audio to continue."
-                .into(),
-        );
-    }
     let path = destination(&settings(app).videos, "mp4")?;
     Ok(Prepared {
         target,
@@ -469,22 +467,12 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
         path,
         audio,
     } = prepared;
-    let audio_enabled = audio;
-    let audio = if audio {
-        Some(audio::start(target.pid).map_err(|e| {
-            format!("Game audio is unavailable: {e}. Choose Record Without Audio to continue.")
-        })?)
-    } else {
-        None
-    };
     let temporary = path.with_extension("recording.mp4");
     let audio_path = path.with_extension("recording.m4a");
     let size = encoder::dimensions(first.width(), first.height())?;
     let fps = backend::fps();
     let mut encoder = encoder::Video::new(&binary, &temporary, size, fps)?;
-    let mut audio = audio
-        .map(|session| encoder::Audio::new(&binary, &audio_path, session))
-        .transpose()?;
+    let mut audio = recording_audio::Track::start(audio, target.pid, &binary, &audio_path);
     let started = Instant::now();
     encoder.write(&first)?;
     let mut frames = 1u64;
@@ -499,12 +487,7 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
             {
                 break;
             }
-            if audio.as_ref().is_some_and(|a| !a.healthy()) {
-                return Err(
-                    "Game audio stopped unexpectedly. The completed recording has been saved."
-                        .into(),
-                );
-            }
+            audio.poll();
             let now = started.elapsed();
             let due = (now.as_secs_f64() * fps as f64).floor() as u64;
             if frames <= due {
@@ -530,8 +513,8 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
                     "recording",
                     seconds,
                     Some(path.clone()),
-                    None,
-                    audio_enabled,
+                    audio.warning.clone(),
+                    audio.active(),
                 );
             }
             std::thread::sleep(Duration::from_millis(5));
@@ -544,11 +527,10 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
         started.elapsed().as_secs(),
         Some(path.clone()),
         None,
-        audio_enabled,
+        audio.active(),
     );
-    let audio_result = audio.as_mut().map(|audio| audio.finish());
+    let audio_ok = audio.finish();
     encoder.finish()?;
-    let audio_ok = matches!(audio_result, Some(Ok(())));
     if audio_ok {
         encoder::mux(&binary, &temporary, &audio_path, &path)?;
     } else {
@@ -556,11 +538,7 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
     }
     let _ = fs::remove_file(&temporary);
     let _ = fs::remove_file(&audio_path);
-    let warning = result.err().or_else(|| {
-        audio_result
-            .and_then(Result::err)
-            .map(|e| format!("Video saved without audio: {e}"))
-    });
+    let warning = result.err().or(audio.warning);
     state.update(
         app,
         "saved",

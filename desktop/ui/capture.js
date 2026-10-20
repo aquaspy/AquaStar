@@ -54,7 +54,7 @@
     stop.disabled = state.phase === 'finalizing';
     if (state.phase === 'recording') {
       const seconds = state.elapsedSeconds || 0;
-      feedback.textContent = `● REC · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} · Ctrl+J to stop`;
+      feedback.textContent = `● REC · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} · ${state.audio ? 'Game audio on' : 'No audio'} · Ctrl+J to stop`;
     } else if (state.phase === 'preparing') feedback.textContent = 'Preparing recording…';
     else if (state.phase === 'finalizing') feedback.textContent = 'Saving recording…';
     else if (state.error) feedback.textContent = String(state.error);

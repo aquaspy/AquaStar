@@ -11,7 +11,7 @@ Shortcuts act directly: neither F2 nor Ctrl+J opens a control window or an AquaS
 - macOS before 12.3 uses the legacy image capture path at 15 FPS.
 - Optional game audio is stereo AAC at 48 kHz. Microphone and whole-system audio capture are not enabled.
 - Default folders are the system Pictures directory's `AquaStar Screenshots` and Videos directory's `AquaStar Recordings`. Change them through the native folder picker.
-- If isolated game audio is unavailable, explicitly choose **Record Without Audio**. AquaStar never silently substitutes the computer's full audio output.
+- If isolated game audio cannot initialize or stops during capture, recording automatically continues as video only. AquaStar never silently substitutes the computer's full audio output.
 
 Settings are stored separately in `capture-settings.json` in the Tauri configuration directory. Existing Electron settings are not overwritten. Only one recording can run at a time. Temporary fragmented MP4 and audio files are retained on finalization errors, rather than reported as successfully saved recordings.
 
@@ -21,13 +21,13 @@ Settings are stored separately in `capture-settings.json` in the Tauri configura
 | --- | --- | --- |
 | Windows | Windows Graphics Capture, targeting the player window | WASAPI process-loopback; requires a supported Windows build (20348 or later) |
 | macOS 12.3+ | ScreenCaptureKit helper targeting the player window | ScreenCaptureKit application filter on macOS 13+ |
-| macOS 11–12.2 | Core Graphics image capture, capped at 15 FPS | Not available; explicitly choose silent recording |
+| macOS 11–12.2 | Core Graphics image capture, capped at 15 FPS | Not available; automatically records video only |
 | Linux X11 | XComposite window pixmap, with window-drawable fallback | PulseAudio/PipeWire-Pulse monitoring of the player's own audio stream |
 | Linux Wayland | ScreenCast portal and its private PipeWire remote | Same process-isolated audio path as X11 |
 
 On Wayland, select the game window in the system picker. Desktops that support only monitor capture are reported as unsupported; AquaStar does not capture the entire monitor instead. The portal cannot reliably expose the selected window's PID, so select the window matching the game chosen in AquaStar. Audio continues to target that game's process.
 
-On Linux, the current audio adapter requires one active playback stream owned by the player. Start the game's sound before recording. Multiple streams, unsupported audio servers and missing permissions produce an explicit error with the silent-recording option. On Windows/macOS, native capture permissions may be requested by the operating system.
+On Linux, the current audio adapter requires one active playback stream owned by the player. Multiple streams, missing playback, unsupported audio servers or missing audio permissions automatically fall back to video only. If audio fails mid-recording, the resulting video omits the audio track to preserve timing. On Windows/macOS, native capture permissions may be requested by the operating system.
 
 Minimizing an X11/Windows game ends the current recording and saves its completed portion. Closing or automatically replacing a player process never transfers an ongoing recording to another process. Capture availability does not change the launcher's operating-system minimum.
 
@@ -68,3 +68,5 @@ GNOME/Zorin was tested with two consecutive native captures: the first returned 
 On GNOME Wayland without the GlobalShortcuts portal, enable **Use GNOME shortcuts for capture** in Preferences. This opt-in creates two AquaStar custom keyboard shortcuts, preserves unrelated entries, and activates the configured capture keys while a tracked game runs. Normal shutdown suspends the bindings; disabling the option removes AquaStar's entries. Local builds must remain at their current executable path while the integration is enabled. Other Wayland desktops may require their own shortcut setup.
 
 Preferences also provides direct screenshot/recording buttons and displays the actual output folders. Defaults are `Pictures/AquaStar Screenshots` (PNG) and `Videos/AquaStar Recordings` (MP4), using the OS user directories. Capture feedback uses desktop notifications without opening a window: Linux requests a silent, transient notification for 2.5 seconds, replacing the previous capture notification. Desktop notification policy may suppress it or control its duration.
+
+`recording-audio-probe` exercises the production optional-audio controller with a missing player audio stream and explicitly disabled audio, then encodes actual H.264 video. Run it with the bundled FFmpeg path and a fresh output directory; use ffprobe to verify both video-only files. This does not replace a live Wayland Ctrl+J test.
