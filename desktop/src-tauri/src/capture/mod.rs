@@ -33,11 +33,12 @@ pub struct Settings {
     pub screenshots: PathBuf,
     pub videos: PathBuf,
     pub audio: bool,
-    #[serde(default)]
+    #[serde(default = "remember_authorization_default")]
     pub remember_authorization: bool,
     #[serde(default)]
     pub gnome_shortcuts: bool,
 }
+fn remember_authorization_default() -> bool { true }
 impl Default for Settings {
     fn default() -> Self {
         let home = dirs::home_dir().unwrap_or_else(std::env::temp_dir);
@@ -49,7 +50,7 @@ impl Default for Settings {
                 .unwrap_or(home)
                 .join("AquaStar Recordings"),
             audio: true,
-            remember_authorization: false,
+            remember_authorization: true,
             gnome_shortcuts: false,
         }
     }
@@ -717,4 +718,18 @@ pub async fn capture_set_gnome_shortcuts(
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+#[cfg(test)]
+mod settings_defaults_tests {
+    #[test]
+    fn remembered_authorization_defaults_on_but_preserves_explicit_choices() {
+        let defaults = super::Settings::default();
+        assert!(defaults.remember_authorization);
+        let mut value = serde_json::to_value(&defaults).unwrap();
+        value.as_object_mut().unwrap().remove("rememberAuthorization");
+        assert!(serde_json::from_value::<super::Settings>(value.clone()).unwrap().remember_authorization);
+        value["rememberAuthorization"] = serde_json::Value::Bool(false);
+        assert!(!serde_json::from_value::<super::Settings>(value).unwrap().remember_authorization);
+    }
 }

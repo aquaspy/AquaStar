@@ -55,7 +55,9 @@ These fixes are newer than the published v3.0.0-rc.5 installers. Use an updated 
 
 ### Remembering Wayland authorization
 
-On Wayland, Capture Controls offers **Remember window authorization**, off by default. AquaStar requests a persistent ScreenCast permission and stores a returned restore token with owner-only file permissions. Subsequent captures of that same live game can restore the selection without another picker, if supported by the desktop. The latest returned token replaces the single-use token. Tokens are never exposed to plugin or tool WebViews.
+On Wayland, Capture Controls offers **Remember window authorization**, enabled by default for new settings. AquaStar requests a persistent ScreenCast permission and stores a returned restore token with owner-only file permissions. Subsequent captures of that same live game can restore the selection without another picker, if supported by the desktop. The latest returned token replaces the single-use token. Tokens are never exposed to plugin or tool WebViews.
+
+**Remember window authorization** defaults on for new installations and settings without this field; explicitly saved choices are preserved. The first selection still requires system approval.
 
 A grant is bound to the player's PID, process start time and boot identity. A different/restarted game requires a new selection; the most recently authorized game is remembered. Turning the option off deletes the locally saved token; it does not promise to revoke the portal's own permission records. Your desktop may ask again after permission revocation, missing/unsupported tokens or session changes. No background capture stream stays running between captures.
 
