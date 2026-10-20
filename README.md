@@ -65,7 +65,7 @@ On Apple Silicon, 3.x runs the launcher and Artix Ruffle natively. The Flash pro
 
 Choose the installer or portable package for your system and architecture. The macOS ZIP contains an Intel application; Apple Silicon uses Rosetta. On Linux, mark an AppImage executable before opening it, or install the Debian package with your package manager.
 
-**[Try AquaStar 3.0.0-rc.5](https://github.com/aquaspy/AquaStar/releases/tag/v3.0.0-rc.5)**, the Tauri pre-release. Recording on macOS and Wayland still needs real-world testing. AquaStar 2.1.0 remains the stable release. Local build instructions are in the [3.x guide](https://github.com/aquaspy/AquaStar/blob/dev/desktop/README.md).
+**[Try AquaStar 3.0.0-rc.5](https://github.com/aquaspy/AquaStar/releases/tag/v3.0.0-rc.5)**, the Tauri pre-release. Recording on macOS still needs real-world testing. RC5 has a Wayland capture issue; a tested correction is available on `dev` and requires a newer build. AquaStar 2.1.0 remains the stable release. Local build instructions are in the [3.x guide](https://github.com/aquaspy/AquaStar/blob/dev/desktop/README.md).
 
 The older AquaStar Lite prototype has been replaced by the 3.x line. The project maintains two lines: Electron 2.x and Tauri 3.x.
 

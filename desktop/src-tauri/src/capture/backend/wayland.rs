@@ -8,6 +8,7 @@ use pipewire::{
     main_loop::MainLoopRc,
     properties,
     spa::{
+        buffer::meta::MetaVideoCrop,
         param::{
             format::{FormatProperties, MediaSubtype, MediaType},
             format_utils,
@@ -15,7 +16,7 @@ use pipewire::{
             ParamType,
         },
         pod::{self, serialize::PodSerializer, Pod},
-        utils::{Direction, Fraction, Rectangle, SpaTypes},
+        utils::{Direction, Rectangle, SpaTypes},
     },
     stream::{StreamFlags, StreamRc},
 };
@@ -76,6 +77,7 @@ pub fn start() -> Result<Frames, String> {
             let stream=StreamRc::new(core,"AquaStar game capture",properties::properties!{"media.type"=>"Video","media.category"=>"Capture","media.role"=>"Screen"}).map_err(|e|e.to_string())?;
             let errors = error.clone();
             let received = latest.clone();
+            let format_errors = error.clone();
             let _listener = stream
                 .add_local_listener_with_user_data(VideoInfoRaw::default())
                 .state_changed(move |_, _, _, state| {
@@ -86,7 +88,7 @@ pub fn start() -> Result<Frames, String> {
                         *errors.lock().unwrap() = Some(format!("Window stream failed: {state:?}"));
                     }
                 })
-                .param_changed(|_, format, id, param| {
+                .param_changed(move |stream, format, id, param| {
                     if id != ParamType::Format.as_raw() {
                         return;
                     }
@@ -94,7 +96,16 @@ pub fn start() -> Result<Frames, String> {
                         if let Ok((MediaType::Video, MediaSubtype::Raw)) =
                             format_utils::parse_format(param)
                         {
-                            let _ = format.parse(param);
+                            if format.parse(param).is_ok() {
+                                let result = crop_metadata_param().and_then(|bytes| {
+                                    let mut params = [Pod::from_bytes(&bytes)
+                                        .ok_or("Invalid crop metadata request")?];
+                                    stream.update_params(&mut params).map_err(|e| e.to_string())
+                                });
+                                if let Err(message) = result {
+                                    *format_errors.lock().unwrap() = Some(message);
+                                }
+                            }
                         }
                     }
                 })
@@ -102,6 +113,12 @@ pub fn start() -> Result<Frames, String> {
                     let Some(mut buffer) = stream.dequeue_buffer() else {
                         return;
                     };
+                    let crop = buffer.find_meta::<MetaVideoCrop>().and_then(|meta| {
+                        let region = meta.meta_region();
+                        region
+                            .is_valid()
+                            .then(|| (region.position(), region.size()))
+                    });
                     let Some(data) = buffer.datas_mut().first_mut() else {
                         return;
                     };
@@ -132,27 +149,44 @@ pub fn start() -> Result<Frames, String> {
                     {
                         return;
                     }
-                    let mut rgba = vec![0; width * height * 4];
-                    for y in 0..height {
-                        for x in 0..width {
-                            let from = offset + y * stride + x * components;
-                            let to = (y * width + x) * 4;
+                    let (left, top, output_width, output_height) = crop
+                        .and_then(|(position, size)| {
+                            let left = usize::try_from(position.x).ok()?;
+                            let top = usize::try_from(position.y).ok()?;
+                            let w = size.width as usize;
+                            let h = size.height as usize;
+                            (left.checked_add(w)? <= width && top.checked_add(h)? <= height)
+                                .then_some((left, top, w, h))
+                        })
+                        .unwrap_or((0, 0, width, height));
+                    let mut rgba = vec![0; output_width * output_height * 4];
+                    for y in 0..output_height {
+                        let from = offset + (top + y) * stride + left * components;
+                        let input = &bytes[from..from + output_width * components];
+                        let output = &mut rgba[y * output_width * 4..(y + 1) * output_width * 4];
+                        for (source, pixel) in input
+                            .chunks_exact(components)
+                            .zip(output.chunks_exact_mut(4))
+                        {
                             match format.format() {
                                 VideoFormat::RGBA | VideoFormat::RGBx | VideoFormat::RGB => {
-                                    rgba[to..to + 3].copy_from_slice(&bytes[from..from + 3])
+                                    pixel[..3].copy_from_slice(&source[..3])
                                 }
                                 VideoFormat::BGRA | VideoFormat::BGRx => {
-                                    rgba[to] = bytes[from + 2];
-                                    rgba[to + 1] = bytes[from + 1];
-                                    rgba[to + 2] = bytes[from];
+                                    pixel[0] = source[2];
+                                    pixel[1] = source[1];
+                                    pixel[2] = source[0];
                                 }
                                 _ => return,
                             }
-                            rgba[to + 3] = 255;
+                            pixel[3] = 255;
                         }
                     }
-                    *latest.lock().unwrap() =
-                        xcap::image::RgbaImage::from_raw(size.width, size.height, rgba);
+                    *latest.lock().unwrap() = xcap::image::RgbaImage::from_raw(
+                        output_width as u32,
+                        output_height as u32,
+                        rgba,
+                    );
                 })
                 .register()
                 .map_err(|e| e.to_string())?;
@@ -166,6 +200,7 @@ pub fn start() -> Result<Frames, String> {
                     Choice,
                     Enum,
                     Id,
+                    VideoFormat::RGBA,
                     VideoFormat::RGBA,
                     VideoFormat::RGBx,
                     VideoFormat::BGRA,
@@ -188,16 +223,8 @@ pub fn start() -> Result<Frames, String> {
                         width: 8192,
                         height: 8192
                     }
-                ),
-                pod::property!(
-                    FormatProperties::VideoFramerate,
-                    Choice,
-                    Range,
-                    Fraction,
-                    Fraction { num: 30, denom: 1 },
-                    Fraction { num: 1, denom: 1 },
-                    Fraction { num: 30, denom: 1 }
-                )
+                ) // Portal streams may advertise a variable 0/1 frame rate or a refresh
+                  // rate above 30 FPS. The recorder samples them on its own 30 FPS clock.
             );
             let bytes =
                 PodSerializer::serialize(Cursor::new(Vec::new()), &pod::Value::Object(object))
@@ -237,4 +264,27 @@ pub fn start() -> Result<Frames, String> {
         }
     });
     Ok(frames)
+}
+
+fn crop_metadata_param() -> Result<Vec<u8>, String> {
+    use pipewire::spa::{sys, utils::Id};
+    let object = pod::Object {
+        type_: SpaTypes::ObjectParamMeta.as_raw(),
+        id: ParamType::Meta.as_raw(),
+        properties: vec![
+            pod::Property {
+                key: sys::SPA_PARAM_META_type,
+                flags: pod::PropertyFlags::empty(),
+                value: pod::Value::Id(Id(sys::SPA_META_VideoCrop)),
+            },
+            pod::Property {
+                key: sys::SPA_PARAM_META_size,
+                flags: pod::PropertyFlags::empty(),
+                value: pod::Value::Int(std::mem::size_of::<sys::spa_meta_region>() as i32),
+            },
+        ],
+    };
+    PodSerializer::serialize(Cursor::new(Vec::new()), &pod::Value::Object(object))
+        .map(|result| result.0.into_inner())
+        .map_err(|e| e.to_string())
 }

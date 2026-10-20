@@ -44,3 +44,11 @@ The local build script prepares the media component when missing or its build re
 The native `capture-probe` example records a synthetic window using the real capture and encoder paths. `desktop/scripts/smoke/capture.py` validates the PNG, H.264/AAC metadata and duration. Linux fixtures can generate process-owned tones for isolation tests. The Capture Check workflow builds all three platforms and exercises window capture on Linux and Windows; macOS interactive permission, Retina and game-renderer behavior require a real Mac test. Wayland likewise requires a compatible compositor session.
 
 Do not describe compilation or fixture tests as proof of authenticated gameplay, every graphics backend, or every supported OS version. Before production, test Flash/Ruffle, occlusion, resize, minimized windows, audio isolation, permissions, disk-full failures, close/exit finalization, direct startup and a ten-minute recording. Record capture FPS, A/V timing, game performance and package-size changes.
+
+### GNOME/Zorin Wayland validation (after rc.5)
+
+An interactive portal test found that Mutter rejects the earlier frame-rate constraints. Development builds now accept the compositor's native/variable frame rate and use the recorder's own 30 FPS clock. The selected default pixel format is also included among the allowed alternatives. VideoCrop metadata is requested and applied to capture the window bounds instead of the compositor's larger backing canvas; the window's own decorations/shadow can remain.
+
+Validated on GNOME/Zorin Wayland: PNG, a ten-second H.264/AAC recording with a process-owned tone on a private silent sink, and motion in all 20 sampled frames. Track durations differed by approximately 27 ms. A separate three-second capture of Artix Ruffle using Automatic/Vulkan and a local sample SWF also succeeded. This does not establish authenticated AQW gameplay, every compositor, or long-session performance on Wayland. macOS recording still needs a real test.
+
+These fixes are newer than the published v3.0.0-rc.5 installers. Use an updated development build for Wayland capture.
