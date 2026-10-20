@@ -9,25 +9,23 @@ Shortcuts act directly: neither F2 nor Ctrl+J opens a control window or an AquaS
 - Screenshots retain the captured window's pixel resolution.
 - Video uses H.264 in MP4, up to 1920×1080 at 30 FPS, without enlarging smaller windows. Its dimensions stay fixed if the game is resized.
 - macOS before 12.3 uses the legacy image capture path at 15 FPS.
-- Optional game audio is stereo AAC at 48 kHz. Microphone and whole-system audio capture are not enabled.
+- Recordings contain video only. Game, microphone and system audio are not captured. There is no audio option.
 - Default folders are the system Pictures directory's `AquaStar Screenshots` and Videos directory's `AquaStar Recordings`. Change them through the native folder picker.
-- If isolated game audio cannot initialize or stops during capture, recording automatically continues as video only. AquaStar never silently substitutes the computer's full audio output.
 
-Settings are stored separately in `capture-settings.json` in the Tauri configuration directory. Existing Electron settings are not overwritten. Only one recording can run at a time. Temporary fragmented MP4 and audio files are retained on finalization errors, rather than reported as successfully saved recordings.
+Settings are stored separately in `capture-settings.json` in the Tauri configuration directory. Existing Electron settings are not overwritten. Only one recording can run at a time. Temporary fragmented MP4 files are retained on finalization errors, rather than reported as successfully saved recordings.
 
 ## Platform behavior
 
-| System | Capture path | Game audio |
+| System | Capture path | Audio |
 | --- | --- | --- |
-| Windows | Windows Graphics Capture, targeting the player window | WASAPI process-loopback; requires a supported Windows build (20348 or later) |
-| macOS 12.3+ | ScreenCaptureKit helper targeting the player window | ScreenCaptureKit application filter on macOS 13+ |
-| macOS 11–12.2 | Core Graphics image capture, capped at 15 FPS | Not available; automatically records video only |
-| Linux X11 | XComposite window pixmap, with window-drawable fallback | PulseAudio/PipeWire-Pulse monitoring of the player's own audio stream |
-| Linux Wayland | ScreenCast portal and its private PipeWire remote | Same process-isolated audio path as X11 |
+| Windows | Windows Graphics Capture, targeting the player window | None |
+| macOS 12.3+ | ScreenCaptureKit helper targeting the player window | None |
+| macOS 11–12.2 | Core Graphics image capture, capped at 15 FPS | None |
+| Linux X11 | XComposite window pixmap, with window-drawable fallback | None |
+| Linux Wayland | ScreenCast portal and its private PipeWire remote | None |
 
-On Wayland, select the game window in the system picker. Desktops that support only monitor capture are reported as unsupported; AquaStar does not capture the entire monitor instead. The portal cannot reliably expose the selected window's PID, so select the window matching the game chosen in AquaStar. Audio continues to target that game's process.
+On Wayland, select the game window in the system picker. Desktops that support only monitor capture are reported as unsupported; AquaStar does not capture the entire monitor instead. The portal cannot reliably expose the selected window's PID, so select the window matching the game chosen in AquaStar. Audio is not captured.
 
-On Linux, the current audio adapter requires one active playback stream owned by the player. Multiple streams, missing playback, unsupported audio servers or missing audio permissions automatically fall back to video only. If audio fails mid-recording, the resulting video omits the audio track to preserve timing. On Windows/macOS, native capture permissions may be requested by the operating system.
 
 Minimizing an X11/Windows game ends the current recording and saves its completed portion. Closing or automatically replacing a player process never transfers an ongoing recording to another process. Capture availability does not change the launcher's operating-system minimum.
 
@@ -41,15 +39,15 @@ The local build script prepares the media component when missing or its build re
 
 ## Validation
 
-The native `capture-probe` example records a synthetic window using the real capture and encoder paths. `desktop/scripts/smoke/capture.py` validates the PNG, H.264/AAC metadata and duration. Linux fixtures can generate process-owned tones for isolation tests. The Capture Check workflow builds all three platforms and exercises window capture on Linux and Windows; macOS interactive permission, Retina and game-renderer behavior require a real Mac test. Wayland likewise requires a compatible compositor session.
+The native `capture-probe` example records a synthetic window using the real capture and encoder paths. `desktop/scripts/smoke/capture.py` validates the PNG, H.264 metadata, duration and absence of audio tracks. The Capture Check workflow builds all three platforms and exercises window capture on Linux and Windows; macOS interactive permission, Retina and game-renderer behavior require a real Mac test. Wayland likewise requires a compatible compositor session.
 
-Do not describe compilation or fixture tests as proof of authenticated gameplay, every graphics backend, or every supported OS version. Before production, test Flash/Ruffle, occlusion, resize, minimized windows, audio isolation, permissions, disk-full failures, close/exit finalization, direct startup and a ten-minute recording. Record capture FPS, A/V timing, game performance and package-size changes.
+Do not describe compilation or fixture tests as proof of authenticated gameplay, every graphics backend, or every supported OS version. Before production, test Flash/Ruffle, occlusion, resize, minimized windows, absence of audio tracks, permissions, disk-full failures, close/exit finalization, direct startup and a ten-minute recording. Record capture FPS, video timing, game performance and package-size changes.
 
 ### GNOME/Zorin Wayland validation (after rc.5)
 
 An interactive portal test found that Mutter rejects the earlier frame-rate constraints. Development builds now accept the compositor's native/variable frame rate and use the recorder's own 30 FPS clock. The selected default pixel format is also included among the allowed alternatives. VideoCrop metadata is requested and applied to capture the window bounds instead of the compositor's larger backing canvas; the window's own decorations/shadow can remain.
 
-Validated on GNOME/Zorin Wayland: PNG, a ten-second H.264/AAC recording with a process-owned tone on a private silent sink, and motion in all 20 sampled frames. Track durations differed by approximately 27 ms. A separate three-second capture of Artix Ruffle using Automatic/Vulkan and a local sample SWF also succeeded. This does not establish authenticated AQW gameplay, every compositor, or long-session performance on Wayland. macOS recording still needs a real test.
+Earlier audio-enabled development builds were validated on GNOME/Zorin Wayland: PNG, a ten-second H.264/AAC recording with a process-owned tone on a private silent sink, and motion in all 20 sampled frames. Track durations differed by approximately 27 ms. A separate three-second capture of Artix Ruffle using Automatic/Vulkan and a local sample SWF also succeeded. This does not establish authenticated AQW gameplay, every compositor, or long-session performance on Wayland. macOS recording still needs a real test.
 
 These fixes are newer than the published v3.0.0-rc.5 installers. Use an updated development build for Wayland capture.
 
@@ -69,4 +67,5 @@ On GNOME Wayland without the GlobalShortcuts portal, enable **Use GNOME shortcut
 
 Preferences also provides direct screenshot/recording buttons and displays the actual output folders. Defaults are `Pictures/AquaStar Screenshots` (PNG) and `Videos/AquaStar Recordings` (MP4), using the OS user directories. Capture feedback uses desktop notifications without opening a window: Linux requests a silent, transient notification for 2.5 seconds, replacing the previous capture notification. Desktop notification policy may suppress it or control its duration.
 
-`recording-audio-probe` exercises the production optional-audio controller with a missing player audio stream and explicitly disabled audio, then encodes actual H.264 video. Run it with the bundled FFmpeg path and a fresh output directory; use ffprobe to verify both video-only files. This does not replace a live Wayland Ctrl+J test.
+
+Current recordings are always silent. The removed `audio` preference is accepted only for compatibility and is omitted when capture settings are saved again.

@@ -18,9 +18,9 @@ if ! command -v cargo >/dev/null; then
   exit 1
 fi
 if [[ $(uname -s) == Linux ]]; then
-  if ! pkg-config --exists webkit2gtk-4.1 gtk+-3.0 dbus-1 libpipewire-0.3 libspa-0.2 libpulse; then
+  if ! pkg-config --exists webkit2gtk-4.1 gtk+-3.0 dbus-1 libpipewire-0.3 libspa-0.2; then
     echo 'Install the Linux build dependencies first:' >&2
-    echo 'sudo apt-get install -y build-essential pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libdbus-1-dev libpipewire-0.3-dev libspa-0.2-dev libpulse-dev libclang-dev nasm' >&2
+    echo 'sudo apt-get install -y build-essential pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libdbus-1-dev libpipewire-0.3-dev libspa-0.2-dev libclang-dev nasm' >&2
     exit 1
   fi
 fi

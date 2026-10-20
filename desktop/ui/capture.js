@@ -33,7 +33,7 @@
   screenshot.onclick = () => window.__TAURI__.core.invoke('capture_screenshot', { id: null }).catch((e) => { feedback.textContent = String(e); });
   const record = document.createElement('button');
   record.type = 'button'; record.textContent = 'Start Recording';
-  record.onclick = () => window.__TAURI__.core.invoke('capture_start', { id: null, silent: false }).catch((e) => { feedback.textContent = String(e); });
+  record.onclick = () => window.__TAURI__.core.invoke('capture_start', { id: null }).catch((e) => { feedback.textContent = String(e); });
   const folders = document.createElement('p');
   const shortcutLabel = document.createElement('label');
   shortcutLabel.hidden = true;
@@ -54,7 +54,7 @@
     stop.disabled = state.phase === 'finalizing';
     if (state.phase === 'recording') {
       const seconds = state.elapsedSeconds || 0;
-      feedback.textContent = `● REC · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} · ${state.audio ? 'Game audio on' : 'No audio'} · Ctrl+J to stop`;
+      feedback.textContent = `● REC · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} · Ctrl+J to stop`;
     } else if (state.phase === 'preparing') feedback.textContent = 'Preparing recording…';
     else if (state.phase === 'finalizing') feedback.textContent = 'Saving recording…';
     else if (state.error) feedback.textContent = String(state.error);

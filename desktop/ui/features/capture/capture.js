@@ -6,7 +6,6 @@ let pending = false;
 let lastSaved = '';
 function showError(error) {
   $('status').textContent = String(error);
-  $('silent').hidden = !String(error).includes('Record Without Audio');
 }
 function render(status) {
   active = ['preparing', 'recording', 'finalizing'].includes(status.phase);
@@ -18,10 +17,8 @@ function render(status) {
   $('record').hidden = active;
   $('record').disabled = pending;
   $('target').disabled = active || pending;
-  $('audio').disabled = active || pending;
   $('remember').disabled = active || pending;
-  $('silent').hidden = true;
-  if (status.phase === 'recording') $('status').textContent = `REC · ${status.audio ? 'Game audio on' : 'No audio'}`;
+  if (status.phase === 'recording') $('status').textContent = 'REC · Video only';
   else if (status.phase === 'preparing') $('status').textContent = 'Preparing capture…';
   else if (status.phase === 'canceled') $('status').textContent = 'Capture canceled.';
   else if (status.phase === 'finalizing') $('status').textContent = 'Saving recording…';
@@ -45,7 +42,6 @@ async function refresh() {
   if (info.lastScreenshot) $('notice').textContent = `Screenshot saved: ${info.lastScreenshot}`;
   $('screenshots').textContent = info.settings.screenshots;
   $('videos').textContent = info.settings.videos;
-  $('audio').checked = info.settings.audio;
   $('gnome-shortcuts').hidden = !info.gnomeShortcutsAvailable;
   $('gnome-shortcut-toggle').checked = info.settings.gnomeShortcuts;
   $('wayland-authorization').hidden = !info.wayland;
@@ -81,10 +77,8 @@ $('screenshot').onclick = () =>
     lastSaved = path;
     $('status').textContent = `Saved: ${path}`;
   });
-$('record').onclick = () => action(() => invoke('capture_start', { id: selected(), silent: false }));
-$('silent').onclick = () => action(() => invoke('capture_start', { id: selected(), silent: true }));
+$('record').onclick = () => action(() => invoke('capture_start', { id: selected() }));
 $('stop').onclick = () => invoke('capture_stop').catch(showError);
-$('audio').onchange = () => invoke('capture_set_audio', { enabled: $('audio').checked }).catch(showError);
 document.querySelectorAll('[data-folder]').forEach((button) => {
   button.onclick = () => action(() => invoke('capture_choose_folder', { kind: button.dataset.folder }));
 });

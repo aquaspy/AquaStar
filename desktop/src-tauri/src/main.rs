@@ -955,7 +955,6 @@ fn main() {
             capture::capture_show,
             capture::capture_info,
             capture::capture_choose_folder,
-            capture::capture_set_audio,
             capture::capture_set_gnome_shortcuts,
             capture::capture_set_remember_authorization,
             capture::capture_open_folder,

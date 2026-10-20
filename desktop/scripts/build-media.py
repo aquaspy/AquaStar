@@ -67,10 +67,10 @@ def main():
     run(['make',*make_args,'install-static'],sources['openh264'],env)
     options = [f'--prefix={prefix.as_posix()}', '--disable-everything','--disable-autodetect','--disable-network',
         '--disable-doc','--disable-debug','--enable-small','--disable-shared','--enable-static',
-        '--enable-ffmpeg','--enable-ffprobe','--enable-protocol=file,pipe','--enable-demuxer=rawvideo,pcm_f32le,mov',
-        '--enable-muxer=mp4,ipod','--enable-decoder=rawvideo,pcm_f32le,aac,h264',
-        '--enable-encoder=libopenh264,aac','--enable-parser=h264,aac',
-        '--enable-filter=format,scale,aresample,aformat,anull,null','--enable-swscale','--enable-swresample',
+        '--enable-ffmpeg','--enable-ffprobe','--enable-protocol=file,pipe','--enable-demuxer=rawvideo,mov',
+        '--enable-muxer=mp4','--enable-decoder=rawvideo,h264',
+        '--enable-encoder=libopenh264','--enable-parser=h264',
+        '--enable-filter=format,scale,null','--enable-swscale','--disable-swresample',
         '--enable-libopenh264', f'--extra-cflags=-I{(prefix / "include").as_posix()}', f'--extra-ldflags=-L{(prefix / "lib").as_posix()}',
         '--extra-libs=-lc++' if host == 'macos' else '--extra-libs=-lstdc++']
     if shutil.which('nasm', path=env.get('PATH')) is None:

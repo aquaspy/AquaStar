@@ -61,7 +61,7 @@ button:disabled {
   flex-wrap: wrap;
   gap: 9px;
 }
-.audio {
+.capture-option {
   display: flex;
   gap: 8px;
 }

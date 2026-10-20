@@ -1,8 +1,6 @@
-mod audio;
 mod backend;
 mod encoder;
 mod feedback;
-mod recording_audio;
 #[cfg(target_os = "linux")]
 mod shortcuts;
 
@@ -26,20 +24,22 @@ pub struct Status {
     pub elapsed_seconds: u64,
     pub path: Option<PathBuf>,
     pub error: Option<String>,
-    pub audio: bool,
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Settings {
     pub screenshots: PathBuf,
     pub videos: PathBuf,
-    pub audio: bool,
+    #[serde(default, rename = "audio", skip_serializing)]
+    _legacy_audio: Option<serde::de::IgnoredAny>,
     #[serde(default = "remember_authorization_default")]
     pub remember_authorization: bool,
     #[serde(default)]
     pub gnome_shortcuts: bool,
 }
-fn remember_authorization_default() -> bool { true }
+fn remember_authorization_default() -> bool {
+    true
+}
 impl Default for Settings {
     fn default() -> Self {
         let home = dirs::home_dir().unwrap_or_else(std::env::temp_dir);
@@ -50,7 +50,7 @@ impl Default for Settings {
             videos: dirs::video_dir()
                 .unwrap_or(home)
                 .join("AquaStar Recordings"),
-            audio: true,
+            _legacy_audio: None,
             remember_authorization: true,
             gnome_shortcuts: false,
         }
@@ -104,14 +104,12 @@ impl CaptureState {
         seconds: u64,
         path: Option<PathBuf>,
         error: Option<String>,
-        audio: bool,
     ) {
         let status = Status {
             phase: phase.into(),
             elapsed_seconds: seconds,
             path,
             error,
-            audio,
         };
         let previous = {
             let mut current = self.0.status.lock().unwrap_or_else(|e| e.into_inner());
@@ -120,14 +118,17 @@ impl CaptureState {
             previous
         };
         if phase == "failed" {
-            eprintln!("AquaStar capture failed: {}", status.error.as_deref().unwrap_or("Unknown capture error"));
+            eprintln!(
+                "AquaStar capture failed: {}",
+                status.error.as_deref().unwrap_or("Unknown capture error")
+            );
         }
         if phase != previous || phase == "failed" {
             match phase {
                 "recording" => feedback::show(
                     app,
                     "AquaStar · Recording",
-                    if status.audio { "Recording started. Press Ctrl+J again to stop." } else { "Recording started without audio. Press Ctrl+J again to stop." },
+                    "Recording started. Press Ctrl+J again to stop.",
                 ),
                 "failed" => feedback::show(
                     app,
@@ -181,7 +182,6 @@ pub struct Capabilities {
     targets: Vec<backend::Target>,
     screenshot: bool,
     video: bool,
-    audio: bool,
     reason: Option<String>,
     settings: Settings,
     status: Status,
@@ -198,7 +198,6 @@ pub async fn capture_info(
     tauri::async_runtime::spawn_blocking(move || {
         let targets = backend::targets(&app.state::<crate::players::Players>().capture_pids())?;
         let reason = encoder::binary(&app).err();
-        let audio = targets.iter().any(|t| audio::available(t.pid));
         let state = app.state::<CaptureState>();
         let status = state.status();
         let last_screenshot = state.0.screenshot.lock().unwrap().clone();
@@ -207,7 +206,6 @@ pub async fn capture_info(
             gnome_shortcuts_available: gnome_shortcuts_available(),
             screenshot: !targets.is_empty(),
             video: reason.is_none() && !targets.is_empty(),
-            audio,
             reason,
             targets,
             settings: settings(&app),
@@ -253,17 +251,6 @@ fn save_settings(app: &tauri::AppHandle, value: &Settings) -> Result<(), String>
         serde_json::to_vec_pretty(value).map_err(|e| e.to_string())?,
     )
     .map_err(|e| e.to_string())
-}
-#[tauri::command]
-pub async fn capture_set_audio(
-    app: tauri::AppHandle,
-    window: tauri::WebviewWindow,
-    enabled: bool,
-) -> Result<(), String> {
-    host(&window)?;
-    let mut saved = settings(&app);
-    saved.audio = enabled;
-    save_settings(&app, &saved)
 }
 fn authorization_path(app: &tauri::AppHandle) -> Option<PathBuf> {
     (backend::is_wayland() && settings(app).remember_authorization)
@@ -357,7 +344,7 @@ pub async fn screenshot(app: tauri::AppHandle, id: Option<String>) -> Result<Pat
         let _ = app.emit_to("capture", "capture-screenshot", &path);
         let _ = app.emit_to("main", "capture-screenshot", &path);
         if !state.active() {
-            state.update(&app, "saved", 0, Some(path.clone()), None, false);
+            state.update(&app, "saved", 0, Some(path.clone()), None);
         }
         Ok(path)
     })
@@ -372,7 +359,7 @@ pub fn screenshot_failed(app: &tauri::AppHandle, error: String) {
         let _ = app.emit_to("main", "capture-screenshot-error", &error);
         let _ = app.emit_to("capture", "capture-screenshot-error", &error);
     } else {
-        state.update(app, "failed", 0, None, Some(error), false);
+        state.update(app, "failed", 0, None, Some(error));
     }
 }
 #[tauri::command]
@@ -380,18 +367,17 @@ pub async fn capture_start(
     app: tauri::AppHandle,
     window: tauri::WebviewWindow,
     id: Option<String>,
-    silent: bool,
 ) -> Result<(), String> {
     host(&window)?;
-    start(app, id, silent).await
+    start(app, id).await
 }
-pub async fn start(app: tauri::AppHandle, id: Option<String>, silent: bool) -> Result<(), String> {
+pub async fn start(app: tauri::AppHandle, id: Option<String>) -> Result<(), String> {
     let state = app.state::<CaptureState>().inner().clone();
     state.begin()?;
-    state.update(&app, "preparing", 0, None, None, false);
+    state.update(&app, "preparing", 0, None, None);
     let outcome = tauri::async_runtime::spawn_blocking({
         let app = app.clone();
-        move || prepare(&app, id, silent)
+        move || prepare(&app, id)
     })
     .await
     .map_err(|e| e.to_string())
@@ -400,11 +386,11 @@ pub async fn start(app: tauri::AppHandle, id: Option<String>, silent: bool) -> R
         Ok(prepared) => prepared,
         Err(error) => {
             if state.0.stop.load(Ordering::SeqCst) {
-                state.update(&app, "canceled", 0, None, None, false);
+                state.update(&app, "canceled", 0, None, None);
                 state.finish(&app);
                 return Ok(());
             }
-            state.update(&app, "failed", 0, None, Some(error.clone()), false);
+            state.update(&app, "failed", 0, None, Some(error.clone()));
             state.finish(&app);
             return Err(error);
         }
@@ -420,7 +406,7 @@ pub async fn start(app: tauri::AppHandle, id: Option<String>, silent: bool) -> R
             )
         });
         if let Err(error) = result {
-            state.update(&app, "failed", 0, None, Some(error), false);
+            state.update(&app, "failed", 0, None, Some(error));
         }
         state.finish(&app);
     });
@@ -432,9 +418,8 @@ struct Prepared {
     source: backend::Source,
     binary: PathBuf,
     path: PathBuf,
-    audio: bool,
 }
-fn prepare(app: &tauri::AppHandle, id: Option<String>, silent: bool) -> Result<Prepared, String> {
+fn prepare(app: &tauri::AppHandle, id: Option<String>) -> Result<Prepared, String> {
     let target = target(app, id)?;
     let binary = encoder::binary(app)?;
     let mut source = backend::Source::new(
@@ -443,7 +428,6 @@ fn prepare(app: &tauri::AppHandle, id: Option<String>, silent: bool) -> Result<P
         authorization_path(app),
     )?;
     let first = source.frame()?;
-    let audio = settings(app).audio && !silent;
     let path = destination(&settings(app).videos, "mp4")?;
     Ok(Prepared {
         target,
@@ -451,12 +435,11 @@ fn prepare(app: &tauri::AppHandle, id: Option<String>, silent: bool) -> Result<P
         source,
         binary,
         path,
-        audio,
     })
 }
 fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> Result<(), String> {
     if state.0.stop.load(Ordering::SeqCst) {
-        state.update(app, "canceled", 0, None, None, false);
+        state.update(app, "canceled", 0, None, None);
         return Ok(());
     }
     let Prepared {
@@ -465,14 +448,11 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
         mut source,
         binary,
         path,
-        audio,
     } = prepared;
     let temporary = path.with_extension("recording.mp4");
-    let audio_path = path.with_extension("recording.m4a");
     let size = encoder::dimensions(first.width(), first.height())?;
     let fps = backend::fps();
     let mut encoder = encoder::Video::new(&binary, &temporary, size, fps)?;
-    let mut audio = recording_audio::Track::start(audio, target.pid, &binary, &audio_path);
     let started = Instant::now();
     encoder.write(&first)?;
     let mut frames = 1u64;
@@ -487,7 +467,6 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
             {
                 break;
             }
-            audio.poll();
             let now = started.elapsed();
             let due = (now.as_secs_f64() * fps as f64).floor() as u64;
             if frames <= due {
@@ -508,14 +487,7 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
             }
             if seconds != now.as_secs() {
                 seconds = now.as_secs();
-                state.update(
-                    app,
-                    "recording",
-                    seconds,
-                    Some(path.clone()),
-                    audio.warning.clone(),
-                    audio.active(),
-                );
+                state.update(app, "recording", seconds, Some(path.clone()), None);
             }
             std::thread::sleep(Duration::from_millis(5));
         }
@@ -527,25 +499,17 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
         started.elapsed().as_secs(),
         Some(path.clone()),
         None,
-        audio.active(),
     );
-    let audio_ok = audio.finish();
     encoder.finish()?;
-    if audio_ok {
-        encoder::mux(&binary, &temporary, &audio_path, &path)?;
-    } else {
-        encoder::seal(&binary, &temporary, &path)?;
-    }
+    encoder::seal(&binary, &temporary, &path)?;
     let _ = fs::remove_file(&temporary);
-    let _ = fs::remove_file(&audio_path);
-    let warning = result.err().or(audio.warning);
+    let warning = result.err();
     state.update(
         app,
         "saved",
         started.elapsed().as_secs(),
         Some(path),
         warning,
-        audio_ok,
     );
     Ok(())
 }
@@ -567,9 +531,9 @@ pub async fn toggle(app: tauri::AppHandle) {
             .0
             .stop
             .store(true, Ordering::SeqCst);
-    } else if let Err(error) = start(app.clone(), None, false).await {
+    } else if let Err(error) = start(app.clone(), None).await {
         app.state::<CaptureState>()
-            .update(&app, "failed", 0, None, Some(error), false);
+            .update(&app, "failed", 0, None, Some(error));
     }
 }
 async fn show_controls(app: &tauri::AppHandle) -> Result<(), String> {
@@ -704,10 +668,30 @@ mod settings_defaults_tests {
     fn remembered_authorization_defaults_on_but_preserves_explicit_choices() {
         let defaults = super::Settings::default();
         assert!(defaults.remember_authorization);
+        for old_audio in [true, false] {
+            let mut legacy = serde_json::to_value(&defaults).unwrap();
+            legacy["audio"] = old_audio.into();
+            legacy["rememberAuthorization"] = false.into();
+            let saved: super::Settings = serde_json::from_value(legacy).unwrap();
+            assert_eq!(saved.screenshots, defaults.screenshots);
+            assert!(!saved.remember_authorization);
+            assert!(serde_json::to_value(saved).unwrap().get("audio").is_none());
+        }
         let mut value = serde_json::to_value(&defaults).unwrap();
-        value.as_object_mut().unwrap().remove("rememberAuthorization");
-        assert!(serde_json::from_value::<super::Settings>(value.clone()).unwrap().remember_authorization);
+        value
+            .as_object_mut()
+            .unwrap()
+            .remove("rememberAuthorization");
+        assert!(
+            serde_json::from_value::<super::Settings>(value.clone())
+                .unwrap()
+                .remember_authorization
+        );
         value["rememberAuthorization"] = serde_json::Value::Bool(false);
-        assert!(!serde_json::from_value::<super::Settings>(value).unwrap().remember_authorization);
+        assert!(
+            !serde_json::from_value::<super::Settings>(value)
+                .unwrap()
+                .remember_authorization
+        );
     }
 }
