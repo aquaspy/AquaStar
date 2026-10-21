@@ -2,6 +2,8 @@
 
 mod ads;
 mod capture;
+#[cfg(target_os = "linux")]
+mod portal_identity;
 mod cli;
 mod account_sync;
 mod extensions;
@@ -890,6 +892,11 @@ fn app_context() -> tauri::Context<tauri::Wry> {
 }
 
 fn main() {
+    // Registry must precede every portal request, including rfd file dialogs.
+    #[cfg(target_os = "linux")]
+    if let Err(error) = tauri::async_runtime::block_on(portal_identity::register()) {
+        eprintln!("aquastar-lite: {error}");
+    }
     // WebKitGTK's DMA-BUF renderer costs ~125 MB PSS here (measured under Xvfb) and is a
     // known source of blank windows on NVIDIA/older Mesa. Users can still opt back in.
     // It does not fix the blank window caused by the font scan below.

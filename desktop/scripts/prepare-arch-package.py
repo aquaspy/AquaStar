@@ -29,8 +29,6 @@ def prepare(output):
     version = arch_version(json.loads((ROOT / 'desktop/src-tauri/tauri.conf.json').read_text())['version'])
     name = f'aquastar-{version}'
     archive = output / f'{name}.tar.gz'
-    # git's inventory excludes generated players/media/build caches. Read files
-    # from disk rather than git archive, so a local preview includes local fixes.
     inventory = subprocess.check_output(
         ['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], cwd=ROOT
     ).decode().split('\0')

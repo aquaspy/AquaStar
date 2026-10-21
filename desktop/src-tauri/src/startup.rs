@@ -28,7 +28,6 @@ pub struct StartupState {
 }
 
 impl StartupState {
-    /// True after a direct start until the user explicitly reopens the launcher.
     pub fn is_direct(&self) -> bool {
         self.direct.load(Ordering::SeqCst)
     }
@@ -429,7 +428,6 @@ mod tests {
         state.request_launcher();
         assert!(!state.is_direct());
         assert!(state.launcher_requested());
-        // Opening a game manually may hide it again, but must not restore auto-exit.
         state.game_launching();
         assert!(!state.is_direct());
         assert!(!state.launcher_requested());

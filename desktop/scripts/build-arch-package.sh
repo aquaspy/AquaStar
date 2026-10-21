@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Build from the current checkout without installing packages or elevating privileges.
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 output="$root/../AquaStar-workspace/arch"
@@ -16,8 +15,6 @@ python "$root/desktop/scripts/prepare-arch-package.py" --output "$output"
 if $prepare_only; then exit 0; fi
 cd "$output"
 makepkg "$@"
-# Distribute corresponding media sources beside the installer instead of
-# installing a large development source archive into every user installation.
 if [[ -f src/media-build/AquaStar-media-sources.tar.xz ]]; then
   cp src/media-build/AquaStar-media-sources.tar.xz ./AquaStar-media-sources.tar.xz
 fi

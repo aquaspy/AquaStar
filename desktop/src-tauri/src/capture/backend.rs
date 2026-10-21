@@ -1,8 +1,3 @@
-#[cfg(target_os = "linux")]
-#[path = "backend/portal_identity.rs"]
-mod portal_identity;
-#[cfg(target_os = "linux")]
-pub(crate) use portal_identity::register as register_portal_identity;
 use serde::Serialize;
 #[cfg(target_os = "linux")]
 #[path = "backend/wayland.rs"]

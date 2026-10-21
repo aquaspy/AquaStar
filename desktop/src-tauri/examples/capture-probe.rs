@@ -1,3 +1,6 @@
+#[cfg(target_os = "linux")]
+#[path = "../src/portal_identity.rs"]
+mod portal_identity;
 #[path = "../src/capture/backend.rs"]
 mod backend;
 #[path = "../src/capture/encoder.rs"]

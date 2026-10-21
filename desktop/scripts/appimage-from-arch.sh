@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# A host-library AppImage from a native Arch package, without linuxdeploy/GTK injection.
 set -euo pipefail
 if (($# != 2)); then
   echo "Usage: APPIMAGETOOL=/path/to/appimagetool $0 PACKAGE.pkg.tar.zst OUTPUT.AppImage" >&2
@@ -24,6 +23,4 @@ export APPDIR
 exec "$APPDIR/usr/bin/aquastar-lite" "$@"
 APP_RUN
 chmod +x "$stage/AppRun"
-# Runtime dependencies remain the same as the Arch package; this is not a
-# universal Linux bundle and intentionally does not inject foreign GTK libraries.
 ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$tool" -n "$stage" "$output"

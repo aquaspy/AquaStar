@@ -217,7 +217,7 @@ jobs:
   # platform has uploaded. Stable and prerelease tags stay off Latest.
   keep-prerelease:
     needs: [build, native-arch, gate]
-    if: needs.gate.outputs.publish == 'true'
+    if: ${{ always() && needs.gate.outputs.publish == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Keep the release off Latest
