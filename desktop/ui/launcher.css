@@ -387,9 +387,104 @@ h1 {
   gap: 6px;
   margin-top: 14px;
 }
+.preference-field-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.preference-field-control > input[type='text'],
+.preference-field-control > select {
+  width: 100%;
+}
+.preference-field-control > .preference-reset {
+  padding: 7px 11px;
+  white-space: nowrap;
+}
 .preference-field label,
 .keybind-row label {
   color: var(--muted);
+}
+.preference-field > .hint {
+  margin: 0;
+}
+.preference-field-boolean {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+}
+.preference-field-boolean label {
+  grid-column: 1;
+  grid-row: 1;
+}
+.preference-field-boolean .preference-field-control {
+  grid-column: 2;
+  grid-row: 1;
+  grid-template-columns: auto auto;
+}
+.preference-field-boolean > .hint {
+  grid-column: 1 / -1;
+}
+.preference-field-boolean input[type='checkbox'] {
+  appearance: none;
+  position: relative;
+  width: 46px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #52677b;
+  border-radius: 999px;
+  background: #202d3b;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.preference-field-boolean input[type='checkbox']::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #b3c2d0;
+  transition: transform 140ms ease, background-color 140ms ease;
+}
+.preference-field-boolean input[type='checkbox']:checked {
+  border-color: var(--cyan);
+  background: #24586b;
+}
+.preference-field-boolean input[type='checkbox']:checked::before {
+  transform: translateX(18px);
+  background: var(--cyan);
+}
+.preference-field-boolean input[type='checkbox']:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.preference-field-boolean input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+.preference-field-boolean .preference-field-status {
+  grid-column: 1 / -1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .preference-field-boolean input[type='checkbox'],
+  .preference-field-boolean input[type='checkbox']::before {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .preference-field-boolean input[type='checkbox'] {
+    appearance: auto;
+    width: 1em;
+    height: 1em;
+    accent-color: auto;
+  }
+  .preference-field-boolean input[type='checkbox']::before {
+    content: none;
+  }
 }
 .preference-actions,
 .keybind-group-head {

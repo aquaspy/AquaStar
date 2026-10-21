@@ -80,7 +80,7 @@
   });
 
   function field(label, control, hint = '', key = '', reset = null) {
-    const row = element('div', { class: 'preference-field' },
+    const row = element('div', { class: `preference-field${control.type === 'checkbox' ? ' preference-field-boolean' : ''}` },
       element('label', { for: control.id, text: label }),
       element('div', { class: 'preference-field-control' }, control, reset)
     );
