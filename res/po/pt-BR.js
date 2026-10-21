@@ -29,7 +29,7 @@ exports.dialogMessages = {
     aboutTitle     : "Sobre o AquaStar NEO, versão: ",
     aboutMessage   : "AquaStar NEO é um shell Flash com plugins por jogo.",
     aboutDetail    :
-        "Agradecimentos:\naquaspy{pluginCredits}\nElectron\nAdobe Flash Player\ne você pelo apoio.\n\nOs plugins de jogos não são produtos oficiais de suas publicadoras; use por sua conta e risco.\n\nProjeto / releases: ",
+        "Agradecimentos:\naquaspy{pluginCredits}\nTauri\nAdobe Flash Player\ne você pelo apoio.\n\nOs plugins de jogos não são produtos oficiais de suas publicadoras; use por sua conta e risco.\n\nProjeto / releases: ",
     aboutDebug     : "Informações para Debug",
 
     aboutGithubPrompt : "Releases do AquaStar NEO",
