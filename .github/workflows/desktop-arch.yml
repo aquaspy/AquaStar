@@ -10,16 +10,26 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'desktop/**'
+      - 'src-tauri/**'
+      - 'ui/**'
+      - 'scripts/**'
       - 'plugins/**'
-      - 'res/po/**'
+      - 'native/**'
+      - 'vendor/**'
+      - 'packaging/**'
+      - 'players.json'
       - '.github/workflows/desktop-arch.yml'
   push:
     branches: [dev]
     paths:
-      - 'desktop/**'
+      - 'src-tauri/**'
+      - 'ui/**'
+      - 'scripts/**'
       - 'plugins/**'
-      - 'res/po/**'
+      - 'native/**'
+      - 'vendor/**'
+      - 'packaging/**'
+      - 'players.json'
       - '.github/workflows/desktop-arch.yml'
 
 permissions:
@@ -39,7 +49,7 @@ jobs:
       - name: Build and test as an unprivileged user
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
-          runuser -u builder -- bash desktop/scripts/build-arch-package.sh --output /tmp/aquastar-neo
+          runuser -u builder -- bash scripts/build-arch-package.sh --output /tmp/aquastar-neo
       - name: Inspect native package
         run: |
           pacman -Qip /tmp/aquastar-neo/aquastar-neo-*.pkg.tar.zst
@@ -49,9 +59,9 @@ jobs:
           curl --fail --location https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage -o /tmp/appimagetool
           echo 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  /tmp/appimagetool' | sha256sum --check
           chmod +x /tmp/appimagetool
-          ver=$(python -c 'import json; print(json.load(open("desktop/src-tauri/tauri.conf.json"))["version"])')
+          ver=$(python -c 'import json; print(json.load(open("src-tauri/tauri.conf.json"))["version"])')
           package=$(find /tmp/aquastar-neo -maxdepth 1 -name 'aquastar-neo-[0-9]*-x86_64.pkg.tar.zst' -print -quit)
-          runuser -u builder -- env APPIMAGETOOL=/tmp/appimagetool bash desktop/scripts/appimage-from-arch.sh "$package" "/tmp/aquastar-neo/aquastar-neo_${ver}_Arch-native_x86_64.AppImage"
+          runuser -u builder -- env APPIMAGETOOL=/tmp/appimagetool bash scripts/appimage-from-arch.sh "$package" "/tmp/aquastar-neo/aquastar-neo_${ver}_Arch-native_x86_64.AppImage"
       - uses: actions/upload-artifact@v4
         with:
           name: AquaStar-NEO-Arch-x86_64

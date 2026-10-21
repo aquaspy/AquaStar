@@ -1,36 +1,17 @@
 {
+  "format": "aquastar-desktop-plugin",
+  "apiVersion": 2,
   "id": "example-companion",
   "name": "Example Companion",
   "version": "1.0.0",
-  "apiVersion": 1,
-  "main": "main.js",
-  "description": "Reference plugin demonstrating AquaStar Host APIs (stage demo, navigation, settings, IPC, store, menus).",
-  "author": "AquaStar",
-  "minAppVersion": "1.12.2",
-  "capabilities": [
-    "game-launch",
-    "session-rules",
-    "navigation-hooks",
-    "feature-windows",
-    "menus",
-    "keybinds",
-    "locales"
+  "launcherParameters": { "id": "example-plugin" },
+  "permissions": ["storage", "network", "links"],
+  "origins": ["https://api.github.com"],
+  "tools": [{ "id": "companion", "name": "Example Companion", "entry": "index.html" }],
+  "links": [{ "id": "project", "name": "AquaStar on GitHub", "url": "https://github.com/aquaspy/AquaStar" }],
+  "actions": [
+    { "id": "open-companion", "name": "Open Example Companion", "kind": "tool", "target": "companion" },
+    { "id": "open-project", "name": "Open AquaStar on GitHub", "kind": "link", "target": "project" }
   ],
-  "permissions": [
-    "net-fetch",
-    "web-request",
-    "flash-trust",
-    "inject-scripts",
-    "persistent-store",
-    "unsafe-renderer"
-  ],
-  "fetchAllowlist": [
-    "https://api.github.com/*",
-    "https://github.com/*",
-    "https://raw.githubusercontent.com/*"
-  ],
-  "injectHostPatterns": [
-    "github.com",
-    "www.github.com"
-  ]
+  "menus": [{ "action": "open-companion" }]
 }

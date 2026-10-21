@@ -9,8 +9,7 @@ name: AquaStar NEO Desktop Smoke
 # Those jobs download the newest v3 release, so the push retests that release.
 # macos-13 was retired on 2025-12-04. Intel Macs use macos-15-intel.
 # macos-latest with an empty flash_arch is a normal Apple Silicon launch.
-# The x86_64 row runs the same app under arch -x86_64. electron-mac launches
-# the Electron x64 zip on Apple Silicon and records the game page size.
+# The x86_64 row runs the same app under arch -x86_64.
 on:
   workflow_dispatch:
     inputs:
@@ -26,7 +25,6 @@ on:
     branches: [dev]
     paths:
       - .github/workflows/desktop-smoke.yml
-      - desktop/scripts/smoke/**
       - scripts/smoke/**
 
 concurrency:
@@ -57,7 +55,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           INPUT_TAG: ${{ github.event.inputs.tag }}
           RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
-        run: bash desktop/scripts/smoke/resolve-tag.sh
+        run: bash scripts/smoke/resolve-tag.sh
 
   smoke:
     needs: resolve
@@ -99,27 +97,25 @@ jobs:
       - name: Install Pillow
         run: python -m pip install pillow
       - name: Button finder test
-        run: |
-          python desktop/scripts/smoke/test_buttons.py
-          python scripts/smoke/test_electron_mac.py
+        run: python scripts/smoke/test_buttons.py
       - name: Download the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.resolve.outputs.tag }}
           PACKAGE: ${{ matrix.package }}
         shell: bash
-        run: bash desktop/scripts/smoke/download.sh
+        run: bash scripts/smoke/download.sh
       - name: Install on Linux or macOS
         if: runner.os != 'Windows'
         env:
           PACKAGE: ${{ matrix.package }}
-        run: bash desktop/scripts/smoke/install-unix.sh
+        run: bash scripts/smoke/install-unix.sh
       - name: Install on Windows
         if: runner.os == 'Windows'
         env:
           PACKAGE: ${{ matrix.package }}
         shell: pwsh
-        run: ./desktop/scripts/smoke/install-windows.ps1
+        run: ./scripts/smoke/install-windows.ps1
       - name: How this job is judged
         shell: bash
         run: |
@@ -134,13 +130,13 @@ jobs:
           AQUASTAR_LITE_SMOKE: flash
           SMOKE_ARCH: ${{ matrix.flash_arch }}
         shell: bash
-        run: python -u desktop/scripts/smoke/drive.py --engine flash --binary "$AQUASTAR_LITE_BIN" --out smoke-out/flash --arch "${SMOKE_ARCH:-}"
+        run: python -u scripts/smoke/drive.py --engine flash --binary "$AQUASTAR_LITE_BIN" --out smoke-out/flash --arch "${SMOKE_ARCH:-}"
       - name: Play Ruffle
         if: always()
         env:
           AQUASTAR_LITE_SMOKE: ruffle
         shell: bash
-        run: python -u desktop/scripts/smoke/drive.py --engine ruffle --binary "$AQUASTAR_LITE_BIN" --out smoke-out/ruffle --arch ""
+        run: python -u scripts/smoke/drive.py --engine ruffle --binary "$AQUASTAR_LITE_BIN" --out smoke-out/ruffle --arch ""
       - name: Upload Flash screenshot and log
         if: always()
         uses: actions/upload-artifact@v4
@@ -154,29 +150,4 @@ jobs:
         with:
           name: smoke-${{ matrix.os }}-${{ matrix.package }}-ruffle${{ matrix.flash_arch && format('-{0}', matrix.flash_arch) || '' }}
           path: smoke-out/ruffle/
-          if-no-files-found: warn
-
-  electron-mac:
-    if: >-
-      github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       (startsWith(github.event.workflow_run.head_branch, 'lite-v') || startsWith(github.event.workflow_run.head_branch, 'v3.')))
-    runs-on: macos-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_branch || github.event.inputs.tag || 'dev' }}
-      - name: Judge the embed measurement
-        run: python3 scripts/smoke/test_electron_mac.py
-      - name: Launch the newest Electron mac zip
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/smoke/electron_mac.py --out smoke-electron
-      - name: Upload the Electron screenshot and page size
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: smoke-macos-latest-electron-mac
-          path: smoke-electron/
           if-no-files-found: warn
