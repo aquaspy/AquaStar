@@ -4,6 +4,7 @@ description = "Launcher window"
 commands.allow = [
   "play",
   "restart_ruffle",
+  "restart_flash",
   "capture_show",
   "capture_info",
   "capture_choose_folder",
@@ -34,16 +35,20 @@ commands.allow = [
   "set_startup",
   "get_profile_preferences",
   "change_profile_preference",
+  "get_hyprland_shortcut_setup",
+  "setup_hyprland_shortcuts",
+  "remove_hyprland_shortcuts",
   "get_custom_swf_status",
   "choose_custom_swf",
   "remove_custom_swf",
-  "restart_app"
+  "restart_app",
+  "show_about"
 ]
 
 [[permission]]
 identifier = "about-commands"
 description = "About window"
-commands.allow = ["open_project_page"]
+commands.allow = ["open_project_page", "close_dialog"]
 
 [[permission]]
 identifier = "studio-commands"

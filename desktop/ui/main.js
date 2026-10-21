@@ -8,6 +8,9 @@ const showMenuBar = document.getElementById('show-menu-bar');
 const launcherHint = document.getElementById('launcher-hint');
 const startupSelect = document.getElementById('startup-game');
 const commandList = document.getElementById('command-list');
+document.getElementById('about-button').addEventListener('click', () => {
+  invoke('show_about').catch(failure);
+});
 const ENGINE_NAMES = { ruffle: 'Ruffle', flash: 'Flash Player' };
 const GLOBAL_PANELS = ['preferences', 'extensions'];
 

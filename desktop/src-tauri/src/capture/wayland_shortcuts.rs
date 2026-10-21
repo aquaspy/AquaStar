@@ -62,12 +62,11 @@ pub fn sync(app: &tauri::AppHandle) {
         return;
     }
     let mut bindings = Vec::new();
-    if !app.state::<crate::Players>().capture_pids().is_empty()
-        && !super::gnome_shortcuts_enabled(app)
-    {
+    if !app.state::<crate::Players>().capture_pids().is_empty() {
         let merged = crate::profile::merged_settings(&crate::profile::live_files());
         for bind in crate::manifest::keybinds() {
-            if !matches!(bind.id.as_str(), "sshot" | "record") {
+            if matches!(bind.id.as_str(), "sshot" | "record") && super::gnome_shortcuts_enabled(app)
+            {
                 continue;
             }
             for accel in crate::manifest::accelerators(&bind, merged.get(&bind.id)) {
@@ -109,15 +108,8 @@ pub fn sync(app: &tauri::AppHandle) {
                     .iter()
                     .enumerate()
                     .map(|(index, (action, key))| {
-                        NewShortcut::new(
-                            format!("{action}-{index}"),
-                            if action == "sshot" {
-                                "Save game screenshot"
-                            } else {
-                                "Start/stop game recording"
-                            },
-                        )
-                        .preferred_trigger(Some(key.as_str()))
+                        NewShortcut::new(format!("{action}-{index}"), description(action))
+                            .preferred_trigger(Some(key.as_str()))
                     })
                     .collect();
                 // Cancellation covers permission dialogs too. Closing the session releases bindings.
@@ -163,9 +155,29 @@ pub fn sync(app: &tauri::AppHandle) {
         .await;
         release(&ACTIVE, &owner);
         if let Err(error) = result {
-            eprintln!("aquastar-lite: Wayland capture shortcuts: {error}");
+            eprintln!("aquastar-lite: Wayland global shortcuts: {error}");
         }
     });
+}
+
+fn description(action: &str) -> &'static str {
+    match action {
+        "sshot" => "Take a game screenshot",
+        "record" => "Start or stop game recording",
+        "help" => "Open AquaStar Help",
+        "settings" => "Open AquaStar Preferences",
+        "wiki" => "Open AQW Wiki",
+        "account" => "Open AQW Account",
+        "design" => "Open AQW Design Notes",
+        "charpage" => "Open AQW Character Page",
+        "newAqw" => "Open another AQW instance",
+        "dragon" => "Open a DragonFable instance",
+        "reminders" => "Open Reminders",
+        "todo" => "Open To-Do List",
+        "inventory" => "Open Inventory",
+        "strategy" => "Open Strategy",
+        _ => "AquaStar shortcut",
+    }
 }
 
 fn release(active: &Mutex<Option<Registration>>, owner: &tauri::async_runtime::Sender<()>) {
@@ -242,5 +254,13 @@ mod tests {
                 expected
             );
         }
+    }
+
+    #[test]
+    fn portal_describes_game_and_launcher_shortcuts() {
+        assert_eq!(super::description("wiki"), "Open AQW Wiki");
+        assert_eq!(super::description("newAqw"), "Open another AQW instance");
+        assert_eq!(super::description("dragon"), "Open a DragonFable instance");
+        assert_eq!(super::description("sshot"), "Take a game screenshot");
     }
 }

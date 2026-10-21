@@ -4,20 +4,6 @@
   "about": { "releasesUrl": "https://github.com/aquaspy/AquaStar/releases" },
   "menus": [
     {
-      "id": "back",
-      "labelKey": "menuBackward",
-      "labelPrefix": "<<< ",
-      "action": "backward",
-      "keybind": "backward"
-    },
-    {
-      "id": "forward",
-      "labelKey": "menuFoward",
-      "labelPrefix": ">>> ",
-      "action": "forward",
-      "keybind": "forward"
-    },
-    {
       "id": "useful",
       "labelKey": "menuOtherPages",
       "items": [
@@ -53,9 +39,7 @@
       "labelKey": "menuTools",
       "fallback": "Tools",
       "items": [
-        { "id": "reload", "labelKey": "menuReloadPage", "keybind": "reload", "action": "reload" },
-        { "id": "reloadCache", "labelKey": "menuReloadCache", "keybind": "reloadCache", "action": "reload-cache" },
-        { "id": "fullscreen", "labelKey": "menuFullscreen", "keybind": "fullscreen", "action": "fullscreen" },
+        { "id": "fullscreen", "labelKey": "menuFullscreen", "action": "fullscreen" },
         { "id": "capture", "fallback": "Screenshots and Recording", "action": "capture" },
         { "id": "sshot", "fallback": "Take Screenshot", "keybind": "sshot", "action": "sshot" },
         { "id": "record", "fallback": "Start/Stop Recording", "keybind": "record", "action": "record" }
@@ -86,21 +70,14 @@
       "items": [
         { "id": "settings", "labelKey": "menuPreferences", "keybind": "settings", "action": "settings" },
         { "type": "separator" },
-        { "id": "help", "labelKey": "menuHelp", "keybind": "help", "action": "help" },
-        { "id": "about", "labelKey": "menuAbout", "keybind": "about", "action": "about" }
+        { "id": "help", "labelKey": "menuHelp", "keybind": "help", "action": "help" }
       ]
     }
   ],
   "keybinds": [
     { "id": "sshot", "default": "F2", "action": "sshot" },
     { "id": "record", "default": "Ctrl+J", "action": "record" },
-    { "id": "about", "default": "F9", "action": "about" },
-    { "id": "fullscreen", "default": "F11", "action": "fullscreen" },
-    { "id": "reload", "default": ["CmdOrCtrl+F5", "CmdOrCtrl+R"], "action": "reload" },
-    { "id": "reloadCache", "default": "CmdOrCtrl+Shift+F5", "action": "reload-cache" },
-    { "id": "forward", "default": "Alt+F", "action": "forward" },
-    { "id": "backward", "default": "Alt+B", "action": "backward" },
-    { "id": "help", "default": ["Alt+H", "CmdOrCtrl+H", "F1"], "action": "help" },
+    { "id": "help", "default": "Alt+H", "action": "help" },
     { "id": "settings", "default": "Alt+9", "action": "settings" },
     { "id": "wiki", "default": "Alt+W", "action": "page" },
     { "id": "account", "default": "Alt+A", "action": "page" },

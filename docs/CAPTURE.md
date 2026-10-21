@@ -72,17 +72,22 @@ Current recordings are always silent. The removed `audio` preference is accepted
 
 Linux notification delivery uses a persistent D-Bus sender so GNOME does not immediately destroy the source and subsequent capture notifications can replace the previous one. Sending errors are logged to stderr. The native probe checks consecutive messages; visible banners were confirmed by the GNOME Wayland tester after this fix. Desktop policy can still hide banners, particularly during fullscreen or Do Not Disturb.
 
-### Hyprland Wayland shortcuts (local fix after rc.6)
+### Hyprland Wayland global shortcuts
 
-Capture shortcuts now use the GlobalShortcuts portal on Wayland; X11 key grabs do not receive keys from native Wayland player windows. The portal session exists only while a tracked game is running, follows saved accelerators and is closed on player exit or launcher shutdown. GNOME's existing opt-in integration remains available. Local builds/AppImages register a stable host portal identity; when absent, a hidden desktop metadata entry is created without replacing existing entries.
+While a tracked game is running, AquaStar registers its saved keybindings through the GlobalShortcuts portal; X11 key grabs do not receive keys from native Wayland player windows. The portal session closes when the game exits or AquaStar shuts down. GNOME's existing opt-in integration remains available. Local builds and AppImages register a stable host portal identity; when absent, a hidden desktop metadata entry is created without replacing existing entries.
 
-Hyprland exposes portal actions but requires compositor bindings (it does not apply `preferred_trigger`). With a game open, inspect `hyprctl globalshortcuts`. Default actions are `io.github.aquaspy.aquastar-lite:sshot-0` and `io.github.aquaspy.aquastar-lite:record-1`. Bind them using Hyprland's `global` dispatcher. Current Lua configuration, for example:
+Hyprland exposes portal actions but does not apply their `preferred_trigger`. On Omarchy, Preferences → General → **Hyprland shortcuts** can add AquaStar's current saved shortcuts to `~/.config/hypr/bindings.lua`. Setup checks `omarchy menu keybindings --print` first, refuses any trigger already in use, keeps existing AquaStar bindings, and writes a dated backup before changing the file. AquaStar only replaces or removes its own marked section; use the same Preferences controls to update or undo it. When changing a shortcut later, run setup/update again.
+
+For other Hyprland configurations, inspect `hyprctl globalshortcuts` while a game is open and bind portal actions with Hyprland's `global` dispatcher. Default IDs for the capture, Wiki, new AQW and DragonFable actions are `io.github.aquaspy.aquastar-lite:sshot-0`, `io.github.aquaspy.aquastar-lite:record-1`, `io.github.aquaspy.aquastar-lite:wiki-4`, `io.github.aquaspy.aquastar-lite:newAqw-8` and `io.github.aquaspy.aquastar-lite:dragon-9`; the numeric suffix can change with custom shortcut settings. In the Lua configuration, for example:
 
 ```lua
 hl.bind("F2", hl.dsp.global("io.github.aquaspy.aquastar-lite:sshot-0"))
 hl.bind("CTRL + J", hl.dsp.global("io.github.aquaspy.aquastar-lite:record-1"))
+hl.bind("ALT + W", hl.dsp.global("io.github.aquaspy.aquastar-lite:wiki-4"))
+hl.bind("ALT + N", hl.dsp.global("io.github.aquaspy.aquastar-lite:newAqw-8"))
+hl.bind("ALT + 1", hl.dsp.global("io.github.aquaspy.aquastar-lite:dragon-9"))
 ```
 
-Check existing bindings before adding these; scope them to your game windows if you want the keys passed through to other apps. Older Hyprland configuration uses `bind = , F2, global, io.github.aquaspy.aquastar-lite:sshot-0` and `bind = CTRL, J, global, io.github.aquaspy.aquastar-lite:record-1`. Changing the saved accelerator also requires updating the compositor binding. The app does not edit compositor settings automatically.
+Check the actual IDs printed on your system before adding manual bindings. AquaStar's Omarchy integration scopes bindings to AquaStar game windows; manual bindings can be scoped the same way in Lua. Older Hyprland configuration uses `bind = ALT, W, global, io.github.aquaspy.aquastar-lite:wiki-4` and `bind = ALT, N, global, io.github.aquaspy.aquastar-lite:newAqw-8`. Changing a saved accelerator also requires updating manual compositor bindings.
 
 On the test Hyprland 0.56.2 session, rc.6's direct capture commands already produced window-only PNG and a silent H.264 MP4. Repeated captures of the same live player restored authorization without selecting the window again. This is separate from keyboard registration. Restoring a grant is compositor-dependent and a newly started player still needs a new selection.

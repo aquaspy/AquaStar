@@ -9,6 +9,7 @@ exports.titleMessages = {
 exports.dialogMessages = {
     helpTitle   :"Help:",
     helpMessage :"AquaStar shortcuts and features.",
+    helpClosePrompt: "Close",
     helpDetail(k) {return 'AquaStar (app)\n' +
         expand(k.help) + ' - Show this help.\n' +
         expand(k.settings)  + ' - Opens Settings (General / active plugin / Keybinds).\n' +

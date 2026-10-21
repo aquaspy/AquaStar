@@ -12,6 +12,7 @@ exports.titleMessages = {
 exports.dialogMessages = {
     helpTitle: "",
     helpMessage: "",
+    helpClosePrompt: "",
     helpDetail(k) {return '' +
         expand(k.help) + '' +
         expand(k.settings)  + '' +

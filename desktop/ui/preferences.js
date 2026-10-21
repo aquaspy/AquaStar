@@ -14,11 +14,6 @@
   const keybindLabels = {
     sshot: ['Capture', 'Take game screenshot'],
     record: ['Capture', 'Start/stop game recording'],
-    about: ['App', 'About AquaStar'],
-    fullscreen: ['App', 'Toggle AquaStar window fullscreen'],
-    reload: ['App', 'Reload AquaStar page'],
-    forward: ['App', 'Forward'],
-    backward: ['App', 'Back'],
     help: ['App', 'Help'],
     settings: ['App', 'Open Preferences'],
     wiki: ['Adventure Quest Worlds', 'Wiki'],
@@ -93,7 +88,7 @@
     return row;
   }
 
-  function makeControl(label, type, key, value, defaultValue, hint = '') {
+  function makeControl(label, type, key, value, defaultValue, hint = '', choices = null) {
     const control = document.createElement(type === 'select' ? 'select' : 'input');
     control.id = `profile-${key}`;
     control.dataset.preferenceKey = key;
@@ -101,8 +96,13 @@
       control.type = 'checkbox';
       control.checked = value === true;
     } else if (type === 'select') {
-      for (const [id, name] of [['system', 'System default'], ['en-US', 'English'], ['pt-BR', 'Português (Brasil)']]) {
-        control.append(element('option', { value: id, text: name }));
+      const options = choices || [
+        { value: 'system', label: 'System default' },
+        { value: 'en-US', label: 'English' },
+        { value: 'pt-BR', label: 'Português (Brasil)' }
+      ];
+      for (const option of options) {
+        control.append(element('option', { value: option.value, text: option.label, disabled: option.disabled === true }));
       }
       control.value = value;
     } else {
@@ -126,15 +126,92 @@
 
   function renderProfile(snapshot) {
     state.snapshot = snapshot;
+    const availableEngines = snapshot.availableEngines || [];
+    const engineChoices = [
+      { value: 'automatic', label: 'System default' },
+      ...[
+        ['ruffle', 'Ruffle'],
+        ['flash', 'Flash']
+      ].map(([value, label]) => ({
+        value,
+        label: availableEngines.includes(value) ? label : `${label} (not available on this system)`,
+        disabled: !availableEngines.includes(value) && snapshot.newInstanceEngine !== value
+      }))
+    ];
+    const hyprland = element('section', { class: 'pref' },
+      element('h2', { class: 'pref-title', text: 'Hyprland shortcuts' }),
+      element('p', { class: 'hint', text: 'Hyprland exposes AquaStar’s shortcut actions but does not assign their keys automatically. On Omarchy, AquaStar checks existing bindings, then can add the current game shortcuts to bindings.lua with a backup. Existing shortcuts are never removed or replaced.' }),
+      element('p', { id: 'hyprland-shortcut-status', class: 'hint', role: 'status', 'aria-live': 'polite', text: 'Checking Omarchy configuration…' }),
+      element('p', { id: 'hyprland-shortcut-path', class: 'hint', text: '' }),
+      element('div', { class: 'preference-actions' },
+        element('button', { type: 'button', id: 'hyprland-shortcut-setup', text: 'Set up / Update shortcuts' }),
+        element('button', { type: 'button', id: 'hyprland-shortcut-remove', text: 'Remove AquaStar shortcuts' })
+      )
+    );
+    hyprland.hidden = true;
     generalMount.replaceChildren(
       element('section', { class: 'pref' },
         element('h2', { class: 'pref-title', text: 'Menu and dialog language' }),
         element('p', { class: 'hint', text: 'This changes AquaStar menus and dialogs. The launcher and plugin interfaces remain in their supplied language.' }),
         makeControl('Language', 'select', 'appLanguage', snapshot.appLanguage, snapshot.defaults.appLanguage)
-      )
+      ),
+      element('section', { class: 'pref' },
+        element('h2', { class: 'pref-title', text: 'New game instances' }),
+        makeControl('Player', 'select', 'newInstanceEngine', snapshot.newInstanceEngine, snapshot.defaults.newInstanceEngine,
+          'Used by the Game menu and its shortcuts for new AQW and DragonFable windows. Existing windows are left alone.', engineChoices)
+      ),
+      hyprland
     );
+    renderHyprlandShortcuts(hyprland);
     renderAqw(snapshot);
     renderKeybinds(snapshot);
+  }
+
+  function renderHyprlandShortcuts(section) {
+    const status = section.querySelector('#hyprland-shortcut-status');
+    const path = section.querySelector('#hyprland-shortcut-path');
+    const setup = section.querySelector('#hyprland-shortcut-setup');
+    const remove = section.querySelector('#hyprland-shortcut-remove');
+    const refresh = async (message = '') => {
+      try {
+        const result = await invoke('get_hyprland_shortcut_setup');
+        section.hidden = !result.visible;
+        status.textContent = message || result.message;
+        path.textContent = result.path ? `Configuration: ${result.path}` : '';
+        setup.disabled = !result.supported;
+        remove.disabled = !result.installed;
+      } catch (error) {
+        section.hidden = true;
+        status.textContent = `Could not inspect Hyprland settings: ${error}`;
+        setup.disabled = true;
+        remove.disabled = true;
+      }
+    };
+    setup.addEventListener('click', async (event) => {
+      await withDisabledEvent(event, async () => {
+        try {
+          const result = await invoke('setup_hyprland_shortcuts');
+          await refresh(result.backupPath ? `${result.message} Backup: ${result.backupPath}` : result.message);
+          announce(result.message);
+        } catch (error) {
+          status.textContent = String(error);
+          announce(String(error), true);
+        }
+      });
+    });
+    remove.addEventListener('click', async (event) => {
+      await withDisabledEvent(event, async () => {
+        try {
+          const result = await invoke('remove_hyprland_shortcuts');
+          await refresh(result.backupPath ? `${result.message} Backup: ${result.backupPath}` : result.message);
+          announce(result.message);
+        } catch (error) {
+          status.textContent = String(error);
+          announce(String(error), true);
+        }
+      });
+    });
+    refresh();
   }
 
   function renderAqw(snapshot) {
@@ -433,22 +510,24 @@
   document.getElementById('preferences').append(live);
   let loadPromise = null;
   document.getElementById('preferences-restart-button').addEventListener('click', () => invoke('restart_app').catch((error) => announce(String(error), true)));
-  const restartRuffleButton = document.getElementById('restart-ruffle-button');
-  const restartRuffleStatus = document.getElementById('restart-ruffle-status');
-  restartRuffleButton.addEventListener('click', async () => {
-    restartRuffleButton.disabled = true;
-    restartRuffleStatus.textContent = '';
-    restartRuffleStatus.dataset.error = 'false';
-    try {
-      await invoke('restart_ruffle');
-      restartRuffleStatus.textContent = 'Ruffle restarted.';
-    } catch (error) {
-      restartRuffleStatus.textContent = String(error);
-      restartRuffleStatus.dataset.error = 'true';
-    } finally {
-      restartRuffleButton.disabled = false;
-    }
-  });
+  for (const [engine, label] of [['ruffle', 'Ruffle'], ['flash', 'Flash']]) {
+    const button = document.getElementById(`restart-${engine}-button`);
+    const status = document.getElementById(`restart-${engine}-status`);
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      status.textContent = '';
+      status.dataset.error = 'false';
+      try {
+        await invoke(`restart_${engine}`);
+        status.textContent = `${label} restarted.`;
+      } catch (error) {
+        status.textContent = String(error);
+        status.dataset.error = 'true';
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
   load();
 
   function showRestartNotice() {

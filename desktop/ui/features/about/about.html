@@ -38,7 +38,11 @@ primary.addEventListener('click', () => {
 });
 const close = document.getElementById('close');
 close.textContent = dialog.close || 'Close';
-close.addEventListener('click', () => window.close());
+close.addEventListener('click', () => {
+  window.__TAURI__.core.invoke('close_dialog').catch((error) => {
+    console.error('Could not close the About window:', error);
+  });
+});
 </script>
 </body>
 </html>

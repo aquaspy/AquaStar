@@ -1,7 +1,9 @@
 //! The bundled game manifest, the locale strings it points at, and the keybind table.
 //! Menus, shortcuts, launcher buttons, and About all read this module.
 
-use std::collections::{BTreeSet, HashMap};
+#[cfg(test)]
+use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::sync::OnceLock;
 
 use serde::Deserialize;
@@ -68,7 +70,6 @@ impl AccelValue {
 #[derive(Clone, Debug)]
 pub struct Keybind {
     pub id: String,
-    pub action: String,
     pub defaults: Vec<String>,
 }
 
@@ -113,9 +114,11 @@ fn catalogs() -> &'static HashMap<&'static str, Catalog> {
     CATALOGS.get_or_init(|| {
         let mut map = HashMap::new();
         let mut en = merge_catalog(PLATFORM_EN, GAME_EN);
-        en.menu.insert("menuPreferences".into(), "Preferences".into());
+        en.menu
+            .insert("menuPreferences".into(), "Preferences".into());
         let mut pt = merge_catalog(PLATFORM_PT, GAME_PT);
-        pt.menu.insert("menuPreferences".into(), "Preferências".into());
+        pt.menu
+            .insert("menuPreferences".into(), "Preferências".into());
         map.insert("en-US", en);
         map.insert("pt-BR", pt);
         map
@@ -147,7 +150,11 @@ pub fn resolve_language(value: &str) -> &'static str {
                 .or_else(|_| std::env::var("LANG"))
                 .unwrap_or_default()
                 .to_ascii_lowercase();
-            if probe.starts_with("pt") { "pt-BR" } else { "en-US" }
+            if probe.starts_with("pt") {
+                "pt-BR"
+            } else {
+                "en-US"
+            }
         }
     }
 }
@@ -186,7 +193,6 @@ pub fn keybinds() -> Vec<Keybind> {
         .iter()
         .map(|bind| Keybind {
             id: bind.id.clone(),
-            action: bind.action.clone(),
             defaults: bind.default.list(),
         })
         .collect()
@@ -197,7 +203,9 @@ pub fn keybind_defaults_value() -> Value {
     for bind in &manifest().keybinds {
         let value = match &bind.default {
             AccelValue::One(text) => Value::String(text.clone()),
-            AccelValue::Many(list) => Value::Array(list.iter().cloned().map(Value::String).collect()),
+            AccelValue::Many(list) => {
+                Value::Array(list.iter().cloned().map(Value::String).collect())
+            }
         };
         map.insert(bind.id.clone(), value);
     }
@@ -207,16 +215,27 @@ pub fn keybind_defaults_value() -> Value {
 pub fn accelerators(bind: &Keybind, saved: Option<&Value>) -> Vec<String> {
     let owned = match saved {
         Some(Value::String(text)) => vec![text.clone()],
-        Some(Value::Array(items)) => items.iter().filter_map(|item| item.as_str().map(str::to_string)).collect(),
+        Some(Value::Array(items)) => items
+            .iter()
+            .filter_map(|item| item.as_str().map(str::to_string))
+            .collect(),
         _ => bind.defaults.clone(),
     };
-    owned.into_iter().map(|item| item.trim().to_string()).filter(|item| !item.is_empty()).collect()
+    owned
+        .into_iter()
+        .map(|item| item.trim().to_string())
+        .filter(|item| !item.is_empty())
+        .collect()
 }
 
 pub fn command_for(id: &str) -> Option<Command> {
     if let Some(node) = find_node(&manifest().menus, id) {
         let action = node.action.clone().unwrap_or_else(|| {
-            if node.url.is_some() { "page".into() } else { String::new() }
+            if node.url.is_some() {
+                "page".into()
+            } else {
+                String::new()
+            }
         });
         if action.is_empty() {
             return None;
@@ -226,15 +245,22 @@ pub fn command_for(id: &str) -> Option<Command> {
             target: node.id.clone().unwrap_or_else(|| id.to_string()),
         });
     }
-    manifest().keybinds.iter().find(|bind| bind.id == id).map(|bind| Command {
-        action: bind.action.clone(),
-        target: bind.id.clone(),
-    })
+    manifest()
+        .keybinds
+        .iter()
+        .find(|bind| bind.id == id)
+        .map(|bind| Command {
+            action: bind.action.clone(),
+            target: bind.id.clone(),
+        })
 }
 
 fn find_node<'a>(nodes: &'a [MenuNode], id: &str) -> Option<&'a MenuNode> {
     for node in nodes {
-        if node.id.as_deref() == Some(id) && node.kind.as_deref() != Some("separator") && node.items.is_none() {
+        if node.id.as_deref() == Some(id)
+            && node.kind.as_deref() != Some("separator")
+            && node.items.is_none()
+        {
             return Some(node);
         }
         if let Some(children) = &node.items {
@@ -258,8 +284,15 @@ pub fn page_label(lang: &str, id: &str) -> String {
 
 pub fn charpage_url(name: &str) -> String {
     let base = page_url("charpage").unwrap_or_else(|| "https://account.aq.com/CharPage".into());
-    let id: String = name.chars().filter(|ch| ch.is_ascii_alphanumeric()).collect();
-    if id.is_empty() { base } else { format!("{base}?id={id}") }
+    let id: String = name
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .collect();
+    if id.is_empty() {
+        base
+    } else {
+        format!("{base}?id={id}")
+    }
 }
 
 /// Texts of the Char Page Studio window, in the chosen language.
@@ -291,14 +324,21 @@ fn host_rules() -> &'static HashMap<String, HostRule> {
     RULES.get_or_init(|| {
         let mut map = HashMap::new();
         for page in useful_pages() {
-            let Ok(parsed) = page.url.parse::<tauri::Url>() else { continue };
-            let Some(host) = parsed.host_str() else { continue };
-            let entry = map.entry(host.to_string()).or_insert(HostRule { http: false });
+            let Ok(parsed) = page.url.parse::<tauri::Url>() else {
+                continue;
+            };
+            let Some(host) = parsed.host_str() else {
+                continue;
+            };
+            let entry = map
+                .entry(host.to_string())
+                .or_insert(HostRule { http: false });
             if parsed.scheme() == "http" {
                 entry.http = true;
             }
         }
-        map.entry("www.artix.com".into()).or_insert(HostRule { http: false });
+        map.entry("www.artix.com".into())
+            .or_insert(HostRule { http: false });
         map
     })
 }
@@ -325,7 +365,11 @@ pub fn accept_site(url: &str) -> Result<tauri::Url, String> {
 
 pub fn useful_pages() -> Vec<UsefulPage> {
     let mut pages = Vec::new();
-    let Some(root) = manifest().menus.iter().find(|node| node.id.as_deref() == Some("useful")) else {
+    let Some(root) = manifest()
+        .menus
+        .iter()
+        .find(|node| node.id.as_deref() == Some("useful"))
+    else {
         return pages;
     };
     if let Some(items) = &root.items {
@@ -344,8 +388,15 @@ fn collect_pages(nodes: &[MenuNode], group: &str, out: &mut Vec<UsefulPage>) {
             collect_pages(children, &group, out);
             continue;
         }
-        if let (Some(id), Some(url), Some(label_key)) = (node.id.clone(), node.url.clone(), node.label_key.clone()) {
-            out.push(UsefulPage { id, label_key, url, group: group.to_string() });
+        if let (Some(id), Some(url), Some(label_key)) =
+            (node.id.clone(), node.url.clone(), node.label_key.clone())
+        {
+            out.push(UsefulPage {
+                id,
+                label_key,
+                url,
+                group: group.to_string(),
+            });
         }
     }
 }
@@ -364,16 +415,21 @@ pub fn shell_pages(lang: &str) -> Value {
         if !pages_by_group.contains_key(&page.group) {
             order.push(page.group.clone());
         }
-        pages_by_group.entry(page.group.clone()).or_default().push(serde_json::json!({
-            "id": page.id,
-            "label": menu_label(lang, &page.label_key, &page.label_key),
-            "url": page.url,
-        }));
+        pages_by_group
+            .entry(page.group.clone())
+            .or_default()
+            .push(serde_json::json!({
+                "id": page.id,
+                "label": menu_label(lang, &page.label_key, &page.label_key),
+                "url": page.url,
+            }));
     }
     for group in order {
         let label = match group.as_str() {
             "top" => Value::Null,
-            "otherPages" => Value::String(menu_label(lang, "menuOtherPages2", "Other usefull Pages")),
+            "otherPages" => {
+                Value::String(menu_label(lang, "menuOtherPages2", "Other usefull Pages"))
+            }
             "socialMedia" => Value::String(menu_label(lang, "menuSocialMedia", "Social Media")),
             other => Value::String(other.to_string()),
         };
@@ -396,11 +452,21 @@ pub fn install_menu(app: &tauri::AppHandle, lang: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn append_top(app: &tauri::AppHandle, menu: &tauri::menu::Menu<tauri::Wry>, node: &MenuNode, lang: &str) -> Result<(), String> {
+fn append_top(
+    app: &tauri::AppHandle,
+    menu: &tauri::menu::Menu<tauri::Wry>,
+    node: &MenuNode,
+    lang: &str,
+) -> Result<(), String> {
     use tauri::menu::{MenuItem, Submenu};
     if let Some(children) = &node.items {
-        let submenu = Submenu::with_id(app, node.id.clone().unwrap_or_default(), node_label(lang, node), true)
-            .map_err(|err| err.to_string())?;
+        let submenu = Submenu::with_id(
+            app,
+            node.id.clone().unwrap_or_default(),
+            node_label(lang, node),
+            true,
+        )
+        .map_err(|err| err.to_string())?;
         fill_submenu(app, &submenu, children, lang)?;
         menu.append(&submenu).map_err(|err| err.to_string())?;
         return Ok(());
@@ -417,7 +483,12 @@ fn append_top(app: &tauri::AppHandle, menu: &tauri::menu::Menu<tauri::Wry>, node
     Ok(())
 }
 
-fn fill_submenu(app: &tauri::AppHandle, submenu: &tauri::menu::Submenu<tauri::Wry>, nodes: &[MenuNode], lang: &str) -> Result<(), String> {
+fn fill_submenu(
+    app: &tauri::AppHandle,
+    submenu: &tauri::menu::Submenu<tauri::Wry>,
+    nodes: &[MenuNode],
+    lang: &str,
+) -> Result<(), String> {
     use tauri::menu::{MenuItem, PredefinedMenuItem, Submenu};
     for node in nodes {
         if node.kind.as_deref() == Some("separator") {
@@ -426,8 +497,13 @@ fn fill_submenu(app: &tauri::AppHandle, submenu: &tauri::menu::Submenu<tauri::Wr
             continue;
         }
         if let Some(children) = &node.items {
-            let child = Submenu::with_id(app, node.id.clone().unwrap_or_default(), node_label(lang, node), true)
-                .map_err(|err| err.to_string())?;
+            let child = Submenu::with_id(
+                app,
+                node.id.clone().unwrap_or_default(),
+                node_label(lang, node),
+                true,
+            )
+            .map_err(|err| err.to_string())?;
             fill_submenu(app, &child, children, lang)?;
             submenu.append(&child).map_err(|err| err.to_string())?;
             continue;
@@ -447,20 +523,47 @@ fn fill_submenu(app: &tauri::AppHandle, submenu: &tauri::menu::Submenu<tauri::Wr
 
 pub fn about_dialog(lang: &str) -> Dialog {
     let cat = catalog(lang);
-    let credits = if cat.credits.is_empty() { String::new() } else { format!("\n{}", cat.credits) };
-    let detail = cat.dialog.get("aboutDetail").cloned().unwrap_or_default().replace("{pluginCredits}", &credits);
+    let credits = if cat.credits.is_empty() {
+        String::new()
+    } else {
+        format!("\n{}", cat.credits)
+    };
+    let detail = cat
+        .dialog
+        .get("aboutDetail")
+        .cloned()
+        .unwrap_or_default()
+        .replace("{pluginCredits}", &credits);
     Dialog {
-        title: format!("{}{}", cat.dialog.get("aboutTitle").map(String::as_str).unwrap_or(""), env!("CARGO_PKG_VERSION")),
+        title: format!(
+            "{}{}",
+            cat.dialog
+                .get("aboutTitle")
+                .map(String::as_str)
+                .unwrap_or(""),
+            env!("CARGO_PKG_VERSION")
+        ),
         message: cat.dialog.get("aboutMessage").cloned().unwrap_or_default(),
         detail: format!(
             "{detail}{}\n\n\n{}:\nOS   - {}\nARCH - {}\n",
             releases_url(),
-            cat.dialog.get("aboutDebug").map(String::as_str).unwrap_or(""),
+            cat.dialog
+                .get("aboutDebug")
+                .map(String::as_str)
+                .unwrap_or(""),
             electron_platform(),
             electron_arch()
         ),
-        primary: cat.dialog.get("aboutGithubPrompt").cloned().unwrap_or_default(),
-        close: cat.dialog.get("aboutClosePrompt").cloned().unwrap_or_else(|| "Close".into()),
+        primary: cat
+            .dialog
+            .get("aboutGithubPrompt")
+            .cloned()
+            .unwrap_or_default(),
+        close: cat
+            .dialog
+            .get("aboutClosePrompt")
+            .cloned()
+            .unwrap_or_else(|| "Close".into()),
     }
 }
 
@@ -472,15 +575,27 @@ pub fn help_dialog(lang: &str, current: Option<&HashMap<String, Vec<String>>>) -
             .and_then(|map| map.get(&bind.id))
             .cloned()
             .unwrap_or_else(|| bind.defaults.clone());
-        let shown = accels.iter().map(|accel| display_accel(accel)).collect::<Vec<_>>().join(", ");
+        let shown = accels
+            .iter()
+            .map(|accel| display_accel(accel))
+            .collect::<Vec<_>>()
+            .join(", ");
         lines.push(format!("{shown} - {}", bind_label(lang, &bind.id)));
     }
     Dialog {
-        title: cat.dialog.get("helpTitle").cloned().unwrap_or_else(|| "Help:".into()),
+        title: cat
+            .dialog
+            .get("helpTitle")
+            .cloned()
+            .unwrap_or_else(|| "Help:".into()),
         message: cat.dialog.get("helpMessage").cloned().unwrap_or_default(),
         detail: lines.join("\n"),
         primary: String::new(),
-        close: "Close".into(),
+        close: cat
+            .dialog
+            .get("helpClosePrompt")
+            .cloned()
+            .unwrap_or_else(|| "Close".into()),
     }
 }
 
@@ -513,19 +628,19 @@ fn find_node_by_keybind<'a>(nodes: &'a [MenuNode], id: &str) -> Option<&'a MenuN
 }
 
 fn node_keybind(node: &MenuNode) -> Option<&str> {
-    manifest().keybinds.iter().find(|bind| Some(bind.id.as_str()) == node.id.as_deref()).map(|bind| bind.id.as_str())
-        .or_else(|| {
-            // Menu ids `back` and `forward` are not the keybind ids.
-            match node.action.as_deref() {
-                Some("backward") => Some("backward"),
-                Some("forward") => Some("forward"),
-                _ => None,
-            }
-        })
+    manifest()
+        .keybinds
+        .iter()
+        .find(|bind| Some(bind.id.as_str()) == node.id.as_deref())
+        .map(|bind| bind.id.as_str())
 }
 
 fn display_accel(accel: &str) -> String {
-    let replacement = if cfg!(target_os = "macos") { "Cmd" } else { "Ctrl" };
+    let replacement = if cfg!(target_os = "macos") {
+        "Cmd"
+    } else {
+        "Ctrl"
+    };
     accel.replace("CmdOrCtrl", replacement)
 }
 
@@ -612,10 +727,14 @@ fn parse_strings(body: &str) -> HashMap<String, String> {
         if i >= bytes.len() {
             break;
         }
-        let Some((key, next)) = read_key(body, i) else { break };
+        let Some((key, next)) = read_key(body, i) else {
+            break;
+        };
         i = skip_ws_and_comments(body, next);
         if bytes.get(i) == Some(&b'(') {
-            let Some(end) = skip_method(body, i) else { break };
+            let Some(end) = skip_method(body, i) else {
+                break;
+            };
             i = skip_ws_and_comments(body, end);
             if bytes.get(i) == Some(&b',') {
                 i += 1;
@@ -627,12 +746,16 @@ fn parse_strings(body: &str) -> HashMap<String, String> {
         }
         i = skip_ws_and_comments(body, i + 1);
         if bytes.get(i) == Some(&b'"') || bytes.get(i) == Some(&b'\'') {
-            let Some(end) = end_string(body, i) else { break };
+            let Some(end) = end_string(body, i) else {
+                break;
+            };
             let raw = &body[i + 1..end - 1];
             map.insert(key, unescape(raw));
             i = end;
         } else {
-            let Some(end) = skip_value(body, i) else { break };
+            let Some(end) = skip_value(body, i) else {
+                break;
+            };
             i = end;
         }
         i = skip_ws_and_comments(body, i);
@@ -887,18 +1010,65 @@ mod tests {
         assert!(about.detail.contains("133spider (AQLite)"));
         assert!(about.detail.contains(releases_url()));
         assert_eq!(charpage_url(""), "https://account.aq.com/CharPage");
-        assert_eq!(charpage_url("Yulgar!"), "https://account.aq.com/CharPage?id=Yulgar");
+        assert_eq!(
+            charpage_url("Yulgar!"),
+            "https://account.aq.com/CharPage?id=Yulgar"
+        );
+    }
+
+    #[test]
+    fn obsolete_web_shortcuts_are_removed_but_game_launches_and_wiki_remain() {
+        let bindings = keybinds();
+        let ids: Vec<&str> = bindings.iter().map(|bind| bind.id.as_str()).collect();
+        for removed in [
+            "about",
+            "fullscreen",
+            "forward",
+            "backward",
+            "reload",
+            "reloadCache",
+        ] {
+            assert!(!ids.contains(&removed), "{removed} still has a shortcut");
+        }
+        assert!(bindings
+            .iter()
+            .any(|bind| bind.id == "help" && bind.defaults == ["Alt+H"]));
+        assert!(bindings
+            .iter()
+            .any(|bind| bind.id == "wiki" && bind.defaults == ["Alt+W"]));
+        assert!(bindings
+            .iter()
+            .any(|bind| bind.id == "newAqw" && bind.defaults == ["Alt+N"]));
+        assert!(bindings.iter().any(|bind| bind.id == "dragon"));
+        for removed in ["back", "forward", "reload", "reloadCache", "about"] {
+            assert!(
+                find_node(&manifest().menus, removed).is_none(),
+                "{removed} remains in the menu"
+            );
+        }
+        assert!(find_node(&manifest().menus, "help").is_some());
+        assert!(find_node(&manifest().menus, "fullscreen").is_some());
+    }
+
+    #[test]
+    fn help_close_button_uses_the_selected_locale() {
+        assert_eq!(help_dialog("en-US", None).close, "Close");
+        assert_eq!(help_dialog("pt-BR", None).close, "Fechar");
     }
 
     #[test]
     fn package_does_not_restore_character_page_printing() {
-        let needles = [
-            format!("{}{}", "Alt+", "K"),
-            format!("{}{}", "cp", "Sshot"),
-        ];
+        let needles = [format!("{}{}", "Alt+", "K"), format!("{}{}", "cp", "Sshot")];
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
         let mut files = Vec::new();
-        for rel in ["src", "../ui", "games", "permissions", "capabilities", "assets"] {
+        for rel in [
+            "src",
+            "../ui",
+            "games",
+            "permissions",
+            "capabilities",
+            "assets",
+        ] {
             collect_files(&root.join(rel), &mut files);
         }
         files.push(root.join("Cargo.toml"));
@@ -906,21 +1076,25 @@ mod tests {
         for path in &files {
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
             let _ = name;
-            let Ok(bytes) = std::fs::read(path) else { continue };
-            let Ok(text) = String::from_utf8(bytes) else { continue };
+            let Ok(bytes) = std::fs::read(path) else {
+                continue;
+            };
+            let Ok(text) = String::from_utf8(bytes) else {
+                continue;
+            };
             for needle in &needles {
-                assert!(!text.contains(needle), "{} contains {needle}", path.display());
+                assert!(
+                    !text.contains(needle),
+                    "{} contains {needle}",
+                    path.display()
+                );
             }
         }
-        let banned_ids = [
-            format!("{}{}", "cp", "Sshot"),
-
-        ];
+        let banned_ids = [format!("{}{}", "cp", "Sshot")];
         let banned_accel = format!("{}{}", "Alt+", "K");
         for bind in keybinds() {
             assert!(!banned_ids.iter().any(|id| id == &bind.id), "{}", bind.id);
             assert!(!bind.defaults.iter().any(|accel| accel == &banned_accel));
-
         }
         let help = help_dialog("en-US", None);
         for needle in &needles {
@@ -939,7 +1113,9 @@ mod tests {
             out.push(path.to_path_buf());
             return;
         }
-        let Ok(entries) = std::fs::read_dir(path) else { return };
+        let Ok(entries) = std::fs::read_dir(path) else {
+            return;
+        };
         for entry in entries.flatten() {
             collect_files(&entry.path(), out);
         }

@@ -1,31 +1,33 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod account_sync;
 mod ads;
 mod capture;
-#[cfg(target_os = "linux")]
-mod portal_identity;
 mod cli;
-mod account_sync;
 mod extensions;
+#[cfg(target_os = "linux")]
+mod fonts;
+mod hyprland_shortcuts;
 mod inventory;
 mod launcher;
 mod manifest;
 mod menu_visibility;
-#[cfg(target_os = "linux")]
-mod fonts;
 mod placement;
 mod players;
+#[cfg(target_os = "linux")]
+mod portal_identity;
 mod profile;
+mod ruffle;
 mod startup;
 mod studio;
-mod ruffle;
 
 use std::path::Path;
+#[cfg(target_os = "linux")]
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::Mutex;
-#[cfg(target_os = "linux")]
-use std::path::PathBuf;
+use std::time::Instant;
 
 use players::Engine;
 use players::MovieKind;
@@ -45,10 +47,10 @@ impl RestartAdmission {
     ) -> Result<RestartAdmissionGuard, String> {
         let mut active = self.0.lock().unwrap_or_else(|e| e.into_inner());
         if *active {
-            return Err("A Ruffle restart is already in progress.".into());
+            return Err("A player restart is already in progress.".into());
         }
         if capture.active() {
-            return Err("Stop the active recording before restarting Ruffle.".into());
+            return Err("Stop the active recording before restarting the game.".into());
         }
         *active = true;
         Ok(RestartAdmissionGuard(self.0.clone()))
@@ -60,7 +62,7 @@ impl RestartAdmission {
     ) -> Result<T, String> {
         let active = self.0.lock().unwrap_or_else(|e| e.into_inner());
         if *active {
-            return Err("A Ruffle restart is in progress.".into());
+            return Err("A player restart is in progress.".into());
         }
         start()
     }
@@ -85,24 +87,101 @@ fn hide_launcher_enabled(app: &tauri::AppHandle) -> bool {
         .unwrap_or(false)
 }
 
+#[derive(Default)]
+struct HideLauncherTrace {
+    hide: bool,
+    config_dir_ms: f64,
+    persistence_ms: f64,
+    sync_ms: f64,
+    shortcut_total_ms: f64,
+    shortcut_cleanup_ms: f64,
+    capture_shortcut_sync_ms: f64,
+    wayland_shortcut_sync_ms: f64,
+    profile_merge_ms: f64,
+    native_registration_ms: f64,
+    sync_outcome: &'static str,
+}
+
+impl HideLauncherTrace {
+    fn log(&self, total: Instant) {
+        let trace = serde_json::json!({
+            "hide": self.hide,
+            "total_ms": total.elapsed().as_secs_f64() * 1000.0,
+            "config_dir_ms": self.config_dir_ms,
+            "persistence_ms": self.persistence_ms,
+            "sync_ms": self.sync_ms,
+            "shortcut_total_ms": self.shortcut_total_ms,
+            "shortcut_cleanup_ms": self.shortcut_cleanup_ms,
+            "capture_shortcut_sync_ms": self.capture_shortcut_sync_ms,
+            "wayland_shortcut_sync_ms": self.wayland_shortcut_sync_ms,
+            "profile_merge_ms": self.profile_merge_ms,
+            "native_registration_ms": self.native_registration_ms,
+            "sync_outcome": self.sync_outcome,
+        });
+        eprintln!("[hide-launcher-trace] {trace}");
+    }
+}
+
+fn hide_launcher_trace_enabled() -> bool {
+    matches!(
+        std::env::var("AQUASTAR_TRACE_HIDE_LAUNCHER").as_deref(),
+        Ok("1")
+    )
+}
+
 fn sync_launcher(app: &tauri::AppHandle) {
+    sync_launcher_inner(app, None, true);
+}
+
+fn sync_launcher_visibility(app: &tauri::AppHandle) {
+    sync_launcher_inner(app, None, false);
+}
+
+fn sync_launcher_for_hide_setting(app: &tauri::AppHandle, trace: &mut HideLauncherTrace) {
+    let started = Instant::now();
+    // This setting only changes launcher visibility. Re-registering every native
+    // shortcut here can take seconds on Linux and does not affect the preference.
+    sync_launcher_inner(app, Some(trace), false);
+    trace.sync_ms = started.elapsed().as_secs_f64() * 1000.0;
+}
+
+fn sync_launcher_inner(
+    app: &tauri::AppHandle,
+    trace: Option<&mut HideLauncherTrace>,
+    register_shortcuts: bool,
+) {
+    let mut trace = trace;
     let presence = app.state::<Players>().current_presence();
     if presence == players::Presence::Idle && app.state::<RestartAdmission>().active() {
+        if let Some(trace) = trace.as_deref_mut() {
+            trace.sync_outcome = "restart-suppressed";
+        }
         return;
     }
     if presence == players::Presence::Idle && app.state::<capture::CaptureState>().active() {
+        if let Some(trace) = trace.as_deref_mut() {
+            trace.sync_outcome = "capture-suppressed";
+        }
         return;
     }
     // Started straight into a game: there is no launcher to bring back, so AquaStar ends
     // with the game.
     if app.state::<startup::StartupState>().is_direct() {
-        register_saved_shortcuts(app);
+        if register_shortcuts {
+            register_shortcuts_for_sync(app, &mut trace);
+        }
+        if let Some(trace) = trace.as_deref_mut() {
+            trace.sync_outcome = "direct-start";
+        }
         if presence == players::Presence::Idle {
             app.exit(0);
         }
         return;
     }
     let Some(window) = app.get_webview_window("main") else {
+        if let Some(trace) = trace.as_deref_mut() {
+            trace.sync_outcome = "no-main-window";
+        }
         return;
     };
     match (presence, hide_launcher_enabled(app)) {
@@ -121,7 +200,20 @@ fn sync_launcher(app: &tauri::AppHandle) {
         }
         (players::Presence::Idle, false) => {}
     }
-    register_saved_shortcuts(app);
+    if register_shortcuts {
+        register_shortcuts_for_sync(app, &mut trace);
+    }
+    if let Some(trace) = trace.as_deref_mut() {
+        trace.sync_outcome = "launcher-window";
+    }
+}
+
+fn register_shortcuts_for_sync(app: &tauri::AppHandle, trace: &mut Option<&mut HideLauncherTrace>) {
+    if let Some(trace) = trace.as_deref_mut() {
+        register_saved_shortcuts_with_trace(app, trace);
+    } else {
+        register_saved_shortcuts(app);
+    }
 }
 
 #[derive(Serialize)]
@@ -150,14 +242,32 @@ fn launcher_settings(app: tauri::AppHandle) -> Result<LauncherSettings, String> 
 
 #[tauri::command]
 fn set_hide_launcher(app: tauri::AppHandle, hide: bool) -> Result<LauncherSettings, String> {
+    let trace_enabled = hide_launcher_trace_enabled();
+    let total_started = Instant::now();
+    let mut trace = HideLauncherTrace {
+        hide,
+        ..HideLauncherTrace::default()
+    };
+    let phase_started = Instant::now();
     let dir = config_dir(&app)?;
+    trace.config_dir_ms = phase_started.elapsed().as_secs_f64() * 1000.0;
+    let phase_started = Instant::now();
     ruffle::save_hide_launcher(&dir, hide)?;
-    if hide { app.state::<startup::StartupState>().game_launching(); }
-    sync_launcher(&app);
+    trace.persistence_ms = phase_started.elapsed().as_secs_f64() * 1000.0;
+    if hide {
+        app.state::<startup::StartupState>().game_launching();
+    }
+    if trace_enabled {
+        sync_launcher_for_hide_setting(&app, &mut trace);
+        trace.log(total_started);
+    } else {
+        sync_launcher_visibility(&app);
+    }
     Ok(LauncherSettings {
         hide_launcher: hide,
         show_menu_bar: app.state::<menu_visibility::Visibility>().get(),
-        menu_bar_supported: !cfg!(target_os = "macos"),    })
+        menu_bar_supported: !cfg!(target_os = "macos"),
+    })
 }
 
 #[tauri::command]
@@ -210,17 +320,34 @@ async fn game_launch_with_visibility(
     let restore_on_error = if hide_launcher_enabled(app) {
         if let Some(window) = app.get_webview_window("main") {
             let visible = window.is_visible().unwrap_or(false);
-            if visible { let _ = window.hide(); }
+            if visible {
+                let _ = window.hide();
+            }
             visible
-        } else { false }
-    } else { false };
+        } else {
+            false
+        }
+    } else {
+        false
+    };
     let result = launch.await;
-    if result.is_err() && restore_on_error { startup::show_main(app); }
+    if result.is_err() && restore_on_error {
+        startup::show_main(app);
+    }
     result
 }
 
 #[tauri::command]
 async fn play(app: tauri::AppHandle, engine: Engine, movie: MovieKind) -> Result<String, String> {
+    play_movie_with_mode(app, engine, movie, false).await
+}
+
+async fn play_movie_with_mode(
+    app: tauri::AppHandle,
+    engine: Engine,
+    movie: MovieKind,
+    new_instance: bool,
+) -> Result<String, String> {
     let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let resource_dir = app.path().resource_dir().ok();
     let exe_dir = std::env::current_exe()
@@ -234,24 +361,61 @@ async fn play(app: tauri::AppHandle, engine: Engine, movie: MovieKind) -> Result
     let players = app.state::<Players>().inner().clone();
     game_launch_with_visibility(&app, async move {
         tauri::async_runtime::spawn_blocking(move || {
-            players.launch_movie(&roots, engine, &profile, movie, &settings, saves.as_deref())
+            if new_instance {
+                players.launch_movie_instance(
+                    &roots,
+                    engine,
+                    &profile,
+                    movie,
+                    &settings,
+                    saves.as_deref(),
+                )
+            } else {
+                players.launch_movie(&roots, engine, &profile, movie, &settings, saves.as_deref())
+            }
         })
         .await
         .map_err(|e| e.to_string())?
-    }).await
+    })
+    .await
+}
+
+fn new_instance_engine() -> Result<Engine, String> {
+    let configured = profile::setting_str(&profile::live_files(), "newInstanceEngine");
+    let engine = match configured.as_str() {
+        "" | "automatic" => Engine::preferred(),
+        other => Engine::from_id(other),
+    }
+    .ok_or_else(|| "No game player is available on this system.".to_string())?;
+    if !engine.supported() {
+        return Err(format!(
+            "{} is not available on this system. Choose another player in Preferences.",
+            engine.id()
+        ));
+    }
+    Ok(engine)
 }
 
 #[tauri::command]
 async fn restart_ruffle(app: tauri::AppHandle) -> Result<String, String> {
+    restart_player(app, Engine::Ruffle).await
+}
+
+#[tauri::command]
+async fn restart_flash(app: tauri::AppHandle) -> Result<String, String> {
+    restart_player(app, Engine::Flash).await
+}
+
+async fn restart_player(app: tauri::AppHandle, engine: Engine) -> Result<String, String> {
     let admission = app.state::<RestartAdmission>().inner().clone();
     let capture = app.state::<capture::CaptureState>().inner().clone();
     let _guard = admission.try_restart(&capture)?;
     let players = app.state::<Players>().inner().clone();
-    let result = if !players.has_live_ruffle() {
-        Err("No active Ruffle game to restart".into())
+    let result = if !players.has_live(engine) {
+        Err(format!("No active {engine:?} game to restart"))
     } else {
         game_launch_with_visibility(&app, async move {
-            tauri::async_runtime::spawn_blocking(move || players.restart_ruffle())
+            tauri::async_runtime::spawn_blocking(move || players.restart(engine))
                 .await
                 .map_err(|error| error.to_string())?
         })
@@ -265,18 +429,29 @@ async fn restart_ruffle(app: tauri::AppHandle) -> Result<String, String> {
     result
 }
 
-async fn play_extension(app: tauri::AppHandle, source: String, engine: Engine) -> Result<String, String> {
+async fn play_extension(
+    app: tauri::AppHandle,
+    source: String,
+    engine: Engine,
+) -> Result<String, String> {
     let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let resource_dir = app.path().resource_dir().ok();
-    let exe_dir = std::env::current_exe().ok().and_then(|path|path.parent().map(Path::to_path_buf));
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(Path::to_path_buf));
     let placement = app.state::<placement::Placement>().inner().clone();
-    let roots = placement.player_roots(&app_data,resource_dir.as_deref(),exe_dir.as_deref());
+    let roots = placement.player_roots(&app_data, resource_dir.as_deref(), exe_dir.as_deref());
     let settings = load_ruffle_settings(&app);
     let saves = placement.ruffle_save_directory().map(Path::to_path_buf);
     let players = app.state::<Players>().inner().clone();
     game_launch_with_visibility(&app, async move {
-        tauri::async_runtime::spawn_blocking(move || players.launch_source(&roots,engine,&source,&settings,saves.as_deref())).await.map_err(|e|e.to_string())?
-    }).await
+        tauri::async_runtime::spawn_blocking(move || {
+            players.launch_source(&roots, engine, &source, &settings, saves.as_deref())
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    })
+    .await
 }
 
 #[tauri::command]
@@ -339,12 +514,16 @@ fn open_tool_window(app: &tauri::AppHandle, name: &str) -> Result<(), String> {
         let _ = window.set_focus();
         return Ok(());
     }
-    WebviewWindowBuilder::new(app, name, WebviewUrl::App(profile::feature_page(name).into()))
-        .title(title)
-        .inner_size(width, height)
-        .build()
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+    WebviewWindowBuilder::new(
+        app,
+        name,
+        WebviewUrl::App(profile::feature_page(name).into()),
+    )
+    .title(title)
+    .inner_size(width, height)
+    .build()
+    .map(|_| ())
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -353,8 +532,25 @@ fn get_profile_preferences() -> Result<profile::ProfilePreferences, String> {
 }
 
 #[tauri::command]
-fn change_profile_preference(change: profile::ProfilePreferenceChange) -> Result<profile::ProfilePreferences, String> {
+fn change_profile_preference(
+    change: profile::ProfilePreferenceChange,
+) -> Result<profile::ProfilePreferences, String> {
     profile::change_profile_preference(&profile::live_files(), change)
+}
+
+#[tauri::command]
+fn get_hyprland_shortcut_setup() -> hyprland_shortcuts::SetupStatus {
+    hyprland_shortcuts::status()
+}
+
+#[tauri::command]
+fn setup_hyprland_shortcuts() -> Result<hyprland_shortcuts::SetupStatus, String> {
+    hyprland_shortcuts::install()
+}
+
+#[tauri::command]
+fn remove_hyprland_shortcuts() -> Result<hyprland_shortcuts::SetupStatus, String> {
+    hyprland_shortcuts::remove()
 }
 
 #[tauri::command]
@@ -468,7 +664,6 @@ fn get_inventory_item_counts(names: Option<Vec<String>>) -> serde_json::Value {
     inventory::item_counts(&profile::live_files(), names.as_deref().unwrap_or(&[]))
 }
 
-
 #[tauri::command]
 fn get_inventory() -> serde_json::Value {
     inventory::document(&profile::live_files())
@@ -500,7 +695,13 @@ async fn open_account_for_sync(app: tauri::AppHandle) -> Result<(), String> {
         window.show().map_err(|error| error.to_string())?;
         return window.set_focus().map_err(|error| error.to_string());
     }
-    open_site(app, "account".into(), "https://account.aq.com/".into(), Some("AQW Account".into())).await
+    open_site(
+        app,
+        "account".into(),
+        "https://account.aq.com/".into(),
+        Some("AQW Account".into()),
+    )
+    .await
 }
 
 #[tauri::command]
@@ -533,13 +734,23 @@ async fn open_inventory_item_wiki(app: tauri::AppHandle, item_name: String) -> R
     if slug.is_empty() {
         return Err("bad item".into());
     }
-    open_site(app, "wiki".into(), format!("https://aqwwiki.wikidot.com/{slug}"), None).await
+    open_site(
+        app,
+        "wiki".into(),
+        format!("https://aqwwiki.wikidot.com/{slug}"),
+        None,
+    )
+    .await
 }
 
 struct TimerShortcut(std::sync::Mutex<Option<tauri_plugin_global_shortcut::Shortcut>>);
-struct ShortcutBook(std::sync::Mutex<std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String>>);
+struct ShortcutBook(
+    std::sync::Mutex<std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String>>,
+);
 
-pub(crate) fn shortcut_from(accel: &profile::Accelerator) -> Option<tauri_plugin_global_shortcut::Shortcut> {
+pub(crate) fn shortcut_from(
+    accel: &profile::Accelerator,
+) -> Option<tauri_plugin_global_shortcut::Shortcut> {
     use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
     let mut mods = Modifiers::empty();
     if accel.alt {
@@ -555,7 +766,11 @@ pub(crate) fn shortcut_from(accel: &profile::Accelerator) -> Option<tauri_plugin
         mods |= Modifiers::SUPER;
     }
     if accel.command_or_control {
-        mods |= if cfg!(target_os = "macos") { Modifiers::META } else { Modifiers::CONTROL };
+        mods |= if cfg!(target_os = "macos") {
+            Modifiers::META
+        } else {
+            Modifiers::CONTROL
+        };
     }
     let key = accel.key.as_str();
     let code = if key.len() == 1 && key.chars().next().unwrap().is_ascii_alphabetic() {
@@ -618,7 +833,12 @@ fn clear_strategy_timer_shortcut(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
-async fn open_site(app: tauri::AppHandle, label: String, url: String, title: Option<String>) -> Result<(), String> {
+async fn open_site(
+    app: tauri::AppHandle,
+    label: String,
+    url: String,
+    title: Option<String>,
+) -> Result<(), String> {
     let parsed = allowed_site(&url)?;
     let title = title.unwrap_or_else(|| label.clone());
     if let Some(w) = app.get_webview_window(&label) {
@@ -742,6 +962,25 @@ async fn open_project_page(app: tauri::AppHandle) -> Result<(), String> {
     open_site(app, "project".into(), url, Some(title)).await
 }
 
+#[tauri::command]
+fn show_about(app: tauri::AppHandle) {
+    open_dialog(
+        &app,
+        "about",
+        manifest::about_dialog(current_language().as_str()),
+        520.0,
+        420.0,
+    );
+}
+
+#[tauri::command]
+fn close_dialog(window: tauri::WebviewWindow) -> Result<(), String> {
+    match window.label() {
+        "about" | "help" => window.close().map_err(|error| error.to_string()),
+        _ => Err("This window cannot be closed with the dialog action.".into()),
+    }
+}
+
 fn current_language() -> String {
     let files = profile::live_files();
     manifest::resolve_language(&profile::setting_str(&files, "appLanguage")).to_string()
@@ -754,7 +993,13 @@ fn focused_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
         .or_else(|| app.get_webview_window("main"))
 }
 
-fn open_dialog(app: &tauri::AppHandle, label: &str, dialog: manifest::Dialog, width: f64, height: f64) {
+fn open_dialog(
+    app: &tauri::AppHandle,
+    label: &str,
+    dialog: manifest::Dialog,
+    width: f64,
+    height: f64,
+) {
     if let Some(window) = app.get_webview_window(label) {
         let _ = window.set_focus();
         return;
@@ -765,54 +1010,48 @@ fn open_dialog(app: &tauri::AppHandle, label: &str, dialog: manifest::Dialog, wi
     );
     let (app, label) = (app.clone(), label.to_string());
     tauri::async_runtime::spawn(async move {
-        let _ = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(profile::feature_page(&label).into()))
-            .title(dialog.title)
-            .inner_size(width, height)
-            .initialization_script(script)
-            .build();
+        let _ = WebviewWindowBuilder::new(
+            &app,
+            &label,
+            WebviewUrl::App(profile::feature_page(&label).into()),
+        )
+        .title(dialog.title)
+        .inner_size(width, height)
+        .initialization_script(script)
+        .build();
     });
 }
 
 fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
-    if extensions::dispatch_action(app, id) { return; }
+    if extensions::dispatch_action(app, id) {
+        return;
+    }
     let Some(command) = manifest::command_for(id) else {
         return;
     };
     match command.action.as_str() {
-        "about" => open_dialog(app, "about", manifest::about_dialog(current_language().as_str()), 520.0, 420.0),
         "help" => {
             let files = profile::live_files();
             let merged = profile::merged_settings(&files);
             let mut current = std::collections::HashMap::new();
             for bind in manifest::keybinds() {
-                current.insert(bind.id.clone(), manifest::accelerators(&bind, merged.get(&bind.id)));
+                current.insert(
+                    bind.id.clone(),
+                    manifest::accelerators(&bind, merged.get(&bind.id)),
+                );
             }
-            open_dialog(app, "help", manifest::help_dialog(current_language().as_str(), Some(&current)), 560.0, 480.0);
+            open_dialog(
+                app,
+                "help",
+                manifest::help_dialog(current_language().as_str(), Some(&current)),
+                560.0,
+                480.0,
+            );
         }
         "fullscreen" => {
             if let Some(window) = focused_window(app) {
                 let next = !window.is_fullscreen().unwrap_or(false);
                 let _ = window.set_fullscreen(next);
-            }
-        }
-        "reload" => {
-            if let Some(window) = focused_window(app) {
-                let _ = window.eval("location.reload()");
-            }
-        }
-        "reload-cache" => {
-            if let Some(window) = focused_window(app) {
-                let _ = window.eval("location.reload(true)");
-            }
-        }
-        "forward" => {
-            if let Some(window) = focused_window(app) {
-                let _ = window.eval("history.forward()");
-            }
-        }
-        "backward" => {
-            if let Some(window) = focused_window(app) {
-                let _ = window.eval("history.back()");
             }
         }
         "settings" => {
@@ -841,7 +1080,9 @@ fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
         }
         "capture" => {
             let app = app.clone();
-            tauri::async_runtime::spawn(async move { capture::open_controls(&app).await; });
+            tauri::async_runtime::spawn(async move {
+                capture::open_controls(&app).await;
+            });
         }
         "sshot" => {
             let app = app.clone();
@@ -853,7 +1094,9 @@ fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
         }
         "record" => {
             let app = app.clone();
-            tauri::async_runtime::spawn(async move { capture::toggle(app).await; });
+            tauri::async_runtime::spawn(async move {
+                capture::toggle(app).await;
+            });
         }
         "play-primary" => spawn_play(app, MovieKind::Primary),
         "play-dragonfable" => spawn_play(app, MovieKind::DragonFable),
@@ -864,26 +1107,87 @@ fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
 fn spawn_play(app: &tauri::AppHandle, movie: MovieKind) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-        let engine = Engine::preferred().unwrap_or(Engine::Ruffle);
-        let _ = play(app, engine, movie).await;
+        match new_instance_engine() {
+            Ok(engine) => {
+                if let Err(error) = play_movie_with_mode(app, engine, movie, true).await {
+                    eprintln!(
+                        "aquastar-lite: could not open new {:?} instance: {error}",
+                        movie
+                    );
+                }
+            }
+            Err(error) => {
+                eprintln!("aquastar-lite: could not choose a player for a new instance: {error}")
+            }
+        }
     });
 }
 
 fn register_saved_shortcuts(app: &tauri::AppHandle) {
+    register_saved_shortcuts_inner(app, None);
+}
+
+fn register_saved_shortcuts_with_trace(app: &tauri::AppHandle, trace: &mut HideLauncherTrace) {
+    register_saved_shortcuts_inner(app, Some(trace));
+}
+
+fn register_saved_shortcuts_inner(app: &tauri::AppHandle, trace: Option<&mut HideLauncherTrace>) {
     use tauri_plugin_global_shortcut::GlobalShortcutExt;
-    let old = std::mem::take(&mut *app.state::<ShortcutBook>().0.lock().unwrap_or_else(|e|e.into_inner()));
-    for shortcut in old.keys() { let _=app.global_shortcut().unregister(*shortcut); }
+    let mut trace = trace;
+    let total_started = trace.as_ref().map(|_| Instant::now());
+    let phase_started = trace.as_ref().map(|_| Instant::now());
+    let old = std::mem::take(
+        &mut *app
+            .state::<ShortcutBook>()
+            .0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()),
+    );
+    for shortcut in old.keys() {
+        let _ = app.global_shortcut().unregister(*shortcut);
+    }
+    if let (Some(trace), Some(started)) = (trace.as_deref_mut(), phase_started) {
+        trace.shortcut_cleanup_ms = started.elapsed().as_secs_f64() * 1000.0;
+    }
+    let phase_started = trace.as_ref().map(|_| Instant::now());
     capture::sync_shortcuts(app);
+    if let (Some(trace), Some(started)) = (trace.as_deref_mut(), phase_started) {
+        trace.capture_shortcut_sync_ms = started.elapsed().as_secs_f64() * 1000.0;
+    }
     #[cfg(target_os = "linux")]
-    capture::wayland_shortcuts::sync(app);
+    {
+        let phase_started = trace.as_ref().map(|_| Instant::now());
+        capture::wayland_shortcuts::sync(app);
+        if let (Some(trace), Some(started)) = (trace.as_deref_mut(), phase_started) {
+            trace.wayland_shortcut_sync_ms = started.elapsed().as_secs_f64() * 1000.0;
+        }
+    }
     let running = !app.state::<Players>().capture_pids().is_empty();
+    let phase_started = trace.as_ref().map(|_| Instant::now());
     let merged = profile::merged_settings(&profile::live_files());
+    if let (Some(trace), Some(started)) = (trace.as_deref_mut(), phase_started) {
+        trace.profile_merge_ms = started.elapsed().as_secs_f64() * 1000.0;
+    }
     let mut map = std::collections::HashMap::new();
+    let phase_started = trace.as_ref().map(|_| Instant::now());
     for bind in manifest::keybinds() {
-        if matches!(bind.id.as_str(), "sshot" | "record") && (!running || capture::gnome_shortcuts_enabled(app) || capture::is_wayland()) { continue; }
+        #[cfg(target_os = "linux")]
+        if capture::is_wayland() {
+            // The global-shortcut plugin currently speaks X11 on Linux. The
+            // Wayland portal owns these bindings while a game process is live.
+            continue;
+        }
+        if matches!(bind.id.as_str(), "sshot" | "record")
+            && (!running || capture::gnome_shortcuts_enabled(app) || capture::is_wayland())
+        {
+            continue;
+        }
         for accel in manifest::accelerators(&bind, merged.get(&bind.id)) {
             let Some(parsed) = profile::parse_accelerator(&accel) else {
-                eprintln!("aquastar-lite: skipping invalid shortcut {accel} for {}", bind.id);
+                eprintln!(
+                    "aquastar-lite: skipping invalid shortcut {accel} for {}",
+                    bind.id
+                );
                 continue;
             };
             let Some(shortcut) = shortcut_from(&parsed) else {
@@ -895,12 +1199,24 @@ fn register_saved_shortcuts(app: &tauri::AppHandle) {
                     map.insert(shortcut, bind.id.clone());
                 }
                 Err(err) => {
-                    eprintln!("aquastar-lite: shortcut {accel} for {} was not registered ({err})", bind.id);
+                    eprintln!(
+                        "aquastar-lite: shortcut {accel} for {} was not registered ({err})",
+                        bind.id
+                    );
                 }
             }
         }
     }
-    *app.state::<ShortcutBook>().0.lock().unwrap_or_else(|err| err.into_inner()) = map;
+    if let (Some(trace), Some(started)) = (trace.as_deref_mut(), phase_started) {
+        trace.native_registration_ms = started.elapsed().as_secs_f64() * 1000.0;
+    }
+    *app.state::<ShortcutBook>()
+        .0
+        .lock()
+        .unwrap_or_else(|err| err.into_inner()) = map;
+    if let (Some(trace), Some(started)) = (trace.as_deref_mut(), total_started) {
+        trace.shortcut_total_ms = started.elapsed().as_secs_f64() * 1000.0;
+    }
 }
 
 fn schedule_inventory_sync(app: tauri::AppHandle) {
@@ -908,7 +1224,9 @@ fn schedule_inventory_sync(app: tauri::AppHandle) {
         std::thread::sleep(std::time::Duration::from_secs(30));
         loop {
             let files = profile::live_files();
-            if inventory::auto_sync_enabled(&files) && inventory::auto_sync_due(&files.inventory, chrono::Utc::now().timestamp_millis()) {
+            if inventory::auto_sync_enabled(&files)
+                && inventory::auto_sync_due(&files.inventory, chrono::Utc::now().timestamp_millis())
+            {
                 let _ = account_sync::sync_blocking(&app, &files.inventory, None);
             }
             std::thread::sleep(std::time::Duration::from_secs(2 * 60 * 60));
@@ -963,14 +1281,22 @@ fn main() {
     // Going straight into a game: keep the launcher window from ever appearing.
     let args: Vec<String> = std::env::args().skip(1).collect();
     let has_saved_startup = ruffle::load_startup(&placement::launcher_config_dir()).is_some();
-    if cli::capture_action(&args).is_some() || startup::probably_direct(&cli::parse(&args), has_saved_startup) {
+    if cli::capture_action(&args).is_some()
+        || startup::probably_direct(&cli::parse(&args), has_saved_startup)
+    {
         if let Some(window) = context.config_mut().app.windows.first_mut() {
             window.visible = false;
         }
     }
     let extension_root = match &placement {
-        placement::Placement::Portable(_) => std::env::current_exe().unwrap().parent().unwrap().join("data"),
-        placement::Placement::Installed => dirs::data_dir().expect("Application data directory").join(context.config().identifier.clone()),
+        placement::Placement::Portable(_) => std::env::current_exe()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("data"),
+        placement::Placement::Installed => dirs::data_dir()
+            .expect("Application data directory")
+            .join(context.config().identifier.clone()),
     };
     let extension_state = extensions::Extensions::load(extension_root);
     let extension_sources = extension_state.sources();
@@ -993,29 +1319,35 @@ fn main() {
                 startup::show_main(app);
             }
         }))
-        .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app, shortcut, event| {
-            if event.state != tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                return;
-            }
-            let timer = app.state::<TimerShortcut>();
-            let slot = timer.0.lock().unwrap_or_else(|err| err.into_inner());
-            if slot.as_ref() == Some(shortcut) {
-                drop(slot);
-                if let Some(window) = app.get_webview_window("strategy") {
-                    let _ = window.eval("window.__aquastarTimerToggle&&window.__aquastarTimerToggle()");
-                }
-                return;
-            }
-            drop(slot);
-            let id = {
-                let book = app.state::<ShortcutBook>();
-                let map = book.0.lock().unwrap_or_else(|err| err.into_inner());
-                map.get(shortcut).cloned()
-            };
-            if let Some(id) = id {
-                dispatch(app, &id, false);
-            }
-        }).build())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, shortcut, event| {
+                    if event.state != tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        return;
+                    }
+                    let timer = app.state::<TimerShortcut>();
+                    let slot = timer.0.lock().unwrap_or_else(|err| err.into_inner());
+                    if slot.as_ref() == Some(shortcut) {
+                        drop(slot);
+                        if let Some(window) = app.get_webview_window("strategy") {
+                            let _ = window.eval(
+                                "window.__aquastarTimerToggle&&window.__aquastarTimerToggle()",
+                            );
+                        }
+                        return;
+                    }
+                    drop(slot);
+                    let id = {
+                        let book = app.state::<ShortcutBook>();
+                        let map = book.0.lock().unwrap_or_else(|err| err.into_inner());
+                        map.get(shortcut).cloned()
+                    };
+                    if let Some(id) = id {
+                        dispatch(app, &id, false);
+                    }
+                })
+                .build(),
+        )
         .manage(placement)
         .manage(Players::default())
         .manage(startup::StartupState::default())
@@ -1023,7 +1355,9 @@ fn main() {
         .manage(capture::CaptureState::default())
         .manage(RestartAdmission::default())
         .manage(TimerShortcut(std::sync::Mutex::new(None)))
-        .manage(ShortcutBook(std::sync::Mutex::new(std::collections::HashMap::new())))
+        .manage(ShortcutBook(std::sync::Mutex::new(
+            std::collections::HashMap::new(),
+        )))
         .invoke_handler(tauri::generate_handler![
             capture::capture_show,
             capture::capture_info,
@@ -1036,6 +1370,7 @@ fn main() {
             capture::capture_stop,
             play,
             restart_ruffle,
+            restart_flash,
             launcher::launcher_model,
             launcher::play_game,
             launcher::launcher_search,
@@ -1058,10 +1393,14 @@ fn main() {
             open_tool,
             get_profile_preferences,
             change_profile_preference,
+            get_hyprland_shortcut_setup,
+            setup_hyprland_shortcuts,
+            remove_hyprland_shortcuts,
             get_custom_swf_status,
             choose_custom_swf,
             remove_custom_swf,
             restart_app,
+            show_about,
             get_reminders,
             get_reminders_messages,
             save_reminders,
@@ -1092,7 +1431,8 @@ fn main() {
             set_show_menu_bar,
             set_hide_launcher,
             get_shell_pages,
-            open_project_page
+            open_project_page,
+            close_dialog
         ])
         .setup(move |app| {
             app.state::<extensions::Extensions>().finish_startup();
@@ -1103,7 +1443,12 @@ fn main() {
             std::thread::spawn(move || players::warm_loader(&profile));
             schedule_smoke(app.handle().clone());
             schedule_inventory_sync(app.handle().clone());
-            let show_menu = app.path().app_config_dir().ok().map(|dir| ruffle::load_show_menu_bar(&dir)).unwrap_or(false);
+            let show_menu = app
+                .path()
+                .app_config_dir()
+                .ok()
+                .map(|dir| ruffle::load_show_menu_bar(&dir))
+                .unwrap_or(false);
             app.state::<menu_visibility::Visibility>().set(show_menu);
             let lang = current_language();
             if let Err(err) = manifest::install_menu(app.handle(), lang.as_str()) {
@@ -1178,7 +1523,9 @@ mod tests {
     fn restart_admission_is_exclusive_until_the_guard_drops() {
         let admission = RestartAdmission::default();
         let capture = capture::CaptureState::default();
-        let guard = admission.try_restart(&capture).expect("first restart admission");
+        let guard = admission
+            .try_restart(&capture)
+            .expect("first restart admission");
         assert!(admission.active());
         assert!(admission.try_restart(&capture).is_err());
         assert!(capture.begin(&admission).is_err());
@@ -1198,10 +1545,11 @@ mod tests {
             .find(|entry| entry.contains("identifier = \"launcher-commands\""))
             .unwrap();
         assert!(launcher.contains("\"restart_ruffle\""));
-        let capability: serde_json::Value = serde_json::from_slice(
-            &std::fs::read(root.join("capabilities/default.json")).unwrap(),
-        )
-        .unwrap();
+        assert!(launcher.contains("\"restart_flash\""));
+        assert!(launcher.contains("\"show_about\""));
+        let capability: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(root.join("capabilities/default.json")).unwrap())
+                .unwrap();
         assert_eq!(capability["windows"], serde_json::json!(["main"]));
         for path in std::fs::read_dir(root.join("capabilities")).unwrap() {
             let path = path.unwrap().path();
@@ -1210,7 +1558,9 @@ mod tests {
             }
             let value: serde_json::Value =
                 serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
-            assert!(!value["permissions"].to_string().contains("launcher-commands"));
+            assert!(!value["permissions"]
+                .to_string()
+                .contains("launcher-commands"));
         }
     }
 

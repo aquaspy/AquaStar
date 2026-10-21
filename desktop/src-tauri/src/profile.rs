@@ -11,16 +11,38 @@ const STRATEGY_MESSAGES: &str = include_str!("../assets/strategy-messages.json")
 const REMINDERS_SEED: &str = include_str!(
     "../../../plugins/adventure-quest-worlds/features/reminders/reminders_default.json"
 );
-const STRATEGY_SEED: &str = include_str!(
-    "../../../plugins/adventure-quest-worlds/features/strategy/strategy_default.json"
-);
+const STRATEGY_SEED: &str =
+    include_str!("../../../plugins/adventure-quest-worlds/features/strategy/strategy_default.json");
 
 const PLATFORM_KEYS: &[&str] = &[
-    "about", "fullscreen", "sshot", "reload", "reloadCache", "forward", "backward", "help",
-    "settings", "record", "appLanguage", "customUrl", "recordingFormat", "renderMode",
-    "ruffleUpdateChannel", "ruffleAutoUpdate", "ruffleAutoUpdateMigrated", "ruffleQuality",
-    "showGameMenu", "enableDevTools", "useDirectWmode", "swfLog", "activePluginId",
-    "pluginSystem", "enableLocalPlugins", "allowLocalPluginOverride", "trustedLocalPlugins",
+    "about",
+    "fullscreen",
+    "sshot",
+    "reload",
+    "reloadCache",
+    "forward",
+    "backward",
+    "help",
+    "settings",
+    "record",
+    "appLanguage",
+    "customUrl",
+    "recordingFormat",
+    "renderMode",
+    "ruffleUpdateChannel",
+    "ruffleAutoUpdate",
+    "ruffleAutoUpdateMigrated",
+    "ruffleQuality",
+    "showGameMenu",
+    "enableDevTools",
+    "useDirectWmode",
+    "swfLog",
+    "activePluginId",
+    "pluginSystem",
+    "enableLocalPlugins",
+    "allowLocalPluginOverride",
+    "trustedLocalPlugins",
+    "newInstanceEngine",
 ];
 
 pub struct ProfileFiles {
@@ -44,6 +66,8 @@ pub struct ProfilePreferences {
     pub player_character: String,
     pub auto_sync: bool,
     pub live_loader_url: bool,
+    pub new_instance_engine: String,
+    pub available_engines: Vec<String>,
     pub keybinds: Vec<ShortcutPreference>,
     pub keybind_diagnostics: Vec<String>,
 }
@@ -56,6 +80,7 @@ pub struct ProfilePreferencesDefaults {
     pub player_character: String,
     pub auto_sync: bool,
     pub live_loader_url: bool,
+    pub new_instance_engine: String,
 }
 
 #[derive(Clone, Debug, serde::Serialize)]
@@ -74,6 +99,7 @@ pub enum ProfilePreferenceChange {
     PlayerCharacter(String),
     AutoSync(bool),
     LiveLoaderUrl(bool),
+    NewInstanceEngine(String),
     Keybind(ShortcutPreferenceChange),
 }
 
@@ -135,19 +161,26 @@ pub fn profile_preferences(files: &ProfileFiles) -> Result<ProfilePreferences, S
     let mut keybinds = Vec::new();
     let stored_plugin = values.get("plugins").and_then(|value| value.get(PLUGIN_ID));
     for bind in crate::manifest::keybinds() {
-        if bind.id == "reloadCache" {
-            continue;
-        }
         let default = keybind_default(&bind.id).unwrap_or(Value::Null);
-        let binding = values.get(&bind.id)
+        let binding = values
+            .get(&bind.id)
             .or_else(|| stored_plugin.and_then(|plugin| plugin.get(&bind.id)))
             .cloned()
             .unwrap_or_else(|| default.clone());
-        keybinds.push(ShortcutPreference { id: bind.id, binding, default });
+        keybinds.push(ShortcutPreference {
+            id: bind.id,
+            binding,
+            default,
+        });
     }
-    let keybind_diagnostics = keybinds.iter().filter_map(|bind| {
-        validate_shortcut_binding(&bind.binding).err().map(|error| format!("{}: {error}", bind.id))
-    }).collect();
+    let keybind_diagnostics = keybinds
+        .iter()
+        .filter_map(|bind| {
+            validate_shortcut_binding(&bind.binding)
+                .err()
+                .map(|error| format!("{}: {error}", bind.id))
+        })
+        .collect();
     Ok(ProfilePreferences {
         defaults: ProfilePreferencesDefaults {
             app_language: "system".into(),
@@ -155,29 +188,70 @@ pub fn profile_preferences(files: &ProfileFiles) -> Result<ProfilePreferences, S
             player_character: String::new(),
             auto_sync: false,
             live_loader_url: true,
+            new_instance_engine: "automatic".into(),
         },
-        app_language: values.get("appLanguage").and_then(Value::as_str).unwrap_or("system").to_string(),
-        custom_url: values.get("customUrl").and_then(Value::as_str).unwrap_or("").to_string(),
-        player_character: values.get("playerCharacter").and_then(Value::as_str).unwrap_or("").to_string(),
-        auto_sync: values.get("autoSync").and_then(Value::as_bool).unwrap_or(false),
-        live_loader_url: values.get("liveLoaderUrl").and_then(Value::as_bool).unwrap_or(true),
+        app_language: values
+            .get("appLanguage")
+            .and_then(Value::as_str)
+            .unwrap_or("system")
+            .to_string(),
+        custom_url: values
+            .get("customUrl")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string(),
+        player_character: values
+            .get("playerCharacter")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string(),
+        auto_sync: values
+            .get("autoSync")
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
+        live_loader_url: values
+            .get("liveLoaderUrl")
+            .and_then(Value::as_bool)
+            .unwrap_or(true),
+        new_instance_engine: values
+            .get("newInstanceEngine")
+            .and_then(Value::as_str)
+            .filter(|engine| ["automatic", "ruffle", "flash"].contains(engine))
+            .unwrap_or("automatic")
+            .to_string(),
+        available_engines: crate::players::Engine::ALL
+            .iter()
+            .filter(|engine| engine.supported())
+            .map(|engine| engine.id().to_string())
+            .collect(),
         keybinds,
         keybind_diagnostics,
     })
 }
 
-pub fn change_profile_preference(files: &ProfileFiles, change: ProfilePreferenceChange) -> Result<ProfilePreferences, String> {
+pub fn change_profile_preference(
+    files: &ProfileFiles,
+    change: ProfilePreferenceChange,
+) -> Result<ProfilePreferences, String> {
     static WRITE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    let _guard = WRITE_LOCK.get_or_init(|| Mutex::new(())).lock().unwrap_or_else(|error| error.into_inner());
+    let _guard = WRITE_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
     let existing_value = match fs::read_to_string(&files.canonical_settings) {
         Ok(text) => serde_json::from_str::<Value>(&text)
             .map_err(|error| format!("Could not read AquaStar settings: {error}"))?,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Value::Object(Map::new()),
         Err(error) => return Err(format!("Could not read AquaStar settings: {error}")),
     };
-    let mut existing = existing_value.as_object().cloned()
+    let mut existing = existing_value
+        .as_object()
+        .cloned()
         .ok_or_else(|| "AquaStar settings must contain a JSON object".to_string())?;
-    if let Some(plugins) = merge_settings(&files.settings_files).get("plugins").filter(|value| value.is_object()) {
+    if let Some(plugins) = merge_settings(&files.settings_files)
+        .get("plugins")
+        .filter(|value| value.is_object())
+    {
         existing.insert("plugins".into(), plugins.clone());
     }
     let (key, value) = match &change {
@@ -194,16 +268,26 @@ pub fn change_profile_preference(files: &ProfileFiles, change: ProfilePreference
             ("customUrl", Value::String(value.clone()))
         }
         ProfilePreferenceChange::PlayerCharacter(value) => {
-            if !value.chars().all(|character| character.is_ascii_alphanumeric()) {
+            if !value
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric())
+            {
                 return Err("Character name can contain letters and numbers only.".into());
             }
             ("playerCharacter", Value::String(value.clone()))
         }
         ProfilePreferenceChange::AutoSync(value) => ("autoSync", Value::Bool(*value)),
         ProfilePreferenceChange::LiveLoaderUrl(value) => ("liveLoaderUrl", Value::Bool(*value)),
+        ProfilePreferenceChange::NewInstanceEngine(value) => {
+            if !["automatic", "ruffle", "flash"].contains(&value.as_str()) {
+                return Err("Choose Automatic, Ruffle, or Flash for new game instances.".into());
+            }
+            ("newInstanceEngine", Value::String(value.clone()))
+        }
         ProfilePreferenceChange::Keybind(change) => {
-            crate::manifest::keybinds().into_iter()
-                .find(|bind| bind.id == change.id && bind.id != "reloadCache")
+            crate::manifest::keybinds()
+                .into_iter()
+                .find(|bind| bind.id == change.id)
                 .ok_or_else(|| "This shortcut is not editable.".to_string())?;
             validate_shortcut_binding(&change.binding)?;
             ("", Value::Null)
@@ -211,8 +295,12 @@ pub fn change_profile_preference(files: &ProfileFiles, change: ProfilePreference
     };
     let mut patch = Map::new();
     match change {
-        ProfilePreferenceChange::Keybind(change) => { patch.insert(change.id, change.binding); }
-        _ => { patch.insert(key.into(), value); }
+        ProfilePreferenceChange::Keybind(change) => {
+            patch.insert(change.id, change.binding);
+        }
+        _ => {
+            patch.insert(key.into(), value);
+        }
     }
     let next = split_save(&patch, PLUGIN_ID, existing);
     write_electron_atomic(&files.canonical_settings, &Value::Object(next))?;
@@ -226,12 +314,16 @@ fn keybind_default(id: &str) -> Option<Value> {
 fn validate_shortcut_binding(value: &Value) -> Result<(), String> {
     let bindings: Vec<&str> = match value {
         Value::String(binding) => vec![binding],
-        Value::Array(values) if !values.is_empty() => values.iter().map(Value::as_str)
-            .collect::<Option<Vec<_>>>().ok_or_else(|| "Shortcut list must contain text values.".to_string())?,
+        Value::Array(values) if !values.is_empty() => values
+            .iter()
+            .map(Value::as_str)
+            .collect::<Option<Vec<_>>>()
+            .ok_or_else(|| "Shortcut list must contain text values.".to_string())?,
         _ => return Err("Shortcut must be text or a list of shortcuts.".into()),
     };
     for binding in bindings {
-        let accelerator = parse_accelerator(binding).ok_or_else(|| format!("Unsupported shortcut: {binding}"))?;
+        let accelerator =
+            parse_accelerator(binding).ok_or_else(|| format!("Unsupported shortcut: {binding}"))?;
         if crate::shortcut_from(&accelerator).is_none() {
             return Err(format!("Unsupported shortcut key: {}", accelerator.key));
         }
@@ -250,9 +342,16 @@ pub struct Accelerator {
 }
 
 pub fn parse_accelerator(raw: &str) -> Option<Accelerator> {
-    let parts: Vec<&str> = raw.split('+').map(str::trim).filter(|part| !part.is_empty()).collect();
+    let parts: Vec<&str> = raw
+        .split('+')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .collect();
     let key = parts.last()?.to_string();
-    if key.eq_ignore_ascii_case("Ctrl") || key.eq_ignore_ascii_case("Alt") || key.eq_ignore_ascii_case("Shift") {
+    if key.eq_ignore_ascii_case("Ctrl")
+        || key.eq_ignore_ascii_case("Alt")
+        || key.eq_ignore_ascii_case("Shift")
+    {
         return None;
     }
     let mut accel = Accelerator {
@@ -340,7 +439,8 @@ pub fn todo_document(files: &ProfileFiles) -> Result<Value, String> {
     let data = if files.todo.is_file() {
         load_todo_value(&files.todo)
     } else {
-        let fresh = serde_json::json!({"characters": [], "tasks": [], "individualHiddenMode": false});
+        let fresh =
+            serde_json::json!({"characters": [], "tasks": [], "individualHiddenMode": false});
         write_electron(&files.todo, &fresh)?;
         fresh
     };
@@ -383,11 +483,18 @@ pub fn save_strategy(files: &ProfileFiles, state: &Value) -> Result<Value, Strin
             let clear = class.get("clearFavorites") == Some(&Value::Bool(true));
             let favorite = class.get("favorites").cloned().unwrap_or(Value::Null);
             let empty = ["tonicId", "elixirId", "potionId"].iter().all(|key| {
-                favorite.get(*key).and_then(Value::as_str).unwrap_or("").is_empty()
+                favorite
+                    .get(*key)
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .is_empty()
             });
             let id = class.get("id").and_then(Value::as_str).unwrap_or("");
             if !clear && empty {
-                if let Some(old) = previous_classes.iter().find(|item| item.get("id").and_then(Value::as_str) == Some(id)) {
+                if let Some(old) = previous_classes
+                    .iter()
+                    .find(|item| item.get("id").and_then(Value::as_str) == Some(id))
+                {
                     if let Some(old_fav) = old.get("favorites") {
                         class["favorites"] = old_fav.clone();
                     }
@@ -402,8 +509,14 @@ pub fn save_strategy(files: &ProfileFiles, state: &Value) -> Result<Value, Strin
 
 fn load_reminders_value(path: &Path) -> Value {
     let parsed = read_json(path).unwrap_or(Value::Null);
-    let quests = parsed.get("quests").and_then(Value::as_array).cloned().unwrap_or_default()
-        .into_iter().map(migrate_quest).collect::<Vec<_>>();
+    let quests = parsed
+        .get("quests")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .map(migrate_quest)
+        .collect::<Vec<_>>();
     serde_json::json!({
         "characters": parsed.get("characters").cloned().filter(|v| v.is_array()).unwrap_or(serde_json::json!([])),
         "quests": quests,
@@ -415,11 +528,22 @@ fn load_reminders_value(path: &Path) -> Value {
 
 fn migrate_quest(quest: Value) -> Value {
     let mut quest = quest.as_object().cloned().unwrap_or_default();
-    let mut hidden_by = quest.get("hiddenBy").cloned().filter(|v| v.is_object()).unwrap_or(serde_json::json!({}));
+    let mut hidden_by = quest
+        .get("hiddenBy")
+        .cloned()
+        .filter(|v| v.is_object())
+        .unwrap_or(serde_json::json!({}));
     if quest.get("hidden") == Some(&Value::Bool(true)) {
-        hidden_by.as_object_mut().unwrap().insert("__shared__".into(), Value::Bool(true));
+        hidden_by
+            .as_object_mut()
+            .unwrap()
+            .insert("__shared__".into(), Value::Bool(true));
     }
-    let done = quest.get("done").cloned().filter(|v| v.is_object()).unwrap_or(serde_json::json!({}));
+    let done = quest
+        .get("done")
+        .cloned()
+        .filter(|v| v.is_object())
+        .unwrap_or(serde_json::json!({}));
     quest.insert("done".into(), done);
     quest.insert("hiddenBy".into(), hidden_by);
     quest.remove("hidden");
@@ -428,13 +552,21 @@ fn migrate_quest(quest: Value) -> Value {
 
 fn reminders_seed() -> Value {
     let raw = parse_static(REMINDERS_SEED);
-    let quests = raw.get("quests").and_then(Value::as_array).cloned().unwrap_or_default().into_iter().enumerate().map(|(index, quest)| {
-        let mut quest = quest.as_object().cloned().unwrap_or_default();
-        quest.insert("id".into(), Value::String(format!("q_seed_{index}")));
-        quest.entry("done").or_insert(serde_json::json!({}));
-        quest.entry("hiddenBy").or_insert(serde_json::json!({}));
-        Value::Object(quest)
-    }).collect::<Vec<_>>();
+    let quests = raw
+        .get("quests")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .enumerate()
+        .map(|(index, quest)| {
+            let mut quest = quest.as_object().cloned().unwrap_or_default();
+            quest.insert("id".into(), Value::String(format!("q_seed_{index}")));
+            quest.entry("done").or_insert(serde_json::json!({}));
+            quest.entry("hiddenBy").or_insert(serde_json::json!({}));
+            Value::Object(quest)
+        })
+        .collect::<Vec<_>>();
     serde_json::json!({
         "characters": [],
         "quests": quests,
@@ -473,11 +605,20 @@ fn migrate_strategy(raw: &Value) -> Value {
     let empty = Map::new();
     let raw = raw.as_object().unwrap_or(&empty);
     let defaults: Value = parse_static(STRATEGY_SEED);
-    let default_potions = defaults.get("potions").and_then(Value::as_array).cloned().unwrap_or_default();
+    let default_potions = defaults
+        .get("potions")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
     let mut timer_types = raw.get("timerTypes").and_then(Value::as_array).cloned().unwrap_or_else(|| {
         serde_json::json!([{"id":"taunt","name":"Taunt"},{"id":"decay","name":"Decay"},{"id":"zone","name":"Zone"}]).as_array().unwrap().clone()
     });
-    timer_types.retain(|item| item.get("name").and_then(Value::as_str).map(|name| !name.trim().is_empty()).unwrap_or(false));
+    timer_types.retain(|item| {
+        item.get("name")
+            .and_then(Value::as_str)
+            .map(|name| !name.trim().is_empty())
+            .unwrap_or(false)
+    });
     for (index, item) in timer_types.iter_mut().enumerate() {
         if item.get("id").and_then(Value::as_str).is_none() {
             item["id"] = Value::String(format!("type_seed_{index}"));
@@ -487,26 +628,55 @@ fn migrate_strategy(raw: &Value) -> Value {
         }
     }
     for builtin in ["taunt", "decay", "zone"] {
-        if !timer_types.iter().any(|item| item.get("id").and_then(Value::as_str) == Some(builtin)) {
-            let name = match builtin { "taunt" => "Taunt", "decay" => "Decay", _ => "Zone" };
+        if !timer_types
+            .iter()
+            .any(|item| item.get("id").and_then(Value::as_str) == Some(builtin))
+        {
+            let name = match builtin {
+                "taunt" => "Taunt",
+                "decay" => "Decay",
+                _ => "Zone",
+            };
             timer_types.insert(0, serde_json::json!({"id": builtin, "name": name}));
         }
     }
-    let mut potions = raw.get("potions").and_then(Value::as_array).cloned().unwrap_or_default();
-    potions.retain(|item| item.get("name").and_then(Value::as_str).map(|name| !name.trim().is_empty()).unwrap_or(false));
+    let mut potions = raw
+        .get("potions")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    potions.retain(|item| {
+        item.get("name")
+            .and_then(Value::as_str)
+            .map(|name| !name.trim().is_empty())
+            .unwrap_or(false)
+    });
     for (index, item) in potions.iter_mut().enumerate() {
         if item.get("id").and_then(Value::as_str).is_none() {
             item["id"] = Value::String(format!("potion_seed_{index}"));
         }
         let kind = item.get("kind").and_then(Value::as_str).unwrap_or("potion");
-        item["kind"] = Value::String(if ["tonic", "elixir", "potion"].contains(&kind) { kind } else { "potion" }.into());
+        item["kind"] = Value::String(
+            if ["tonic", "elixir", "potion"].contains(&kind) {
+                kind
+            } else {
+                "potion"
+            }
+            .into(),
+        );
         if let Some(name) = item.get("name").and_then(Value::as_str) {
             item["name"] = Value::String(name.trim().to_string());
         }
     }
     for item in &default_potions {
         let name = item.get("name").and_then(Value::as_str).unwrap_or("");
-        if !potions.iter().any(|potion| potion.get("name").and_then(Value::as_str).unwrap_or("").eq_ignore_ascii_case(name)) {
+        if !potions.iter().any(|potion| {
+            potion
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .eq_ignore_ascii_case(name)
+        }) {
             potions.push(item.clone());
         }
     }
@@ -528,7 +698,11 @@ fn migrate_strategy(raw: &Value) -> Value {
             }
         }))
     }).collect::<Vec<_>>();
-    let legacy = raw.get("strategies").and_then(Value::as_array).cloned().unwrap_or_default();
+    let legacy = raw
+        .get("strategies")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
     let bosses = raw.get("bosses").and_then(Value::as_array).cloned().unwrap_or_default().into_iter().enumerate().filter_map(|(index, boss)| {
         let boss_map = boss.as_object()?;
         let name = boss_map.get("name").and_then(Value::as_str).unwrap_or("").trim().to_string();
@@ -550,7 +724,11 @@ fn migrate_strategy(raw: &Value) -> Value {
             "strategies": strategies
         }))
     }).collect::<Vec<_>>();
-    let shortcut = raw.get("timerShortcut").and_then(Value::as_str).unwrap_or("").trim();
+    let shortcut = raw
+        .get("timerShortcut")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
     serde_json::json!({
         "potions": potions,
         "classes": classes,
@@ -563,7 +741,11 @@ fn migrate_strategy(raw: &Value) -> Value {
 fn migrate_strategy_item(raw: &Value, kind: &str, types: &[Value], index: usize) -> Value {
     let raw = raw.as_object().cloned().unwrap_or_default();
     let slots_limit = if kind == "challenge" { 7 } else { 4 };
-    let mut slots = raw.get("classIds").and_then(Value::as_array).cloned().unwrap_or_default();
+    let mut slots = raw
+        .get("classIds")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
     slots.truncate(slots_limit);
     while slots.len() < slots_limit {
         slots.push(Value::String(String::new()));
@@ -608,9 +790,18 @@ fn migrate_strategy_item(raw: &Value, kind: &str, types: &[Value], index: usize)
             "note": role.get("note").and_then(Value::as_str).unwrap_or("").trim()
         })
     }).collect::<Vec<_>>();
-    let notes = raw.get("strategyNotes").and_then(Value::as_str).map(str::to_string).or_else(|| raw.get("notes").and_then(Value::as_str).map(str::to_string)).unwrap_or_default();
+    let notes = raw
+        .get("strategyNotes")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .or_else(|| raw.get("notes").and_then(Value::as_str).map(str::to_string))
+        .unwrap_or_default();
     let name = raw.get("name").and_then(Value::as_str).unwrap_or("").trim();
-    let name = if name.is_empty() { "Strategy".to_string() } else { name.to_string() };
+    let name = if name.is_empty() {
+        "Strategy".to_string()
+    } else {
+        name.to_string()
+    };
     serde_json::json!({
         "id": raw.get("id").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| format!("strategy_seed_{index}")),
         "name": name,
@@ -638,8 +829,12 @@ fn merge_settings(paths: &[PathBuf]) -> Map<String, Value> {
     let mut top = Map::new();
     let mut plugins = None;
     for path in paths {
-        let Some(value) = read_json(path) else { continue };
-        let Some(obj) = value.as_object() else { continue };
+        let Some(value) = read_json(path) else {
+            continue;
+        };
+        let Some(obj) = value.as_object() else {
+            continue;
+        };
         if obj.get("plugins").is_some_and(Value::is_object) {
             plugins = obj.get("plugins").cloned();
         }
@@ -650,7 +845,11 @@ fn merge_settings(paths: &[PathBuf]) -> Map<String, Value> {
     if let Some(plugins) = plugins {
         top.insert("plugins".into(), plugins);
     }
-    let plugin_slice = top.get("plugins").and_then(|plugins| plugins.get(PLUGIN_ID)).and_then(Value::as_object).cloned();
+    let plugin_slice = top
+        .get("plugins")
+        .and_then(|plugins| plugins.get(PLUGIN_ID))
+        .and_then(Value::as_object)
+        .cloned();
     if let Some(slice) = plugin_slice {
         for (key, value) in slice {
             if !is_platform_key(&key) {
@@ -661,11 +860,25 @@ fn merge_settings(paths: &[PathBuf]) -> Map<String, Value> {
     top
 }
 
-fn split_save(changed: &Map<String, Value>, active_id: &str, mut existing: Map<String, Value>) -> Map<String, Value> {
-    let mut plugins = existing.get("plugins").cloned().filter(|value| value.is_object()).unwrap_or(serde_json::json!({}));
-    let mut slice = plugins.get(active_id).cloned().filter(|value| value.is_object()).unwrap_or(serde_json::json!({}));
+fn split_save(
+    changed: &Map<String, Value>,
+    active_id: &str,
+    mut existing: Map<String, Value>,
+) -> Map<String, Value> {
+    let mut plugins = existing
+        .get("plugins")
+        .cloned()
+        .filter(|value| value.is_object())
+        .unwrap_or(serde_json::json!({}));
+    let mut slice = plugins
+        .get(active_id)
+        .cloned()
+        .filter(|value| value.is_object())
+        .unwrap_or(serde_json::json!({}));
     for (key, value) in changed {
-        if key == "plugins" { continue; }
+        if key == "plugins" {
+            continue;
+        }
         if is_platform_key(key) {
             existing.insert(key.clone(), value.clone());
         } else if let Some(slice) = slice.as_object_mut() {
@@ -696,10 +909,15 @@ fn read_json(path: &Path) -> Option<Value> {
 }
 
 fn json_number(value: f64) -> Value {
-    if value.is_finite() && value.fract() == 0.0 && (i64::MIN as f64..=i64::MAX as f64).contains(&value) {
+    if value.is_finite()
+        && value.fract() == 0.0
+        && (i64::MIN as f64..=i64::MAX as f64).contains(&value)
+    {
         Value::from(value as i64)
     } else {
-        serde_json::Number::from_f64(value).map(Value::Number).unwrap_or(Value::from(0))
+        serde_json::Number::from_f64(value)
+            .map(Value::Number)
+            .unwrap_or(Value::from(0))
     }
 }
 
@@ -711,7 +929,9 @@ fn write_electron(path: &Path, value: &Value) -> Result<(), String> {
     let mut buf = Vec::new();
     let mut serializer = serde_json::Serializer::with_formatter(&mut buf, formatter);
     use serde::Serialize;
-    value.serialize(&mut serializer).map_err(|e| e.to_string())?;
+    value
+        .serialize(&mut serializer)
+        .map_err(|e| e.to_string())?;
     fs::write(path, buf).map_err(|e| e.to_string())
 }
 
@@ -725,12 +945,24 @@ fn write_electron_atomic(path: &Path, value: &Value) -> Result<(), String> {
     let mut buf = Vec::new();
     let mut serializer = serde_json::Serializer::with_formatter(&mut buf, formatter);
     use serde::Serialize;
-    value.serialize(&mut serializer).map_err(|e| e.to_string())?;
-    let temp = path.with_extension(format!("tmp-{}-{}", std::process::id(), NEXT_TEMP.fetch_add(1, Ordering::Relaxed)));
-    let old_mode = fs::metadata(path).ok().map(|metadata| metadata.permissions());
+    value
+        .serialize(&mut serializer)
+        .map_err(|e| e.to_string())?;
+    let temp = path.with_extension(format!(
+        "tmp-{}-{}",
+        std::process::id(),
+        NEXT_TEMP.fetch_add(1, Ordering::Relaxed)
+    ));
+    let old_mode = fs::metadata(path)
+        .ok()
+        .map(|metadata| metadata.permissions());
     let result = (|| {
         use std::io::Write;
-        let mut file = fs::OpenOptions::new().write(true).create_new(true).open(&temp).map_err(|e| e.to_string())?;
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temp)
+            .map_err(|e| e.to_string())?;
         file.write_all(&buf).map_err(|e| e.to_string())?;
         file.sync_all().map_err(|e| e.to_string())?;
         if let Some(permissions) = old_mode {
@@ -755,20 +987,43 @@ fn replace_file_atomic(source: &Path, destination: &Path) -> Result<(), String> 
     use std::ptr;
     #[link(name = "Kernel32")]
     extern "system" {
-        fn ReplaceFileW(replaced: *const u16, replacement: *const u16, backup: *const u16, flags: u32, exclude: *mut std::ffi::c_void, reserved: *mut std::ffi::c_void) -> i32;
+        fn ReplaceFileW(
+            replaced: *const u16,
+            replacement: *const u16,
+            backup: *const u16,
+            flags: u32,
+            exclude: *mut std::ffi::c_void,
+            reserved: *mut std::ffi::c_void,
+        ) -> i32;
         fn MoveFileExW(existing: *const u16, new: *const u16, flags: u32) -> i32;
     }
-    let wide = |path: &Path| path.as_os_str().encode_wide().chain(Some(0)).collect::<Vec<_>>();
+    let wide = |path: &Path| {
+        path.as_os_str()
+            .encode_wide()
+            .chain(Some(0))
+            .collect::<Vec<_>>()
+    };
     let source_wide = wide(source);
     let destination_wide = wide(destination);
     let result = unsafe {
         if destination.exists() {
-            ReplaceFileW(destination_wide.as_ptr(), source_wide.as_ptr(), ptr::null(), 0, ptr::null_mut(), ptr::null_mut())
+            ReplaceFileW(
+                destination_wide.as_ptr(),
+                source_wide.as_ptr(),
+                ptr::null(),
+                0,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
         } else {
             MoveFileExW(source_wide.as_ptr(), destination_wide.as_ptr(), 0x00000008)
         }
     };
-    if result == 0 { Err(std::io::Error::last_os_error().to_string()) } else { Ok(()) }
+    if result == 0 {
+        Err(std::io::Error::last_os_error().to_string())
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -776,7 +1031,8 @@ mod tests {
     use super::*;
 
     fn scratch(name: &str) -> ProfileFiles {
-        let root = std::env::temp_dir().join(format!("aquastar-roundtrip-{name}-{}", std::process::id()));
+        let root =
+            std::env::temp_dir().join(format!("aquastar-roundtrip-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         let aqua = root.join("AquaStar");
         fs::create_dir_all(&aqua).unwrap();
@@ -801,8 +1057,19 @@ mod tests {
         let snapshot = profile_preferences(&files).unwrap();
         assert_eq!(snapshot.custom_url, "https://cdn.example/game.swf");
         assert_eq!(snapshot.player_character, "Old");
-        assert_eq!(snapshot.keybinds.iter().find(|bind| bind.id == "help").unwrap().default, keybind_default("help").unwrap());
-        assert_eq!(fs::read_to_string(&files.canonical_settings).unwrap(), source);
+        assert_eq!(
+            snapshot
+                .keybinds
+                .iter()
+                .find(|bind| bind.id == "wiki")
+                .unwrap()
+                .default,
+            keybind_default("wiki").unwrap()
+        );
+        assert_eq!(
+            fs::read_to_string(&files.canonical_settings).unwrap(),
+            source
+        );
     }
 
     #[test]
@@ -810,8 +1077,13 @@ mod tests {
         let files = scratch("preferences-fixed-owner");
         let source = r#"{"fixtureKept":{"nested":true},"activePluginId":"old-electron-plugin","customUrl":"","plugins":{"old-electron-plugin":{"untouched":17},"adventure-quest-worlds":{"playerCharacter":"Before","unknownAqw":true}}}"#;
         fs::write(&files.canonical_settings, source).unwrap();
-        change_profile_preference(&files, ProfilePreferenceChange::PlayerCharacter("Hero42".into())).unwrap();
-        let saved: Value = serde_json::from_str(&fs::read_to_string(&files.canonical_settings).unwrap()).unwrap();
+        change_profile_preference(
+            &files,
+            ProfilePreferenceChange::PlayerCharacter("Hero42".into()),
+        )
+        .unwrap();
+        let saved: Value =
+            serde_json::from_str(&fs::read_to_string(&files.canonical_settings).unwrap()).unwrap();
         assert_eq!(saved["playerCharacter"], "Hero42");
         assert_eq!(saved["plugins"][PLUGIN_ID]["playerCharacter"], "Hero42");
         assert_eq!(saved["plugins"]["old-electron-plugin"]["untouched"], 17);
@@ -827,10 +1099,15 @@ mod tests {
             &files.settings_files[0],
             r#"{"legacyRoot":{"kept":true},"plugins":{"otherPlugin":{"untouched":17},"adventure-quest-worlds":{"playerCharacter":"LegacyHero","autoSync":true,"unknownAqw":{"kept":true}}}}"#,
         ).unwrap();
-        fs::write(&files.canonical_settings, r#"{"appLanguage":"en-US","ruffleQuality":"High"}"#).unwrap();
+        fs::write(
+            &files.canonical_settings,
+            r#"{"appLanguage":"en-US","ruffleQuality":"High"}"#,
+        )
+        .unwrap();
         let before = merged_settings(&files);
 
-        change_profile_preference(&files, ProfilePreferenceChange::AppLanguage("pt-BR".into())).unwrap();
+        change_profile_preference(&files, ProfilePreferenceChange::AppLanguage("pt-BR".into()))
+            .unwrap();
 
         let after = merged_settings(&files);
         let mut expected = before;
@@ -844,32 +1121,92 @@ mod tests {
     }
 
     #[test]
-    fn shortcut_reset_preserves_manifest_multibinding_array() {
+    fn shortcut_reset_preserves_legacy_values_and_current_binding() {
         let files = scratch("preferences-shortcut-reset");
-        fs::write(&files.canonical_settings, r#"{"plugins":{"adventure-quest-worlds":{"reload":["Alt+X"],"reloadCache":"F8"}}}"#).unwrap();
-        let defaults = keybind_default("reload").unwrap();
-        change_profile_preference(&files, ProfilePreferenceChange::Keybind(ShortcutPreferenceChange {
-            id: "reload".into(), binding: defaults.clone()
-        })).unwrap();
-        let saved: Value = serde_json::from_str(&fs::read_to_string(&files.canonical_settings).unwrap()).unwrap();
-        assert_eq!(saved["reload"], defaults);
-        assert_eq!(saved["plugins"][PLUGIN_ID]["reload"], serde_json::json!(["Alt+X"]));
+        fs::write(
+            &files.canonical_settings,
+            r#"{"plugins":{"adventure-quest-worlds":{"reload":["Alt+X"],"reloadCache":"F8"}}}"#,
+        )
+        .unwrap();
+        let defaults = keybind_default("wiki").unwrap();
+        change_profile_preference(
+            &files,
+            ProfilePreferenceChange::Keybind(ShortcutPreferenceChange {
+                id: "wiki".into(),
+                binding: defaults.clone(),
+            }),
+        )
+        .unwrap();
+        let saved: Value =
+            serde_json::from_str(&fs::read_to_string(&files.canonical_settings).unwrap()).unwrap();
+        assert_eq!(saved["wiki"], defaults);
+        assert_eq!(
+            saved["plugins"][PLUGIN_ID]["reload"],
+            serde_json::json!(["Alt+X"])
+        );
         assert_eq!(saved["plugins"][PLUGIN_ID]["reloadCache"], "F8");
-        assert_eq!(profile_preferences(&files).unwrap().keybinds.iter().find(|bind| bind.id == "reload").unwrap().binding, defaults);
+        assert_eq!(
+            profile_preferences(&files)
+                .unwrap()
+                .keybinds
+                .iter()
+                .find(|bind| bind.id == "wiki")
+                .unwrap()
+                .binding,
+            defaults
+        );
+    }
+
+    #[test]
+    fn new_instance_engine_preference_round_trips_and_rejects_unknown_choices() {
+        let files = scratch("new-instance-engine");
+        let initial = profile_preferences(&files).unwrap();
+        assert_eq!(initial.new_instance_engine, "automatic");
+        assert_eq!(initial.defaults.new_instance_engine, "automatic");
+        change_profile_preference(
+            &files,
+            ProfilePreferenceChange::NewInstanceEngine("flash".into()),
+        )
+        .unwrap();
+        assert_eq!(
+            profile_preferences(&files).unwrap().new_instance_engine,
+            "flash"
+        );
+        assert!(change_profile_preference(
+            &files,
+            ProfilePreferenceChange::NewInstanceEngine("vulkan".into())
+        )
+        .is_err());
     }
 
     #[test]
     fn preferences_reject_unsupported_values_and_report_imported_shortcuts() {
         let files = scratch("preferences-invalid");
-        let source = r#"{"appLanguage":"en-US","plugins":{"adventure-quest-worlds":{"wiki":"Alt+?"}}}"#;
+        let source =
+            r#"{"appLanguage":"en-US","plugins":{"adventure-quest-worlds":{"wiki":"Alt+?"}}}"#;
         fs::write(&files.canonical_settings, source).unwrap();
         let snapshot = profile_preferences(&files).unwrap();
-        assert!(snapshot.keybind_diagnostics.iter().any(|item| item.starts_with("wiki:")));
-        assert!(change_profile_preference(&files, ProfilePreferenceChange::AppLanguage("xx".into())).is_err());
-        assert!(change_profile_preference(&files, ProfilePreferenceChange::Keybind(ShortcutPreferenceChange {
-            id: "wiki".into(), binding: Value::String("Alt+?".into())
-        })).is_err());
-        assert_eq!(fs::read_to_string(&files.canonical_settings).unwrap(), source);
+        assert!(snapshot
+            .keybind_diagnostics
+            .iter()
+            .any(|item| item.starts_with("wiki:")));
+        assert!(change_profile_preference(
+            &files,
+            ProfilePreferenceChange::AppLanguage("xx".into())
+        )
+        .is_err());
+        assert!(change_profile_preference(
+            &files,
+            ProfilePreferenceChange::Keybind(ShortcutPreferenceChange {
+                id: "wiki".into(),
+                binding: Value::String("Alt+?".into())
+            })
+        )
+        .is_err());
+        assert_eq!(
+            fs::read_to_string(&files.canonical_settings).unwrap(),
+            source
+        );
     }
 
     #[test]
@@ -878,8 +1215,13 @@ mod tests {
         let source = "{ this is not JSON";
         fs::write(&files.canonical_settings, source).unwrap();
         assert!(profile_preferences(&files).is_err());
-        assert!(change_profile_preference(&files, ProfilePreferenceChange::AutoSync(true)).is_err());
-        assert_eq!(fs::read_to_string(&files.canonical_settings).unwrap(), source);
+        assert!(
+            change_profile_preference(&files, ProfilePreferenceChange::AutoSync(true)).is_err()
+        );
+        assert_eq!(
+            fs::read_to_string(&files.canonical_settings).unwrap(),
+            source
+        );
     }
 
     #[test]
@@ -889,8 +1231,18 @@ mod tests {
         let loaded = reminders_document(&files).unwrap();
         assert_eq!(loaded["data"]["quests"][0]["hiddenBy"]["__shared__"], true);
         assert!(loaded["data"]["quests"][0].get("hidden").is_none());
-        assert_eq!(loaded["data"]["quests"][0]["done"]["hero"], 4102444800000u64);
-        assert!(fs::read_to_string(&files.reminders).unwrap().contains("\"hidden\": true") || fs::read_to_string(&files.reminders).unwrap().contains("\"hidden\":true"));
+        assert_eq!(
+            loaded["data"]["quests"][0]["done"]["hero"],
+            4102444800000u64
+        );
+        assert!(
+            fs::read_to_string(&files.reminders)
+                .unwrap()
+                .contains("\"hidden\": true")
+                || fs::read_to_string(&files.reminders)
+                    .unwrap()
+                    .contains("\"hidden\":true")
+        );
         let mut edited = loaded["data"].clone();
         edited["quests"][0]["name"] = Value::String("Edited Quest".into());
         edited["showCompleted"] = Value::Bool(true);
@@ -905,7 +1257,8 @@ mod tests {
             "tasks": [{"id":"t1","name":"Fixture Task","category":"shopMerge","joinCommand":"/join shop","priority":true,"wikiLink":"https://aqwwiki.wikidot.com/fixture","extra":"kept"}],
             "individualHiddenMode": false
         })).unwrap();
-        let stored: Value = serde_json::from_str(&fs::read_to_string(&files.todo).unwrap()).unwrap();
+        let stored: Value =
+            serde_json::from_str(&fs::read_to_string(&files.todo).unwrap()).unwrap();
         assert_eq!(stored["tasks"][0]["extra"], "kept");
         let todo = todo_document(&files).unwrap();
         assert_eq!(todo["data"]["tasks"][0]["name"], "Fixture Task");
@@ -931,16 +1284,35 @@ mod tests {
         }"#).unwrap();
         let loaded = strategy_document(&files).unwrap();
         assert_eq!(loaded["data"]["timerShortcut"], "Alt+Shift+F");
-        assert_eq!(loaded["data"]["bosses"][0]["strategies"][0]["timerRoles"][0]["offset"], 6);
-        assert!(loaded["data"]["potions"].as_array().unwrap().iter().any(|potion| potion["name"] == "Body Tonic"));
-        assert!(!fs::read_to_string(&files.strategy).unwrap().contains("Body Tonic"));
+        assert_eq!(
+            loaded["data"]["bosses"][0]["strategies"][0]["timerRoles"][0]["offset"],
+            6
+        );
+        assert!(loaded["data"]["potions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|potion| potion["name"] == "Body Tonic"));
+        assert!(!fs::read_to_string(&files.strategy)
+            .unwrap()
+            .contains("Body Tonic"));
         let mut edited = loaded["data"].clone();
         edited["bosses"][0]["strategies"][0]["strategyNotes"] = Value::String("edited note".into());
-        edited["classes"][0]["favorites"] = serde_json::json!({"tonicId":"","elixirId":"","potionId":""});
+        edited["classes"][0]["favorites"] =
+            serde_json::json!({"tonicId":"","elixirId":"","potionId":""});
         let saved = save_strategy(&files, &edited).unwrap();
-        assert_eq!(saved["data"]["bosses"][0]["strategies"][0]["strategyNotes"], "edited note");
+        assert_eq!(
+            saved["data"]["bosses"][0]["strategies"][0]["strategyNotes"],
+            "edited note"
+        );
         assert_eq!(saved["data"]["classes"][0]["favorites"]["tonicId"], "p1");
-        assert_eq!(saved["data"]["bosses"][0]["strategies"][0]["classIds"].as_array().unwrap().len(), 4);
+        assert_eq!(
+            saved["data"]["bosses"][0]["strategies"][0]["classIds"]
+                .as_array()
+                .unwrap()
+                .len(),
+            4
+        );
         let text = fs::read_to_string(&files.strategy).unwrap();
         assert!(text.contains("Body Tonic"));
         assert!(text.contains("Alt+Shift+F"));
@@ -955,6 +1327,4 @@ mod tests {
         assert!(parse_accelerator("").is_none());
         assert!(parse_accelerator("Alt+").is_none());
     }
-
-
 }

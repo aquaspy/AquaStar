@@ -29,7 +29,11 @@ document.getElementById('message').textContent = dialog.message || '';
 document.getElementById('detail').textContent = dialog.detail || '';
 const close = document.getElementById('close');
 close.textContent = dialog.close || 'Close';
-close.addEventListener('click', () => window.close());
+close.addEventListener('click', () => {
+  window.__TAURI__.core.invoke('close_dialog').catch((error) => {
+    console.error('Could not close the help window:', error);
+  });
+});
 </script>
 </body>
 </html>

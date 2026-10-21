@@ -9,6 +9,7 @@ exports.titleMessages = {
 exports.dialogMessages = {
     helpTitle   :"Ajuda:",
     helpMessage :"Atalhos e recursos do AquaStar.",
+    helpClosePrompt: "Fechar",
     helpDetail(k) {return 'AquaStar (app)\n' +
         expand(k.help) + ' - Mostra esta ajuda.\n' +
         expand(k.settings)  + ' - Abre as Configurações (Geral / plugin ativo / Atalhos).\n' +
