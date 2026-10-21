@@ -9,6 +9,73 @@ use std::{
     path::PathBuf,
     time::{Duration, Instant},
 };
+
+#[cfg(target_os = "linux")]
+fn log_linux_window_diagnostics(pid: u32) {
+    use std::process::Command;
+
+    let root_clients = Command::new("xprop")
+        .args(["-root", "_NET_CLIENT_LIST_STACKING"])
+        .output();
+    let client_list = match root_clients {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+            eprintln!(
+                "X11 root _NET_CLIENT_LIST_STACKING (status {:?}): {}{}",
+                output.status,
+                stdout,
+                String::from_utf8_lossy(&output.stderr)
+            );
+            stdout
+        }
+        Err(error) => {
+            eprintln!("Could not query X11 root client list with xprop: {error}");
+            String::new()
+        }
+    };
+    if !client_list.contains("0x") {
+        match Command::new("xwininfo").args(["-root", "-tree"]).output() {
+            Ok(output) => {
+                let tree = String::from_utf8_lossy(&output.stdout);
+                eprintln!(
+                    "X11 root tree (status {:?}): {}{}",
+                    output.status,
+                    tree,
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                for xid in tree.lines().filter_map(|line| {
+                    let xid = line.trim().split_whitespace().next()?;
+                    xid.starts_with("0x").then_some(xid)
+                }) {
+                    match Command::new("xprop")
+                        .args(["-id", xid, "_NET_WM_PID"])
+                        .output()
+                    {
+                        Ok(output) => eprintln!(
+                            "X11 root child {xid} _NET_WM_PID (status {:?}): {}{}",
+                            output.status,
+                            String::from_utf8_lossy(&output.stdout),
+                            String::from_utf8_lossy(&output.stderr)
+                        ),
+                        Err(error) => eprintln!("Could not query _NET_WM_PID for {xid}: {error}"),
+                    }
+                }
+            }
+            Err(error) => eprintln!("Could not query X11 root tree with xwininfo: {error}"),
+        }
+    }
+
+    match xcap::Window::all() {
+        Ok(windows) => {
+            eprintln!("xcap windows while looking for fixture PID {pid}:");
+            for window in windows {
+                eprintln!("  XID {:?}, PID {:?}", window.id(), window.pid());
+            }
+        }
+        Err(error) => eprintln!("xcap window enumeration failed: {error}"),
+    }
+}
+
 fn main() -> Result<(), String> {
     let args: Vec<_> = std::env::args().collect();
     let pid = args
@@ -23,11 +90,20 @@ fn main() -> Result<(), String> {
     // published its owned client. Wait for that condition, not a fixed delay.
     let deadline = Instant::now() + Duration::from_secs(10);
     let target = loop {
-        let targets = backend::targets(&[pid])?;
+        let targets = match backend::targets(&[pid]) {
+            Ok(targets) => targets,
+            Err(error) => {
+                #[cfg(target_os = "linux")]
+                log_linux_window_diagnostics(pid);
+                return Err(error);
+            }
+        };
         if !targets.is_empty() {
             break backend::select(targets, None)?;
         }
         if Instant::now() >= deadline {
+            #[cfg(target_os = "linux")]
+            log_linux_window_diagnostics(pid);
             return Err("No owned fixture window appeared within 10 seconds.".into());
         }
         std::thread::sleep(Duration::from_millis(50));
