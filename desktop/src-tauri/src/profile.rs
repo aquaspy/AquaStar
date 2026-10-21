@@ -178,8 +178,11 @@ pub fn change_profile_preference(files: &ProfileFiles, change: ProfilePreference
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Value::Object(Map::new()),
         Err(error) => return Err(format!("Could not read AquaStar settings: {error}")),
     };
-    let existing = existing_value.as_object().cloned()
+    let mut existing = existing_value.as_object().cloned()
         .ok_or_else(|| "AquaStar settings must contain a JSON object".to_string())?;
+    if let Some(plugins) = merge_settings(&files.settings_files).get("plugins").filter(|value| value.is_object()) {
+        existing.insert("plugins".into(), plugins.clone());
+    }
     let (key, value) = match &change {
         ProfilePreferenceChange::AppLanguage(value) => {
             if !["system", "en-US", "pt-BR"].contains(&value.as_str()) {
@@ -818,6 +821,29 @@ mod tests {
         assert_eq!(saved["plugins"][PLUGIN_ID]["unknownAqw"], true);
         assert_eq!(saved["fixtureKept"]["nested"], true);
         assert_eq!(saved["activePluginId"], "old-electron-plugin");
+    }
+
+    #[test]
+    fn preference_edit_preserves_effective_legacy_plugins_and_root_values() {
+        let files = scratch("preferences-legacy-effective-values");
+        fs::write(
+            &files.settings_files[0],
+            r#"{"legacyRoot":{"kept":true},"plugins":{"otherPlugin":{"untouched":17},"adventure-quest-worlds":{"playerCharacter":"LegacyHero","autoSync":true,"unknownAqw":{"kept":true}}}}"#,
+        ).unwrap();
+        fs::write(&files.canonical_settings, r#"{"appLanguage":"en-US","ruffleQuality":"High"}"#).unwrap();
+        let before = merged_settings(&files);
+
+        change_profile_preference(&files, ProfilePreferenceChange::AppLanguage("pt-BR".into())).unwrap();
+
+        let after = merged_settings(&files);
+        let mut expected = before;
+        expected.insert("appLanguage".into(), Value::String("pt-BR".into()));
+        assert_eq!(after, expected);
+        assert_eq!(after["plugins"]["otherPlugin"]["untouched"], 17);
+        assert_eq!(after["playerCharacter"], "LegacyHero");
+        assert_eq!(after["autoSync"], true);
+        assert_eq!(after["unknownAqw"]["kept"], true);
+        assert_eq!(after["legacyRoot"]["kept"], true);
     }
 
     #[test]
