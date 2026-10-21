@@ -30,6 +30,9 @@ pub fn start(pid: u32, authorization_path: Option<std::path::PathBuf>) -> Result
     let stop = frames.stop.clone();
     std::thread::spawn(move || {
         let result = tauri::async_runtime::block_on(async {
+            if let Err(error) = super::register_portal_identity().await {
+                eprintln!("aquastar-lite: {error}");
+            }
             let proxy = Screencast::new().await.map_err(|e| e.to_string())?;
             if !proxy
                 .available_source_types()

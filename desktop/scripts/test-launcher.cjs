@@ -1,0 +1,23 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const source = fs.readFileSync(require('node:path').join(__dirname, '../ui/main.js'), 'utf8');
+const start = source.indexOf('function gameCard(');
+const end = source.indexOf('\nfunction ', start + 1);
+const calls = [];
+const context = {choice:{}, opening:new Set(), ENGINE_NAMES:{}, renderPlugin(){}, message(){}, failure(e){throw e;}, invoke:async (...args)=>{calls.push(args);}, el(tag, attrs={}, ...children){return {tag, ...attrs, value:attrs.value || '',children, append(child){this.children.push(child);if(child.selected)this.value=child.value;}}}};
+vm.createContext(context);
+vm.runInContext(source.slice(start,end),context);
+(async()=>{
+const game={id:'game',name:'Game',engines:['ruffle','flash'],selectedEngine:'ruffle',launchable:true};
+const card=context.gameCard({id:'test'},game);
+const row=card.children.find(c=>c.class==='launch');
+const button=row.children[0],select=row.children[1].children.find(c=>c.tag==='select');
+select.value='flash';select.onchange({target:select});
+await button.onclick();
+assert.equal(calls[0][1].engine,'flash');
+select.value='ruffle';select.onchange({target:select});
+await button.onclick();
+assert.equal(calls[1][1].engine,'ruffle');
+console.log('PASS: changing player launches the current selection in both directions');
+})();

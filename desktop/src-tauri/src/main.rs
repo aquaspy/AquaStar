@@ -40,10 +40,10 @@ fn hide_launcher_enabled(app: &tauri::AppHandle) -> bool {
 
 fn sync_launcher(app: &tauri::AppHandle, presence: players::Presence) {
     if presence == players::Presence::Idle && app.state::<capture::CaptureState>().active() { return; }
-    register_saved_shortcuts(app);
     // Started straight into a game: there is no launcher to bring back, so AquaStar ends
     // with the game.
     if app.state::<startup::StartupState>().is_direct() {
+        register_saved_shortcuts(app);
         if presence == players::Presence::Idle {
             app.exit(0);
         }
@@ -54,7 +54,9 @@ fn sync_launcher(app: &tauri::AppHandle, presence: players::Presence) {
     };
     match (presence, hide_launcher_enabled(app)) {
         (players::Presence::Running, true) => {
-            let _ = window.hide();
+            if !app.state::<startup::StartupState>().launcher_requested() {
+                let _ = window.hide();
+            }
         }
         (players::Presence::Running, false) => {
             let _ = window.show();
@@ -66,6 +68,7 @@ fn sync_launcher(app: &tauri::AppHandle, presence: players::Presence) {
         }
         (players::Presence::Idle, false) => {}
     }
+    register_saved_shortcuts(app);
 }
 
 #[derive(Serialize)]
@@ -96,6 +99,7 @@ fn launcher_settings(app: tauri::AppHandle) -> Result<LauncherSettings, String> 
 fn set_hide_launcher(app: tauri::AppHandle, hide: bool) -> Result<LauncherSettings, String> {
     let dir = config_dir(&app)?;
     ruffle::save_hide_launcher(&dir, hide)?;
+    if hide { app.state::<startup::StartupState>().game_launching(); }
     sync_launcher(&app, app.state::<Players>().presence());
     Ok(LauncherSettings {
         hide_launcher: hide,
@@ -145,6 +149,23 @@ fn load_ruffle_settings(app: &tauri::AppHandle) -> ruffle::RuffleSettings {
     }
 }
 
+async fn game_launch_with_visibility(
+    app: &tauri::AppHandle,
+    launch: impl std::future::Future<Output = Result<String, String>>,
+) -> Result<String, String> {
+    app.state::<startup::StartupState>().game_launching();
+    let restore_on_error = if hide_launcher_enabled(app) {
+        if let Some(window) = app.get_webview_window("main") {
+            let visible = window.is_visible().unwrap_or(false);
+            if visible { let _ = window.hide(); }
+            visible
+        } else { false }
+    } else { false };
+    let result = launch.await;
+    if result.is_err() && restore_on_error { startup::show_main(app); }
+    result
+}
+
 #[tauri::command]
 async fn play(app: tauri::AppHandle, engine: Engine, movie: MovieKind) -> Result<String, String> {
     let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
@@ -158,11 +179,13 @@ async fn play(app: tauri::AppHandle, engine: Engine, movie: MovieKind) -> Result
     let settings = load_ruffle_settings(&app);
     let saves = placement.ruffle_save_directory().map(Path::to_path_buf);
     let players = app.state::<Players>().inner().clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        players.launch_movie(&roots, engine, &profile, movie, &settings, saves.as_deref())
-    })
-    .await
-    .map_err(|e| e.to_string())?
+    game_launch_with_visibility(&app, async move {
+        tauri::async_runtime::spawn_blocking(move || {
+            players.launch_movie(&roots, engine, &profile, movie, &settings, saves.as_deref())
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }).await
 }
 
 async fn play_extension(app: tauri::AppHandle, source: String, engine: Engine) -> Result<String, String> {
@@ -174,7 +197,9 @@ async fn play_extension(app: tauri::AppHandle, source: String, engine: Engine) -
     let settings = load_ruffle_settings(&app);
     let saves = placement.ruffle_save_directory().map(Path::to_path_buf);
     let players = app.state::<Players>().inner().clone();
-    tauri::async_runtime::spawn_blocking(move || players.launch_source(&roots,engine,&source,&settings,saves.as_deref())).await.map_err(|e|e.to_string())?
+    game_launch_with_visibility(&app, async move {
+        tauri::async_runtime::spawn_blocking(move || players.launch_source(&roots,engine,&source,&settings,saves.as_deref())).await.map_err(|e|e.to_string())?
+    }).await
 }
 
 #[tauri::command]
@@ -807,11 +832,13 @@ fn register_saved_shortcuts(app: &tauri::AppHandle) {
     let old = std::mem::take(&mut *app.state::<ShortcutBook>().0.lock().unwrap_or_else(|e|e.into_inner()));
     for shortcut in old.keys() { let _=app.global_shortcut().unregister(*shortcut); }
     capture::sync_shortcuts(app);
+    #[cfg(target_os = "linux")]
+    capture::wayland_shortcuts::sync(app);
     let running = !app.state::<Players>().capture_pids().is_empty();
     let merged = profile::merged_settings(&profile::live_files());
     let mut map = std::collections::HashMap::new();
     for bind in manifest::keybinds() {
-        if matches!(bind.id.as_str(), "sshot" | "record") && (!running || capture::gnome_shortcuts_enabled(app)) { continue; }
+        if matches!(bind.id.as_str(), "sshot" | "record") && (!running || capture::gnome_shortcuts_enabled(app) || capture::is_wayland()) { continue; }
         for accel in manifest::accelerators(&bind, merged.get(&bind.id)) {
             let Some(parsed) = profile::parse_accelerator(&accel) else {
                 eprintln!("aquastar-lite: skipping invalid shortcut {accel} for {}", bind.id);
@@ -915,10 +942,8 @@ fn main() {
                 dispatch(app, action, false);
             } else if args.iter().any(|arg| arg.starts_with("--")) {
                 startup::apply(app, &args, false);
-            } else if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.show();
-                let _ = window.set_focus();
+            } else {
+                startup::show_main(app);
             }
         }))
         .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app, shortcut, event| {
@@ -1091,6 +1116,8 @@ fn main() {
         }
         if main_gone || matches!(event, RunEvent::Exit) {
             capture::suspend_shortcuts(app);
+            #[cfg(target_os = "linux")]
+            capture::wayland_shortcuts::suspend();
             app.state::<capture::CaptureState>().shutdown();
             app.state::<Players>().kill_all();
             app.state::<studio::StudioState>().stop_preview();
