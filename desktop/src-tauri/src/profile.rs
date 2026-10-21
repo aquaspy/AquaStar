@@ -1,6 +1,3 @@
-//! Electron profile windows. Settings, reminders, to-do, and strategy read and
-//! write the same JSON files Electron uses, with the same merge and migration.
-
 use std::fs;
 use std::path::{Path, PathBuf};
 

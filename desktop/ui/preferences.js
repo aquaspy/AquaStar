@@ -113,6 +113,9 @@
     control.addEventListener('change', () => saveField(key, control));
     const reset = element('button', { type: 'button', class: 'preference-reset', text: 'Reset' });
     reset.setAttribute('aria-label', `Reset ${label}`);
+    reset.addEventListener('pointerdown', (event) => {
+      if (event.button === 0) event.preventDefault();
+    });
     reset.addEventListener('click', () => {
       if (type === 'checkbox') control.checked = defaultValue === true;
       else control.value = defaultValue;

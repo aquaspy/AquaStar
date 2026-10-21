@@ -36,6 +36,77 @@ assert.equal(prefContext.keybindFromEvent({ code: 'KeyK', metaKey: true }), 'Met
 assert.equal(prefContext.keybindFromEvent({ code: 'KeyJ', ctrlKey: true }), 'Ctrl+J');
 assert.equal(prefContext.keybindFromEvent({ code: 'Tab' }), null);
 
+function fakeElement(attributes = {}, ...children) {
+  return {
+    ...attributes,
+    children,
+    dataset: {},
+    listeners: {},
+    addEventListener(type, listener) { this.listeners[type] = listener; },
+    setAttribute(name, value) { this[name] = value; },
+    dispatch(type, event = {}) {
+      let prevented = false;
+      this.listeners[type]?.({ preventDefault() { prevented = true; }, ...event });
+      return prevented;
+    }
+  };
+}
+
+const profileControls = [];
+const profileButtons = [];
+const profileContext = {
+  document: {
+    createElement: () => {
+      const control = fakeElement();
+      profileControls.push(control);
+      return control;
+    },
+    getElementById: () => profileContext.documentStatus
+  },
+  element: (tag, attributes, ...children) => {
+    const node = fakeElement(attributes, ...children);
+    if (attributes?.class === 'preference-reset') profileButtons.push(node);
+    return node;
+  },
+  field: (label, control, hint, key, reset) => ({ control, reset }),
+  state: { mode: 'idle', snapshot: { playerCharacter: 'edited' } },
+  payloadFor: (key, value) => ({ kind: key, value }),
+  documentStatus: { textContent: '', dataset: {} },
+  showRestartNotice() {},
+  announce() {}
+};
+let resolvePreferenceSave;
+const preferenceSaves = [];
+profileContext.invoke = (command, args) => {
+  preferenceSaves.push(args.change.value);
+  return new Promise((resolve) => { resolvePreferenceSave = resolve; });
+};
+profileContext.setEditorsDisabled = (disabled) => {
+  profileButtons.forEach((button) => { button.disabled = disabled; });
+};
+vm.createContext(profileContext);
+const makeControlStart = preferenceSource.indexOf('function makeControl(');
+const renderProfileStart = preferenceSource.indexOf('\n  function renderProfile(', makeControlStart);
+const profileSaveFieldStart = preferenceSource.indexOf('\n  async function saveField(', renderProfileStart);
+const profileSaveKeybindStart = preferenceSource.indexOf('\n  async function saveKeybind(', profileSaveFieldStart);
+assert.ok(makeControlStart >= 0 && renderProfileStart > makeControlStart && profileSaveFieldStart > renderProfileStart && profileSaveKeybindStart > profileSaveFieldStart);
+vm.runInContext(`${preferenceSource.slice(makeControlStart, renderProfileStart)}\n${preferenceSource.slice(profileSaveFieldStart + 3, profileSaveKeybindStart)}`, profileContext);
+
+async function resetEditedTextField() {
+  profileContext.makeControl('Character name', 'text', 'playerCharacter', 'edited', 'default');
+  const control = profileControls[0];
+  const reset = profileButtons[0];
+  const prevented = reset.dispatch('pointerdown', { button: 0 });
+  const pendingSave = prevented ? null : control.listeners.change?.();
+  if (!reset.disabled) reset.listeners.click();
+  assert.equal(preferenceSaves.length, 1, 'Reset should persist once after an edited text field is reset');
+  assert.equal(preferenceSaves[0], 'default', 'the persisted value after Reset must be the default');
+  resolvePreferenceSave({ playerCharacter: 'default' });
+  if (pendingSave) await pendingSave;
+  else await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(control.value, 'default', 'the text control should show the saved default after Reset');
+}
+
 (async () => {
   const button = { disabled: false };
   const event = { currentTarget: button };
@@ -50,7 +121,8 @@ assert.equal(prefContext.keybindFromEvent({ code: 'Tab' }), null);
   await operation;
   assert.equal(settled, true);
   assert.equal(button.disabled, false);
-  console.log('PASS: Preferences navigation, recorded modifiers, and async control state');
+  await resetEditedTextField();
+  console.log('PASS: Preferences navigation, recorded modifiers, async control state, and text Reset persistence');
 })().catch((error) => {
   process.nextTick(() => { throw error; });
 });
