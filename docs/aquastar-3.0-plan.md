@@ -1,5 +1,7 @@
 # AquaStar 3.0 plan
 
+This file is history. Classic AquaStar, this Electron app, is on `main` and `dev`. AquaStar NEO is a separate product on `neo` and `neo-dev`. Its current plan is [docs/neo-plan.md on the neo branch](https://github.com/aquaspy/AquaStar/blob/neo/docs/neo-plan.md). The text below records the earlier plan and is not the current branch contract.
+
 **All implementation work on AquaStar 3.0 is done in pstack poteto-mode.** Use the pstack principles, and the pstack skills when a task calls for one.
 
 AquaStar 3.0 replaces the Electron app. People who want the old launcher stay on a maintained 2.x branch. The `lite/` tree becomes 3.0. The `lite-v0.2.0` pre-releases were the lab. Lite is not a separate product.

@@ -1,6 +1,6 @@
 # Repository map
 
-This is the maintained Electron 2.x source tree. Use `2.x-dev` for maintenance development and `2.x` for its stable line. Current Tauri 3.0 development lives on `dev`; the active code is in `desktop/` on that branch. Historical Tauri snapshots were removed from this maintenance branch.
+This is classic AquaStar, the Electron app. `main` is the stable branch. `dev` is development. AquaStar NEO lives on `neo` and `neo-dev` and is not in this tree.
 
 | Path | Purpose |
 | --- | --- |
@@ -15,16 +15,16 @@ This is the maintained Electron 2.x source tree. Use `2.x-dev` for maintenance d
 | `.github/` | CI and release workflows |
 | `LICENSE.md` | Original project license notice |
 
-The root runtime and plugin paths remain intact. The 3.0 branch also consumes shared plugin assets, so moving those paths requires coordinating their consumers and packaging rules across the lines. No SWFs or bundled runtime binaries were removed.
+This tree does not contain the NEO launcher. NEO keeps its own copies of the plugin assets it needs.
 
 ## Branch contract
 
-- `main`: stable 3.x line after a separately approved merge.
-- `dev`: 3.x development.
-- `2.x`: maintained 2.x stable line, renamed from `electron-2.x`.
-- `2.x-dev`: 2.x development.
+- `main`: classic Electron stable. This is the default branch.
+- `dev`: classic Electron development.
+- `neo`: AquaStar NEO stable.
+- `neo-dev`: AquaStar NEO development.
 
-The agreed branch cleanup was authorized. File organization does not authorize a release tag, a change to GitHub Latest, or a merge into `main`. Those release actions remain pending explicit approval.
+Electron workflows in this tree run on `main` and `dev`. They do not build NEO. A release tag, a change to GitHub Latest, or a merge from `dev` into `main` still needs its own approval.
 
 ## Generated files
 

@@ -1,6 +1,6 @@
 # AquaStar – Agent Notes
 
-This is the maintained AquaStar Electron 2.x line (`2.x` stable, `2.x-dev` development). Active Tauri 3.0 development is on `dev`; the current Tauri source is in `desktop/` on that branch. Historical Tauri snapshots have been removed from this maintenance branch. See [`docs/REPOSITORY.md`](docs/REPOSITORY.md) for the repository map.
+This is classic AquaStar, the Electron app. `main` is stable. `dev` is development. AquaStar NEO is a separate product on `neo` and `neo-dev` and is not in this tree. See [`docs/REPOSITORY.md`](docs/REPOSITORY.md) for the repository map.
 
 Custom Electron 11 Flash (PPAPI) companion shell. Game-specific behavior lives in **plugins**; the bundled default is Adventure Quest Worlds (`plugins/adventure-quest-worlds/`).
 
@@ -16,7 +16,7 @@ Plugin authoring (full guide): [`docs/PLUGINS.md`](docs/PLUGINS.md). Architectur
 - `npm run test:ci` – run tests followed by the local Windows packaging check
 - `npm run web:build` / `web:preview` – build/serve the static tools site (plugin `contributeWebBuild`)
 - `./scripts/build-all-arch.sh` – **legacy local release script** for multi-arch Linux/Windows. Prefer GitHub Releases via tag (see below).
-- **GitHub Release:** the Electron release workflow handles 2.x tags. Publishing a stable release requires explicit user approval. Local builds and repository organization do not authorize release tags or changes to GitHub Latest.
+- **GitHub Release:** the Electron release workflow handles `v*` tags on this line. It does not build AquaStar NEO. NEO tags use `neo-v*` and are published from the `neo` branch. Publishing a stable release requires explicit user approval. Local builds and repository organization do not authorize release tags or changes to GitHub Latest.
 
 The test workflow runs `npm test` on pull requests and packages the Windows app separately.
 
