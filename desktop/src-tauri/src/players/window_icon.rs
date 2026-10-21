@@ -1,4 +1,4 @@
-//! The AquaStar icon for player windows.
+//! The AquaStar NEO icon for player windows.
 //!
 //! The launcher cannot edit a pinned player's executable, because its SHA-256 is
 //! checked. It sets the icon on the player's window from outside the process
@@ -41,7 +41,7 @@ pub fn net_wm_icon() -> &'static [i64] {
             match tauri::image::Image::from_bytes(png) {
                 Ok(image) => data.extend(argb_block(image.width(), image.height(), image.rgba())),
                 Err(err) => {
-                    eprintln!("aquastar-lite: window icon was not decoded ({err})");
+                    eprintln!("aquastar-neo: window icon was not decoded ({err})");
                     return Vec::new();
                 }
             }

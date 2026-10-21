@@ -8,7 +8,7 @@
             return;
         }
 
-        var defaultText = 'AquaStar: Sync Now';
+        var defaultText = 'AquaStar NEO: Sync Now';
         var ensureTimer = null;
 
         function ensureButton() {
@@ -27,14 +27,14 @@
 
             btn.onclick = function () {
                 btn.disabled = true;
-                btn.textContent = 'AquaStar: Syncing...';
+                btn.textContent = 'AquaStar NEO: Syncing...';
                 window.aquastarWiki.syncInventoryNow().then(function (result) {
                     btn.disabled = false;
-                    btn.textContent = (result && result.ok) ? 'AquaStar: Synced!' : 'AquaStar: Sync Failed';
+                    btn.textContent = (result && result.ok) ? 'AquaStar NEO: Synced!' : 'AquaStar NEO: Sync Failed';
                     setTimeout(function () { btn.textContent = defaultText; }, 2500);
                 }).catch(function () {
                     btn.disabled = false;
-                    btn.textContent = 'AquaStar: Sync Failed';
+                    btn.textContent = 'AquaStar NEO: Sync Failed';
                     setTimeout(function () { btn.textContent = defaultText; }, 2500);
                 });
             };

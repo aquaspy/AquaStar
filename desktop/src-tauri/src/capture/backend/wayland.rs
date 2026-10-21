@@ -31,7 +31,7 @@ pub fn start(pid: u32, authorization_path: Option<std::path::PathBuf>) -> Result
     std::thread::spawn(move || {
         let result = tauri::async_runtime::block_on(async {
             if let Err(error) = crate::portal_identity::register().await {
-                eprintln!("aquastar-lite: {error}");
+                eprintln!("aquastar-neo: {error}");
             }
             let proxy = Screencast::new().await.map_err(|e| e.to_string())?;
             if !proxy
@@ -91,7 +91,7 @@ pub fn start(pid: u32, authorization_path: Option<std::path::PathBuf>) -> Result
             let main_loop = MainLoopRc::new(None).map_err(|e| e.to_string())?;
             let context = ContextRc::new(&main_loop, None).map_err(|e| e.to_string())?;
             let core = context.connect_fd_rc(fd, None).map_err(|e| e.to_string())?;
-            let stream=StreamRc::new(core,"AquaStar game capture",properties::properties!{"media.type"=>"Video","media.category"=>"Capture","media.role"=>"Screen"}).map_err(|e|e.to_string())?;
+            let stream=StreamRc::new(core,"AquaStar NEO game capture",properties::properties!{"media.type"=>"Video","media.category"=>"Capture","media.role"=>"Screen"}).map_err(|e|e.to_string())?;
             let errors = error.clone();
             let received = latest.clone();
             let format_errors = error.clone();

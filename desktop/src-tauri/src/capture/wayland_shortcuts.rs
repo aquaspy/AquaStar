@@ -155,7 +155,7 @@ pub fn sync(app: &tauri::AppHandle) {
         .await;
         release(&ACTIVE, &owner);
         if let Err(error) = result {
-            eprintln!("aquastar-lite: Wayland global shortcuts: {error}");
+            eprintln!("aquastar-neo: Wayland global shortcuts: {error}");
         }
     });
 }
@@ -164,8 +164,8 @@ fn description(action: &str) -> &'static str {
     match action {
         "sshot" => "Take a game screenshot",
         "record" => "Start or stop game recording",
-        "help" => "Open AquaStar Help",
-        "settings" => "Open AquaStar Preferences",
+        "help" => "Open AquaStar NEO Help",
+        "settings" => "Open AquaStar NEO Preferences",
         "wiki" => "Open AQW Wiki",
         "account" => "Open AQW Account",
         "design" => "Open AQW Design Notes",
@@ -176,7 +176,7 @@ fn description(action: &str) -> &'static str {
         "todo" => "Open To-Do List",
         "inventory" => "Open Inventory",
         "strategy" => "Open Strategy",
-        _ => "AquaStar shortcut",
+        _ => "AquaStar NEO shortcut",
     }
 }
 

@@ -101,7 +101,7 @@ function renderBanner() {
   }
   if (model.restartRequired) {
     tone = 'warn';
-    lines.push('Changes to your plugins are saved. Restart AquaStar to apply them.');
+    lines.push('Changes to your plugins are saved. Restart AquaStar NEO to apply them.');
   }
   const errors = model.errors || [];
   if (errors.length) tone = 'bad';
@@ -122,7 +122,7 @@ function renderBanner() {
   banner.append(text);
   if (model.restartRequired) {
     banner.append(
-      el('button', { type: 'button', text: 'Restart AquaStar', onclick: () => invoke('extensions_restart').catch(failure) })
+      el('button', { type: 'button', text: 'Restart AquaStar NEO', onclick: () => invoke('extensions_restart').catch(failure) })
     );
   }
   banner.hidden = false;
@@ -408,8 +408,8 @@ startupSelect.addEventListener('change', async () => {
     await invoke('set_startup', { pluginId, gameId });
     message(
       pluginId
-        ? 'AquaStar will open this game on start-up. Reopen AquaStar or use --launcher to change Preferences.'
-        : 'AquaStar will show the launcher on start-up.'
+        ? 'AquaStar NEO will open this game on start-up. Reopen AquaStar NEO or use --launcher to change Preferences.'
+        : 'AquaStar NEO will show the launcher on start-up.'
     );
   } catch (error) {
     failure(error);

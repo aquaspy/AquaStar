@@ -137,7 +137,7 @@ fn fetch_char_page(name: &str) -> Result<String, String> {
     let url = format!("https://account.aq.com/CharPage?id={name}");
     let response = ureq::get(&url)
         .timeout(Duration::from_secs(20))
-        .set("User-Agent", "AquaStar Char Page Studio")
+        .set("User-Agent", "AquaStar NEO Char Page Studio")
         .call()
         .map_err(|error| match error {
             ureq::Error::Status(code, _) => format!("AQW returned HTTP {code}."),
@@ -220,7 +220,7 @@ fn player_arguments(
         .map(str::to_string),
     );
     if artix {
-        args.extend(["--title".to_string(), "AquaStar Char Page Studio".to_string()]);
+        args.extend(["--title".to_string(), "AquaStar NEO Char Page Studio".to_string()]);
     }
     args.push(swf.display().to_string());
     args
@@ -735,7 +735,7 @@ mod tests {
         let args = player_arguments(true, &pairs, Path::new("C:/x/scene.swf"), 715, 455, &settings);
         assert_eq!(args[0], "-PstrName=A B&C", "one argument per FlashVar, so no shell quoting is involved");
         assert!(args.contains(&"--dummy-external-interface".to_string()));
-        assert!(args.windows(2).any(|w| w == ["--title", "AquaStar Char Page Studio"]));
+        assert!(args.windows(2).any(|w| w == ["--title", "AquaStar NEO Char Page Studio"]));
         assert_eq!(args.last().unwrap(), "C:/x/scene.swf");
         let stock = player_arguments(false, &pairs, Path::new("s.swf"), 715, 455, &settings);
         assert!(!stock.contains(&"--title".to_string()), "stock Ruffle 0.7.1 rejects --title");

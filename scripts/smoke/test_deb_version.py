@@ -48,6 +48,13 @@ def main():
                 members = command('ar', 't', str(package)).splitlines()
                 assert 'control.tar.gz' in members and 'data.tar.xz' in members
                 subprocess.run(['dpkg', '--compare-versions', expected, 'lt', expected.split('~')[0]], check=True)
+            if version == '3.0.0-rc.3':
+                command('python3', str(SCRIPT), '--package-name', 'aquastar-neo', str(package))
+                renamed = Path(scratch) / 'aquastar-neo_3.0.0~rc.3_amd64.deb'
+                assert renamed.is_file() and not package.exists()
+                assert command('dpkg-deb', '--field', str(renamed), 'Package') == 'aquastar-neo'
+                assert command('dpkg-deb', '--field', str(renamed), 'Version') == expected
+                assert payload(renamed) == original
     print('Debian candidate ordering, identity, payload, stable versions and idempotence: passed')
 
 

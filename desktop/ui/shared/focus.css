@@ -1,4 +1,4 @@
-/* Keep keyboard focus consistent across AquaStar's native HTML windows. */
+/* Keep keyboard focus consistent across AquaStar NEO's native HTML windows. */
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
@@ -19,7 +19,7 @@ summary:focus,
   outline-offset: 2px;
 }
 
-/* Chromium's native scrollbar otherwise stays bright against AquaStar's dark
+/* Chromium's native scrollbar otherwise stays bright against AquaStar NEO's dark
    HTML feature windows. Kept here so every feature that shares focus styling
    also shares the same unobtrusive scroll treatment. */
 ::-webkit-scrollbar {

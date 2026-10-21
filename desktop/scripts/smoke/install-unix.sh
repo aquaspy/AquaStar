@@ -22,7 +22,7 @@ case "$(uname -s)" in
     sudo apt-get install -y xvfb openbox scrot xdotool "$gtk" libnss3 libegl1 libxkbcommon-x11-0 libgl1-mesa-dri fonts-liberation libssl3 "$alsa" libfontconfig1
     if [ "$pkg" = deb ]; then
       sudo apt-get install -y ./dist/*.deb
-      bin=$(command -v aquastar-lite)
+      bin=$(command -v aquastar-neo)
     elif [ "$pkg" = appimage ]; then
       bin=$(echo "$PWD"/dist/*.AppImage)
       chmod +x "$bin"
@@ -60,17 +60,17 @@ case "$(uname -s)" in
     rm -rf "$mount"
     mkdir -p "$mount"
     hdiutil attach dist/*.dmg -nobrowse -mountpoint "$mount"
-    app=$(find "$mount" -maxdepth 2 \( -name 'AquaStar.app' -o -name 'aquastar-lite.app' \) -print -quit)
+    app=$(find "$mount" -maxdepth 2 -name 'AquaStar NEO.app' -print -quit)
     if [ -z "$app" ]; then
-      echo "no AquaStar.app in the disk image" >&2
+      echo "no AquaStar NEO.app in the disk image" >&2
       ls -la "$mount" >&2
       exit 1
     fi
-    rm -rf "$HOME/AquaStar.app"
-    cp -R "$app" "$HOME/AquaStar.app"
+    rm -rf "$HOME/AquaStar NEO.app"
+    cp -R "$app" "$HOME/AquaStar NEO.app"
     hdiutil detach "$mount"
-    xattr -cr "$HOME/AquaStar.app"
-    bin="$HOME/AquaStar.app/Contents/MacOS/aquastar-lite"
+    xattr -cr "$HOME/AquaStar NEO.app"
+    bin="$HOME/AquaStar NEO.app/Contents/MacOS/aquastar-neo"
     ;;
   *)
     echo "install-unix.sh does not install on $(uname -s)" >&2

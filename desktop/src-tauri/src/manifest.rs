@@ -1006,7 +1006,7 @@ mod tests {
         assert!(accept_site("https://aqwwiki.wikidot.com/search:site/q/sword").is_ok());
         let about = about_dialog("en-US");
         assert!(about.title.contains(env!("CARGO_PKG_VERSION")));
-        assert!(about.title.contains("About AquaStar Version:"));
+        assert!(about.title.contains("About AquaStar NEO Version:"));
         assert!(about.detail.contains("133spider (AQLite)"));
         assert!(about.detail.contains(releases_url()));
         assert_eq!(charpage_url(""), "https://account.aq.com/CharPage");

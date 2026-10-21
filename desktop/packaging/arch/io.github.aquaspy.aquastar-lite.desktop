@@ -1,14 +1,14 @@
 [Desktop Entry]
 Type=Application
-Name=AquaStar
-Comment=Flash and Ruffle companion launcher
-Exec=aquastar-lite
-Icon=aquastar-lite
+Name=AquaStar NEO
+Comment=AquaStar NEO Flash and Ruffle launcher
+Exec=aquastar-neo
+Icon=aquastar-neo
 Terminal=false
 Categories=Game;
-StartupWMClass=aquastar-lite
+StartupWMClass=aquastar-neo
 Actions=Launcher;
 
 [Desktop Action Launcher]
 Name=Open Launcher and Preferences
-Exec=aquastar-lite --launcher
+Exec=aquastar-neo --launcher

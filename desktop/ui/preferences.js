@@ -140,19 +140,19 @@
     ];
     const hyprland = element('section', { class: 'pref' },
       element('h2', { class: 'pref-title', text: 'Hyprland shortcuts' }),
-      element('p', { class: 'hint', text: 'Hyprland exposes AquaStar’s shortcut actions but does not assign their keys automatically. On Omarchy, AquaStar checks existing bindings, then can add the current game shortcuts to bindings.lua with a backup. Existing shortcuts are never removed or replaced.' }),
+      element('p', { class: 'hint', text: 'Hyprland exposes AquaStar NEO’s shortcut actions but does not assign their keys automatically. On Omarchy, AquaStar NEO checks existing bindings, then can add the current game shortcuts to bindings.lua with a backup. Existing shortcuts are never removed or replaced.' }),
       element('p', { id: 'hyprland-shortcut-status', class: 'hint', role: 'status', 'aria-live': 'polite', text: 'Checking Omarchy configuration…' }),
       element('p', { id: 'hyprland-shortcut-path', class: 'hint', text: '' }),
       element('div', { class: 'preference-actions' },
         element('button', { type: 'button', id: 'hyprland-shortcut-setup', text: 'Set up / Update shortcuts' }),
-        element('button', { type: 'button', id: 'hyprland-shortcut-remove', text: 'Remove AquaStar shortcuts' })
+        element('button', { type: 'button', id: 'hyprland-shortcut-remove', text: 'Remove AquaStar NEO shortcuts' })
       )
     );
     hyprland.hidden = true;
     generalMount.replaceChildren(
       element('section', { class: 'pref' },
         element('h2', { class: 'pref-title', text: 'Menu and dialog language' }),
-        element('p', { class: 'hint', text: 'This changes AquaStar menus and dialogs. The launcher and plugin interfaces remain in their supplied language.' }),
+        element('p', { class: 'hint', text: 'This changes AquaStar NEO menus and dialogs. The launcher and plugin interfaces remain in their supplied language.' }),
         makeControl('Language', 'select', 'appLanguage', snapshot.appLanguage, snapshot.defaults.appLanguage)
       ),
       element('section', { class: 'pref' },
@@ -285,7 +285,7 @@
       if (!groups.has(group)) groups.set(group, []);
       groups.get(group).push(item);
     }
-    const content = [element('p', { class: 'hint', text: 'Saved shortcuts may require restarting AquaStar.' })];
+    const content = [element('p', { class: 'hint', text: 'Saved shortcuts may require restarting AquaStar NEO.' })];
     for (const [group, items] of groups) {
       const card = element('section', { class: 'pref keybind-group' },
         element('div', { class: 'keybind-group-head' },
@@ -405,7 +405,7 @@
       rowStatus.textContent = (saved.keybindDiagnostics || []).find((message) => message.startsWith(`${item.id}:`)) || '';
       rowStatus.dataset.error = 'false';
       showRestartNotice();
-      if (!quiet) announce(`${displayName(item.id)} shortcut saved. Restart AquaStar to apply saved keybinds.`);
+      if (!quiet) announce(`${displayName(item.id)} shortcut saved. Restart AquaStar NEO to apply saved keybinds.`);
     } catch (error) {
       rowStatus.textContent = String(error);
       rowStatus.dataset.error = 'true';

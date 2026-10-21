@@ -138,11 +138,11 @@ pub fn feature_page(name: &str) -> String {
 
 pub fn tool_spec(name: &str) -> Option<(&'static str, f64, f64)> {
     Some(match name {
-        "reminders" => ("AquaStar - Reminders", 1040.0, 620.0),
-        "todo" => ("AquaStar - To-Do List", 960.0, 620.0),
-        "strategy" => ("AquaStar - Strategy", 1040.0, 680.0),
-        "inventory" => ("AquaStar - Inventory", 1040.0, 620.0),
-        "studio" => ("AquaStar - Char Page Studio", 560.0, 900.0),
+        "reminders" => ("AquaStar NEO - Reminders", 1040.0, 620.0),
+        "todo" => ("AquaStar NEO - To-Do List", 960.0, 620.0),
+        "strategy" => ("AquaStar NEO - Strategy", 1040.0, 680.0),
+        "inventory" => ("AquaStar NEO - Inventory", 1040.0, 620.0),
+        "studio" => ("AquaStar NEO - Char Page Studio", 560.0, 900.0),
         _ => return None,
     })
 }
@@ -150,11 +150,11 @@ pub fn tool_spec(name: &str) -> Option<(&'static str, f64, f64)> {
 pub fn profile_preferences(files: &ProfileFiles) -> Result<ProfilePreferences, String> {
     if files.canonical_settings.exists() {
         let text = fs::read_to_string(&files.canonical_settings)
-            .map_err(|error| format!("Could not read AquaStar settings: {error}"))?;
+            .map_err(|error| format!("Could not read AquaStar NEO settings: {error}"))?;
         let canonical: Value = serde_json::from_str(&text)
-            .map_err(|error| format!("Could not read AquaStar settings: {error}"))?;
+            .map_err(|error| format!("Could not read AquaStar NEO settings: {error}"))?;
         if !canonical.is_object() {
-            return Err("AquaStar settings must contain a JSON object".into());
+            return Err("AquaStar NEO settings must contain a JSON object".into());
         }
     }
     let values = merge_settings(&files.settings_files);
@@ -240,14 +240,14 @@ pub fn change_profile_preference(
         .unwrap_or_else(|error| error.into_inner());
     let existing_value = match fs::read_to_string(&files.canonical_settings) {
         Ok(text) => serde_json::from_str::<Value>(&text)
-            .map_err(|error| format!("Could not read AquaStar settings: {error}"))?,
+            .map_err(|error| format!("Could not read AquaStar NEO settings: {error}"))?,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Value::Object(Map::new()),
-        Err(error) => return Err(format!("Could not read AquaStar settings: {error}")),
+        Err(error) => return Err(format!("Could not read AquaStar NEO settings: {error}")),
     };
     let mut existing = existing_value
         .as_object()
         .cloned()
-        .ok_or_else(|| "AquaStar settings must contain a JSON object".to_string())?;
+        .ok_or_else(|| "AquaStar NEO settings must contain a JSON object".to_string())?;
     if let Some(plugins) = merge_settings(&files.settings_files)
         .get("plugins")
         .filter(|value| value.is_object())

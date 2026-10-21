@@ -57,7 +57,7 @@ fn hidden_account_window(app: &tauri::AppHandle) -> Result<WebviewWindow, String
         .parse()
         .map_err(|_| "invalid-account-url")?;
     let window = WebviewWindowBuilder::new(app, SESSION_LABEL, WebviewUrl::External(url))
-        .title("AquaStar Account Session")
+        .title("AquaStar NEO Account Session")
         .visible(false)
         .focused(false)
         .skip_taskbar(true)

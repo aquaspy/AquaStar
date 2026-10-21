@@ -4,7 +4,7 @@
     "linux": {
       "appimage": {
         "files": {
-          "usr/lib/aquastar-lite/flash-gtk2": "flash-gtk2"
+          "usr/lib/aqua-star-neo/flash-gtk2": "flash-gtk2"
         }
       },
       "deb": {
@@ -23,8 +23,8 @@
           "libwayland-server0",
           "libxcb-randr0"
         ],
-        "conflicts": ["aquastar-lite", "aqua-star-lite"],
-        "replaces": ["aquastar-lite", "aqua-star-lite"],
+        "conflicts": ["aqua-star", "aquastar-lite", "aqua-star-lite"],
+        "replaces": ["aqua-star", "aquastar-lite", "aqua-star-lite"],
         "desktopTemplate": "assets/aquastar-lite.desktop"
       }
     }

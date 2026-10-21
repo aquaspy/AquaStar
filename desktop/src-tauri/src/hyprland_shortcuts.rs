@@ -90,7 +90,7 @@ pub fn status() -> SetupStatus {
             path: Some(path),
             backup_path: None,
             message:
-                "The bindings file is not a regular file, so AquaStar will leave it untouched."
+                "The bindings file is not a regular file, so AquaStar NEO will leave it untouched."
                     .into(),
         };
     }
@@ -116,9 +116,9 @@ pub fn status() -> SetupStatus {
         backup_path: None,
         message: if installed {
             if active_session {
-                "AquaStar's managed bindings are saved. Reload Hyprland, then test a shortcut to confirm the compositor loaded them.".into()
+                "AquaStar NEO's managed bindings are saved. Reload Hyprland, then test a shortcut to confirm the compositor loaded them.".into()
             } else {
-                "AquaStar's managed bindings are saved. They apply in your next Hyprland session."
+                "AquaStar NEO's managed bindings are saved. They apply in your next Hyprland session."
                     .into()
             }
         } else if supported {
@@ -134,7 +134,7 @@ pub fn install() -> Result<SetupStatus, String> {
     let metadata = fs::symlink_metadata(&path).map_err(|error| error.to_string())?;
     if metadata.file_type().is_symlink() || !metadata.is_file() {
         return Err(
-            "The Hyprland bindings path is not a regular file; AquaStar left it untouched.".into(),
+            "The Hyprland bindings path is not a regular file; AquaStar NEO left it untouched.".into(),
         );
     }
     let current = fs::read_to_string(&path).map_err(|error| error.to_string())?;
@@ -143,7 +143,7 @@ pub fn install() -> Result<SetupStatus, String> {
         && !current.contains("hl.bind(")
         && !current.contains("hl.bind (")
     {
-        return Err("AquaStar only edits Omarchy-style Lua bindings that use hl.bind().".into());
+        return Err("AquaStar NEO only edits Omarchy-style Lua bindings that use hl.bind().".into());
     }
 
     let planned = plan_bindings(&base)?;
@@ -151,11 +151,11 @@ pub fn install() -> Result<SetupStatus, String> {
         .args(["menu", "keybindings", "--print"])
         .output()
         .map_err(|error| {
-            format!("Could not check Omarchy's current keybindings ({error}); AquaStar left the config untouched.")
+            format!("Could not check Omarchy's current keybindings ({error}); AquaStar NEO left the config untouched.")
         })?;
     if !active_bindings.status.success() {
         return Err(
-            "Could not check Omarchy's current keybindings; AquaStar left the config untouched."
+            "Could not check Omarchy's current keybindings; AquaStar NEO left the config untouched."
                 .into(),
         );
     }
@@ -164,7 +164,7 @@ pub fn install() -> Result<SetupStatus, String> {
     let conflicts = binding_conflicts(&planned, &active_bindings, &old_managed);
     if !conflicts.is_empty() {
         return Err(format!(
-            "AquaStar found existing Hyprland shortcuts for {}. It did not change the config. Change those keys in Preferences or free them in Omarchy first.",
+            "AquaStar NEO found existing Hyprland shortcuts for {}. It did not change the config. Change those keys in Preferences or free them in Omarchy first.",
             conflicts.join(", ")
         ));
     }
@@ -173,7 +173,7 @@ pub fn install() -> Result<SetupStatus, String> {
     let updated = format!("{base}\n\n{block}\n");
     if updated == current {
         let mut result = status();
-        result.message = "AquaStar's Hyprland shortcuts are already up to date.".into();
+        result.message = "AquaStar NEO's Hyprland shortcuts are already up to date.".into();
         return Ok(result);
     }
 
@@ -191,7 +191,7 @@ pub fn remove() -> Result<SetupStatus, String> {
     let metadata = fs::symlink_metadata(&path).map_err(|error| error.to_string())?;
     if metadata.file_type().is_symlink() || !metadata.is_file() {
         return Err(
-            "The Hyprland bindings path is not a regular file; AquaStar left it untouched.".into(),
+            "The Hyprland bindings path is not a regular file; AquaStar NEO left it untouched.".into(),
         );
     }
     let current = fs::read_to_string(&path).map_err(|error| error.to_string())?;
@@ -203,7 +203,7 @@ pub fn remove() -> Result<SetupStatus, String> {
     atomic_write(&path, updated.as_bytes(), &metadata)?;
     let mut result = status();
     result.backup_path = Some(backup);
-    result.message = "AquaStar's managed shortcuts were removed. A backup was saved.".into();
+    result.message = "AquaStar NEO's managed shortcuts were removed. A backup was saved.".into();
     Ok(result)
 }
 
@@ -240,7 +240,7 @@ fn plan_bindings(unmanaged: &str) -> Result<Vec<PlannedBinding>, String> {
         }
     }
     if binds.is_empty() {
-        return Err("AquaStar could not find any shortcuts to add to Hyprland.".into());
+        return Err("AquaStar NEO could not find any shortcuts to add to Hyprland.".into());
     }
     Ok(binds)
 }
@@ -352,21 +352,21 @@ fn references_portal_action(contents: &str, portal_id: &str) -> bool {
 
 fn action_description(id: &str) -> &'static str {
     match id {
-        "sshot" => "AquaStar screenshot",
-        "record" => "AquaStar start/stop recording",
-        "help" => "AquaStar help",
-        "settings" => "AquaStar preferences",
-        "wiki" => "AquaStar AQW Wiki",
-        "account" => "AquaStar AQW Account",
-        "design" => "AquaStar AQW Design Notes",
-        "charpage" => "AquaStar AQW Character Page",
-        "newAqw" => "AquaStar new AQW instance",
-        "dragon" => "AquaStar DragonFable instance",
-        "reminders" => "AquaStar reminders",
-        "todo" => "AquaStar to-do list",
-        "inventory" => "AquaStar inventory",
-        "strategy" => "AquaStar strategy",
-        _ => "AquaStar shortcut",
+        "sshot" => "AquaStar NEO screenshot",
+        "record" => "AquaStar NEO start/stop recording",
+        "help" => "AquaStar NEO help",
+        "settings" => "AquaStar NEO preferences",
+        "wiki" => "AquaStar NEO AQW Wiki",
+        "account" => "AquaStar NEO AQW Account",
+        "design" => "AquaStar NEO AQW Design Notes",
+        "charpage" => "AquaStar NEO AQW Character Page",
+        "newAqw" => "AquaStar NEO new AQW instance",
+        "dragon" => "AquaStar NEO DragonFable instance",
+        "reminders" => "AquaStar NEO reminders",
+        "todo" => "AquaStar NEO to-do list",
+        "inventory" => "AquaStar NEO inventory",
+        "strategy" => "AquaStar NEO strategy",
+        _ => "AquaStar NEO shortcut",
     }
 }
 
@@ -431,13 +431,13 @@ fn strip_managed_block(contents: &str) -> Result<(String, bool), String> {
         return Ok((contents.to_string(), false));
     }
     if begin_count != 1 || end_count != 1 {
-        return Err("AquaStar's managed Hyprland section is incomplete or duplicated; the file was left untouched.".into());
+        return Err("AquaStar NEO's managed Hyprland section is incomplete or duplicated; the file was left untouched.".into());
     }
     let begin = contents.find(BEGIN).unwrap();
     let end = contents.find(END).unwrap();
     if end < begin {
         return Err(
-            "AquaStar's managed Hyprland section is malformed; the file was left untouched.".into(),
+            "AquaStar NEO's managed Hyprland section is malformed; the file was left untouched.".into(),
         );
     }
     let line_start = contents[..begin].rfind('\n').map_or(0, |i| i + 1);
@@ -445,7 +445,7 @@ fn strip_managed_block(contents: &str) -> Result<(String, bool), String> {
         || line_start < 2
         || &contents[line_start - 2..line_start] != "\n\n"
     {
-        return Err("AquaStar's managed Hyprland section has unexpected surrounding text; the file was left untouched.".into());
+        return Err("AquaStar NEO's managed Hyprland section has unexpected surrounding text; the file was left untouched.".into());
     }
     let end_line = contents[end..]
         .find('\n')
@@ -615,17 +615,17 @@ mod tests {
             PlannedBinding {
                 portal_id: "wiki-4".into(),
                 trigger: "ALT + W".into(),
-                description: "AquaStar AQW Wiki",
+                description: "AquaStar NEO AQW Wiki",
             },
             PlannedBinding {
                 portal_id: "newAqw-8".into(),
                 trigger: "ALT + N".into(),
-                description: "AquaStar new AQW instance",
+                description: "AquaStar NEO new AQW instance",
             },
             PlannedBinding {
                 portal_id: "dragon-9".into(),
                 trigger: "ALT + 1".into(),
-                description: "AquaStar DragonFable instance",
+                description: "AquaStar NEO DragonFable instance",
             },
         ];
         let current = "SUPER ALT + 1 → Switch to group window 1\n";
@@ -637,15 +637,15 @@ mod tests {
     #[test]
     fn previously_managed_shortcuts_do_not_conflict_during_update() {
         let block = format!(
-            "{BEGIN}\nhl.bind(\"ALT + W\", aquastar_portal_shortcut(\"wiki-4\"), {{ auto_consuming = true, description = \"AquaStar AQW Wiki\" }})\n{END}"
+            "{BEGIN}\nhl.bind(\"ALT + W\", aquastar_portal_shortcut(\"wiki-4\"), {{ auto_consuming = true, description = \"AquaStar NEO AQW Wiki\" }})\n{END}"
         );
         let old = managed_binding_labels(&block);
         let planned = vec![PlannedBinding {
             portal_id: "wiki-4".into(),
             trigger: "ALT + W".into(),
-            description: "AquaStar AQW Wiki",
+            description: "AquaStar NEO AQW Wiki",
         }];
-        assert_eq!(old, vec![("ALT+W".into(), "AquaStar AQW Wiki".into())]);
-        assert!(binding_conflicts(&planned, "ALT + W → AquaStar AQW Wiki", &old).is_empty());
+        assert_eq!(old, vec![("ALT+W".into(), "AquaStar NEO AQW Wiki".into())]);
+        assert!(binding_conflicts(&planned, "ALT + W → AquaStar NEO AQW Wiki", &old).is_empty());
     }
 }

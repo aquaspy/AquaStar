@@ -274,7 +274,7 @@ pub fn decide(
         } else {
             match (&request.version, &shipped) {
                 (Some(wanted), Some(actual)) if !cli::version_matches(actual, wanted) => Some(format!(
-                    "{} {wanted} is not available here; AquaStar ships {} {actual}.",
+                    "{} {wanted} is not available here; AquaStar NEO ships {} {actual}.",
                     engine_name(request.engine),
                     engine_name(request.engine)
                 )),

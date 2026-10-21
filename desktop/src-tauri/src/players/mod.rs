@@ -72,7 +72,7 @@ impl Engine {
         }
     }
 
-    /// Version of the player AquaStar ships for this system (`1.7.0`, `32.0.0.465`).
+    /// Version of the player AquaStar NEO ships for this system (`1.7.0`, `32.0.0.465`).
     pub fn version_on(&self, os: catalog::Os, arch: catalog::Arch) -> Option<String> {
         catalog::Catalog::pinned()
             .select(*self, os, arch)
@@ -239,7 +239,7 @@ fn without_launcher_fontconfig(cmd: &mut Command) {
 /// The Flash projector is GTK 2. That `usr/lib` directory also holds GTK 3, and
 /// inheriting it makes the projector exit before it maps a window (GLib-GObject
 /// NULL class). The scrub applies to Ruffle and Flash. Flash then gets only
-/// `usr/lib/aquastar-lite/flash-gtk2` on `LD_LIBRARY_PATH`.
+/// `usr/lib/aqua-star-neo/flash-gtk2` on `LD_LIBRARY_PATH`.
 const APPIMAGE_DROP: &[&str] = &[
     "GTK_PATH",
     "GTK_EXE_PREFIX",
@@ -288,7 +288,7 @@ fn scrub_player_env(vars: Vec<(String, String)>) -> Vec<(String, String)> {
 /// GTK 2 libraries copied by `desktop/scripts/bundle-flash-gtk2.sh` and packed into
 /// the AppImage. The deb uses the system packages instead, so this stays empty
 /// unless `APPDIR` is set.
-const FLASH_RUNTIME_DIR: &str = "usr/lib/aquastar-lite/flash-gtk2";
+const FLASH_RUNTIME_DIR: &str = "usr/lib/aqua-star-neo/flash-gtk2";
 const FLASH_RUNTIME_MARK: &str = "libgtk-x11-2.0.so.0";
 
 fn flash_runtime_libs(appdir: &Path) -> Option<PathBuf> {
@@ -546,7 +546,7 @@ impl Players {
         prepare_existing: bool,
     ) -> Result<String, String> {
         if self.shutting_down.load(Ordering::SeqCst) {
-            return Err("AquaStar is closing".into());
+            return Err("AquaStar NEO is closing".into());
         }
         let save_directory = save_directory.map(Path::to_path_buf);
         let settings = settings.for_platform(std::env::consts::OS);
@@ -558,7 +558,7 @@ impl Players {
             }
         }
         if self.shutting_down.load(Ordering::SeqCst) {
-            return Err("AquaStar is closing".into());
+            return Err("AquaStar NEO is closing".into());
         }
         let graphics = settings.graphics;
         let ruffle_may_fallback = engine == Engine::Ruffle && graphics != RuffleGraphics::Gl;
@@ -657,7 +657,7 @@ impl Players {
             drop(list);
             let _ = child.kill();
             let _ = child.wait();
-            return Err("AquaStar is closing".into());
+            return Err("AquaStar NEO is closing".into());
         }
         list.push(Tracked {
             child,
@@ -680,7 +680,7 @@ impl Players {
         save_directory: Option<&Path>,
     ) -> Result<String, String> {
         if self.shutting_down.load(Ordering::SeqCst) {
-            return Err("AquaStar is closing".into());
+            return Err("AquaStar NEO is closing".into());
         }
         let settings = RuffleSettings {
             quality,
@@ -696,7 +696,7 @@ impl Players {
         if self.shutting_down.load(Ordering::SeqCst) {
             let _ = child.kill();
             let _ = child.wait();
-            return Err("AquaStar is closing".into());
+            return Err("AquaStar NEO is closing".into());
         }
         let backend = safe_backend_name();
         if let Ok(Some(status)) = child.try_wait() {
@@ -718,7 +718,7 @@ impl Players {
     pub fn restart(&self, engine: Engine) -> Result<String, String> {
         let _gate = self.launch_gate.lock().unwrap();
         if self.shutting_down.load(Ordering::SeqCst) {
-            return Err("AquaStar is closing".into());
+            return Err("AquaStar NEO is closing".into());
         }
         self.launch_hold.store(true, Ordering::SeqCst);
         let _hold = LaunchHold(&self.launch_hold);
@@ -757,7 +757,7 @@ impl Players {
             }
         }
         if self.shutting_down.load(Ordering::SeqCst) {
-            return Err("AquaStar is closing".into());
+            return Err("AquaStar NEO is closing".into());
         }
         for recipe in recipes {
             let (exe, swf, cli, settings, save_directory) = recipe.command();
@@ -868,7 +868,7 @@ impl Players {
             watch.graphics,
             recipe.save_directory.as_deref(),
         ) {
-            eprintln!("aquastar-lite: OpenGL relaunch failed: {err}");
+            eprintln!("aquastar-neo: OpenGL relaunch failed: {err}");
         }
     }
 
@@ -982,7 +982,7 @@ pub(crate) fn start_ruffle(
 
 pub fn warm_loader(paths: &crate::placement::ProfilePaths) {
     if let Err(err) = movie::refresh(paths) {
-        eprintln!("aquastar-lite: loader refresh skipped: {err}");
+        eprintln!("aquastar-neo: loader refresh skipped: {err}");
     }
 }
 
@@ -1226,7 +1226,7 @@ fn log_flash_launch(exe: &Path, args: &[String]) {
         args.join(" ")
     };
     eprintln!(
-        "aquastar-lite: launching Flash {} args={args}",
+        "aquastar-neo: launching Flash {} args={args}",
         exe.display()
     );
 }
@@ -1241,7 +1241,7 @@ fn log_fallback(report: &ExitReport, tail: &str) {
         .map(|s| s.to_string())
         .unwrap_or_else(|| "null".into());
     eprintln!(
-        "aquastar-lite: Ruffle desktop ({}) exited abnormally (code {code}, signal {signal}, {} ms{}); relaunching with {}. stderr tail: {}",
+        "aquastar-neo: Ruffle desktop ({}) exited abnormally (code {code}, signal {signal}, {} ms{}); relaunching with {}. stderr tail: {}",
         report.graphics.as_str(),
         report.elapsed.as_millis(),
         if report.panicked { ", panic" } else { "" },
@@ -2330,7 +2330,7 @@ mod save_directory_tests {
             .any(|pair| pair == ["--save-directory", SAVE]));
         let title_at = artix
             .windows(2)
-            .position(|pair| pair == ["--title", "AquaStar"])
+            .position(|pair| pair == ["--title", "AquaStar NEO"])
             .expect("artix title");
         assert_eq!(artix.get(title_at + 2).map(String::as_str), Some(SWF));
         assert!(!artix.iter().any(|arg| arg == "--companion"));
@@ -2395,7 +2395,7 @@ mod save_directory_tests {
 
     #[test]
     fn appimage_library_paths_do_not_reach_the_player() {
-        let appdir = "/tmp/AquaStar.AppDir";
+        let appdir = "/tmp/AquaStar NEO.AppDir";
         let joined = |suffix: &str| format!("{appdir}{suffix}");
         let vars = scrub_player_env(vec![
             ("APPDIR".into(), appdir.into()),
@@ -2470,7 +2470,7 @@ mod save_directory_tests {
         let root = std::env::temp_dir().join(format!("aqlite-flash-libs-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         let appdir = root.join("AppDir");
-        let libs = appdir.join("usr/lib/aquastar-lite/flash-gtk2");
+        let libs = appdir.join("usr/lib/aqua-star-neo/flash-gtk2");
         fs::create_dir_all(&libs).unwrap();
         fs::write(libs.join("libgtk-x11-2.0.so.0"), b"not-really").unwrap();
         assert!(flash_runtime_libs(&appdir).is_some());

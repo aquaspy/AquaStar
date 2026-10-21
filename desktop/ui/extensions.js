@@ -106,7 +106,7 @@
     list.replaceChildren();
     restart.hidden = !data.restartRequired;
     if (data.safeMode) message('Safe mode: third-party plugins are disabled.');
-    else if (data.restartRequired) message('Changes are saved. Restart AquaStar to apply them.');
+    else if (data.restartRequired) message('Changes are saved. Restart AquaStar NEO to apply them.');
     else message('Plugins are up to date.');
     for (const error of data.errors || []) list.appendChild(node('p', String(error), 'extension-error'));
     if (!data.plugins.length)

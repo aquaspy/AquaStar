@@ -421,12 +421,12 @@ mod tests {
     fn release_workflow_publishes_the_portable_zip() {
         let yml = include_str!("../../../.github/workflows/desktop-release.yml");
         assert!(yml.contains("portable.txt"));
-        assert!(yml.contains("AquaStar_"));
+        assert!(yml.contains("aquastar-neo_"));
         assert!(yml.contains("_x64-portable.zip"));
         assert!(yml.contains("gh release upload"));
         assert!(yml.contains("prerelease: ${{ needs.gate.outputs.kind != 'stable' }}"));
-        assert!(yml.contains("aquastar-desktop-windows-portable"));
-        assert!(yml.contains("desktop/src-tauri/target/release/AquaStar_"));
+        assert!(yml.contains("aquastar-neo-desktop-windows-portable"));
+        assert!(yml.contains("desktop/src-tauri/target/release/aquastar-neo_"));
         assert!(!yml
             .lines()
             .any(|line| line.contains("bundle/nsis") && line.contains("portable")));
@@ -463,7 +463,7 @@ mod tests {
         let yml = include_str!("../../../.github/workflows/desktop-smoke.yml");
         assert!(yml.contains("workflow_dispatch"));
         assert!(yml.contains("workflow_run"));
-        assert!(yml.contains("AquaStar Desktop Release"));
+        assert!(yml.contains("AquaStar NEO Desktop Release"));
         assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'lite-v')"));
         assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'v3.')"));
         assert!(!yml.contains("contains(github.event.workflow_run.head_branch, '-')"));
@@ -657,7 +657,7 @@ mod tests {
         let root = scratch("profile");
         let app_data = root.join("appData");
         let cwd = root.join("cwd");
-        let exe = root.join("AquaStar.app").join("Contents").join("MacOS");
+        let exe = root.join("AquaStar NEO.app").join("Contents").join("MacOS");
         let config = root.join("config");
         let paths = profile_paths(&app_data, Some(&cwd), Some(&exe), &config);
         assert_eq!(

@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-pub const PLAYER_TITLE: &str = "AquaStar";
+pub const PLAYER_TITLE: &str = "AquaStar NEO";
 
 /// Whether a window title should be replaced.
 ///
@@ -487,7 +487,7 @@ mod tests {
 
     #[cfg(target_os = "linux")]
     #[test]
-    fn x11_window_title_becomes_aquastar_lite() {
+    fn x11_window_title_becomes_aquastar_neo() {
         if std::env::var_os("DISPLAY").is_none() {
             return;
         }

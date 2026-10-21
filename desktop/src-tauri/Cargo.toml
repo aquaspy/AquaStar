@@ -1,8 +1,8 @@
 [package]
-name = "aquastar-lite"
+name = "aquastar-neo"
 version = "3.0.0-rc.6"
 edition = "2021"
-description = "AquaStar launcher"
+description = "AquaStar NEO launcher"
 license = "MIT"
 
 [build-dependencies]

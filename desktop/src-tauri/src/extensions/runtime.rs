@@ -218,7 +218,7 @@ pub fn open_tool(
     let source = state
         .sources
         .get(plugin_id)
-        .ok_or("extension is not active; restart AquaStar")?;
+        .ok_or("extension is not active; restart AquaStar NEO")?;
     let root = root
         .canonicalize()
         .map_err(|_| "extension package unavailable")?;
@@ -264,7 +264,7 @@ pub fn open_tool(
     let close_app = app.clone();
     let close_label = label.clone();
     let builder = WebviewWindowBuilder::new(app, &label, WebviewUrl::CustomProtocol(url))
-        .title(format!("AquaStar — {plugin_id}"))
+        .title(format!("AquaStar NEO — {plugin_id}"))
         .inner_size(900.0, 700.0)
         .incognito(true)
         .use_https_scheme(true)

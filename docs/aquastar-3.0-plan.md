@@ -1,6 +1,6 @@
-# AquaStar 3.0 plan
+# AquaStar NEO development plan
 
-**All implementation work on AquaStar 3.0 is done in pstack poteto-mode.** Use the pstack principles, and the pstack skills when a task calls for one.
+**All implementation work on AquaStar NEO is done in pstack poteto-mode.** Use the pstack principles, and the pstack skills when a task calls for one.
 
 AquaStar 3.0 replaces the Electron app. People who want the old launcher stay on a maintained 2.x branch. The `desktop/` tree becomes 3.0. The `lite-v0.2.0` pre-releases were the lab. Lite is not a separate product.
 
@@ -262,4 +262,4 @@ The user requested the updated public README and fresh pre-releases for both mai
 
 The user requested renaming the active `lite/` source to `desktop/`, removing retired Tauri snapshots from the other branches, and deleting the previously preserved cursor branch. That branch tip is preserved in the verified pre-cleanup bundle. The final candidate tags for this revision are `v3.0.0-rc.3` and `v2.1.1-rc.9`; the already pushed `rc.2` and `rc.8` builds were canceled before publication when these changes were requested. Tags are retained as history, not moved.
 
-The public 3.x product name is AquaStar. Internal application identifiers and the existing binary name are retained to preserve profile/resource compatibility. Debian candidate control versions use the `~rc` form so that a later stable version sorts after its candidate. Public filenames identify the product, candidate, and architecture. The README compares the Artix/AE patched standalone player in 3.x with the browser Ruffle used in 2.x; Intel Mac uses the official standalone pin.
+The public product name is AquaStar NEO. Release numbers remain on the 3.x sequence. The executable and package names use AquaStar NEO; the stable application identifier remains unchanged so profiles, portal grants and shortcut bindings continue to work. Debian candidate control versions use the `~rc` form so that a later stable version sorts after its candidate. Public filenames identify the product, candidate, and architecture. The README compares the Artix/AE patched standalone player in 3.x with the browser Ruffle used in 2.x; Intel Mac uses the official standalone pin.

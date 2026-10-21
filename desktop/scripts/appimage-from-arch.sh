@@ -12,15 +12,15 @@ tool=$(command -v "${APPIMAGETOOL:-appimagetool}") || {
 stage=$(mktemp -d)
 trap 'rm -rf -- "$stage"' EXIT
 tar --no-same-owner -xf "$package" -C "$stage"
-[[ -x "$stage/usr/bin/aquastar-lite" ]] || { echo 'Not an AquaStar native package.' >&2; exit 1; }
-install -m644 "$stage/usr/share/applications/aquastar-lite.desktop" "$stage/AquaStar.desktop"
-install -m644 "$stage/usr/share/icons/hicolor/128x128/apps/aquastar-lite.png" "$stage/aquastar-lite.png"
+[[ -x "$stage/usr/bin/aquastar-neo" ]] || { echo 'Not an AquaStar NEO native package.' >&2; exit 1; }
+install -m644 "$stage/usr/share/applications/io.github.aquaspy.aquastar-lite.desktop" "$stage/aquastar-neo.desktop"
+install -m644 "$stage/usr/share/icons/hicolor/128x128/apps/aquastar-neo.png" "$stage/aquastar-neo.png"
 cat > "$stage/AppRun" <<'APP_RUN'
 #!/usr/bin/env bash
 set -euo pipefail
 APPDIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 export APPDIR
-exec "$APPDIR/usr/bin/aquastar-lite" "$@"
+exec "$APPDIR/usr/bin/aquastar-neo" "$@"
 APP_RUN
 chmod +x "$stage/AppRun"
 ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$tool" -n "$stage" "$output"

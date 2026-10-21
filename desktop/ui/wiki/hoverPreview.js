@@ -81,7 +81,7 @@ function unhovered() {
 // server-side and hand back just the item's own image(s). We fetch the page ourselves
 // and do the same filtering locally - see extractItemImages() below.
 // On aqwwiki itself that fetch is same-origin and works directly. On account.aq.com
-// (Inventory/BuyBack/Wheel/CharPage) and in AquaStar's own windows it isn't - a page-side
+// (Inventory/BuyBack/Wheel/CharPage) and in AquaStar NEO's own windows it isn't - a page-side
 // fetch() to aqwwiki.wikidot.com gets blocked by CORS. preload_wikiview.js (and
 // preload_inventory.js, which re-exposes the same bridge) handle that: when present, they
 // ask the main process to make the request instead (a plain HTTP request there, no CORS to

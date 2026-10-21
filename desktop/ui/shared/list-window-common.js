@@ -4,7 +4,7 @@
   const state = root.AquaStarListState;
   const time = root.AquaStarResetTime;
   const workspace = root.AquaStarWorkspace;
-  if (!state || !time || !workspace) throw new Error('AquaStar shared list dependencies were not loaded');
+  if (!state || !time || !workspace) throw new Error('AquaStar NEO shared list dependencies were not loaded');
   root.ListWindowCommon = Object.assign({}, state, time, {
     showPromptModal: workspace.showPromptModal,
     showChoiceModal: workspace.showChoiceModal

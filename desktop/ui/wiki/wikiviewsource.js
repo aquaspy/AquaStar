@@ -319,7 +319,7 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
         const panel = document.createElement('div');
         panel.id = 'aquastarMergeShopCalculator';
         // Deliberately inherits the Wiki's Verdana font, colours, inputs and links instead
-        // of bringing AquaStar's dark-window styling into an otherwise native Wiki page.
+        // of bringing AquaStar NEO's dark-window styling into an otherwise native Wiki page.
         panel.style.cssText = 'margin:8px 0 12px;font:inherit;color:inherit;';
         panel.innerHTML = '<strong>' + messages.mergeMaterialsTitle + '</strong> ' +
             '<select id="aquastarMergeShopMode">' +
@@ -372,7 +372,7 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
             const controls = document.createElement('div');
             controls.className = 'aquastarMergeShopTabControls';
             controls.style.cssText = 'margin:5px 0 2px;font-size:90%;';
-            controls.innerHTML = 'AquaStar: <a href="#">' + messages.mergeSelectAll + '</a> / <a href="#">' + messages.mergeClearAll + '</a>';
+            controls.innerHTML = 'AquaStar NEO: <a href="#">' + messages.mergeSelectAll + '</a> / <a href="#">' + messages.mergeClearAll + '</a>';
             const firstTable = tabPanel.querySelector('table.wiki-content-table');
             if (firstTable) firstTable.parentNode.insertBefore(controls, firstTable);
             const links = controls.querySelectorAll('a');
@@ -389,7 +389,7 @@ if (location.hostname.indexOf("aqwwiki.wikidot.com") !== -1 &&
     }
 
     const mergeMessagesFallback = {
-        mergeMaterialsTitle: 'AquaStar: Shop materials',
+        mergeMaterialsTitle: 'AquaStar NEO: Shop materials',
         mergeDependencies: 'Include dependencies',
         mergeBuyback: 'Dependencies with Buy Back',
         mergeEmpty: 'No materials listed.',

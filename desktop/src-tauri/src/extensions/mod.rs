@@ -177,7 +177,7 @@ pub async fn extensions_install(
     if !approved {
         // An ownerless dialog can open behind the launcher on Windows, so the user never
         // sees it. Parent it to the launcher window.
-        let mut dialog = rfd::AsyncFileDialog::new().add_filter("AquaStar plugin ZIP", &["zip"]);
+        let mut dialog = rfd::AsyncFileDialog::new().add_filter("AquaStar NEO plugin ZIP", &["zip"]);
         let parent = app.get_webview_window("main");
         if let Some(parent) = &parent {
             dialog = dialog.set_parent(parent);
@@ -197,7 +197,7 @@ pub async fn extensions_install(
         .map_err(|e| e.to_string())??;
         if builtin::is_builtin(&review.manifest.id) {
             return Err(format!(
-                "{} is built into AquaStar and cannot be replaced by a package",
+                "{} is built into AquaStar NEO and cannot be replaced by a package",
                 review.manifest.name
             ));
         }

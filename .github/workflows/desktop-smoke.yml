@@ -1,4 +1,4 @@
-name: AquaStar Desktop Smoke
+name: AquaStar NEO Desktop Smoke
 
 # Launches the real desktop release artifacts and checks that Play starts a
 # player. Screenshots are for a person. A Cloudflare block or a blank login
@@ -20,7 +20,7 @@ on:
         default: ''
         type: string
   workflow_run:
-    workflows: ['AquaStar Desktop Release']
+    workflows: ['AquaStar NEO Desktop Release']
     types: [completed]
   push:
     branches: [dev]

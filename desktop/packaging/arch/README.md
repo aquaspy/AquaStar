@@ -1,7 +1,8 @@
 # Native Arch Linux package
 
-The native `aqua-star` package installs `/usr/bin/aquastar-lite`, a desktop entry,
-icons and resources in `/usr/lib/AquaStar`. It uses the system GTK/WebKit and
+The native `aquastar-neo` package installs `/usr/bin/aquastar-neo`, a desktop entry,
+icons and resources in `/usr/lib/aqua-star-neo`. Its package metadata replaces the
+previous `aqua-star` package so pacman can upgrade existing installations. It uses the system GTK/WebKit and
 GPU libraries, without an AppImage runtime or bundled Ubuntu GTK environment.
 The Tauri application identifier and user data paths remain unchanged.
 
@@ -24,9 +25,9 @@ cd /path/outside/checkout
 makepkg
 ```
 
-Install the resulting package explicitly with `sudo pacman -U aqua-star-*.pkg.tar.zst`.
-Close any existing AquaStar/game before testing the installed build because the
-single-instance mechanism otherwise continues using that old executable.
+Install the resulting package explicitly with `sudo pacman -U aquastar-neo-*.pkg.tar.zst`.
+Close any existing launcher or game before testing AquaStar NEO because the single-instance
+mechanism otherwise continues using the old executable.
 
 Players are downloaded on first use using the existing pinned catalog and SHA-256
 verification. The package does not redistribute Adobe Flash. Ruffle is the default;
@@ -37,7 +38,7 @@ source bundle accompany the package. `nasm` is an optional build optimization; t
 recipe already supports machines without it.
 
 Prerelease versions map `3.0.0-rc.6` to `3.0.0rc.6`, so pacman's `vercmp` sorts it
-below `3.0.0`. This package name also remains separate from Electron's `aquastar`.
+below `3.0.0`. The NEO package name remains separate from Electron's `aquastar`.
 
 `.github/workflows/desktop-arch.yml` builds and tests in a current Arch container
 as an unprivileged user, then uploads the native package and its source recipe.
@@ -53,7 +54,7 @@ To retain the native library environment in an AppImage, install
 
 ```sh
 APPIMAGETOOL=/path/to/appimagetool bash desktop/scripts/appimage-from-arch.sh \
-  /path/aqua-star-3.0.0rc.6-1-x86_64.pkg.tar.zst /path/AquaStar-Arch-x86_64.AppImage
+  /path/aquastar-neo-3.0.0rc.6-1-x86_64.pkg.tar.zst /path/aquastar-neo_3.0.0-rc.6_Arch-native_x86_64.AppImage
 ```
 
 This variant uses the same system dependencies and downloaded players as the

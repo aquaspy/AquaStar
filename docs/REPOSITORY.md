@@ -1,6 +1,6 @@
 # Repository map
 
-AquaStar 3.0 lives in `desktop/`. The root still contains the Electron platform and shared game assets, because the Tauri build reads several of those assets directly. Moving these runtime paths requires a separate migration of their consumers and packaging rules.
+AquaStar NEO lives in `desktop/`. The root still contains the Electron platform and shared game assets, because the Tauri build reads several of those assets directly. Moving these runtime paths requires a separate migration of their consumers and packaging rules.
 
 | Path | Purpose |
 | --- | --- |

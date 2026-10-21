@@ -1,4 +1,4 @@
-name: AquaStar Desktop Check
+name: AquaStar NEO Desktop Check
 
 # Compiles and unit-tests the Tauri app in desktop/ on pull requests that touch it.
 # desktop-release.yml only runs on lite-v* tags or by hand, so without this job a
@@ -27,6 +27,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libpipewire-0.3-dev libxcb-randr0-dev libgbm-dev libclang-dev
+      - name: Debian package migration check
+        run: python3 scripts/smoke/test_deb_version.py
+      - name: Tauri release artifact naming check
+        run: python3 desktop/scripts/smoke/test_tauri_artifacts.py
       - name: cargo test
         working-directory: desktop/src-tauri
         run: cargo test --locked

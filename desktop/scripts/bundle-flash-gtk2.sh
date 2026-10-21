@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copy the GTK 2 libraries the Flash projector loads into
 # desktop/src-tauri/flash-gtk2/. The AppImage build places that directory at
-# usr/lib/aquastar-lite/flash-gtk2 and the projector child is the only process
+# usr/lib/aqua-star-neo/flash-gtk2 and the projector child is the only process
 # whose LD_LIBRARY_PATH points there. The deb does not ship this directory; it
 # depends on libgtk2.0-0t64 | libgtk2.0-0 and libnss3.
 #

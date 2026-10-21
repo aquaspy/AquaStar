@@ -106,7 +106,7 @@ static void fit_stage(void *window) {
 
 static void force_title(void *window) {
     if (!real_set_title) real_set_title = dlsym(RTLD_NEXT, "gtk_window_set_title");
-    if (real_set_title) real_set_title(window, "AquaStar");
+    if (real_set_title) real_set_title(window, "AquaStar NEO");
 }
 
 /* The launcher passes a PNG path in AQUASTAR_FLASH_ICON. */

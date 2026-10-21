@@ -36,7 +36,7 @@ pub fn binary(app: &tauri::AppHandle) -> Result<PathBuf, String> {
             .join("media")
             .join(&name),
     );
-    let path = candidates.into_iter().find(|p| p.is_file()).ok_or("The bundled recording component is missing. Reinstall AquaStar or prepare the local media build.".to_string())?;
+    let path = candidates.into_iter().find(|p| p.is_file()).ok_or("The bundled recording component is missing. Reinstall AquaStar NEO or prepare the local media build.".to_string())?;
     verify(path)
 }
 fn verify(path: PathBuf) -> Result<PathBuf, String> {

@@ -1,4 +1,4 @@
-//! Short, silent desktop feedback; never creates or focuses an AquaStar window.
+//! Short, silent desktop feedback; never creates or focuses an AquaStar NEO window.
 pub fn show(app: &tauri::AppHandle, title: &str, body: &str) {
     let title = title.to_owned();
     let body: String = body.chars().take(240).collect();
@@ -35,7 +35,7 @@ pub fn show(app: &tauri::AppHandle, title: &str, body: &str) {
                             .call::<_, _, u32>(
                                 "Notify",
                                 &(
-                                    "AquaStar",
+                                    "AquaStar NEO",
                                     previous,
                                     "camera-photo",
                                     title,
@@ -50,7 +50,7 @@ pub fn show(app: &tauri::AppHandle, title: &str, body: &str) {
                     match result {
                         Ok(id) => previous = id,
                         Err(error) => {
-                            eprintln!("AquaStar: desktop notification failed: {error}");
+                            eprintln!("AquaStar NEO: desktop notification failed: {error}");
                             previous = 0;
                             connection = None;
                         }

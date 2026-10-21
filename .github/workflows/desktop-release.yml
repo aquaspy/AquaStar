@@ -1,4 +1,4 @@
-name: AquaStar Desktop Release
+name: AquaStar NEO Desktop Release
 
 on:
   push:
@@ -114,7 +114,7 @@ jobs:
           projectPath: desktop
           tauriScript: npx -y @tauri-apps/cli@2
           tagName: ${{ github.ref_name }}
-          releaseName: ${{ needs.gate.outputs.kind == 'stable' && 'AquaStar v__VERSION__' || 'AquaStar v__VERSION__ - Pre-release' }}
+          releaseName: ${{ needs.gate.outputs.kind == 'stable' && 'AquaStar NEO v__VERSION__' || 'AquaStar NEO v__VERSION__ - Pre-release' }}
           releaseDraft: false
           # A prerelease tag stays a prerelease. A stable v3.0.0 tag is not a
           # prerelease. Neither tag becomes Latest until that is a separate edit.
@@ -136,12 +136,25 @@ jobs:
         run: gh release upload "$GITHUB_REF_NAME" ../AquaStar-workspace/builds/media/AquaStar-media-sources.tar.xz --repo "$GITHUB_REPOSITORY" --clobber
       - name: Normalize Debian prerelease versions
         if: matrix.platform == 'ubuntu-22.04'
-        run: python3 scripts/normalize-deb-version.py desktop/src-tauri/target/release/bundle/deb/*.deb
-      - name: Replace Debian packages with normalized versions
+        run: python3 scripts/normalize-deb-version.py --package-name aquastar-neo desktop/src-tauri/target/release/bundle/deb/*.deb
+      - name: Rename AppImage package
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          ver=$(python3 -c 'import json; print(json.load(open("desktop/src-tauri/tauri.conf.json"))["version"])')
+          python3 desktop/scripts/rename-tauri-artifacts.py \
+            --bundle-dir desktop/src-tauri/target/release/bundle/appimage \
+            --version "$ver" --platform linux
+      - name: Replace Linux release assets with normalized package names
         if: matrix.platform == 'ubuntu-22.04' && needs.gate.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" desktop/src-tauri/target/release/bundle/deb/*.deb --repo "$GITHUB_REPOSITORY" --clobber
+        run: |
+          while IFS= read -r asset; do
+            [ -z "$asset" ] || gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes --repo "$GITHUB_REPOSITORY"
+          done < <(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name | select((endswith(".deb") or endswith(".AppImage")) and (startswith("aquastar-neo_") | not))')
+          gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber \
+            desktop/src-tauri/target/release/bundle/deb/aquastar-neo_*.deb \
+            desktop/src-tauri/target/release/bundle/appimage/aquastar-neo_*.AppImage
       - name: Sign nested apps and seal the DMG
         if: matrix.platform == 'macos-latest'
         run: bash desktop/scripts/finish-macos-app.sh
@@ -156,26 +169,41 @@ jobs:
             exit 1
           fi
           gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber "$dmg"
+      - name: Rename Windows installer package
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $ver = (Get-Content -Raw desktop/src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          python desktop/scripts/rename-tauri-artifacts.py --bundle-dir desktop/src-tauri/target/release/bundle/nsis --version $ver --platform windows
+      - name: Replace Windows installer release asset
+        if: matrix.platform == 'windows-latest' && needs.gate.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          while IFS= read -r asset; do
+            [ -z "$asset" ] || gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes --repo "$GITHUB_REPOSITORY"
+          done < <(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name | select(endswith("-setup.exe") and (startswith("aquastar-neo_") | not))')
+          gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber desktop/src-tauri/target/release/bundle/nsis/aquastar-neo_*-setup.exe
       - name: Package Windows portable
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
           $ver = (Get-Content -Raw desktop/src-tauri/tauri.conf.json | ConvertFrom-Json).version
           if ($ver -notmatch '^[0-9A-Za-z][0-9A-Za-z._+-]*$') { throw "tauri.conf.json version is not a single path segment: $ver" }
-          $exe = "desktop/src-tauri/target/release/aquastar-lite.exe"
+          $exe = "desktop/src-tauri/target/release/aquastar-neo.exe"
           if (-not (Test-Path $exe)) { throw "missing $exe" }
-          $stage = Join-Path $env:RUNNER_TEMP "aquastar-lite-portable"
+          $stage = Join-Path $env:RUNNER_TEMP "aquastar-neo-portable"
           if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
           New-Item -ItemType Directory -Path $stage | Out-Null
-          Copy-Item $exe (Join-Path $stage "aquastar-lite.exe")
-          Set-Content -Encoding ascii -Path (Join-Path $stage "portable.txt") -Value "AquaStar stores its data in the data folder next to this file.`r`n"
+          Copy-Item $exe (Join-Path $stage "aquastar-neo.exe")
+          Set-Content -Encoding ascii -Path (Join-Path $stage "portable.txt") -Value "AquaStar NEO stores its data in the data folder next to this file.`r`n"
           $players = "desktop/src-tauri/players"
           if (-not (Test-Path $players)) { throw "missing $players" }
           Copy-Item -Recurse $players (Join-Path $stage "players")
           Copy-Item -Recurse "desktop/src-tauri/media" (Join-Path $stage "media")
-          $zip = "desktop/src-tauri/target/release/AquaStar_${ver}_x64-portable.zip"
+          $zip = "desktop/src-tauri/target/release/aquastar-neo_${ver}_x64-portable.zip"
           if (Test-Path $zip) { Remove-Item -Force $zip }
-          tar.exe -a -cf $zip -C $stage aquastar-lite.exe portable.txt players media
+          tar.exe -a -cf $zip -C $stage aquastar-neo.exe portable.txt players media
       - name: Attach portable zip to the pre-release
         if: matrix.platform == 'windows-latest' && needs.gate.outputs.publish == 'true'
         env:
@@ -184,19 +212,19 @@ jobs:
         run: |
           $ver = (Get-Content -Raw desktop/src-tauri/tauri.conf.json | ConvertFrom-Json).version
           gh release upload "$env:GITHUB_REF_NAME" --repo "$env:GITHUB_REPOSITORY" --clobber `
-            "desktop/src-tauri/target/release/AquaStar_${ver}_x64-portable.zip"
+            "desktop/src-tauri/target/release/aquastar-neo_${ver}_x64-portable.zip"
       - name: Upload portable zip (manual run)
         if: matrix.platform == 'windows-latest' && needs.gate.outputs.publish != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: aquastar-desktop-windows-portable
-          path: desktop/src-tauri/target/release/AquaStar_*_x64-portable.zip
+          name: aquastar-neo-desktop-windows-portable
+          path: desktop/src-tauri/target/release/aquastar-neo_*_x64-portable.zip
           if-no-files-found: error
       - name: Upload bundles (manual run)
         if: needs.gate.outputs.publish != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: aquastar-desktop-${{ matrix.platform }}
+          name: aquastar-neo-desktop-${{ matrix.platform }}
           path: |
             desktop/src-tauri/target/**/release/bundle/appimage/*.AppImage
             desktop/src-tauri/target/**/release/bundle/deb/*.deb

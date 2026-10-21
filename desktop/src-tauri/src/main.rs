@@ -164,7 +164,7 @@ fn sync_launcher_inner(
         }
         return;
     }
-    // Started straight into a game: there is no launcher to bring back, so AquaStar ends
+    // Started straight into a game: there is no launcher to bring back, so AquaStar NEO ends
     // with the game.
     if app.state::<startup::StartupState>().is_direct() {
         if register_shortcuts {
@@ -306,7 +306,7 @@ fn load_ruffle_settings(app: &tauri::AppHandle) -> ruffle::RuffleSettings {
     match app.path().app_config_dir() {
         Ok(dir) => ruffle::RuffleSettings::load(&dir),
         Err(e) => {
-            eprintln!("aquastar-lite: no config dir ({e}); using default Ruffle settings");
+            eprintln!("aquastar-neo: no config dir ({e}); using default Ruffle settings");
             ruffle::RuffleSettings::default()
         }
     }
@@ -498,7 +498,7 @@ fn spawn_tool(app: &tauri::AppHandle, name: String) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         if let Err(error) = open_tool_window(&app, &name) {
-            eprintln!("aquastar-lite: could not open {name}: {error}");
+            eprintln!("aquastar-neo: could not open {name}: {error}");
         }
     });
 }
@@ -632,7 +632,7 @@ async fn open_todo_link(app: tauri::AppHandle, url: String) -> Result<(), String
         return Ok(());
     }
     WebviewWindowBuilder::new(&app, label, WebviewUrl::External(parsed))
-        .title("AquaStar - To-Do")
+        .title("AquaStar NEO - To-Do")
         .inner_size(1100.0, 750.0)
         .initialization_script_for_all_frames(ads::init_script())
         .on_navigation(|url| match url.host_str() {
@@ -847,7 +847,7 @@ async fn open_site(
         return Ok(());
     }
     WebviewWindowBuilder::new(&app, &label, WebviewUrl::External(parsed))
-        .title(format!("AquaStar - {title}"))
+        .title(format!("AquaStar NEO - {title}"))
         .inner_size(1100.0, 750.0)
         .initialization_script_for_all_frames(ads::init_script())
         .on_page_load(|window, payload| {
@@ -874,7 +874,7 @@ async fn open_site(
 #[cfg(target_os = "linux")]
 fn limit_webkit_fonts() {
     if std::env::var_os("FONTCONFIG_FILE").is_some() {
-        eprintln!("aquastar-lite: FONTCONFIG_FILE is set, leaving WebKit fonts alone");
+        eprintln!("aquastar-neo: FONTCONFIG_FILE is set, leaving WebKit fonts alone");
         return;
     }
     let dirs: Vec<PathBuf> = fonts::SEARCH_DIRS.iter().map(PathBuf::from).collect();
@@ -882,12 +882,12 @@ fn limit_webkit_fonts() {
         .and_then(|base| fonts::install(&base, &dirs, Path::new("/etc/fonts/conf.d")));
     match installed {
         Ok((conf, count)) => {
-            eprintln!("aquastar-lite: WebKit uses {} ({count} font files)", conf.display());
+            eprintln!("aquastar-neo: WebKit uses {} ({count} font files)", conf.display());
             std::env::set_var("FONTCONFIG_FILE", &conf);
             std::env::set_var(LIMITED_FONTS_MARKER, "1");
         }
         Err(e) => eprintln!(
-            "aquastar-lite: could not write the WebKit fontconfig ({e}); using system fonts, the window may stay blank"
+            "aquastar-neo: could not write the WebKit fontconfig ({e}); using system fonts, the window may stay blank"
         ),
     }
 }
@@ -916,7 +916,7 @@ fn tell_user(message: &str) {
     }
 
     let text = wide(message);
-    let caption = wide("AquaStar");
+    let caption = wide("AquaStar NEO");
     unsafe {
         MessageBoxW(
             std::ptr::null_mut(),
@@ -944,7 +944,7 @@ fn smoke_request() -> Option<Engine> {
     match parse_smoke_engine(&value) {
         Some(engine) => Some(engine),
         None => {
-            eprintln!("aquastar-lite: ignoring AQUASTAR_LITE_SMOKE={value}");
+            eprintln!("aquastar-neo: ignoring AQUASTAR_LITE_SMOKE={value}");
             None
         }
     }
@@ -1111,13 +1111,13 @@ fn spawn_play(app: &tauri::AppHandle, movie: MovieKind) {
             Ok(engine) => {
                 if let Err(error) = play_movie_with_mode(app, engine, movie, true).await {
                     eprintln!(
-                        "aquastar-lite: could not open new {:?} instance: {error}",
+                        "aquastar-neo: could not open new {:?} instance: {error}",
                         movie
                     );
                 }
             }
             Err(error) => {
-                eprintln!("aquastar-lite: could not choose a player for a new instance: {error}")
+                eprintln!("aquastar-neo: could not choose a player for a new instance: {error}")
             }
         }
     });
@@ -1185,13 +1185,13 @@ fn register_saved_shortcuts_inner(app: &tauri::AppHandle, trace: Option<&mut Hid
         for accel in manifest::accelerators(&bind, merged.get(&bind.id)) {
             let Some(parsed) = profile::parse_accelerator(&accel) else {
                 eprintln!(
-                    "aquastar-lite: skipping invalid shortcut {accel} for {}",
+                    "aquastar-neo: skipping invalid shortcut {accel} for {}",
                     bind.id
                 );
                 continue;
             };
             let Some(shortcut) = shortcut_from(&parsed) else {
-                eprintln!("aquastar-lite: cannot map shortcut {accel} for {}", bind.id);
+                eprintln!("aquastar-neo: cannot map shortcut {accel} for {}", bind.id);
                 continue;
             };
             match app.global_shortcut().register(shortcut) {
@@ -1200,7 +1200,7 @@ fn register_saved_shortcuts_inner(app: &tauri::AppHandle, trace: Option<&mut Hid
                 }
                 Err(err) => {
                     eprintln!(
-                        "aquastar-lite: shortcut {accel} for {} was not registered ({err})",
+                        "aquastar-neo: shortcut {accel} for {} was not registered ({err})",
                         bind.id
                     );
                 }
@@ -1241,7 +1241,7 @@ fn schedule_smoke(app: tauri::AppHandle) {
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_secs(2));
         let result = tauri::async_runtime::block_on(play(app, engine, MovieKind::Primary));
-        eprintln!("aquastar-lite: smoke {engine:?}: {result:?}");
+        eprintln!("aquastar-neo: smoke {engine:?}: {result:?}");
     });
 }
 
@@ -1253,7 +1253,7 @@ fn main() {
     // Registry must precede every portal request, including rfd file dialogs.
     #[cfg(target_os = "linux")]
     if let Err(error) = tauri::async_runtime::block_on(portal_identity::register()) {
-        eprintln!("aquastar-lite: {error}");
+            eprintln!("aquastar-neo: {error}");
     }
     // WebKitGTK's DMA-BUF renderer costs ~125 MB PSS here (measured under Xvfb) and is a
     // known source of blank windows on NVIDIA/older Mesa. Users can still opt back in.
@@ -1269,12 +1269,12 @@ fn main() {
         Ok(placement) => placement,
         Err(err) => {
             let message = format!(
-                "AquaStar could not create its data folder next to the executable.\n\n{err}\n\nportable.txt is present, so data was not stored in AppData."
+                "AquaStar NEO could not create its data folder next to the executable.\n\n{err}\n\nportable.txt is present, so data was not stored in AppData."
             );
             #[cfg(target_os = "windows")]
             tell_user(&message);
             #[cfg(not(target_os = "windows"))]
-            eprintln!("aquastar-lite: {message}");
+            eprintln!("aquastar-neo: {message}");
             std::process::exit(1);
         }
     };
@@ -1452,7 +1452,7 @@ fn main() {
             app.state::<menu_visibility::Visibility>().set(show_menu);
             let lang = current_language();
             if let Err(err) = manifest::install_menu(app.handle(), lang.as_str()) {
-                eprintln!("aquastar-lite: menu was not installed ({err})");
+                eprintln!("aquastar-neo: menu was not installed ({err})");
             }
             app.handle().on_menu_event(|app, event| {
                 dispatch(app, event.id().0.as_str(), true);
@@ -1470,12 +1470,12 @@ fn main() {
                 startup::apply(app.handle(), &args, true);
             }
             if let Err(error) = menu_visibility::apply(app.handle()) {
-                eprintln!("AquaStar: could not apply menu visibility: {error}");
+                eprintln!("AquaStar NEO: could not apply menu visibility: {error}");
             }
             Ok(())
         })
         .build(context)
-        .expect("failed to build AquaStar");
+        .expect("failed to build AquaStar NEO");
     app.state::<Players>()
         .watch_presence({
             let app = app.handle().clone();
@@ -1609,22 +1609,36 @@ mod tests {
     }
 
     #[test]
-    fn product_strings_say_aquastar_3() {
+    fn product_strings_say_aquastar_neo() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
         let read = |path: &str| std::fs::read_to_string(root.join(path)).unwrap();
-        let lite = format!("{} {}", "AquaStar", "Lite");
         let cargo = read("Cargo.toml");
         let conf = read("tauri.conf.json");
-        assert!(cargo.contains("name = \"aquastar-lite\""));
+        assert!(cargo.contains("name = \"aquastar-neo\""));
         assert!(cargo.contains(&format!("version = \"{}\"", env!("CARGO_PKG_VERSION"))));
-        assert!(!cargo.contains(&lite));
         let parsed: serde_json::Value = serde_json::from_str(&conf).unwrap();
         assert_eq!(parsed["version"], env!("CARGO_PKG_VERSION"));
-        assert_eq!(parsed["productName"], "AquaStar");
-        assert_eq!(parsed["mainBinaryName"], "aquastar-lite");
+        assert_eq!(parsed["productName"], "AquaStar NEO");
+        assert_eq!(parsed["mainBinaryName"], "aquastar-neo");
+        // Keep the established app identity so existing profiles and portal bindings survive.
         assert_eq!(parsed["identifier"], "io.github.aquaspy.aquastar-lite");
-        assert_eq!(parsed["app"]["windows"][0]["title"], "AquaStar");
-        assert_eq!(parsed["bundle"]["macOS"]["bundleName"], "AquaStar");
+        assert_eq!(parsed["app"]["windows"][0]["title"], "AquaStar NEO");
+        assert_eq!(parsed["bundle"]["macOS"]["bundleName"], "AquaStar NEO");
+        let linux: serde_json::Value =
+            serde_json::from_str(&read("tauri.linux.conf.json")).unwrap();
+        assert_eq!(
+            linux["bundle"]["linux"]["deb"]["desktopTemplate"],
+            "assets/aquastar-lite.desktop"
+        );
+        assert!(linux["bundle"]["linux"]["deb"]["replaces"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|package| package == "aqua-star"));
+        let arch = read("../packaging/arch/PKGBUILD.in");
+        assert!(arch.contains("pkgname=aquastar-neo"));
+        assert!(arch.contains("replaces=('aqua-star'"));
+        assert!(arch.contains("/usr/bin/aquastar-neo"));
         let visible = [
             conf,
             read("src/players/flash_gtk.c"),
@@ -1637,11 +1651,10 @@ mod tests {
         ];
         for text in &visible {
             assert!(text.contains("AquaStar"));
-            assert!(!text.contains(&lite), "{text}");
         }
-        assert!(visible[3].contains("<title>AquaStar</title>"));
-        assert!(visible[4].contains("PLAYER_TITLE: &str = \"AquaStar\""));
-        assert!(visible[2].lines().any(|line| line == "Name=AquaStar"));
-        assert!(visible[7].contains("<string>AquaStar</string>"));
+        assert!(visible[3].contains("<title>AquaStar NEO</title>"));
+        assert!(visible[4].contains("PLAYER_TITLE: &str = \"AquaStar NEO\""));
+        assert!(visible[2].lines().any(|line| line == "Name=AquaStar NEO"));
+        assert!(visible[7].contains("<string>AquaStar NEO</string>"));
     }
 }

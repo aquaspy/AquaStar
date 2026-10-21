@@ -36,7 +36,7 @@ if [[ ! -f "$media_binary" || ../scripts/build-media.py -nt "$media_binary" || (
   python3 ../scripts/build-media.py
 fi
 cargo "${args[@]}"
-binary="${CARGO_TARGET_DIR:-$PWD/target}/$profile/aquastar-lite"
+binary="${CARGO_TARGET_DIR:-$PWD/target}/$profile/aquastar-neo"
 mkdir -p "$(dirname "$binary")/media"
 cp -R media/. "$(dirname "$binary")/media/"
 [[ "$media_os" != windows ]] || binary="${binary}.exe"

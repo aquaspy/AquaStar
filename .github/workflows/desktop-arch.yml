@@ -1,4 +1,4 @@
-name: AquaStar Native Arch Package
+name: AquaStar NEO Native Arch Package
 
 on:
   workflow_call:
@@ -34,34 +34,34 @@ jobs:
         run: |
           pacman -Syu --noconfirm --needed git rust clang python pkgconf webkit2gtk-4.1 gtk3 libpipewire dbus openssl alsa-lib fontconfig libxkbcommon-x11 libglvnd libxcomposite libxrandr
           useradd --create-home builder
-          install -d -o builder -g builder /tmp/aquastar-arch
+          install -d -o builder -g builder /tmp/aquastar-neo
       - uses: actions/checkout@v4
       - name: Build and test as an unprivileged user
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
-          runuser -u builder -- bash desktop/scripts/build-arch-package.sh --output /tmp/aquastar-arch
+          runuser -u builder -- bash desktop/scripts/build-arch-package.sh --output /tmp/aquastar-neo
       - name: Inspect native package
         run: |
-          pacman -Qip /tmp/aquastar-arch/aqua-star-*.pkg.tar.zst
-          pacman -Qlp /tmp/aquastar-arch/aqua-star-*.pkg.tar.zst
+          pacman -Qip /tmp/aquastar-neo/aquastar-neo-*.pkg.tar.zst
+          pacman -Qlp /tmp/aquastar-neo/aquastar-neo-*.pkg.tar.zst
       - name: Build the Arch-targeted AppImage
         run: |
           curl --fail --location https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage -o /tmp/appimagetool
           echo 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  /tmp/appimagetool' | sha256sum --check
           chmod +x /tmp/appimagetool
           ver=$(python -c 'import json; print(json.load(open("desktop/src-tauri/tauri.conf.json"))["version"])')
-          package=$(find /tmp/aquastar-arch -maxdepth 1 -name 'aqua-star-[0-9]*-x86_64.pkg.tar.zst' -print -quit)
-          runuser -u builder -- env APPIMAGETOOL=/tmp/appimagetool bash desktop/scripts/appimage-from-arch.sh "$package" "/tmp/aquastar-arch/AquaStar_${ver}_Arch-native_x86_64.AppImage"
+          package=$(find /tmp/aquastar-neo -maxdepth 1 -name 'aquastar-neo-[0-9]*-x86_64.pkg.tar.zst' -print -quit)
+          runuser -u builder -- env APPIMAGETOOL=/tmp/appimagetool bash desktop/scripts/appimage-from-arch.sh "$package" "/tmp/aquastar-neo/aquastar-neo_${ver}_Arch-native_x86_64.AppImage"
       - uses: actions/upload-artifact@v4
         with:
-          name: AquaStar-Arch-x86_64
+          name: AquaStar-NEO-Arch-x86_64
           path: |
-            /tmp/aquastar-arch/aqua-star-[0-9]*.pkg.tar.zst
-            /tmp/aquastar-arch/*.AppImage
-            /tmp/aquastar-arch/AquaStar-media-sources.tar.xz
-            /tmp/aquastar-arch/PKGBUILD
-            /tmp/aquastar-arch/.SRCINFO
-            /tmp/aquastar-arch/aquastar-*.tar.gz
+            /tmp/aquastar-neo/aquastar-neo-[0-9]*.pkg.tar.zst
+            /tmp/aquastar-neo/*.AppImage
+            /tmp/aquastar-neo/AquaStar-media-sources.tar.xz
+            /tmp/aquastar-neo/PKGBUILD
+            /tmp/aquastar-neo/.SRCINFO
+            /tmp/aquastar-neo/aquastar-neo-*.tar.gz
           include-hidden-files: true
           if-no-files-found: error
 
@@ -74,7 +74,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: AquaStar-Arch-x86_64
+          name: AquaStar-NEO-Arch-x86_64
           path: native-arch
       - name: Attach native Arch installers and sources
         env:
@@ -84,4 +84,4 @@ jobs:
           gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber \
             native-arch/*.pkg.tar.zst native-arch/*.AppImage \
             native-arch/AquaStar-media-sources.tar.xz native-arch/PKGBUILD \
-            native-arch/.SRCINFO native-arch/aquastar-*.tar.gz
+            native-arch/.SRCINFO native-arch/aquastar-neo-*.tar.gz

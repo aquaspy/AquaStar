@@ -30,9 +30,9 @@ PLAYER_NAMES = {
     ("Linux", "ruffle"): ["ruffle", "ruffle_desktop"],
 }
 LAUNCHER_NAMES = {
-    "Windows": ["aquastar-lite.exe"],
-    "Darwin": ["aquastar-lite"],
-    "Linux": ["aquastar-lite"],
+    "Windows": ["aquastar-neo.exe"],
+    "Darwin": ["aquastar-neo"],
+    "Linux": ["aquastar-neo"],
 }
 
 
@@ -304,13 +304,13 @@ def focus_launcher(launcher):
         return
     system = platform.system()
     if system == "Linux":
-        run(["xdotool", "search", "--name", "^AquaStar$", "windowactivate"])
+        run(["xdotool", "search", "--name", "^AquaStar NEO$", "windowactivate"])
     elif system == "Darwin":
         run(
             [
                 "osascript",
                 "-e",
-                'tell application "System Events" to set frontmost of first process whose name is "aquastar-lite" to true',
+                'tell application "System Events" to set frontmost of first process whose name is "aquastar-neo" to true',
             ]
         )
     else:

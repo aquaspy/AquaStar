@@ -3,8 +3,8 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleDisplayName</key>
-  <string>AquaStar</string>
+  <string>AquaStar NEO</string>
   <key>NSScreenCaptureUsageDescription</key>
-  <string>AquaStar captures the game window for screenshots and recordings you request.</string>
+  <string>AquaStar NEO captures the game window for screenshots and recordings you request.</string>
 </dict>
 </plist>

@@ -40,7 +40,7 @@
   const shortcutToggle = document.createElement('input'); shortcutToggle.type = 'checkbox';
   shortcutLabel.append(shortcutToggle, ' Use GNOME shortcuts for capture');
   const shortcutHint = document.createElement('p'); shortcutHint.hidden = true;
-  shortcutHint.textContent = 'Registers screenshot and recording shortcuts with GNOME while a game is open. Existing desktop shortcuts are preserved. Disable this option to remove AquaStar’s entries.';
+  shortcutHint.textContent = 'Registers screenshot and recording shortcuts with GNOME while a game is open. Existing desktop shortcuts are preserved. Disable this option to remove AquaStar NEO’s entries.';
   shortcutToggle.onchange = async () => {
     shortcutToggle.disabled = true;
     try { await window.__TAURI__.core.invoke('capture_set_gnome_shortcuts', { enabled: shortcutToggle.checked }); }

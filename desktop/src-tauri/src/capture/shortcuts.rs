@@ -177,7 +177,7 @@ pub fn sync(app: &tauri::AppHandle) {
     std::thread::spawn(move || {
         // Read current state inside the worker so a quick player exit cannot leave stale keys active.
         if let Err(error) = apply(&app, None, false) {
-            super::feedback::show(&app, "AquaStar · Shortcut setup", &error);
+            super::feedback::show(&app, "AquaStar NEO · Shortcut setup", &error);
         }
     });
 }

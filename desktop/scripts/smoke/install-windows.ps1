@@ -4,14 +4,14 @@ if (-not $pkg) { throw 'PACKAGE is not set' }
 
 function Find-Launcher {
   $candidates = @(
-    "$env:LOCALAPPDATA\AquaStar\aquastar-lite.exe",
-    "$env:LOCALAPPDATA\Programs\AquaStar\aquastar-lite.exe",
-    "$env:LOCALAPPDATA\aquastar-lite\aquastar-lite.exe",
-    "$env:LOCALAPPDATA\Programs\aquastar-lite\aquastar-lite.exe"
+    "$env:LOCALAPPDATA\AquaStar NEO\aquastar-neo.exe",
+    "$env:LOCALAPPDATA\Programs\AquaStar NEO\aquastar-neo.exe",
+    "$env:LOCALAPPDATA\aquastar-neo\aquastar-neo.exe",
+    "$env:LOCALAPPDATA\Programs\aquastar-neo\aquastar-neo.exe"
   )
   $hit = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
   if ($hit) { return $hit }
-  $found = Get-ChildItem -Path $env:LOCALAPPDATA -Filter aquastar-lite.exe -Recurse -ErrorAction SilentlyContinue |
+  $found = Get-ChildItem -Path $env:LOCALAPPDATA -Filter aquastar-neo.exe -Recurse -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch '\\players\\' } |
     Select-Object -First 1
   if ($found) { return $found.FullName }
@@ -30,14 +30,14 @@ if ($pkg -eq 'nsis') {
     if ($exe) { break }
     Start-Sleep -Seconds 1
   } while ((Get-Date) -lt $deadline)
-  if (-not $exe) { throw 'aquastar-lite.exe was not found after the silent install' }
+  if (-not $exe) { throw 'aquastar-neo.exe was not found after the silent install' }
 } elseif ($pkg -eq 'portable') {
   $zip = Get-ChildItem dist\*portable.zip | Select-Object -First 1
   if (-not $zip) { throw 'portable.zip is missing from dist' }
-  $dest = Join-Path $env:RUNNER_TEMP 'aquastar-lite-portable'
+  $dest = Join-Path $env:RUNNER_TEMP 'aquastar-neo-portable'
   if (Test-Path $dest) { Remove-Item -Recurse -Force $dest }
   Expand-Archive -Path $zip.FullName -DestinationPath $dest
-  $exe = Join-Path $dest 'aquastar-lite.exe'
+  $exe = Join-Path $dest 'aquastar-neo.exe'
   if (-not (Test-Path $exe)) { throw "missing $exe" }
 } else {
   throw "unexpected package $pkg"

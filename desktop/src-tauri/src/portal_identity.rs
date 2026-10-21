@@ -17,7 +17,7 @@ pub async fn register() -> Result<(), String> {
         let entry = applications.join("io.github.aquaspy.aquastar-lite.desktop");
         use std::io::Write;
         match std::fs::OpenOptions::new().write(true).create_new(true).open(entry) {
-            Ok(mut file) => file.write_all(b"[Desktop Entry]\nType=Application\nName=AquaStar\nExec=true\nIcon=applications-games\nNoDisplay=true\n").map_err(|e| e.to_string())?,
+            Ok(mut file) => file.write_all(b"[Desktop Entry]\nType=Application\nName=AquaStar NEO\nExec=true\nIcon=applications-games\nNoDisplay=true\n").map_err(|e| e.to_string())?,
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {},
             Err(e) => return Err(e.to_string()),
         }
@@ -29,7 +29,7 @@ pub async fn register() -> Result<(), String> {
                     .map_err(|e| format!("Invalid portal app ID: {e}"))?,
             )
             .await
-            .map_err(|e| format!("Cannot register AquaStar with the desktop portal: {e}"));
+            .map_err(|e| format!("Cannot register AquaStar NEO with the desktop portal: {e}"));
             if result.is_ok() {
                 break;
             }

@@ -27,7 +27,7 @@ def prepare(output):
         raise ValueError('Keep package output outside the source checkout')
     output.mkdir(parents=True, exist_ok=True)
     version = arch_version(json.loads((ROOT / 'desktop/src-tauri/tauri.conf.json').read_text())['version'])
-    name = f'aquastar-{version}'
+    name = f'aquastar-neo-{version}'
     archive = output / f'{name}.tar.gz'
     inventory = subprocess.check_output(
         ['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], cwd=ROOT

@@ -13,10 +13,10 @@ while IFS= read -r candidate; do
   if [[ -z "$app" ]]; then
     app="$candidate"
   fi
-done < <(find "$target" -type d -name "AquaStar.app")
+  done < <(find "$target" -type d -name "AquaStar NEO.app")
 
 if [[ -z "$app" ]]; then
-  echo "AquaStar.app not found under $target" >&2
+  echo "AquaStar NEO.app not found under $target" >&2
   exit 1
 fi
 
@@ -27,8 +27,8 @@ import sys
 path = sys.argv[1]
 with open(path, "rb") as handle:
     info = plistlib.load(handle)
-info["CFBundleDisplayName"] = "AquaStar"
-info["CFBundleName"] = "AquaStar"
+info["CFBundleDisplayName"] = "AquaStar NEO"
+info["CFBundleName"] = "AquaStar NEO"
 with open(path, "wb") as handle:
     plistlib.dump(info, handle, fmt=plistlib.FMT_XML)
 PY
@@ -51,10 +51,10 @@ bundle=$(cd "$(dirname "$app")/.." && pwd)
 dmg_dir="$bundle/dmg"
 mkdir -p "$dmg_dir"
 ver=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$desktop/src-tauri/tauri.conf.json")
-dmg="$dmg_dir/AquaStar_${ver}_universal.dmg"
+dmg="$dmg_dir/aquastar-neo_${ver}_universal.dmg"
 stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
 cp -R "$app" "$stage/"
 ln -s /Applications "$stage/Applications"
-hdiutil create -volname "AquaStar" -srcfolder "$stage" -ov -format UDZO "$dmg"
+hdiutil create -volname "AquaStar NEO" -srcfolder "$stage" -ov -format UDZO "$dmg"
 echo "$dmg"

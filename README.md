@@ -1,8 +1,8 @@
-# AquaStar
+# AquaStar NEO
 
-![AquaStar](https://raw.githubusercontent.com/aquaspy/AquaStar/dev/Icon/Icon_1024.png)
+![AquaStar NEO](https://raw.githubusercontent.com/aquaspy/AquaStar/dev/Icon/Icon_1024.png)
 
-AquaStar is a desktop launcher and companion for AdventureQuest Worlds, with support for DragonFable. It provides inventory tools, wiki access, reminders, tasks, and strategy planning. It does not automate gameplay.
+AquaStar NEO is a desktop launcher and companion for AdventureQuest Worlds, with support for DragonFable. It provides inventory tools, wiki access, reminders, tasks, and strategy planning. It does not automate gameplay.
 
 The project maintains two lines. **3.x** is the Tauri launcher, with the game running in a separate standalone player. **2.x** is the Electron launcher, with the game inside its window. Both lines remain available so you can choose the features and system support you need.
 
@@ -19,7 +19,7 @@ Artix does not support third-party launchers. Report AquaStar issues in this rep
 
 ## Choose a version
 
-| Feature                                        | AquaStar 2.x                                  | AquaStar 3.x                                                                                                               |
+| Feature                                        | AquaStar 2.x                                  | AquaStar NEO                                                                                                               |
 | ---------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Launcher                                       | Electron 11.5.0, pinned for PPAPI support     | Tauri 2 with the system webview                                                                                            |
 | Game window                                    | Embedded in the Electron window               | Separate standalone player window                                                                                          |
@@ -43,7 +43,7 @@ In 3.x, the launcher can stay open during gameplay or hide until the player exit
 
 Both lines use the saved login for the AQW account site to sync inventory and Buy Back; the Account window does not need to stay open. Signing in to the game is separate from signing in to the account site.
 
-The 3.x launcher supports several desktop plugins at once, installed from local ZIP packages. They can add games, links, interactive tools, menus and shortcuts through a restricted API. They do not reuse Electron plugins or receive access to your account session. See the [desktop plugin guide](https://github.com/aquaspy/AquaStar/blob/dev/docs/DESKTOP-PLUGINS.md).
+The NEO launcher supports several desktop plugins at once, installed from local ZIP packages. They can add games, links, interactive tools, menus and shortcuts through a restricted API. They do not reuse Electron plugins or receive access to your account session. See the [desktop plugin guide](https://github.com/aquaspy/AquaStar/blob/dev/docs/DESKTOP-PLUGINS.md).
 
 On Linux and Windows, the 3.x menu bar is hidden by default. Enable **Preferences → Show menu bar** to display it; keyboard shortcuts remain available while it is hidden. macOS keeps its system application menu.
 
@@ -55,9 +55,9 @@ On Linux and Windows, the 3.x menu bar is hidden by default. Enable **Preference
 | macOS   | Intel x64 application; Apple Silicon uses Rosetta                    | macOS 11 or later, universal launcher for Intel and Apple Silicon |
 | Linux   | x64, i386, and armv7l packages                                       | x64 packages on systems with WebKitGTK 4.1                        |
 
-The [3.0 platform matrix](https://github.com/aquaspy/AquaStar/blob/dev/docs/aquastar-3.0-plan.md#platform-matrix) distinguishes published package targets from other player pins and possible ports. A player pin does not mean an installer exists for that architecture. There is no Android build.
+The [NEO platform matrix](https://github.com/aquaspy/AquaStar/blob/dev/docs/aquastar-3.0-plan.md#platform-matrix) distinguishes published package targets from other player pins and possible ports. A player pin does not mean an installer exists for that architecture. There is no Android build.
 
-On Apple Silicon, 3.x runs the launcher and Artix Ruffle natively. The Flash projector is Intel and requires Rosetta. Intel Macs use the pinned official Ruffle build. The macOS builds are not notarized; installation details are in the [3.x build and player guide](https://github.com/aquaspy/AquaStar/blob/dev/desktop/README.md).
+On Apple Silicon, AquaStar NEO runs the launcher and Artix Ruffle natively. The Flash projector is Intel and requires Rosetta. Intel Macs use the pinned official Ruffle build. The macOS builds are not notarized; installation details are in the [3.x build and player guide](https://github.com/aquaspy/AquaStar/blob/dev/desktop/README.md).
 
 ## Downloads
 
@@ -65,9 +65,9 @@ On Apple Silicon, 3.x runs the launcher and Artix Ruffle natively. The Flash pro
 
 Choose the installer or portable package for your system and architecture. The macOS ZIP contains an Intel application; Apple Silicon uses Rosetta. On Linux, mark an AppImage executable before opening it, or install the Debian package with your package manager.
 
-**[Try AquaStar 3.0.0-rc.5](https://github.com/aquaspy/AquaStar/releases/tag/v3.0.0-rc.5)**, the Tauri pre-release. Recording on macOS still needs real-world testing. RC5 has a Wayland capture issue; a tested correction is available on `dev` and requires a newer build. AquaStar 2.1.0 remains the stable release. Local build instructions are in the [3.x guide](https://github.com/aquaspy/AquaStar/blob/dev/desktop/README.md).
+**[Try AquaStar NEO 3.0.0-rc.5](https://github.com/aquaspy/AquaStar/releases/tag/v3.0.0-rc.5)**, the Tauri pre-release. Recording on macOS still needs real-world testing. RC5 has a Wayland capture issue; a tested correction is available on `dev` and requires a newer build. AquaStar 2.1.0 remains the stable release. Local build instructions are in the [3.x guide](https://github.com/aquaspy/AquaStar/blob/dev/desktop/README.md).
 
-The older AquaStar Lite prototype has been replaced by the 3.x line. The project maintains two lines: Electron 2.x and Tauri 3.x.
+The older AquaStar Lite prototype has been replaced by AquaStar NEO. The project maintains the Electron 2.x line and the AquaStar NEO line.
 
 The 3.x stable release and application merge into `main` remain pending testing and approval.
 
@@ -76,7 +76,7 @@ The 3.x stable release and application merge into `main` remain pending testing 
 | Branch                                                        | Role                                                                         |
 | ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `main`                                                        | Default branch and release integration; the 3.x application merge is pending |
-| [`dev`](https://github.com/aquaspy/AquaStar/tree/dev)         | Active 3.x development                                                       |
+| [`dev`](https://github.com/aquaspy/AquaStar/tree/dev)         | Active AquaStar NEO development                                                       |
 | [`2.x`](https://github.com/aquaspy/AquaStar/tree/2.x)         | Maintained Electron 2.x line                                                 |
 | [`2.x-dev`](https://github.com/aquaspy/AquaStar/tree/2.x-dev) | Electron maintenance development                                             |
 
@@ -141,4 +141,4 @@ Run the Rust tests on `dev` with the native build dependencies installed:
 cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml -- --test-threads=1
 ```
 
-The [desktop plugin guide](https://github.com/aquaspy/AquaStar/blob/dev/docs/DESKTOP-PLUGINS.md) documents the new 3.x API and example package. The [plugin guide](https://github.com/aquaspy/AquaStar/blob/2.x-dev/docs/PLUGINS.md) covers the Electron plugin API. The [3.0 plan](https://github.com/aquaspy/AquaStar/blob/dev/docs/aquastar-3.0-plan.md) records migration scope, platform limits, and release gates. Third-party player license notices are included with their packages and in [desktop/licenses](https://github.com/aquaspy/AquaStar/tree/dev/desktop/licenses).
+The [desktop plugin guide](https://github.com/aquaspy/AquaStar/blob/dev/docs/DESKTOP-PLUGINS.md) documents the AquaStar NEO API and example package. The [plugin guide](https://github.com/aquaspy/AquaStar/blob/2.x-dev/docs/PLUGINS.md) covers the Electron plugin API. The [AquaStar NEO plan](https://github.com/aquaspy/AquaStar/blob/dev/docs/aquastar-3.0-plan.md) records migration scope, platform limits, and release gates. Third-party player license notices are included with their packages and in [desktop/licenses](https://github.com/aquaspy/AquaStar/tree/dev/desktop/licenses).

@@ -380,7 +380,7 @@ impl Manifest {
         version_parts(&self.version)?;
         if let Some(min) = &self.min_app_version {
             if !version_at_least(app_version, min)? {
-                return Err(format!("Requires AquaStar {min} or newer"));
+                return Err(format!("Requires AquaStar NEO {min} or newer"));
             }
         }
         let mut permissions = BTreeSet::new();

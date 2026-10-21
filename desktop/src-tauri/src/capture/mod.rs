@@ -124,7 +124,7 @@ impl CaptureState {
         };
         if phase == "failed" {
             eprintln!(
-                "AquaStar capture failed: {}",
+                "AquaStar NEO capture failed: {}",
                 status.error.as_deref().unwrap_or("Unknown capture error")
             );
         }
@@ -132,12 +132,12 @@ impl CaptureState {
             match phase {
                 "recording" => feedback::show(
                     app,
-                    "AquaStar · Recording",
+                    "AquaStar NEO · Recording",
                     "Recording started. Press Ctrl+J again to stop.",
                 ),
                 "failed" => feedback::show(
                     app,
-                    "AquaStar · Capture failed",
+                    "AquaStar NEO · Capture failed",
                     status
                         .error
                         .as_deref()
@@ -151,7 +151,7 @@ impl CaptureState {
                 {
                     feedback::show(
                         app,
-                        "AquaStar · Video saved",
+                        "AquaStar NEO · Video saved",
                         &status.path.as_ref().unwrap().display().to_string(),
                     )
                 }
@@ -178,7 +178,7 @@ fn settings(app: &tauri::AppHandle) -> Settings {
 fn host(window: &tauri::WebviewWindow) -> Result<(), String> {
     match window.label() {
         "main" | "capture" => Ok(()),
-        _ => Err("Capture is available only to AquaStar's capture controls.".into()),
+        _ => Err("Capture is available only to AquaStar NEO's capture controls.".into()),
     }
 }
 #[derive(Serialize)]
@@ -343,7 +343,7 @@ pub async fn screenshot(app: tauri::AppHandle, id: Option<String>) -> Result<Pat
         *state.0.screenshot.lock().unwrap() = Some(path.clone());
         feedback::show(
             &app,
-            "AquaStar · Screenshot saved",
+            "AquaStar NEO · Screenshot saved",
             &path.display().to_string(),
         );
         let _ = app.emit_to("capture", "capture-screenshot", &path);
@@ -360,7 +360,7 @@ pub fn screenshot_failed(app: &tauri::AppHandle, error: String) {
     let state = app.state::<CaptureState>();
     if state.active() {
         // A failed screenshot must not replace the active recording's state.
-        feedback::show(app, "AquaStar · Screenshot failed", &error);
+        feedback::show(app, "AquaStar NEO · Screenshot failed", &error);
         let _ = app.emit_to("main", "capture-screenshot-error", &error);
         let _ = app.emit_to("capture", "capture-screenshot-error", &error);
     } else {
@@ -552,7 +552,7 @@ async fn show_controls(app: &tauri::AppHandle) -> Result<(), String> {
         "capture",
         tauri::WebviewUrl::App("features/capture/capture.html".into()),
     )
-    .title("AquaStar — Capture")
+    .title("AquaStar NEO — Capture")
     .inner_size(420.0, 410.0)
     .resizable(true)
     .always_on_top(true)
@@ -574,7 +574,7 @@ pub async fn open_controls(app: &tauri::AppHandle) {
 }
 fn destination(dir: &Path, extension: &str) -> Result<PathBuf, String> {
     fs::create_dir_all(dir).map_err(|e| format!("Cannot create capture folder: {e}"))?;
-    let name = chrono::Local::now().format("AquaStar-%Y%m%d-%H%M%S-%f");
+    let name = chrono::Local::now().format("AquaStar-NEO-%Y%m%d-%H%M%S-%f");
     let path = dir.join(format!("{name}.{extension}"));
     if path.exists() {
         return Err("Capture filename already exists. Try again.".into());
@@ -614,8 +614,8 @@ mod tests {
 pub fn no_game_feedback(app: &tauri::AppHandle) {
     feedback::show(
         app,
-        "AquaStar · No game running",
-        "Open a game in AquaStar before using capture shortcuts.",
+        "AquaStar NEO · No game running",
+        "Open a game in AquaStar NEO before using capture shortcuts.",
     );
 }
 

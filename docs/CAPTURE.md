@@ -2,7 +2,7 @@
 
 Open **Preferences → Screenshots and recording → Open Capture Controls**, or use the Tools menu. Start a game first. **F2** saves a PNG; **Ctrl+J** starts or stops an MP4 recording. These shortcuts follow the saved keybindings and are registered while a player is running. With several game windows, choose the target in Capture Controls.
 
-Shortcuts act directly: neither F2 nor Ctrl+J opens a control window or an AquaStar message dialog. The Wayland system picker may still appear when authorization is needed. Status, saved paths, errors and a Stop Recording button are available in the existing launcher Preferences. Open Capture Controls manually if you want the optional separate controls, including REC and elapsed time while the launcher is hidden. Closing the controls hides them during recording; it does not silently stop the recording. Closing the game finalizes the completed portion. The launcher returns afterwards, or exits after a direct `--no-launcher` session.
+Shortcuts act directly: neither F2 nor Ctrl+J opens a control window or an AquaStar NEO message dialog. The Wayland system picker may still appear when authorization is needed. Status, saved paths, errors and a Stop Recording button are available in the existing launcher Preferences. Open Capture Controls manually if you want the optional separate controls, including REC and elapsed time while the launcher is hidden. Closing the controls hides them during recording; it does not silently stop the recording. Closing the game finalizes the completed portion. The launcher returns afterwards, or exits after a direct `--no-launcher` session.
 
 ## Files and defaults
 
@@ -24,7 +24,7 @@ Settings are stored separately in `capture-settings.json` in the Tauri configura
 | Linux X11 | XComposite window pixmap, with window-drawable fallback | None |
 | Linux Wayland | ScreenCast portal and its private PipeWire remote | None |
 
-On Wayland, select the game window in the system picker. Desktops that support only monitor capture are reported as unsupported; AquaStar does not capture the entire monitor instead. The portal cannot reliably expose the selected window's PID, so select the window matching the game chosen in AquaStar. Audio is not captured.
+On Wayland, select the game window in the system picker. Desktops that support only monitor capture are reported as unsupported; AquaStar NEO does not capture the entire monitor instead. The portal cannot reliably expose the selected window's PID, so select the window matching the game chosen in AquaStar NEO. Audio is not captured.
 
 
 Minimizing an X11/Windows game ends the current recording and saves its completed portion. Closing or automatically replacing a player process never transfers an ongoing recording to another process. Capture availability does not change the launcher's operating-system minimum.
@@ -53,7 +53,7 @@ These fixes are newer than the published v3.0.0-rc.5 installers. Use an updated 
 
 ### Remembering Wayland authorization
 
-On Wayland, Capture Controls offers **Remember window authorization**, enabled by default for new settings. AquaStar requests a persistent ScreenCast permission and stores a returned restore token with owner-only file permissions. Subsequent captures of that same live game can restore the selection without another picker, if supported by the desktop. The latest returned token replaces the single-use token. Tokens are never exposed to plugin or tool WebViews.
+On Wayland, Capture Controls offers **Remember window authorization**, enabled by default for new settings. AquaStar NEO requests a persistent ScreenCast permission and stores a returned restore token with owner-only file permissions. Subsequent captures of that same live game can restore the selection without another picker, if supported by the desktop. The latest returned token replaces the single-use token. Tokens are never exposed to plugin or tool WebViews.
 
 **Remember window authorization** defaults on for new installations and settings without this field; explicitly saved choices are preserved. The first selection still requires system approval.
 
@@ -63,7 +63,7 @@ GNOME/Zorin was tested with two consecutive native captures: the first returned 
 
 ### GNOME Wayland capture shortcuts
 
-On GNOME Wayland without the GlobalShortcuts portal, enable **Use GNOME shortcuts for capture** in Preferences. This opt-in creates two AquaStar custom keyboard shortcuts, preserves unrelated entries, and activates the configured capture keys while a tracked game runs. Normal shutdown suspends the bindings; disabling the option removes AquaStar's entries. Local builds must remain at their current executable path while the integration is enabled. Other Wayland desktops may require their own shortcut setup.
+On GNOME Wayland without the GlobalShortcuts portal, enable **Use GNOME shortcuts for capture** in Preferences. This opt-in creates two AquaStar NEO custom keyboard shortcuts, preserves unrelated entries, and activates the configured capture keys while a tracked game runs. Normal shutdown suspends the bindings; disabling the option removes AquaStar NEO's entries. Local builds must remain at their current executable path while the integration is enabled. Other Wayland desktops may require their own shortcut setup.
 
 Preferences also provides direct screenshot/recording buttons and displays the actual output folders. Defaults are `Pictures/AquaStar Screenshots` (PNG) and `Videos/AquaStar Recordings` (MP4), using the OS user directories. Capture feedback uses desktop notifications without opening a window: Linux requests a silent, transient notification for 2.5 seconds, replacing the previous capture notification. Desktop notification policy may suppress it or control its duration.
 
@@ -74,9 +74,9 @@ Linux notification delivery uses a persistent D-Bus sender so GNOME does not imm
 
 ### Hyprland Wayland global shortcuts
 
-While a tracked game is running, AquaStar registers its saved keybindings through the GlobalShortcuts portal; X11 key grabs do not receive keys from native Wayland player windows. The portal session closes when the game exits or AquaStar shuts down. GNOME's existing opt-in integration remains available. Local builds and AppImages register a stable host portal identity; when absent, a hidden desktop metadata entry is created without replacing existing entries.
+While a tracked game is running, AquaStar NEO registers its saved keybindings through the GlobalShortcuts portal; X11 key grabs do not receive keys from native Wayland player windows. The portal session closes when the game exits or AquaStar NEO shuts down. GNOME's existing opt-in integration remains available. Local builds and AppImages register a stable host portal identity; when absent, a hidden desktop metadata entry is created without replacing existing entries.
 
-Hyprland exposes portal actions but does not apply their `preferred_trigger`. On Omarchy, Preferences → General → **Hyprland shortcuts** can add AquaStar's current saved shortcuts to `~/.config/hypr/bindings.lua`. Setup checks `omarchy menu keybindings --print` first, refuses any trigger already in use, keeps existing AquaStar bindings, and writes a dated backup before changing the file. AquaStar only replaces or removes its own marked section; use the same Preferences controls to update or undo it. When changing a shortcut later, run setup/update again.
+Hyprland exposes portal actions but does not apply their `preferred_trigger`. On Omarchy, Preferences → General → **Hyprland shortcuts** can add AquaStar NEO's current saved shortcuts to `~/.config/hypr/bindings.lua`. Setup checks `omarchy menu keybindings --print` first, refuses any trigger already in use, keeps existing AquaStar NEO bindings, and writes a dated backup before changing the file. AquaStar NEO only replaces or removes its own marked section; use the same Preferences controls to update or undo it. When changing a shortcut later, run setup/update again.
 
 For other Hyprland configurations, inspect `hyprctl globalshortcuts` while a game is open and bind portal actions with Hyprland's `global` dispatcher. Default IDs for the capture, Wiki, new AQW and DragonFable actions are `io.github.aquaspy.aquastar-lite:sshot-0`, `io.github.aquaspy.aquastar-lite:record-1`, `io.github.aquaspy.aquastar-lite:wiki-4`, `io.github.aquaspy.aquastar-lite:newAqw-8` and `io.github.aquaspy.aquastar-lite:dragon-9`; the numeric suffix can change with custom shortcut settings. In the Lua configuration, for example:
 
@@ -88,6 +88,6 @@ hl.bind("ALT + N", hl.dsp.global("io.github.aquaspy.aquastar-lite:newAqw-8"))
 hl.bind("ALT + 1", hl.dsp.global("io.github.aquaspy.aquastar-lite:dragon-9"))
 ```
 
-Check the actual IDs printed on your system before adding manual bindings. AquaStar's Omarchy integration scopes bindings to AquaStar game windows; manual bindings can be scoped the same way in Lua. Older Hyprland configuration uses `bind = ALT, W, global, io.github.aquaspy.aquastar-lite:wiki-4` and `bind = ALT, N, global, io.github.aquaspy.aquastar-lite:newAqw-8`. Changing a saved accelerator also requires updating manual compositor bindings.
+Check the actual IDs printed on your system before adding manual bindings. AquaStar NEO's Omarchy integration scopes bindings to AquaStar NEO game windows; manual bindings can be scoped the same way in Lua. Older Hyprland configuration uses `bind = ALT, W, global, io.github.aquaspy.aquastar-lite:wiki-4` and `bind = ALT, N, global, io.github.aquaspy.aquastar-lite:newAqw-8`. Changing a saved accelerator also requires updating manual compositor bindings.
 
 On the test Hyprland 0.56.2 session, rc.6's direct capture commands already produced window-only PNG and a silent H.264 MP4. Repeated captures of the same live player restored authorization without selecting the window again. This is separate from keyboard registration. Restoring a grant is compositor-dependent and a newly started player still needs a new selection.

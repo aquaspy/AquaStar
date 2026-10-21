@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "AquaStar",
-  "mainBinaryName": "aquastar-lite",
+  "productName": "AquaStar NEO",
+  "mainBinaryName": "aquastar-neo",
   "version": "3.0.0-rc.6",
   "identifier": "io.github.aquaspy.aquastar-lite",
   "build": {
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "AquaStar",
+        "title": "AquaStar NEO",
         "width": 900,
         "height": 860
       }
@@ -34,7 +34,7 @@
       "signingIdentity": "-",
       "hardenedRuntime": false,
       "minimumSystemVersion": "11.0",
-      "bundleName": "AquaStar",
+      "bundleName": "AquaStar NEO",
       "infoPlist": "Info.plist"
     },
     "icon": [
