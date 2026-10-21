@@ -30,32 +30,19 @@ commands.allow = [
   "launcher_model",
   "play_game",
   "launcher_search",
-  "set_startup"
+  "set_startup",
+  "get_profile_preferences",
+  "change_profile_preference",
+  "get_custom_swf_status",
+  "choose_custom_swf",
+  "remove_custom_swf",
+  "restart_app"
 ]
 
 [[permission]]
 identifier = "about-commands"
 description = "About window"
 commands.allow = ["open_project_page"]
-
-[[permission]]
-identifier = "settings-commands"
-description = "Settings window"
-commands.allow = [
-  "get_keybindings",
-  "get_settings_messages",
-  "save_keybindings",
-  "get_ruffle_status",
-  "update_ruffle",
-  "restore_bundled_ruffle",
-  "restart_app",
-  "get_custom_swf_status",
-  "choose_custom_swf",
-  "remove_custom_swf",
-  "get_plugin_list",
-  "get_plugin_settings",
-  "get_settings_layout"
-]
 
 [[permission]]
 identifier = "studio-commands"

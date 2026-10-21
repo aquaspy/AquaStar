@@ -1,9 +1,9 @@
 'use strict';
 (() => {
-  const preferences = document.getElementById('preferences');
+  const preferences = document.getElementById('capture-preferences');
   if (!preferences) return;
   const section = document.createElement('section');
-  section.className = 'card';
+  section.className = 'pref';
   const title = document.createElement('h2');
   title.textContent = 'Screenshots and recording';
   const text = document.createElement('p');
@@ -11,7 +11,7 @@
     'Capture your game as PNG screenshots or MP4 video. Use F2 for screenshots and Ctrl+J to start or stop recording.';
   const button = document.createElement('button');
   button.type = 'button';
-  button.textContent = 'Open Capture Controls';
+  button.textContent = 'Open capture controls';
   button.onclick = () =>
     window.__TAURI__.core.invoke('capture_show').catch((error) => {
       text.textContent = String(error);
@@ -23,16 +23,16 @@
   screenshotNotice.setAttribute('role', 'status');
   const stop = document.createElement('button');
   stop.type = 'button';
-  stop.textContent = 'Stop Recording · Ctrl+J';
+  stop.textContent = 'Stop recording · Ctrl+J';
   stop.hidden = true;
   stop.onclick = () => window.__TAURI__.core.invoke('capture_stop').catch((error) => {
     feedback.textContent = String(error);
   });
   const screenshot = document.createElement('button');
-  screenshot.type = 'button'; screenshot.textContent = 'Take Screenshot';
+  screenshot.type = 'button'; screenshot.textContent = 'Take game screenshot';
   screenshot.onclick = () => window.__TAURI__.core.invoke('capture_screenshot', { id: null }).catch((e) => { feedback.textContent = String(e); });
   const record = document.createElement('button');
-  record.type = 'button'; record.textContent = 'Start Recording';
+  record.type = 'button'; record.textContent = 'Start game recording';
   record.onclick = () => window.__TAURI__.core.invoke('capture_start', { id: null }).catch((e) => { feedback.textContent = String(e); });
   const folders = document.createElement('p');
   const shortcutLabel = document.createElement('label');

@@ -254,6 +254,10 @@ fn spawn_tool(app: &tauri::AppHandle, name: String) {
 }
 
 fn open_tool_window(app: &tauri::AppHandle, name: &str) -> Result<(), String> {
+    if name == "settings" {
+        startup::open_preferences(app);
+        return Ok(());
+    }
     let (title, width, height) =
         profile::tool_spec(name).ok_or_else(|| format!("unknown window {name}"))?;
     if let Some(window) = app.get_webview_window(name) {
@@ -269,42 +273,13 @@ fn open_tool_window(app: &tauri::AppHandle, name: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn get_keybindings() -> serde_json::Value {
-    profile::keybindings_payload(&profile::live_files())
+fn get_profile_preferences() -> Result<profile::ProfilePreferences, String> {
+    profile::profile_preferences(&profile::live_files())
 }
 
 #[tauri::command]
-fn get_settings_messages() -> serde_json::Value {
-    profile::settings_messages()
-}
-
-#[tauri::command]
-fn save_keybindings(binds: serde_json::Value) -> Result<serde_json::Value, String> {
-    profile::save_keybindings(&profile::live_files(), &binds)
-}
-
-#[tauri::command]
-fn get_ruffle_status() -> serde_json::Value {
-    profile::ruffle_status(&profile::live_files())
-}
-
-#[tauri::command]
-fn update_ruffle(channel: Option<String>) -> serde_json::Value {
-    let _ = channel;
-    serde_json::json!({
-        "ok": false,
-        "error": "AquaStar 3.0 uses the pinned desktop players. The in-page Ruffle download is not used."
-    })
-}
-
-#[tauri::command]
-fn restore_bundled_ruffle() -> serde_json::Value {
-    serde_json::json!({ "ok": true })
-}
-
-#[tauri::command]
-fn restart_app(app: tauri::AppHandle) {
-    app.restart();
+fn change_profile_preference(change: profile::ProfilePreferenceChange) -> Result<profile::ProfilePreferences, String> {
+    profile::change_profile_preference(&profile::live_files(), change)
 }
 
 #[tauri::command]
@@ -339,18 +314,8 @@ fn remove_custom_swf() -> serde_json::Value {
 }
 
 #[tauri::command]
-fn get_plugin_list(opts: Option<serde_json::Value>) -> serde_json::Value {
-    profile::plugin_list(&profile::live_files(), opts.as_ref().unwrap_or(&serde_json::Value::Null))
-}
-
-#[tauri::command]
-fn get_plugin_settings() -> serde_json::Value {
-    profile::plugin_settings(&profile::live_files())
-}
-
-#[tauri::command]
-fn get_settings_layout() -> serde_json::Value {
-    profile::settings_layout()
+fn restart_app(app: tauri::AppHandle) {
+    app.restart();
 }
 
 #[tauri::command]
@@ -499,7 +464,7 @@ async fn open_inventory_item_wiki(app: tauri::AppHandle, item_name: String) -> R
 struct TimerShortcut(std::sync::Mutex<Option<tauri_plugin_global_shortcut::Shortcut>>);
 struct ShortcutBook(std::sync::Mutex<std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String>>);
 
-fn shortcut_from(accel: &profile::Accelerator) -> Option<tauri_plugin_global_shortcut::Shortcut> {
+pub(crate) fn shortcut_from(accel: &profile::Accelerator) -> Option<tauri_plugin_global_shortcut::Shortcut> {
     use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
     let mut mods = Modifiers::empty();
     if accel.alt {
@@ -776,7 +741,7 @@ fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
             }
         }
         "settings" => {
-            spawn_tool(app, "settings".into());
+            startup::open_preferences(app);
         }
         "tool" => {
             spawn_tool(app, command.target);
@@ -1014,19 +979,12 @@ fn main() {
             preferred_engine,
             open_site,
             open_tool,
-            get_keybindings,
-            get_settings_messages,
-            save_keybindings,
-            get_ruffle_status,
-            update_ruffle,
-            restore_bundled_ruffle,
-            restart_app,
+            get_profile_preferences,
+            change_profile_preference,
             get_custom_swf_status,
             choose_custom_swf,
             remove_custom_swf,
-            get_plugin_list,
-            get_plugin_settings,
-            get_settings_layout,
+            restart_app,
             get_reminders,
             get_reminders_messages,
             save_reminders,

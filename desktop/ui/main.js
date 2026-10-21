@@ -15,6 +15,8 @@ let savedShowMenuBar = false;
 let menuBarSupported = true;
 let model = { plugins: [], errors: [], restartRequired: false, safeMode: false };
 let view = null; // a plugin id, or one of GLOBAL_PANELS
+let navigationRevision = 0;
+let modelLoaded = false;
 const choice = {}; // "<plugin>/<game>" -> engine picked this session
 const opening = new Set(); // "<plugin>/<game>" while the player starts
 
@@ -322,6 +324,7 @@ function renderEmpty() {
 }
 
 function showView(id, focus = true) {
+  navigationRevision += 1;
   const isGlobal = GLOBAL_PANELS.includes(id);
   view = id;
   pluginPage.hidden = isGlobal;
@@ -333,23 +336,33 @@ function showView(id, focus = true) {
     if (model.plugins.some((plugin) => plugin.id === id)) renderPlugin();
     else renderEmpty();
   }
+  document.dispatchEvent(new CustomEvent('aquastar:view-changed', { detail: id }));
+  if (id === 'preferences') document.dispatchEvent(new CustomEvent('aquastar:preferences-activated'));
   markCurrent();
   if (focus) document.getElementById('main').focus();
 }
 
+function wantedView(initialLoad, navigationChanged, startShow) {
+  if (!initialLoad || navigationChanged) return view || savedView();
+  return startShow || (GLOBAL_PANELS.includes(view) ? view : view || savedView());
+}
+
 async function loadModel() {
+  const requestRevision = navigationRevision;
+  const initialLoad = !modelLoaded;
   try {
     model = await invoke('launcher_model');
   } catch (error) {
     failure(error);
     model = { plugins: [], errors: [String(error)], restartRequired: false, safeMode: false };
   }
+  modelLoaded = true;
   renderNav();
   renderBanner();
   renderBuiltin();
   renderStartup();
   const start = model.startup || {};
-  const wanted = start.show || (GLOBAL_PANELS.includes(view) ? view : view || savedView());
+  const wanted = wantedView(initialLoad, navigationRevision !== requestRevision, start.show);
   const target = GLOBAL_PANELS.includes(wanted) || model.plugins.some((plugin) => plugin.id === wanted) ? wanted : null;
   showView(target || (model.plugins[0] && model.plugins[0].id) || 'extensions', false);
   if (start.notice) message(start.notice, true);
@@ -403,7 +416,8 @@ startupSelect.addEventListener('change', async () => {
 // A second launch (`aquastar --aqw --launcher`) reaches the running launcher through this event.
 if (window.__TAURI__.event) {
   window.__TAURI__.event.listen('aquastar://start', (event) => {
-    const { plugin, notice } = event.payload || {};
+    const { plugin, notice, preferences } = event.payload || {};
+    if (preferences) showView('preferences');
     if (plugin && model.plugins.some((entry) => entry.id === plugin)) showView(plugin);
     if (notice) message(notice, true);
   });

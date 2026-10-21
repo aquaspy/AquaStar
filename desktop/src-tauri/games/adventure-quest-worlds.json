@@ -84,7 +84,7 @@
       "id": "aquastar",
       "label": "AquaStar",
       "items": [
-        { "id": "settings", "labelKey": "menuSettings", "keybind": "settings", "action": "settings" },
+        { "id": "settings", "labelKey": "menuPreferences", "keybind": "settings", "action": "settings" },
         { "type": "separator" },
         { "id": "help", "labelKey": "menuHelp", "keybind": "help", "action": "help" },
         { "id": "about", "labelKey": "menuAbout", "keybind": "about", "action": "about" }

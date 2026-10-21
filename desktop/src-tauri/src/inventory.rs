@@ -994,7 +994,6 @@ mod tests {
             todo: aqua.join("aquastar_todo.json"),
             strategy: aqua.join("aquastar_strategy.json"),
             inventory: aqua.join("aquastar_inventory.json"),
-            plugins_dir: aqua.join("plugins"),
             swf_managed: aqua.join("custom-game.swf"),
             swf_candidates: vec![aqua.join("custom-game.swf")],
         };

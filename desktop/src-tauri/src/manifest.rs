@@ -112,8 +112,12 @@ fn catalogs() -> &'static HashMap<&'static str, Catalog> {
     static CATALOGS: OnceLock<HashMap<&'static str, Catalog>> = OnceLock::new();
     CATALOGS.get_or_init(|| {
         let mut map = HashMap::new();
-        map.insert("en-US", merge_catalog(PLATFORM_EN, GAME_EN));
-        map.insert("pt-BR", merge_catalog(PLATFORM_PT, GAME_PT));
+        let mut en = merge_catalog(PLATFORM_EN, GAME_EN);
+        en.menu.insert("menuPreferences".into(), "Preferences".into());
+        let mut pt = merge_catalog(PLATFORM_PT, GAME_PT);
+        pt.menu.insert("menuPreferences".into(), "Preferências".into());
+        map.insert("en-US", en);
+        map.insert("pt-BR", pt);
         map
     })
 }
@@ -186,10 +190,6 @@ pub fn keybinds() -> Vec<Keybind> {
             defaults: bind.default.list(),
         })
         .collect()
-}
-
-pub fn keybind_ids() -> Vec<String> {
-    keybinds().into_iter().map(|bind| bind.id).collect()
 }
 
 pub fn keybind_defaults_value() -> Value {
@@ -875,6 +875,8 @@ mod tests {
         assert_eq!(seen, expected);
         assert_eq!(menu_label("en-US", "menuWiki", ""), "AQW Wiki");
         assert_eq!(menu_label("en-US", "menuOtherPages", ""), "Usefull Pages");
+        assert_eq!(menu_label("en-US", "menuPreferences", ""), "Preferences");
+        assert_eq!(menu_label("pt-BR", "menuPreferences", ""), "Preferências");
         assert_eq!(menu_label("pt-BR", "menuDailyGifts", ""), "Drops Diários");
         assert!(accept_site("http://www.aq.com/lore/calendar").is_err());
         assert!(accept_site("https://aqwwiki.wikidot.com/new-releases").is_ok());

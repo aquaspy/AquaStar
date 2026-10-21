@@ -4,6 +4,7 @@ mod movie;
 mod window_icon;
 
 pub use movie::MovieKind;
+pub(crate) use movie::valid_custom_swf_url;
 pub(crate) use catalog::{Arch, Os};
 
 use serde::{Deserialize, Serialize};

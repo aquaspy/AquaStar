@@ -35,6 +35,16 @@
               <p class="lead">Settings for AquaStar itself. Available options depend on your system.</p>
             </div>
           </div>
+          <div class="pref-tabs" role="tablist" aria-label="Preferences sections">
+            <button type="button" role="tab" id="tab-general" aria-controls="panel-general" aria-selected="true" tabindex="0" data-preferences-tab="general">General</button>
+            <button type="button" role="tab" id="tab-aqw" aria-controls="panel-aqw" aria-selected="false" tabindex="-1" data-preferences-tab="aqw">Adventure Quest Worlds</button>
+            <button type="button" role="tab" id="tab-keybinds" aria-controls="panel-keybinds" aria-selected="false" tabindex="-1" data-preferences-tab="keybinds">Keybinds</button>
+          </div>
+          <div id="preferences-restart" class="preferences-restart" role="status" hidden>
+            <span>Restart AquaStar to refresh menu labels, dialogs, and saved shortcuts.</span>
+            <button type="button" id="preferences-restart-button">Restart AquaStar</button>
+          </div>
+          <section id="panel-general" class="pref-tab-panel" role="tabpanel" aria-labelledby="tab-general" tabindex="0">
           <div class="pref">
             <div class="fields">
               <label for="ruffle-quality">Ruffle quality<select id="ruffle-quality" disabled></select></label
@@ -73,7 +83,11 @@
               menu stays in the system menu bar.
             </p>
           </div>
-          <button type="button" data-tool="settings">Open all settings ↗</button>
+          <div id="capture-preferences"></div>
+          <div id="profile-general-preferences"></div>
+          </section>
+          <section id="panel-aqw" class="pref-tab-panel" role="tabpanel" aria-labelledby="tab-aqw" tabindex="0" hidden></section>
+          <section id="panel-keybinds" class="pref-tab-panel" role="tabpanel" aria-labelledby="tab-keybinds" tabindex="0" hidden></section>
         </section>
         <section class="panel" id="extensions" hidden aria-label="Plugins">
           <div class="head">
@@ -99,6 +113,7 @@
       </main>
     </div>
     <script src="main.js"></script>
+    <script src="preferences.js"></script>
     <script src="capture.js"></script>
     <script src="extensions.js"></script>
   </body>

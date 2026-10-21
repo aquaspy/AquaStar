@@ -161,6 +161,10 @@ fn https_swf(url: &str) -> bool {
     }
 }
 
+pub(crate) fn valid_custom_swf_url(url: &str) -> bool {
+    https_swf(url)
+}
+
 fn loader_ok(candidate: &str) -> bool {
     if candidate.len() >= 200 {
         return false;

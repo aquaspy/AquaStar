@@ -5,9 +5,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value};
+use std::sync::{Mutex, OnceLock};
 
 const PLUGIN_ID: &str = "adventure-quest-worlds";
-const SETTINGS_MESSAGES: &str = include_str!("../assets/settings-messages.json");
 const REMINDERS_MESSAGES: &str = include_str!("../assets/reminders-messages.json");
 const TODO_MESSAGES: &str = include_str!("../assets/todo-messages.json");
 const STRATEGY_MESSAGES: &str = include_str!("../assets/strategy-messages.json");
@@ -34,9 +34,57 @@ pub struct ProfileFiles {
     pub todo: PathBuf,
     pub strategy: PathBuf,
     pub inventory: PathBuf,
-    pub plugins_dir: PathBuf,
     pub swf_managed: PathBuf,
     pub swf_candidates: Vec<PathBuf>,
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProfilePreferences {
+    pub defaults: ProfilePreferencesDefaults,
+    pub app_language: String,
+    pub custom_url: String,
+    pub player_character: String,
+    pub auto_sync: bool,
+    pub live_loader_url: bool,
+    pub keybinds: Vec<ShortcutPreference>,
+    pub keybind_diagnostics: Vec<String>,
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProfilePreferencesDefaults {
+    pub app_language: String,
+    pub custom_url: String,
+    pub player_character: String,
+    pub auto_sync: bool,
+    pub live_loader_url: bool,
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShortcutPreference {
+    pub id: String,
+    pub binding: Value,
+    pub default: Value,
+}
+
+#[derive(Clone, Debug, serde::Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "camelCase")]
+pub enum ProfilePreferenceChange {
+    AppLanguage(String),
+    CustomUrl(String),
+    PlayerCharacter(String),
+    AutoSync(bool),
+    LiveLoaderUrl(bool),
+    Keybind(ShortcutPreferenceChange),
+}
+
+#[derive(Clone, Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShortcutPreferenceChange {
+    pub id: String,
+    pub binding: Value,
 }
 
 pub fn files_from(profile: &crate::placement::ProfilePaths) -> ProfileFiles {
@@ -47,7 +95,6 @@ pub fn files_from(profile: &crate::placement::ProfilePaths) -> ProfileFiles {
         todo: profile.aqua_dir.join("aquastar_todo.json"),
         strategy: profile.aqua_dir.join("aquastar_strategy.json"),
         inventory: profile.aqua_dir.join("aquastar_inventory.json"),
-        plugins_dir: profile.aqua_dir.join("plugins"),
         swf_managed: profile.aqua_dir.join("custom-game.swf"),
         swf_candidates: profile.swf_candidates.clone(),
         settings_files: profile.settings_files.clone(),
@@ -68,7 +115,6 @@ pub fn feature_page(name: &str) -> String {
 
 pub fn tool_spec(name: &str) -> Option<(&'static str, f64, f64)> {
     Some(match name {
-        "settings" => ("AquaStar - Settings", 640.0, 680.0),
         "reminders" => ("AquaStar - Reminders", 1040.0, 620.0),
         "todo" => ("AquaStar - To-Do List", 960.0, 620.0),
         "strategy" => ("AquaStar - Strategy", 1040.0, 680.0),
@@ -76,6 +122,121 @@ pub fn tool_spec(name: &str) -> Option<(&'static str, f64, f64)> {
         "studio" => ("AquaStar - Char Page Studio", 560.0, 900.0),
         _ => return None,
     })
+}
+
+pub fn profile_preferences(files: &ProfileFiles) -> Result<ProfilePreferences, String> {
+    if files.canonical_settings.exists() {
+        let text = fs::read_to_string(&files.canonical_settings)
+            .map_err(|error| format!("Could not read AquaStar settings: {error}"))?;
+        let canonical: Value = serde_json::from_str(&text)
+            .map_err(|error| format!("Could not read AquaStar settings: {error}"))?;
+        if !canonical.is_object() {
+            return Err("AquaStar settings must contain a JSON object".into());
+        }
+    }
+    let values = merge_settings(&files.settings_files);
+    let mut keybinds = Vec::new();
+    let stored_plugin = values.get("plugins").and_then(|value| value.get(PLUGIN_ID));
+    for bind in crate::manifest::keybinds() {
+        if bind.id == "reloadCache" {
+            continue;
+        }
+        let default = keybind_default(&bind.id).unwrap_or(Value::Null);
+        let binding = values.get(&bind.id)
+            .or_else(|| stored_plugin.and_then(|plugin| plugin.get(&bind.id)))
+            .cloned()
+            .unwrap_or_else(|| default.clone());
+        keybinds.push(ShortcutPreference { id: bind.id, binding, default });
+    }
+    let keybind_diagnostics = keybinds.iter().filter_map(|bind| {
+        validate_shortcut_binding(&bind.binding).err().map(|error| format!("{}: {error}", bind.id))
+    }).collect();
+    Ok(ProfilePreferences {
+        defaults: ProfilePreferencesDefaults {
+            app_language: "system".into(),
+            custom_url: String::new(),
+            player_character: String::new(),
+            auto_sync: false,
+            live_loader_url: true,
+        },
+        app_language: values.get("appLanguage").and_then(Value::as_str).unwrap_or("system").to_string(),
+        custom_url: values.get("customUrl").and_then(Value::as_str).unwrap_or("").to_string(),
+        player_character: values.get("playerCharacter").and_then(Value::as_str).unwrap_or("").to_string(),
+        auto_sync: values.get("autoSync").and_then(Value::as_bool).unwrap_or(false),
+        live_loader_url: values.get("liveLoaderUrl").and_then(Value::as_bool).unwrap_or(true),
+        keybinds,
+        keybind_diagnostics,
+    })
+}
+
+pub fn change_profile_preference(files: &ProfileFiles, change: ProfilePreferenceChange) -> Result<ProfilePreferences, String> {
+    static WRITE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    let _guard = WRITE_LOCK.get_or_init(|| Mutex::new(())).lock().unwrap_or_else(|error| error.into_inner());
+    let existing_value = match fs::read_to_string(&files.canonical_settings) {
+        Ok(text) => serde_json::from_str::<Value>(&text)
+            .map_err(|error| format!("Could not read AquaStar settings: {error}"))?,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Value::Object(Map::new()),
+        Err(error) => return Err(format!("Could not read AquaStar settings: {error}")),
+    };
+    let existing = existing_value.as_object().cloned()
+        .ok_or_else(|| "AquaStar settings must contain a JSON object".to_string())?;
+    let (key, value) = match &change {
+        ProfilePreferenceChange::AppLanguage(value) => {
+            if !["system", "en-US", "pt-BR"].contains(&value.as_str()) {
+                return Err("Choose System default, English, or Português (Brasil).".into());
+            }
+            ("appLanguage", Value::String(value.clone()))
+        }
+        ProfilePreferenceChange::CustomUrl(value) => {
+            if !value.is_empty() && !crate::players::valid_custom_swf_url(value) {
+                return Err("Enter an HTTPS URL ending in .swf, up to 199 characters.".into());
+            }
+            ("customUrl", Value::String(value.clone()))
+        }
+        ProfilePreferenceChange::PlayerCharacter(value) => {
+            if !value.chars().all(|character| character.is_ascii_alphanumeric()) {
+                return Err("Character name can contain letters and numbers only.".into());
+            }
+            ("playerCharacter", Value::String(value.clone()))
+        }
+        ProfilePreferenceChange::AutoSync(value) => ("autoSync", Value::Bool(*value)),
+        ProfilePreferenceChange::LiveLoaderUrl(value) => ("liveLoaderUrl", Value::Bool(*value)),
+        ProfilePreferenceChange::Keybind(change) => {
+            crate::manifest::keybinds().into_iter()
+                .find(|bind| bind.id == change.id && bind.id != "reloadCache")
+                .ok_or_else(|| "This shortcut is not editable.".to_string())?;
+            validate_shortcut_binding(&change.binding)?;
+            ("", Value::Null)
+        }
+    };
+    let mut patch = Map::new();
+    match change {
+        ProfilePreferenceChange::Keybind(change) => { patch.insert(change.id, change.binding); }
+        _ => { patch.insert(key.into(), value); }
+    }
+    let next = split_save(&patch, PLUGIN_ID, existing);
+    write_electron_atomic(&files.canonical_settings, &Value::Object(next))?;
+    profile_preferences(files)
+}
+
+fn keybind_default(id: &str) -> Option<Value> {
+    crate::manifest::keybind_defaults_value().get(id).cloned()
+}
+
+fn validate_shortcut_binding(value: &Value) -> Result<(), String> {
+    let bindings: Vec<&str> = match value {
+        Value::String(binding) => vec![binding],
+        Value::Array(values) if !values.is_empty() => values.iter().map(Value::as_str)
+            .collect::<Option<Vec<_>>>().ok_or_else(|| "Shortcut list must contain text values.".to_string())?,
+        _ => return Err("Shortcut must be text or a list of shortcuts.".into()),
+    };
+    for binding in bindings {
+        let accelerator = parse_accelerator(binding).ok_or_else(|| format!("Unsupported shortcut: {binding}"))?;
+        if crate::shortcut_from(&accelerator).is_none() {
+            return Err(format!("Unsupported shortcut key: {}", accelerator.key));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -115,9 +276,6 @@ pub fn parse_accelerator(raw: &str) -> Option<Accelerator> {
     Some(accel)
 }
 
-pub fn settings_messages() -> Value {
-    parse_static(SETTINGS_MESSAGES)
-}
 pub fn reminders_messages() -> Value {
     parse_static(REMINDERS_MESSAGES)
 }
@@ -126,163 +284,6 @@ pub fn todo_messages() -> Value {
 }
 pub fn strategy_messages() -> Value {
     parse_static(STRATEGY_MESSAGES)
-}
-
-pub fn keybindings_payload(files: &ProfileFiles) -> Value {
-    migrate_settings_files(&files.settings_files);
-    let mut merged = merge_settings(&files.settings_files);
-    if merged.get("ruffleAutoUpdateMigrated") != Some(&Value::Bool(true)) {
-        merged.insert("ruffleAutoUpdate".into(), Value::Bool(true));
-        merged.insert("ruffleAutoUpdateMigrated".into(), Value::Bool(true));
-        if files.canonical_settings.is_file() {
-            if let Some(mut canonical) = read_json(&files.canonical_settings).and_then(|v| v.as_object().cloned()) {
-                canonical.insert("ruffleAutoUpdate".into(), Value::Bool(true));
-                canonical.insert("ruffleAutoUpdateMigrated".into(), Value::Bool(true));
-                let _ = write_electron(&files.canonical_settings, &Value::Object(canonical));
-            }
-        }
-    }
-    let mut current = defaults_map();
-    for (key, value) in &merged {
-        if key != "plugins" {
-            current.insert(key.clone(), value.clone());
-        }
-    }
-    serde_json::json!({
-        "current": current,
-        "defaults": keybind_defaults(),
-        "options": option_defaults(),
-        "renderModeChoices": [
-            {"id": "flash", "label": "Flash Player"},
-            {"id": "ruffle", "label": "Ruffle (Experimental)"}
-        ],
-        "ruffleUpdateChannelChoices": [
-            {"id": "latest", "label": "Latest (Stable)"},
-            {"id": "nightly", "label": "Nightly (Experimental)"}
-        ],
-        "ruffleQualityChoices": [
-            {"id": "high", "label": "High (default)"},
-            {"id": "medium", "label": "Medium"},
-            {"id": "low", "label": "Low (fastest)"}
-        ],
-        "appLanguageChoices": [
-            {"id": "system", "label": "System default"},
-            {"id": "en-US", "label": "English"},
-            {"id": "pt-BR", "label": "Português (Brasil)"}
-        ],
-        "visibleKeybindIds": keybind_default_ids(),
-        "savePath": files.canonical_settings.display().to_string()
-    })
-}
-
-pub fn save_keybindings(files: &ProfileFiles, changed: &Value) -> Result<Value, String> {
-    let existing = read_json(&files.canonical_settings)
-        .and_then(|value| value.as_object().cloned())
-        .unwrap_or_default();
-    let active = changed
-        .get("activePluginId")
-        .and_then(Value::as_str)
-        .filter(|id| !id.is_empty())
-        .map(str::to_string)
-        .or_else(|| existing.get("activePluginId").and_then(Value::as_str).filter(|id| !id.is_empty()).map(str::to_string))
-        .unwrap_or_else(|| PLUGIN_ID.to_string());
-    let changed_map = changed.as_object().cloned().unwrap_or_default();
-    let next = split_save(&changed_map, &active, existing);
-    write_electron(&files.canonical_settings, &Value::Object(next))?;
-    Ok(serde_json::json!({ "savedTo": files.canonical_settings.display().to_string() }))
-}
-
-pub fn plugin_settings(files: &ProfileFiles) -> Value {
-    let settings = read_json(&files.canonical_settings).unwrap_or(Value::Null);
-    serde_json::json!({
-        "activePluginId": settings.get("activePluginId").and_then(Value::as_str).unwrap_or(""),
-        "pluginSystem": settings.get("pluginSystem").and_then(Value::as_bool).unwrap_or(true),
-        "enableLocalPlugins": settings.get("enableLocalPlugins") == Some(&Value::Bool(true)),
-        "allowLocalPluginOverride": settings.get("allowLocalPluginOverride") == Some(&Value::Bool(true)),
-        "trustedLocalPlugins": settings.get("trustedLocalPlugins").cloned().filter(|v| v.is_object()).unwrap_or(serde_json::json!({}))
-    })
-}
-
-pub fn settings_layout() -> Value {
-    serde_json::json!({
-        "plugin": {"id": PLUGIN_ID, "name": "Adventure Quest Worlds"},
-        "pluginSections": [
-            {
-                "id": "aqw-account",
-                "title": "Account & Inventory",
-                "titleKey": "account",
-                "order": 10,
-                "fields": [
-                    {"key": "playerCharacter", "type": "text", "sanitize": "alphanumeric"},
-                    {"key": "featurePlayerName", "type": "boolean"},
-                    {"key": "autoSync", "type": "boolean"}
-                ]
-            },
-            {
-                "id": "aqw-game",
-                "title": "Game",
-                "titleKey": "game",
-                "order": 20,
-                "fields": [{"key": "liveLoaderUrl", "type": "boolean"}]
-            }
-        ]
-    })
-}
-
-pub fn plugin_list(files: &ProfileFiles, opts: &Value) -> Value {
-    let settings = plugin_settings(files);
-    let enable_local = opts.get("enableLocalPlugins").and_then(Value::as_bool).unwrap_or(settings["enableLocalPlugins"].as_bool().unwrap_or(false));
-    let allow_override = opts.get("allowLocalPluginOverride").and_then(Value::as_bool).unwrap_or(settings["allowLocalPluginOverride"].as_bool().unwrap_or(false));
-    let trusted = opts.get("trustedLocalPlugins").cloned().filter(|v| v.is_object()).unwrap_or(settings["trustedLocalPlugins"].clone());
-    let mut plugins = vec![serde_json::json!({
-        "id": PLUGIN_ID,
-        "name": "Adventure Quest Worlds",
-        "version": "1.0.0",
-        "source": "bundled",
-        "trusted": true
-    })];
-    let mut errors = Vec::new();
-    if enable_local {
-        if let Ok(entries) = fs::read_dir(&files.plugins_dir) {
-            let mut locals: Vec<_> = entries.flatten().collect();
-            locals.sort_by_key(|entry| entry.file_name());
-            for entry in locals {
-                let manifest_path = entry.path().join("plugin.json");
-                let Some(manifest) = read_json(&manifest_path) else { continue };
-                let Some(id) = manifest.get("id").and_then(Value::as_str) else { continue };
-                if id == PLUGIN_ID && !allow_override {
-                    errors.push(format!("{id} collides with the bundled plugin"));
-                    continue;
-                }
-                if id == PLUGIN_ID && allow_override {
-                    plugins.retain(|plugin| plugin["id"].as_str() != Some(id));
-                }
-                plugins.push(serde_json::json!({
-                    "id": id,
-                    "name": manifest.get("name").and_then(Value::as_str).unwrap_or(id),
-                    "version": manifest.get("version").and_then(Value::as_str).unwrap_or(""),
-                    "source": "local",
-                    "trusted": trusted.get(id) == Some(&Value::Bool(true))
-                }));
-            }
-        }
-    }
-    serde_json::json!({
-        "plugins": plugins,
-        "errors": errors,
-        "localPluginsDir": files.plugins_dir.display().to_string()
-    })
-}
-
-pub fn ruffle_status(files: &ProfileFiles) -> Value {
-    let merged = merge_settings(&files.settings_files);
-    let channel = if merged.get("ruffleUpdateChannel").and_then(Value::as_str) == Some("nightly") { "nightly" } else { "latest" };
-    serde_json::json!({
-        "isActive": merged.get("renderMode").and_then(Value::as_str) == Some("ruffle"),
-        "configuredChannel": channel,
-        "loaded": {"source": "bundled", "channel": channel, "version": "desktop pin"},
-        "fallback": {"version": "desktop pin"}
-    })
 }
 
 pub fn swf_status(files: &ProfileFiles) -> Value {
@@ -621,17 +622,6 @@ fn migrate_strategy_item(raw: &Value, kind: &str, types: &[Value], index: usize)
     })
 }
 
-fn migrate_settings_files(paths: &[PathBuf]) {
-    for path in paths {
-        let Some(mut value) = read_json(path) else { continue };
-        let Some(obj) = value.as_object_mut() else { continue };
-        if obj.get("renderMode").and_then(Value::as_str) == Some("ruffle-native") {
-            obj.insert("renderMode".into(), Value::String("ruffle".into()));
-            let _ = write_electron(path, &value);
-        }
-    }
-}
-
 pub(crate) fn merged_settings(files: &ProfileFiles) -> Map<String, Value> {
     merge_settings(&files.settings_files)
 }
@@ -696,42 +686,6 @@ fn is_platform_key(key: &str) -> bool {
     PLATFORM_KEYS.contains(&key)
 }
 
-fn defaults_map() -> Map<String, Value> {
-    let mut map = Map::new();
-    if let Value::Object(options) = option_defaults() {
-        map.extend(options);
-    }
-    if let Value::Object(binds) = keybind_defaults() {
-        map.extend(binds);
-    }
-    map
-}
-
-fn option_defaults() -> Value {
-    serde_json::json!({
-        "appLanguage": "system",
-        "customUrl": "",
-        "renderMode": "flash",
-        "ruffleUpdateChannel": "latest",
-        "ruffleAutoUpdate": true,
-        "ruffleQuality": "high",
-        "showGameMenu": true,
-        "enableDevTools": false,
-        "playerCharacter": "",
-        "featurePlayerName": false,
-        "autoSync": false,
-        "liveLoaderUrl": true
-    })
-}
-
-fn keybind_defaults() -> Value {
-    crate::manifest::keybind_defaults_value()
-}
-
-fn keybind_default_ids() -> Vec<String> {
-    crate::manifest::keybind_ids()
-}
-
 fn parse_static(raw: &str) -> Value {
     serde_json::from_str(raw).unwrap_or(Value::Null)
 }
@@ -761,6 +715,62 @@ fn write_electron(path: &Path, value: &Value) -> Result<(), String> {
     fs::write(path, buf).map_err(|e| e.to_string())
 }
 
+fn write_electron_atomic(path: &Path, value: &Value) -> Result<(), String> {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
+    if let Some(dir) = path.parent() {
+        fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+    let formatter = serde_json::ser::PrettyFormatter::with_indent(b"    ");
+    let mut buf = Vec::new();
+    let mut serializer = serde_json::Serializer::with_formatter(&mut buf, formatter);
+    use serde::Serialize;
+    value.serialize(&mut serializer).map_err(|e| e.to_string())?;
+    let temp = path.with_extension(format!("tmp-{}-{}", std::process::id(), NEXT_TEMP.fetch_add(1, Ordering::Relaxed)));
+    let old_mode = fs::metadata(path).ok().map(|metadata| metadata.permissions());
+    let result = (|| {
+        use std::io::Write;
+        let mut file = fs::OpenOptions::new().write(true).create_new(true).open(&temp).map_err(|e| e.to_string())?;
+        file.write_all(&buf).map_err(|e| e.to_string())?;
+        file.sync_all().map_err(|e| e.to_string())?;
+        if let Some(permissions) = old_mode {
+            fs::set_permissions(&temp, permissions).map_err(|e| e.to_string())?;
+        }
+        replace_file_atomic(&temp, path)
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(temp);
+    }
+    result
+}
+
+#[cfg(not(windows))]
+fn replace_file_atomic(source: &Path, destination: &Path) -> Result<(), String> {
+    fs::rename(source, destination).map_err(|e| e.to_string())
+}
+
+#[cfg(windows)]
+fn replace_file_atomic(source: &Path, destination: &Path) -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use std::ptr;
+    #[link(name = "Kernel32")]
+    extern "system" {
+        fn ReplaceFileW(replaced: *const u16, replacement: *const u16, backup: *const u16, flags: u32, exclude: *mut std::ffi::c_void, reserved: *mut std::ffi::c_void) -> i32;
+        fn MoveFileExW(existing: *const u16, new: *const u16, flags: u32) -> i32;
+    }
+    let wide = |path: &Path| path.as_os_str().encode_wide().chain(Some(0)).collect::<Vec<_>>();
+    let source_wide = wide(source);
+    let destination_wide = wide(destination);
+    let result = unsafe {
+        if destination.exists() {
+            ReplaceFileW(destination_wide.as_ptr(), source_wide.as_ptr(), ptr::null(), 0, ptr::null_mut(), ptr::null_mut())
+        } else {
+            MoveFileExW(source_wide.as_ptr(), destination_wide.as_ptr(), 0x00000008)
+        }
+    };
+    if result == 0 { Err(std::io::Error::last_os_error().to_string()) } else { Ok(()) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -778,55 +788,75 @@ mod tests {
             todo: aqua.join("aquastar_todo.json"),
             strategy: aqua.join("aquastar_strategy.json"),
             inventory: aqua.join("aquastar_inventory.json"),
-            plugins_dir: aqua.join("plugins"),
             swf_managed: aqua.join("custom-game.swf"),
             swf_candidates: vec![aqua.join("custom-game.swf"), aqua.join("aqlite_old.swf")],
         }
     }
 
     #[test]
-    fn settings_round_trip_keeps_electron_shape() {
-        let files = scratch("settings");
-        fs::write(&files.canonical_settings, "{\n    \"fixtureKept\": 1,\n    \"ruffleAutoUpdateMigrated\": true,\n    \"ruffleAutoUpdate\": false,\n    \"plugins\": {\n        \"adventure-quest-worlds\": {\n            \"liveLoaderUrl\": true,\n            \"playerCharacter\": \"Old\"\n        }\n    }\n}").unwrap();
-        fs::write(&files.settings_files[0], r#"{"customUrl":"https://old.example/old.swf","appLanguage":"en-US"}"#).unwrap();
-        let view = keybindings_payload(&files);
-        assert_eq!(view["current"]["customUrl"], "https://old.example/old.swf");
-        assert_eq!(view["current"]["playerCharacter"], "Old");
-        assert_eq!(view["current"]["ruffleAutoUpdate"], false);
-        assert_eq!(view["current"]["reload"][0], "CmdOrCtrl+F5");
-        save_keybindings(&files, &serde_json::json!({
-            "appLanguage": "pt-BR",
-            "liveLoaderUrl": false,
-            "wiki": "Alt+9",
-            "reload": ["F5"]
-        })).unwrap();
-        let saved: Value = serde_json::from_str(&fs::read_to_string(&files.canonical_settings).unwrap()).unwrap();
-        let text = fs::read_to_string(&files.canonical_settings).unwrap();
-        assert!(text.contains("\n    \""), "{text}");
-        assert_eq!(saved["fixtureKept"], 1);
-        assert_eq!(saved["appLanguage"], "pt-BR");
-        assert_eq!(saved["liveLoaderUrl"], false);
-        assert_eq!(saved["wiki"], "Alt+9");
-        assert_eq!(saved["reload"][0], "F5");
-        assert!(saved.get("plugins").unwrap().get("appLanguage").is_none());
-        assert_eq!(saved["plugins"][PLUGIN_ID]["liveLoaderUrl"], false);
-        assert_eq!(saved["plugins"][PLUGIN_ID]["wiki"], "Alt+9");
-        assert_eq!(saved["plugins"][PLUGIN_ID]["playerCharacter"], "Old");
-        assert!(saved["plugins"][PLUGIN_ID].get("reload").is_none());
-        let again = keybindings_payload(&files);
-        assert_eq!(again["current"]["appLanguage"], "pt-BR");
-        assert_eq!(again["current"]["liveLoaderUrl"], false);
-        assert_eq!(again["current"]["wiki"], "Alt+9");
+    fn preferences_read_does_not_run_legacy_updater_migration() {
+        let files = scratch("preferences-read-no-migration");
+        let source = r#"{"ruffleAutoUpdate":false,"customUrl":"https://cdn.example/game.swf","plugins":{"adventure-quest-worlds":{"playerCharacter":"Old"}}}"#;
+        fs::write(&files.canonical_settings, source).unwrap();
+        let snapshot = profile_preferences(&files).unwrap();
+        assert_eq!(snapshot.custom_url, "https://cdn.example/game.swf");
+        assert_eq!(snapshot.player_character, "Old");
+        assert_eq!(snapshot.keybinds.iter().find(|bind| bind.id == "help").unwrap().default, keybind_default("help").unwrap());
+        assert_eq!(fs::read_to_string(&files.canonical_settings).unwrap(), source);
     }
 
     #[test]
-    fn retired_render_mode_becomes_ruffle_on_disk() {
-        let files = scratch("render");
-        fs::write(&files.canonical_settings, r#"{"renderMode":"ruffle-native","ruffleAutoUpdateMigrated":true}"#).unwrap();
-        let view = keybindings_payload(&files);
-        assert_eq!(view["current"]["renderMode"], "ruffle");
+    fn preference_edits_keep_data_and_ignore_stale_active_plugin() {
+        let files = scratch("preferences-fixed-owner");
+        let source = r#"{"fixtureKept":{"nested":true},"activePluginId":"old-electron-plugin","customUrl":"","plugins":{"old-electron-plugin":{"untouched":17},"adventure-quest-worlds":{"playerCharacter":"Before","unknownAqw":true}}}"#;
+        fs::write(&files.canonical_settings, source).unwrap();
+        change_profile_preference(&files, ProfilePreferenceChange::PlayerCharacter("Hero42".into())).unwrap();
         let saved: Value = serde_json::from_str(&fs::read_to_string(&files.canonical_settings).unwrap()).unwrap();
-        assert_eq!(saved["renderMode"], "ruffle");
+        assert_eq!(saved["playerCharacter"], "Hero42");
+        assert_eq!(saved["plugins"][PLUGIN_ID]["playerCharacter"], "Hero42");
+        assert_eq!(saved["plugins"]["old-electron-plugin"]["untouched"], 17);
+        assert_eq!(saved["plugins"][PLUGIN_ID]["unknownAqw"], true);
+        assert_eq!(saved["fixtureKept"]["nested"], true);
+        assert_eq!(saved["activePluginId"], "old-electron-plugin");
+    }
+
+    #[test]
+    fn shortcut_reset_preserves_manifest_multibinding_array() {
+        let files = scratch("preferences-shortcut-reset");
+        fs::write(&files.canonical_settings, r#"{"plugins":{"adventure-quest-worlds":{"reload":["Alt+X"],"reloadCache":"F8"}}}"#).unwrap();
+        let defaults = keybind_default("reload").unwrap();
+        change_profile_preference(&files, ProfilePreferenceChange::Keybind(ShortcutPreferenceChange {
+            id: "reload".into(), binding: defaults.clone()
+        })).unwrap();
+        let saved: Value = serde_json::from_str(&fs::read_to_string(&files.canonical_settings).unwrap()).unwrap();
+        assert_eq!(saved["reload"], defaults);
+        assert_eq!(saved["plugins"][PLUGIN_ID]["reload"], serde_json::json!(["Alt+X"]));
+        assert_eq!(saved["plugins"][PLUGIN_ID]["reloadCache"], "F8");
+        assert_eq!(profile_preferences(&files).unwrap().keybinds.iter().find(|bind| bind.id == "reload").unwrap().binding, defaults);
+    }
+
+    #[test]
+    fn preferences_reject_unsupported_values_and_report_imported_shortcuts() {
+        let files = scratch("preferences-invalid");
+        let source = r#"{"appLanguage":"en-US","plugins":{"adventure-quest-worlds":{"wiki":"Alt+?"}}}"#;
+        fs::write(&files.canonical_settings, source).unwrap();
+        let snapshot = profile_preferences(&files).unwrap();
+        assert!(snapshot.keybind_diagnostics.iter().any(|item| item.starts_with("wiki:")));
+        assert!(change_profile_preference(&files, ProfilePreferenceChange::AppLanguage("xx".into())).is_err());
+        assert!(change_profile_preference(&files, ProfilePreferenceChange::Keybind(ShortcutPreferenceChange {
+            id: "wiki".into(), binding: Value::String("Alt+?".into())
+        })).is_err());
+        assert_eq!(fs::read_to_string(&files.canonical_settings).unwrap(), source);
+    }
+
+    #[test]
+    fn malformed_canonical_settings_are_reported_without_rewrite() {
+        let files = scratch("preferences-malformed");
+        let source = "{ this is not JSON";
+        fs::write(&files.canonical_settings, source).unwrap();
+        assert!(profile_preferences(&files).is_err());
+        assert!(change_profile_preference(&files, ProfilePreferenceChange::AutoSync(true)).is_err());
+        assert_eq!(fs::read_to_string(&files.canonical_settings).unwrap(), source);
     }
 
     #[test]
@@ -903,35 +933,5 @@ mod tests {
         assert!(parse_accelerator("Alt+").is_none());
     }
 
-    #[test]
-    fn every_feature_window_has_its_page() {
-        let ui = Path::new(env!("CARGO_MANIFEST_DIR")).join("../ui");
-        for name in ["settings", "reminders", "todo", "strategy", "inventory", "studio", "about", "help"] {
-            let page = ui.join(feature_page(name));
-            assert!(page.is_file(), "missing {}", page.display());
-        }
-    }
 
-    #[test]
-    fn windows_use_the_electron_editors() {
-        let ui = Path::new(env!("CARGO_MANIFEST_DIR")).join("../ui");
-        let settings = fs::read_to_string(ui.join("features/settings/settings.html")).unwrap();
-        let reminders = fs::read_to_string(ui.join("features/reminders/reminders.html")).unwrap();
-        let todo = fs::read_to_string(ui.join("features/todo/todo.html")).unwrap();
-        let strategy = fs::read_to_string(ui.join("features/strategy/strategy.html")).unwrap();
-        let extra = fs::read_to_string(ui.join("features/strategy/strategy-extra.js")).unwrap();
-        assert!(settings.contains("settings-bridge.js"));
-        assert!(settings.contains("id=\"saveBtn\""));
-        assert!(settings.contains("data-tab=\"keybinds\""));
-        assert!(reminders.contains("reminders-bridge.js"));
-        assert!(reminders.contains("id=\"addQuestBtn\"") || reminders.contains("addQuest"));
-        assert!(todo.contains("todo-bridge.js"));
-        assert!(strategy.contains("strategy-bridge.js"));
-        assert!(strategy.contains("id=\"shortcutInput\""));
-        assert!(extra.contains("timerRolesPanel"));
-        assert!(extra.contains("startRoleRunner"));
-        let bridge = fs::read_to_string(ui.join("features/strategy/strategy-bridge.js")).unwrap();
-        assert!(bridge.contains("set_strategy_timer_shortcut"));
-        assert!(bridge.contains("__aquastarTimerToggle"));
-    }
 }

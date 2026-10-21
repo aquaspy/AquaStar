@@ -77,13 +77,17 @@ The bundled AQW plugin has a **Char Page Studio** tool (`aquastar --aqw --tool=s
 
 ## Menu visibility and account sync
 
+Preferences is the single settings destination in the launcher, with General, Adventure Quest Worlds and Keybinds sections. Completed edits save automatically. The Preferences menu action, Alt+9 and the built-in `settings` tool alias open this page, including during direct gameplay. Language applies to menus and dialogs; changes to language and saved shortcuts require restarting AquaStar. AQW source overrides apply on the next game launch.
+
+The old Electron plugin-selection, renderer and Ruffle updater controls are not shown in 3.x. Manage plugins owns desktop plugin installation and enablement. Inactive compatibility settings remain stored; changing a visible field preserves unrelated and unknown values. Main Preferences remains the authority for Ruffle quality and graphics, without importing a duplicate legacy quality value.
+
 The in-window menu bar is hidden by default on Linux and Windows. Enable **Preferences → Show menu bar** to show it; keyboard shortcuts work with either setting. macOS keeps its system application menu.
 
 Inventory sync uses the saved account session. If the visible Account window is closed, the launcher initializes the account session in a hidden window using the same browser profile. An expired login offers **Open Account**; game login and account-site login are separate sessions.
 
 ## Game capture
 
-The development launcher includes **Preferences → Screenshots and recording**, PNG screenshots (F2) and MP4 recording (Ctrl+J). The recording component ships with the application. Audio is restricted to the game process where supported; silent recording is an explicit fallback. See [capture capabilities and native testing](../docs/CAPTURE.md).
+The development launcher includes **Preferences → Screenshots and recording**, PNG screenshots (F2) and MP4 recording (Ctrl+J). The recording component ships with the application. Recordings contain video only; no game, system or microphone audio is captured. See [capture capabilities and native testing](../docs/CAPTURE.md).
 
 ## Native Arch Linux package
 

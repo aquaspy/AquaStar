@@ -19,6 +19,10 @@ use crate::players::{Arch, Engine, Os};
 
 pub const EVENT: &str = "aquastar://start";
 
+fn is_preferences_tool_alias(cli: &Cli) -> bool {
+    cli.tool.as_deref() == Some("settings")
+}
+
 #[derive(Default)]
 pub struct StartupState {
     direct: AtomicBool,
@@ -302,6 +306,13 @@ pub fn show_main(app: &tauri::AppHandle) {
     }
 }
 
+pub fn open_preferences(app: &tauri::AppHandle) {
+    let state = app.state::<StartupState>();
+    state.set(Some("preferences".into()), None);
+    show_main(app);
+    let _ = app.emit(EVENT, json!({ "preferences": true }));
+}
+
 /// In a direct start there is no launcher to go back to, so AquaStar ends when the last
 /// window is closed and no game is running.
 pub fn exit_when_finished(app: &tauri::AppHandle, closed: &str) {
@@ -324,6 +335,10 @@ pub fn exit_when_finished(app: &tauri::AppHandle, closed: &str) {
 /// `first` is the first instance; later instances forward their arguments here.
 pub fn apply(app: &tauri::AppHandle, args: &[String], first: bool) {
     let parsed = cli::parse(args);
+    if is_preferences_tool_alias(&parsed) {
+        open_preferences(app);
+        return;
+    }
     let saved = launcher::config_dir(app).and_then(|dir| crate::ruffle::load_startup(&dir));
     let mut owned: Vec<(Manifest, bool)> = vec![(launcher::bundled().clone(), true)];
     owned.extend(app.state::<Extensions>().active_plugins().into_iter().map(|(manifest, _)| (manifest, false)));
@@ -431,6 +446,16 @@ mod tests {
         state.game_launching();
         assert!(!state.is_direct());
         assert!(!state.launcher_requested());
+    }
+
+    #[test]
+    fn legacy_settings_tool_name_resolves_to_preferences() {
+        let bare = parse(&["--tool=settings".into()]);
+        let plugin = parse(&["--aqw".into(), "--tool=settings".into(), "--no-launcher".into()]);
+        let other = parse(&["--aqw".into(), "--tool=inventory".into()]);
+        assert!(is_preferences_tool_alias(&bare));
+        assert!(is_preferences_tool_alias(&plugin));
+        assert!(!is_preferences_tool_alias(&other));
     }
 
     #[test]
