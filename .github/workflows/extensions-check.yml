@@ -10,7 +10,7 @@ on:
       - 'native/**'
       - '.github/workflows/extensions-check.yml'
   push:
-    branches: [dev]
+    branches: [neo, neo-dev]
     paths:
       - 'src-tauri/**'
       - 'ui/**'

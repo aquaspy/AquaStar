@@ -1,7 +1,7 @@
 name: AquaStar Capture Check
 on:
   push:
-    branches: [dev]
+    branches: [neo, neo-dev]
     paths:
       - 'src-tauri/**'
       - 'ui/**'

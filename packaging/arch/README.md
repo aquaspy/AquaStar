@@ -11,7 +11,7 @@ On Arch x86_64, install the `base-devel` group and the dependencies listed in
 run from the repository root as a regular user:
 
 ```sh
-bash desktop/scripts/build-arch-package.sh
+bash scripts/build-arch-package.sh
 ```
 
 The script snapshots the current checkout, including local changes, into the
@@ -20,7 +20,7 @@ and a SHA-256-checked source archive, then runs `makepkg`. It does not install
 packages or invoke sudo. For an independent recipe/source upload:
 
 ```sh
-bash desktop/scripts/build-arch-package.sh --prepare-only --output /path/outside/checkout
+bash scripts/build-arch-package.sh --prepare-only --output /path/outside/checkout
 cd /path/outside/checkout
 makepkg
 ```
@@ -37,13 +37,13 @@ is built from the existing pinned sources; its notices, manifest and correspondi
 source bundle accompany the package. `nasm` is an optional build optimization; the media
 recipe already supports machines without it.
 
-Prerelease versions map `3.0.0-rc.6` to `3.0.0rc.6`, so pacman's `vercmp` sorts it
-below `3.0.0`. The NEO package name remains separate from Electron's `aquastar`.
+Prerelease versions map `1.0.0-rc.1` to `1.0.0rc.1`, so pacman's `vercmp` sorts it
+below `1.0.0`. The NEO package name remains separate from Electron's `aquastar`.
 
 `.github/workflows/desktop-arch.yml` builds and tests in a current Arch container
 as an unprivileged user, then uploads the native package and its source recipe.
-It supports manual dispatch, desktop PR checks, development pushes and v3 tags.
-It does not publish to AUR or install anything on the host. The normal desktop release workflow calls it to attach these assets to v3 releases; standalone PR/development/manual checks only upload workflow artifacts.
+It supports manual dispatch, pull requests, and pushes to `neo` and `neo-dev`.
+It does not publish to AUR or install anything on the host. The NEO release workflow calls it to attach these assets to `neo-v*` releases. Standalone pull request, development, and manual checks only upload workflow artifacts.
 A successful package build does not establish Wayland permissions, UI behavior or
 FPS: those require an interactive test on the target desktop.
 
@@ -53,8 +53,8 @@ To retain the native library environment in an AppImage, install
 [appimagetool](https://github.com/AppImage/appimagetool) and convert the native package:
 
 ```sh
-APPIMAGETOOL=/path/to/appimagetool bash desktop/scripts/appimage-from-arch.sh \
-  /path/aquastar-neo-3.0.0rc.6-1-x86_64.pkg.tar.zst /path/aquastar-neo_3.0.0-rc.6_Arch-native_x86_64.AppImage
+APPIMAGETOOL=/path/to/appimagetool bash scripts/appimage-from-arch.sh \
+  /path/aquastar-neo-1.0.0rc.1-1-x86_64.pkg.tar.zst /path/aquastar-neo_1.0.0-rc.1_Arch-native_x86_64.AppImage
 ```
 
 This variant uses the same system dependencies and downloaded players as the

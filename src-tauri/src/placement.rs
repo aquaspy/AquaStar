@@ -450,7 +450,7 @@ mod tests {
         let second = actions.next().expect("second tauri-action").0;
         assert!(fetch < first && fetch_ps < first && first < second);
         assert!(yml.contains("--bundles app"));
-        assert!(yml.contains("v3.*-*"));
+        assert!(yml.contains("neo-v*-rc.*"));
         assert!(yml.contains("needs.gate.outputs.publish == 'true'"));
         assert!(!yml.contains("startsWith(github.ref, 'refs/tags/lite-v')"));
         assert!(yml.contains("scripts/finish-macos-app.sh"));
@@ -464,8 +464,7 @@ mod tests {
         assert!(yml.contains("workflow_dispatch"));
         assert!(yml.contains("workflow_run"));
         assert!(yml.contains("AquaStar NEO Desktop Release"));
-        assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'lite-v')"));
-        assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'v3.')"));
+        assert!(yml.contains("startsWith(github.event.workflow_run.head_branch, 'neo-v')"));
         assert!(!yml.contains("contains(github.event.workflow_run.head_branch, '-')"));
         assert!(yml.contains("github.event.workflow_run.conclusion == 'success'"));
         for os in [
@@ -523,7 +522,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_tag_accepts_lite_and_v3_releases() {
+    fn resolve_tag_accepts_neo_releases() {
         let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../scripts/smoke/resolve-tag.sh");
         let accept = |tag: &str| {
             let output = std::env::temp_dir().join(format!(
@@ -542,17 +541,20 @@ mod tests {
             let _ = std::fs::remove_file(&output);
             result.status.success()
         };
-        assert!(accept("lite-v0.2.0"));
-        assert!(accept("v3.0.0-alpha.1"));
-        assert!(accept("v3.0.0"));
-        assert!(!accept("v3.0"));
+        assert!(accept("neo-v1.0.0-rc.1"));
+        assert!(accept("neo-v1.0.0-alpha.1"));
+        assert!(accept("neo-v1.0.0-beta.2"));
+        assert!(accept("neo-v1.0.0"));
+        assert!(!accept("neo-v1.0"));
+        assert!(!accept("v3.0.0"));
+        assert!(!accept("lite-v0.2.0"));
         assert!(!accept("v2.1.1"));
     }
 
     #[test]
-    fn stable_v3_tag_publishes_and_stays_off_latest() {
+    fn stable_neo_tag_publishes_and_stays_off_latest() {
         let yml = include_str!("../../.github/workflows/desktop-release.yml");
-        assert!(yml.contains("- 'v3.*'"));
+        assert!(yml.contains("- 'neo-v*'"));
         assert!(yml.contains("kind=stable"));
         assert!(yml.contains("--prerelease=false --latest=false"));
         assert!(yml.contains("--prerelease --latest=false"));

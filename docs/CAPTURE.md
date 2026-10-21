@@ -33,13 +33,13 @@ Minimizing an X11/Windows game ends the current recording and saves its complete
 
 The installer includes a minimal standalone FFmpeg 8.1.3/OpenH264 2.6.0 build. No download or separately installed FFmpeg is needed at runtime. Only file/pipe protocols and the required codecs, filters and containers are enabled. The Linux x64 component measured approximately 4.4 MiB before installer compression.
 
-Build it with `python3 desktop/scripts/build-media.py`. Sources, checksums and configure flags are pinned in the build script. Source downloads and compiler output live outside the checkout in the sibling workspace. Generated binaries and license manifests are placed in the ignored `desktop/src-tauri/media/` directory. macOS universal packages include both native architectures; Windows portable ZIPs include the media directory beside the executable. See [media notices](../desktop/licenses/media.md).
+Build it with `python3 scripts/build-media.py`. Sources, checksums and configure flags are pinned in the build script. Source downloads and compiler output live outside the checkout in the sibling workspace. Generated binaries and license manifests are placed in the ignored `src-tauri/media/` directory. macOS universal packages include both native architectures; Windows portable ZIPs include the media directory beside the executable. See [media notices](../licenses/media.md).
 
 The local build script prepares the media component when missing or its build recipe/native helper changes. For a manual optimized binary, copy `src-tauri/media/` beside the executable, or use a normal Tauri bundle. `AQUASTAR_CAPTURE_FFMPEG` is a debug-only encoder override, not a plugin or production API.
 
 ## Validation
 
-The native `capture-probe` example records a synthetic window using the real capture and encoder paths. `desktop/scripts/smoke/capture.py` validates the PNG, H.264 metadata, duration and absence of audio tracks. The Capture Check workflow builds all three platforms and exercises window capture on Linux and Windows; macOS interactive permission, Retina and game-renderer behavior require a real Mac test. Wayland likewise requires a compatible compositor session.
+The native `capture-probe` example records a synthetic window using the real capture and encoder paths. `scripts/smoke/capture.py` validates the PNG, H.264 metadata, duration and absence of audio tracks. The Capture Check workflow builds all three platforms and exercises window capture on Linux and Windows; macOS interactive permission, Retina and game-renderer behavior require a real Mac test. Wayland likewise requires a compatible compositor session.
 
 Do not describe compilation or fixture tests as proof of authenticated gameplay, every graphics backend, or every supported OS version. Before production, test Flash/Ruffle, occlusion, resize, minimized windows, absence of audio tracks, permissions, disk-full failures, close/exit finalization, direct startup and a ten-minute recording. Record capture FPS, video timing, game performance and package-size changes.
 

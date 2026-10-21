@@ -2,7 +2,9 @@
 
 **All implementation work on AquaStar NEO is done in pstack poteto-mode.** Use the pstack principles, and the pstack skills when a task calls for one.
 
-AquaStar 3.0 replaces the Electron app. People who want the old launcher stay on a maintained 2.x branch. The `desktop/` tree becomes 3.0. The `lite-v0.2.0` pre-releases were the lab. Lite is not a separate product.
+AquaStar NEO is a separate product from classic AquaStar. Classic AquaStar is the Electron app on `main` and `dev`. NEO development is `neo-dev`. Stable NEO is `neo`. The version sequence starts at `1.0.0`. Tags use `neo-v*` (for example `neo-v1.0.0-rc.1`). An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. Latest stays the classic Electron release. Older `v3.0.0-*` tags stay as history.
+
+The sections below record the earlier plan, when this launcher was called AquaStar 3.0 and lived in `desktop/`. The [product split on 21 October 2026](#product-split-21-october-2026) replaces that plan's branch and release rules.
 
 ## Goals
 
@@ -10,7 +12,7 @@ AquaStar 3.0 replaces the Electron app. People who want the old launcher stay on
 - Match the Electron UI as closely as possible.
 - Cover every desktop target that has a player and a supported system webview.
 - Leave every SWF unchanged.
-- Ship each phase from `dev` as a pre-release after the smoke workflow passes.
+- Ship each phase from `neo-dev` as a pre-release after the smoke workflow passes.
 
 ## Non-goals
 
@@ -47,9 +49,9 @@ The shell uses the operating system's webview. Windows uses WebView2, macOS uses
 
 The default player is the Artix custom `ruffle_desktop` 1.7.0 wherever Artix ships a build. Stock Ruffle covers the targets Artix does not build. The Flash projector 32.0.0.465 stays available where a build exists, and it is never the default.
 
-Artix builds are extracted from [ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip](https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip). The same directory has per-platform zips for windows-x64, macOS-arm64, and linux-x64. Current pins live in `desktop/players.json`.
+Artix builds are extracted from [ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip](https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip). The same directory has per-platform zips for windows-x64, macOS-arm64, and linux-x64. Current pins live in `players.json`.
 
-`desktop/players.json` already pins stock Ruffle 0.7.1 for macOS universal. The same GitHub release also publishes `windows-x86_32`, `linux-i686`, and `linux-aarch64`. Phase 1 adds those pins. That release has no Windows ARM desktop build.
+`players.json` already pins stock Ruffle 0.7.1 for macOS universal. The same GitHub release also publishes `windows-x86_32`, `linux-i686`, and `linux-aarch64`. Phase 1 adds those pins. That release has no Windows ARM desktop build.
 
 | Target | Default | Also available |
 | --- | --- | --- |
@@ -85,14 +87,16 @@ The Artix binary accepts `--title`, `--companion`, `--companion-name`, `--tcp-co
 | PPAPI Flash and the in-page Ruffle | Drop | The game runs in a standalone player. |
 | Socket proxy and Pepper trust | Drop | The player opens its own sockets. |
 | Plugin host and local plugins | Drop | A game JSON file plus first-party pages. |
-| Char Page Studio | Drop (superseded) | Originally dropped. The 3.x launcher now ships it as a tool of the bundled plugin: the scene opens in its own Ruffle window instead of an embedded Flash. See `desktop/README.md`. |
+| Char Page Studio | Drop (superseded) | Originally dropped. The 3.x launcher now ships it as a tool of the bundled plugin: the scene opens in its own Ruffle window instead of an embedded Flash. See `README.md`. |
 | Alt+K char page print | Drop | Stays on the 2.x branch. |
 | Screen recording and F2 capture | Drop | Stays on the 2.x branch. |
 | Record the player window to MP4 | 3.1 | Native capture of the standalone player window. |
 
 ## Architecture
 
-3.0 grows out of `desktop/`. The shell is a Tauri 2 window. The game is a separate process started with `std::process::Command`. The shell watches that process and closes it when the game window closes.
+The launcher lives at the repository root. The notes in this section describe the earlier `desktop/` layout and are kept as history.
+
+The shell is a Tauri 2 window. The game is a separate process started with `std::process::Command`. The shell watches that process and closes it when the game window closes.
 
 Each game is a JSON manifest. The manifest lists URLs, menu entries, player flags, and which first-party pages exist. Those pages ship with the app. They call a fixed set of Tauri commands. Each window has a capability file that allows only the commands that page needs. The shell ships its own pages and loads no outside plugin code.
 
@@ -106,13 +110,13 @@ Before the first commit that changes the product, cut `electron-2.x` from `dev`.
 
 ## How the work ships
 
-Work lands on `dev` by direct commit. Do not open pull requests for 3.0 work.
+Work lands on `neo-dev` by direct commit. Stable NEO is `neo`. Do not open pull requests for NEO work.
 
-`release.yml` builds the Electron app for `v*` tags, and a stable `v*` tag can become Latest. The Tauri workflow builds `desktop/` for `lite-v*` tags and publishes a prerelease. A 3.0 phase tag stays on the Tauri workflow. Do not push a `v*` tag for a 3.0 build while `release.yml` still owns that pattern.
+`.github/workflows/desktop-release.yml` builds this tree for `neo-v*` tags. A tag with `-rc`, `-alpha`, or `-beta` is a prerelease. A `neo-v*` tag without those suffixes is a stable NEO release. Both pass `--latest=false`. Latest stays the classic Electron release. Do not push a `v*` or `v3.0.0-*` tag for a NEO build. Existing `v3.0.0-*` tags stay untouched.
 
-Each finished phase is a pre-release. The smoke workflow has to pass on the tagged commit. Latest stays on the current stable release until the 3.0 final.
+Each finished phase is a pre-release. The smoke workflow has to pass on the tagged commit.
 
-The final tag is `v3.0.0`, with no prerelease suffix, and only after the release workflow for that tag builds the Tauri app. Tag it when the user says 3.0 replaces Electron as the current release. Merge `dev` into `main` only after the user explicitly confirms that merge.
+Do not merge NEO into `main`. `main` and `dev` are the classic Electron line. Later paragraphs that still name `v3.0.0`, `desktop/`, and `2.x` describe the plan before the product split.
 
 ## Phased plan
 
@@ -242,7 +246,7 @@ Stable publication remains on hold for the performance and interface review. The
 - WebView2 runtime 109 is the last runtime for Windows 7 and 8.1, per [Introduction to Microsoft Edge WebView2](https://learn.microsoft.com/en-us/microsoft-edge/webview2/).
 - The Artix player archive is [ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip](https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-ALL.zip).
 - Stock desktop builds are the `ruffle-rs/ruffle` release `v0.7.1`.
-- Player pins and the current macOS floor are `desktop/players.json` and `desktop/src-tauri/tauri.conf.json`.
+- Player pins and the current macOS floor are `players.json` and `src-tauri/tauri.conf.json`.
 
 ## Repository organization completed, 17 October 2026
 
@@ -263,3 +267,13 @@ The user requested the updated public README and fresh pre-releases for both mai
 The user requested renaming the active `lite/` source to `desktop/`, removing retired Tauri snapshots from the other branches, and deleting the previously preserved cursor branch. That branch tip is preserved in the verified pre-cleanup bundle. The final candidate tags for this revision are `v3.0.0-rc.3` and `v2.1.1-rc.9`; the already pushed `rc.2` and `rc.8` builds were canceled before publication when these changes were requested. Tags are retained as history, not moved.
 
 The public product name is AquaStar NEO. Release numbers remain on the 3.x sequence. The executable and package names use AquaStar NEO; the stable application identifier remains unchanged so profiles, portal grants and shortcut bindings continue to work. Debian candidate control versions use the `~rc` form so that a later stable version sorts after its candidate. Public filenames identify the product, candidate, and architecture. The README compares the Artix/AE patched standalone player in 3.x with the browser Ruffle used in 2.x; Intel Mac uses the official standalone pin.
+
+## Product split, 21 October 2026
+
+The owner approved a repository split. AquaStar NEO is no longer AquaStar 3.0, and it does not replace the Electron app.
+
+- This tree is NEO only. The launcher, plugins, scripts, and workflows live at the repository root. The Electron application is not in this tree.
+- `neo-dev` is NEO development. `neo` is the NEO stable branch. Classic Electron `main` and `dev` are a separate history.
+- The version in `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` is `1.0.0-rc.1`. The Cargo package and binary stay `aquastar-neo`. The bundle identifier stays `io.github.aquaspy.aquastar-lite`, so existing settings, portal grants, and shortcut bindings keep their directory.
+- Release tags are `neo-v*`. An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. The `v3.0.0-*` tags already published stay where they are.
+- CI for this tree runs on pushes to `neo` and `neo-dev`.

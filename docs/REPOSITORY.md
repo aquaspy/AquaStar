@@ -1,40 +1,39 @@
 # Repository map
 
-AquaStar NEO lives in `desktop/`. The root still contains the Electron platform and shared game assets, because the Tauri build reads several of those assets directly. Moving these runtime paths requires a separate migration of their consumers and packaging rules.
+This branch contains AquaStar NEO only. The Tauri launcher, its plugins, scripts, and workflows live at the repository root. Classic AquaStar, the Electron app, is on `main` and `dev` and is not in this tree.
 
 | Path | Purpose |
 | --- | --- |
-| `desktop/src-tauri/` | Tauri launcher, Rust commands, capabilities, and native configuration |
-| `desktop/native/` | Platform capture helper sources |
-| `desktop/vendor/` | Licensed dependency sources with documented compatibility patches |
-| `desktop/ui/` | Shipped 3.0 launcher and tool pages |
-| `desktop/src-tauri/games/`, `desktop/players.json`, `desktop/licenses/` | Game manifests, pinned standalone players, and their notices |
-| `desktop/plugins/` | Desktop plugin manifests: `adventure-quest-worlds/` is the bundled AQW plugin compiled into the binary; `example-companion/` is the starter for packages |
-| `desktop/scripts/` | Local Tauri builds, player preparation, packaging, and smoke checks |
-| `main.js`, `res/` | Electron entry point and platform code |
-| `plugins/` | Electron plugins and shared first-party assets consumed by 3.0 |
-| `FlashPlayer/`, `Icon/`, `build/` | Runtime binaries and packaging resources; `build/` contains source-controlled icons, not compiler output |
-| `scripts/` | Shared tooling and Electron packaging; `build-all-arch.sh` is the legacy multi-architecture entry point |
-| `test/` | JavaScript regression tests and fixtures |
+| `src-tauri/` | Tauri launcher, Rust commands, capabilities, and native configuration |
+| `ui/` | Shipped launcher and tool pages |
+| `native/` | Platform capture helper sources |
+| `vendor/` | Licensed dependency sources with documented compatibility patches |
+| `players.json`, `licenses/` | Pinned standalone players and their notices |
+| `plugins/` | Plugin manifests. `adventure-quest-worlds/` is the bundled AQW plugin compiled into the binary. `example-companion/` is the starter for packages |
+| `scripts/` | Local builds, player preparation, packaging, and smoke checks |
+| `packaging/` | Native package recipes, including the Arch `PKGBUILD` |
 | `docs/` | Plans, contributor guides, and historical documentation |
 | `docs/design/` | UI and architecture documents, previews, and editable icon sources in `icon-sources/` |
-| `docs/examples/aquastar.json` | Example Electron profile; runtime profiles belong in the application's data directory |
-| `.github/` | CI and release workflows |
+| `.github/` | CI and release workflows for NEO |
 | `LICENSE.md` | Original project license notice |
 
-`docs/design/launcher-3.0-preview.html` and `docs/design/launcher-3.1-plugins-preview.html` are design artifacts. The second shows the plugin-driven launcher; `desktop/ui/index.html` and `main.js` now render the data from the `launcher_model` command. The installed launcher is built from `desktop/ui/`, which now implements the approved design.
+`docs/design/launcher-3.0-preview.html` and `docs/design/launcher-3.1-plugins-preview.html` are design artifacts. The installed launcher is built from `ui/`. `ui/main.js` draws the data from the `launcher_model` command.
+
+Locales, default reminder and strategy lists, studio movies, platform strings, and the ad-host list live inside this tree (`plugins/adventure-quest-worlds/` and `src-tauri/assets/`). They are copies of assets the Electron app also ships. The Electron copies stay on `main` and `dev`.
 
 ## Branch contract
 
-- `main`: stable 3.x line after the separately approved merge.
-- `dev`: 3.x development.
-- `2.x`: maintained 2.x stable line, replacing `electron-2.x`.
-- `2.x-dev`: 2.x development.
+- `neo`: NEO stable.
+- `neo-dev`: NEO development.
+- `main`: classic Electron stable. It is not in this history after the split.
+- `dev`: classic Electron development. It is not in this history after the split.
 
-The user authorized the agreed branch cleanup. This repository organization does not itself merge into `main`, tag a stable release, or change GitHub Latest. Those release actions remain pending explicit approval under the [3.0 plan](aquastar-3.0-plan.md).
+Release tags for this product use `neo-v*`. An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. The [NEO plan](neo-plan.md) records the product split. Older `v3.0.0-*` tags stay as history.
 
 ## Generated files
 
-Keep generated output out of version control: `node_modules/`, `dist/`, `work/`, `work-*/`, `releases/`, `web-dist/`, `desktop/src-tauri/target/`, downloaded player caches, and generated binaries in `desktop/src-tauri/media/`. Local diagnostic output belongs in ignored `logs/`; the application does not maintain a log buffer in the repository. Screenshots and recordings belong in the application's configured output directory.
+Keep generated output out of version control: `src-tauri/target/`, `src-tauri/gen/`, downloaded players under `src-tauri/players/`, `src-tauri/flash-gtk2/`, `src-tauri/permissions/autogenerated/`, and generated binaries in `src-tauri/media/`. Local diagnostic output belongs in ignored `logs/`. Screenshots and recordings belong in the application's configured output directory.
 
-Local test builds, SDK files, and branch-history backups can live beside the checkout instead of inside the source tree. Keep backups until the retained branches and local test builds have been verified. Do not remove bundled players, Flash binaries, SWFs, or shared assets as part of artifact cleanup.
+Local test builds and package snapshots can live beside the checkout. Do not remove bundled source assets, SWFs, or notices as part of artifact cleanup.
+
+The application identifier is `io.github.aquaspy.aquastar-lite`. The binary and Cargo package are `aquastar-neo`. Leave the identifier unchanged unless a data migration is added.

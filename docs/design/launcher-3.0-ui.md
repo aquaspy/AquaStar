@@ -1,10 +1,10 @@
-# Launcher AquaStar 3.0
+# AquaStar NEO launcher
 
-Status: implementado no launcher Tauri em `desktop/ui/`. A prévia original permanece como referência visual.
+Status: implemented in the Tauri launcher at `ui/`. The original preview remains a visual reference.
 
 A interface padrão e a prévia usam inglês (en-US), conforme solicitado pelo usuário. O idioma desta documentação não define o idioma do produto. Os menus nativos e as ferramentas mantêm sua localização existente; os novos textos do launcher usam inglês.
 
-> Nota (3.1): a próxima direção está em [launcher-3.1-plugins-preview.html](launcher-3.1-plugins-preview.html). O launcher passa a listar cada plugin na barra lateral e a desenhar a página de cada um a partir do que o plugin declara (jogos com seu player por plataforma, ferramentas, links e buscas). Só as preferências globais do AquaStar ficam fixas. O launcher real já faz isso: `desktop/ui/main.js` desenha o resultado do comando `launcher_model`. A organização em Jogar/Ferramentas/Páginas úteis descrita abaixo é a do 3.0 e foi substituída pela página de cada plugin.
+> Note: the next direction is in [launcher-3.1-plugins-preview.html](launcher-3.1-plugins-preview.html). The launcher lists each plugin in the sidebar and draws each plugin page from what that plugin declares (games with a player per platform, tools, links, and searches). Only AquaStar's global preferences stay fixed. The real launcher already does this. `ui/main.js` draws the result of the `launcher_model` command. The Play / Tools / Useful Pages organization described below is the earlier layout and was replaced by a page per plugin.
 
 ## Objetivo
 
@@ -52,7 +52,7 @@ O status deve usar `aria-live="polite"`. Erros permanecem visíveis e não depen
 ## Implementação em etapas
 
 1. Revisar a prévia e escolher a organização visual antes de alterar o launcher real.
-2. Aplicar estrutura e estilos em `desktop/ui/index.html` e `style.css`. Adaptar os seletores de `main.js` e preservar as chamadas existentes.
+2. Apply the structure and styles in `ui/index.html` and `style.css`. Adapt the selectors in `main.js` and keep the existing calls.
 3. Integrar estados, traduções e ações. Validar cada ferramenta, link, preferência e comportamento de encerramento do player.
 4. Atualizar o smoke visual para localizar a ação principal sem depender de textos em inglês. Preservar a distinção atual entre os botões de abrir jogo e os links.
 5. Comparar abertura e memória do launcher antes/depois em builds release, com os mesmos players e perfil. Sem prometer ganho numérico a partir de uma prévia estática.

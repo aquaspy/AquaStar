@@ -16,7 +16,7 @@ on:
       - 'players.json'
       - '.github/workflows/desktop-*.yml'
   push:
-    branches: [main, dev]
+    branches: [neo, neo-dev]
     paths:
       - 'src-tauri/**'
       - 'ui/**'

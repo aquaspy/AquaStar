@@ -1,6 +1,6 @@
 [package]
 name = "aquastar-neo"
-version = "3.0.0-rc.6"
+version = "1.0.0-rc.1"
 edition = "2021"
 description = "AquaStar NEO launcher"
 license = "MIT"

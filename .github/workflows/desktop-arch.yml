@@ -20,7 +20,7 @@ on:
       - 'players.json'
       - '.github/workflows/desktop-arch.yml'
   push:
-    branches: [dev]
+    branches: [neo, neo-dev]
     paths:
       - 'src-tauri/**'
       - 'ui/**'

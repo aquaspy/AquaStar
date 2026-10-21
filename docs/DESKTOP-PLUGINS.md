@@ -12,7 +12,7 @@ Removal preserves saved data unless **Also delete saved plugin data** is selecte
 
 ## Package format
 
-Use `desktop/plugins/example-companion/` as a starter. ZIP the files inside the directory, placing `plugin.json` at the archive root. Do not ZIP the parent directory. Include all resources locally; no remote scripts, frames, native libraries or executables are supported.
+Use `plugins/example-companion/` as a starter. ZIP the files inside the directory, placing `plugin.json` at the archive root. Do not ZIP the parent directory. Include all resources locally; no remote scripts, frames, native libraries or executables are supported.
 
 `plugin.json` uses `format: "aquastar-desktop-plugin"` and `apiVersion: 1`. Its `id` is a stable unique identifier and `version` is a semantic version. Optional `minAppVersion` sets the oldest compatible AquaStar NEO version. Declare contributions as follows:
 
@@ -64,11 +64,11 @@ A command that names a plugin shows the launcher on its page; `--no-launcher` sk
 
 ### Built-in example plugin
 
-`example-companion` also ships inside the executable (`src/extensions/builtin.rs` embeds `desktop/plugins/example-companion/`). Unlike AQW it is an ordinary package: same manifest rules, permissions and isolated tool windows. It is written to `extensions/builtin/example-companion/` at start-up, listed as built in, and cannot be disabled or removed. An installed package with the same id is ignored, and a ZIP with that id is refused at review. It stays available in safe mode. Its saved data is kept under the same id.
+`example-companion` also ships inside the executable (`src/extensions/builtin.rs` embeds `plugins/example-companion/`). Unlike AQW it is an ordinary package: same manifest rules, permissions and isolated tool windows. It is written to `extensions/builtin/example-companion/` at start-up, listed as built in, and cannot be disabled or removed. An installed package with the same id is ignored, and a ZIP with that id is refused at review. It stays available in safe mode. Its saved data is kept under the same id.
 
 ### The bundled plugin
 
-AQW is described by `desktop/plugins/adventure-quest-worlds/plugin.json` and compiled into the binary. It is listed like any plugin but cannot be disabled or removed. Only it may use `tools[].builtin` (windows implemented by AquaStar NEO: `inventory`, `reminders`, `todo`, `strategy`, `studio`, and the `settings` alias for launcher Preferences), `games[].resolver` (host movie resolvers such as the live AQW loader and the custom SWF/URL override) and `links` blocks with `source: "menu:useful"`. Packages that use these are rejected, and the ids `adventure-quest-worlds` and `aquastar` stay reserved for the host.
+AQW is described by `plugins/adventure-quest-worlds/plugin.json` and compiled into the binary. It is listed like any plugin but cannot be disabled or removed. Only it may use `tools[].builtin` (windows implemented by AquaStar NEO: `inventory`, `reminders`, `todo`, `strategy`, `studio`, and the `settings` alias for launcher Preferences), `games[].resolver` (host movie resolvers such as the live AQW loader and the custom SWF/URL override) and `links` blocks with `source: "menu:useful"`. Packages that use these are rejected, and the ids `adventure-quest-worlds` and `aquastar` stay reserved for the host.
 
 ## Tool SDK
 

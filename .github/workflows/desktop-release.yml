@@ -3,9 +3,7 @@ name: AquaStar NEO Desktop Release
 on:
   push:
     tags:
-      - 'lite-v*'
-      - 'v3.*-*'
-      - 'v3.*'
+      - 'neo-v*'
   workflow_dispatch:
 
 permissions:
@@ -26,9 +24,14 @@ jobs:
           publish=false
           kind=prerelease
           case "$REF" in
-            refs/tags/lite-v*) publish=true; kind=prerelease ;;
-            refs/tags/v3.*-*) publish=true; kind=prerelease ;;
-            refs/tags/v3.*) publish=true; kind=stable ;;
+            refs/tags/neo-v*-rc.*|refs/tags/neo-v*-alpha.*|refs/tags/neo-v*-beta.*)
+              publish=true
+              kind=prerelease
+              ;;
+            refs/tags/neo-v*)
+              publish=true
+              kind=stable
+              ;;
           esac
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
           echo "kind=$kind" >> "$GITHUB_OUTPUT"
@@ -111,13 +114,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          projectPath: desktop
+          projectPath: '.'
           tauriScript: npx -y @tauri-apps/cli@2
           tagName: ${{ github.ref_name }}
           releaseName: ${{ needs.gate.outputs.kind == 'stable' && 'AquaStar NEO v__VERSION__' || 'AquaStar NEO v__VERSION__ - Pre-release' }}
           releaseDraft: false
-          # A prerelease tag stays a prerelease. A stable v3.0.0 tag is not a
-          # prerelease. Neither tag becomes Latest until that is a separate edit.
+          # An rc, alpha, or beta tag stays a prerelease. A stable neo-v tag is
+          # not a prerelease. No NEO tag becomes Latest. Latest stays the classic release.
           prerelease: ${{ needs.gate.outputs.kind != 'stable' }}
           args: ${{ matrix.args }}
       # Manual runs only build and upload workflow artifacts, so the bundles can be
@@ -126,7 +129,7 @@ jobs:
         if: needs.gate.outputs.publish != 'true'
         uses: tauri-apps/tauri-action@v0
         with:
-          projectPath: desktop
+          projectPath: '.'
           tauriScript: npx -y @tauri-apps/cli@2
           args: ${{ matrix.args }}
       - name: Attach corresponding media sources
@@ -259,9 +262,9 @@ jobs:
             gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false
           fi
 
-  # workflow_run only starts desktop-smoke.yml once that file is on the default
-  # branch. Until then a dispatch is a no-op, so a release is not failed by a
-  # workflow GitHub cannot see yet. A push of the smoke file to dev runs it.
+  # workflow_dispatch only works from the default branch. main is the classic
+  # Electron line and does not carry this file, so a dispatch can return 403.
+  # A push of the smoke file to neo-dev runs the same jobs.
   smoke:
     needs: [build, keep-prerelease, gate]
     if: needs.gate.outputs.publish == 'true'
@@ -278,8 +281,8 @@ jobs:
             echo "main has desktop-smoke.yml, so workflow_run starts the smoke test"
             exit 0
           fi
-          if gh workflow run desktop-smoke.yml --repo "$GITHUB_REPOSITORY" --ref dev -f tag="$GITHUB_REF_NAME"; then
+          if gh workflow run desktop-smoke.yml --repo "$GITHUB_REPOSITORY" --ref neo-dev -f tag="$GITHUB_REF_NAME"; then
             echo "dispatched desktop-smoke.yml for $GITHUB_REF_NAME"
             exit 0
           fi
-          echo "desktop-smoke.yml is not dispatchable until it is on the default branch. A push of that file to dev runs the same test."
+          echo "desktop-smoke.yml is not dispatchable until it is on the default branch. A push of that file to neo-dev runs the same test."

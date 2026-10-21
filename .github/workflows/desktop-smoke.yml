@@ -4,9 +4,9 @@ name: AquaStar NEO Desktop Smoke
 # player. Screenshots are for a person. A Cloudflare block or a blank login
 # is not a failure.
 #
-# workflow_dispatch and workflow_run only fire once this file is on the
-# default branch. A push of this file to dev runs the same jobs before that.
-# Those jobs download the newest v3 release, so the push retests that release.
+# workflow_dispatch only fires once this file is on the default branch.
+# A push of this file to neo-dev runs the resolve job. If no neo-v release
+# exists yet, artifact smoke is skipped and the workflow still succeeds.
 # macos-13 was retired on 2025-12-04. Intel Macs use macos-15-intel.
 # macos-latest with an empty flash_arch is a normal Apple Silicon launch.
 # The x86_64 row runs the same app under arch -x86_64.
@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag (lite-v* or v3.x.y.z, with or without a prerelease suffix). Empty uses the newest matching release.
+        description: Release tag (neo-v*, with or without an rc, alpha, or beta suffix). Empty uses the newest matching release.
         required: false
         default: ''
         type: string
@@ -22,7 +22,7 @@ on:
     workflows: ['AquaStar NEO Desktop Release']
     types: [completed]
   push:
-    branches: [dev]
+    branches: [neo, neo-dev]
     paths:
       - .github/workflows/desktop-smoke.yml
       - scripts/smoke/**
@@ -40,14 +40,14 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       (startsWith(github.event.workflow_run.head_branch, 'lite-v') || startsWith(github.event.workflow_run.head_branch, 'v3.')))
+       startsWith(github.event.workflow_run.head_branch, 'neo-v'))
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch || github.event.inputs.tag || 'dev' }}
+          ref: ${{ github.event.workflow_run.head_branch || github.event.inputs.tag || 'neo-dev' }}
       - name: Choose the desktop release
         id: tag
         env:
@@ -90,7 +90,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch || github.event.inputs.tag || 'dev' }}
+          ref: ${{ github.event.workflow_run.head_branch || github.event.inputs.tag || 'neo-dev' }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

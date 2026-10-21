@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def arch_version(version):
     # Pacman's '_' sorts *after* the final release. Join rc/alpha/beta suffixes
-    # directly, so e.g. 3.0.0rc.6 upgrades cleanly to 3.0.0.
+    # directly, so e.g. 1.0.0rc.1 upgrades cleanly to 1.0.0.
     if not re.fullmatch(r'\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?', version):
         raise ValueError(f'Unsupported Arch version: {version}')
     return version.replace('-', '')
