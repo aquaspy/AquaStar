@@ -1,0 +1,47 @@
+pkgname=aqua-star
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc='AquaStar native Flash/Ruffle companion launcher'
+arch=('x86_64')
+url='https://github.com/aquaspy/AquaStar'
+license=('MIT' 'LGPL-2.1-or-later' 'BSD-2-Clause')
+depends=('glibc' 'gcc-libs' 'webkit2gtk-4.1' 'gtk3' 'libpipewire' 'dbus'
+         'openssl' 'alsa-lib' 'fontconfig' 'libxkbcommon-x11' 'libglvnd'
+         'libxcomposite' 'libxrandr')
+makedepends=('rust' 'clang' 'python' 'pkgconf')
+optdepends=('xdg-desktop-portal: Wayland screenshots and recording'
+            'xdg-desktop-portal-hyprland: Hyprland capture and global shortcuts'
+            'gtk2: legacy Adobe Flash projector (available from AUR)'
+            'nss: legacy Adobe Flash projector')
+options=('!lto')
+source=("aquastar-${pkgver}.tar.gz")
+sha256sums=('@SOURCE_SHA256@')
+
+build() {
+  cd "$srcdir/aquastar-${pkgver}"
+  python desktop/scripts/build-media.py --work "$srcdir/media-build" --source-bundle
+  cargo build --manifest-path desktop/src-tauri/Cargo.toml --release --locked
+}
+
+check() {
+  cd "$srcdir/aquastar-${pkgver}"
+  cargo test --manifest-path desktop/src-tauri/Cargo.toml --locked -- --test-threads=1
+}
+
+package() {
+  cd "$srcdir/aquastar-${pkgver}"
+  local target_dir="${CARGO_TARGET_DIR:-$PWD/desktop/src-tauri/target}"
+  install -Dm755 "$target_dir/release/aquastar-lite" "$pkgdir/usr/bin/aquastar-lite"
+  # Tauri resolves native Linux resources beside /usr/bin via /usr/lib/AquaStar.
+  install -d "$pkgdir/usr/lib/AquaStar/media"
+  cp -a desktop/src-tauri/media/. "$pkgdir/usr/lib/AquaStar/media/"
+  install -Dm644 desktop/packaging/arch/io.github.aquaspy.aquastar-lite.desktop \
+    "$pkgdir/usr/share/applications/aquastar-lite.desktop"
+  for size in 16 32 48 64 128 256 512; do
+    install -Dm644 "desktop/src-tauri/icons/${size}x${size}.png" \
+      "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/aquastar-lite.png"
+  done
+  install -Dm644 LICENSE.md "$pkgdir/usr/share/licenses/$pkgname/LICENSE.md"
+  install -d "$pkgdir/usr/share/licenses/$pkgname/components"
+  cp -a desktop/licenses/. "$pkgdir/usr/share/licenses/$pkgname/components/"
+}

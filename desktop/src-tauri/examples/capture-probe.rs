@@ -1,3 +1,6 @@
+#[cfg(target_os = "linux")]
+#[path = "../src/portal_identity.rs"]
+mod portal_identity;
 #[path = "../src/capture/backend.rs"]
 mod backend;
 #[path = "../src/capture/encoder.rs"]
@@ -16,7 +19,19 @@ fn main() -> Result<(), String> {
     let binary = PathBuf::from(args.get(2).ok_or("Expected encoder path")?);
     let directory = PathBuf::from(args.get(3).ok_or("Expected output directory")?);
     std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
-    let target = backend::select(backend::targets(&[pid])?, None)?;
+    // A fixture's GTK idle callback can run before the X11 window manager has
+    // published its owned client. Wait for that condition, not a fixed delay.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let target = loop {
+        let targets = backend::targets(&[pid])?;
+        if !targets.is_empty() {
+            break backend::select(targets, None)?;
+        }
+        if Instant::now() >= deadline {
+            return Err("No owned fixture window appeared within 10 seconds.".into());
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    };
     let mut source = backend::Source::new(
         &target,
         None,

@@ -1,4 +1,7 @@
 mod backend;
+pub(crate) use backend::is_wayland;
+#[cfg(target_os = "linux")]
+pub(crate) mod wayland_shortcuts;
 mod encoder;
 mod feedback;
 #[cfg(target_os = "linux")]

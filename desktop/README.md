@@ -84,3 +84,14 @@ Inventory sync uses the saved account session. If the visible Account window is 
 ## Game capture
 
 The development launcher includes **Preferences → Screenshots and recording**, PNG screenshots (F2) and MP4 recording (Ctrl+J). The recording component ships with the application. Audio is restricted to the game process where supported; silent recording is an explicit fallback. See [capture capabilities and native testing](../docs/CAPTURE.md).
+
+## Native Arch Linux package
+
+Run `bash desktop/scripts/build-arch-package.sh` to generate a checksummed source snapshot and build a native `aqua-star-*.pkg.tar.zst` with `makepkg`, outside the checkout. It uses Arch's system libraries, retains the existing application profile, builds the recording sidecar and downloads pinned players on first use. See [Arch packaging](packaging/arch/README.md) for dependencies, installation, prerelease version ordering and the Arch release workflow.
+
+
+### Returning to the launcher after a direct start
+
+Reopen AquaStar while its game is running, or start it with `--launcher`, to bring back the existing launcher and change Preferences. Reopening leaves direct-start auto-exit mode for that session: closing the game then keeps the launcher available. The saved start-up choice remains unchanged for the next app start. Native Arch desktop entries also provide an **Open Launcher and Preferences** action.
+
+When **Hide the launcher during gameplay** is enabled, the launcher hides as the launch request begins, before player preparation and the 800 ms process health check. A failed launch restores the launcher. This retains the existing crash-detection window rather than shortening it to make the UI appear faster.

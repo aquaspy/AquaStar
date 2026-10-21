@@ -141,12 +141,12 @@ function gameCard(plugin, game) {
     disabled: !game.launchable || pending,
     text: pending ? 'Opening game window…' : 'Open game window ↗',
     onclick: async () => {
-      if (pending) return;
+      if (opening.has(key)) return;
       opening.add(key);
       renderPlugin();
       message(`Opening ${game.name}…`);
       try {
-        message(await invoke('play_game', { pluginId: plugin.id, gameId: game.id, engine: picked }));
+        message(await invoke('play_game', { pluginId: plugin.id, gameId: game.id, engine: select.value }));
       } catch (error) {
         failure(error);
       } finally {
@@ -392,7 +392,7 @@ startupSelect.addEventListener('change', async () => {
     await invoke('set_startup', { pluginId, gameId });
     message(
       pluginId
-        ? 'AquaStar will open this game on start-up. Start it with --launcher to see the launcher.'
+        ? 'AquaStar will open this game on start-up. Reopen AquaStar or use --launcher to change Preferences.'
         : 'AquaStar will show the launcher on start-up.'
     );
   } catch (error) {

@@ -22,14 +22,24 @@ pub const EVENT: &str = "aquastar://start";
 #[derive(Default)]
 pub struct StartupState {
     direct: AtomicBool,
+    launcher_requested: AtomicBool,
     show: Mutex<Option<String>>,
     notice: Mutex<Option<String>>,
 }
 
 impl StartupState {
-    /// True while AquaStar was started straight into a game: it exits with the game.
     pub fn is_direct(&self) -> bool {
         self.direct.load(Ordering::SeqCst)
+    }
+    pub fn game_launching(&self) {
+        self.launcher_requested.store(false, Ordering::SeqCst);
+    }
+    pub fn request_launcher(&self) {
+        self.direct.store(false, Ordering::SeqCst);
+        self.launcher_requested.store(true, Ordering::SeqCst);
+    }
+    pub fn launcher_requested(&self) -> bool {
+        self.launcher_requested.load(Ordering::SeqCst)
     }
     fn set(&self, show: Option<String>, notice: Option<String>) {
         *self.show.lock().unwrap_or_else(|e| e.into_inner()) = show;
@@ -283,7 +293,8 @@ pub fn decide(
     }
 }
 
-fn show_main(app: &tauri::AppHandle) {
+pub fn show_main(app: &tauri::AppHandle) {
+    app.state::<StartupState>().request_launcher();
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.unminimize();
         let _ = window.show();
@@ -405,6 +416,21 @@ mod tests {
             }),
             ..Decision::default()
         }
+    }
+
+    #[test]
+    fn reopening_the_launcher_leaves_direct_mode_until_the_next_app_start() {
+        let state = StartupState::default();
+        state.direct.store(true, Ordering::SeqCst);
+        state.game_launching();
+        assert!(state.is_direct());
+        assert!(!state.launcher_requested());
+        state.request_launcher();
+        assert!(!state.is_direct());
+        assert!(state.launcher_requested());
+        state.game_launching();
+        assert!(!state.is_direct());
+        assert!(!state.launcher_requested());
     }
 
     #[test]

@@ -204,12 +204,20 @@ jobs:
             desktop/src-tauri/target/**/release/bundle/dmg/*.dmg
           if-no-files-found: error
 
+  native-arch:
+    needs: [build, gate]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/desktop-arch.yml
+    with:
+      release_tag: ${{ needs.gate.outputs.publish == 'true' && github.ref_name || '' }}
+
   # tauri-action cannot mark a release as Latest, and its update of an
   # existing release does not send prerelease. Reassert both after every
   # platform has uploaded. Stable and prerelease tags stay off Latest.
   keep-prerelease:
-    needs: [build, gate]
-    if: needs.gate.outputs.publish == 'true'
+    needs: [build, native-arch, gate]
+    if: ${{ always() && needs.gate.outputs.publish == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Keep the release off Latest
