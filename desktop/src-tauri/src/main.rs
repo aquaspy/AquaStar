@@ -22,6 +22,8 @@ mod ruffle;
 
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::Arc;
+use std::sync::Mutex;
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
 
@@ -33,6 +35,49 @@ use players::LIMITED_FONTS_MARKER;
 use serde::Serialize;
 use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
+#[derive(Clone, Default)]
+struct RestartAdmission(Arc<Mutex<bool>>);
+
+impl RestartAdmission {
+    fn try_restart(
+        &self,
+        capture: &capture::CaptureState,
+    ) -> Result<RestartAdmissionGuard, String> {
+        let mut active = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        if *active {
+            return Err("A Ruffle restart is already in progress.".into());
+        }
+        if capture.active() {
+            return Err("Stop the active recording before restarting Ruffle.".into());
+        }
+        *active = true;
+        Ok(RestartAdmissionGuard(self.0.clone()))
+    }
+
+    fn with_recording_start<T>(
+        &self,
+        start: impl FnOnce() -> Result<T, String>,
+    ) -> Result<T, String> {
+        let active = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        if *active {
+            return Err("A Ruffle restart is in progress.".into());
+        }
+        start()
+    }
+
+    fn active(&self) -> bool {
+        *self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+struct RestartAdmissionGuard(Arc<Mutex<bool>>);
+
+impl Drop for RestartAdmissionGuard {
+    fn drop(&mut self) {
+        *self.0.lock().unwrap_or_else(|e| e.into_inner()) = false;
+    }
+}
+
 fn hide_launcher_enabled(app: &tauri::AppHandle) -> bool {
     app.path()
         .app_config_dir()
@@ -40,8 +85,14 @@ fn hide_launcher_enabled(app: &tauri::AppHandle) -> bool {
         .unwrap_or(false)
 }
 
-fn sync_launcher(app: &tauri::AppHandle, presence: players::Presence) {
-    if presence == players::Presence::Idle && app.state::<capture::CaptureState>().active() { return; }
+fn sync_launcher(app: &tauri::AppHandle) {
+    let presence = app.state::<Players>().current_presence();
+    if presence == players::Presence::Idle && app.state::<RestartAdmission>().active() {
+        return;
+    }
+    if presence == players::Presence::Idle && app.state::<capture::CaptureState>().active() {
+        return;
+    }
     // Started straight into a game: there is no launcher to bring back, so AquaStar ends
     // with the game.
     if app.state::<startup::StartupState>().is_direct() {
@@ -102,7 +153,7 @@ fn set_hide_launcher(app: tauri::AppHandle, hide: bool) -> Result<LauncherSettin
     let dir = config_dir(&app)?;
     ruffle::save_hide_launcher(&dir, hide)?;
     if hide { app.state::<startup::StartupState>().game_launching(); }
-    sync_launcher(&app, app.state::<Players>().presence());
+    sync_launcher(&app);
     Ok(LauncherSettings {
         hide_launcher: hide,
         show_menu_bar: app.state::<menu_visibility::Visibility>().get(),
@@ -188,6 +239,30 @@ async fn play(app: tauri::AppHandle, engine: Engine, movie: MovieKind) -> Result
         .await
         .map_err(|e| e.to_string())?
     }).await
+}
+
+#[tauri::command]
+async fn restart_ruffle(app: tauri::AppHandle) -> Result<String, String> {
+    let admission = app.state::<RestartAdmission>().inner().clone();
+    let capture = app.state::<capture::CaptureState>().inner().clone();
+    let _guard = admission.try_restart(&capture)?;
+    let players = app.state::<Players>().inner().clone();
+    let result = if !players.has_live_ruffle() {
+        Err("No active Ruffle game to restart".into())
+    } else {
+        game_launch_with_visibility(&app, async move {
+            tauri::async_runtime::spawn_blocking(move || players.restart_ruffle())
+                .await
+                .map_err(|error| error.to_string())?
+        })
+        .await
+    };
+    if result.is_err() {
+        startup::show_main(&app);
+    }
+    drop(_guard);
+    sync_launcher(&app);
+    result
 }
 
 async fn play_extension(app: tauri::AppHandle, source: String, engine: Engine) -> Result<String, String> {
@@ -946,6 +1021,7 @@ fn main() {
         .manage(startup::StartupState::default())
         .manage(studio::StudioState::default())
         .manage(capture::CaptureState::default())
+        .manage(RestartAdmission::default())
         .manage(TimerShortcut(std::sync::Mutex::new(None)))
         .manage(ShortcutBook(std::sync::Mutex::new(std::collections::HashMap::new())))
         .invoke_handler(tauri::generate_handler![
@@ -959,6 +1035,7 @@ fn main() {
             capture::capture_start,
             capture::capture_stop,
             play,
+            restart_ruffle,
             launcher::launcher_model,
             launcher::play_game,
             launcher::launcher_search,
@@ -1057,7 +1134,7 @@ fn main() {
     app.state::<Players>()
         .watch_presence({
             let app = app.handle().clone();
-            move |presence| sync_launcher(&app, presence)
+            move |_| sync_launcher(&app)
         })
         .expect("presence hook");
     app.run(|app, event| {
@@ -1096,6 +1173,46 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn restart_admission_is_exclusive_until_the_guard_drops() {
+        let admission = RestartAdmission::default();
+        let capture = capture::CaptureState::default();
+        let guard = admission.try_restart(&capture).expect("first restart admission");
+        assert!(admission.active());
+        assert!(admission.try_restart(&capture).is_err());
+        assert!(capture.begin(&admission).is_err());
+        drop(guard);
+        assert!(!admission.active());
+        capture.begin(&admission).unwrap();
+        assert!(capture.active());
+        assert!(admission.try_restart(&capture).is_err());
+    }
+
+    #[test]
+    fn restart_command_is_available_only_to_the_main_launcher_capability() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let permissions = std::fs::read_to_string(root.join("permissions/app.toml")).unwrap();
+        let launcher = permissions
+            .split("[[permission]]")
+            .find(|entry| entry.contains("identifier = \"launcher-commands\""))
+            .unwrap();
+        assert!(launcher.contains("\"restart_ruffle\""));
+        let capability: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(root.join("capabilities/default.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(capability["windows"], serde_json::json!(["main"]));
+        for path in std::fs::read_dir(root.join("capabilities")).unwrap() {
+            let path = path.unwrap().path();
+            if path.file_name().and_then(|name| name.to_str()) == Some("default.json") {
+                continue;
+            }
+            let value: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+            assert!(!value["permissions"].to_string().contains("launcher-commands"));
+        }
+    }
 
     #[test]
     fn launcher_pages_open_on_allowed_hosts_and_are_not_ad_hosts() {

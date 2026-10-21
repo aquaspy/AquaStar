@@ -97,10 +97,15 @@ struct FallbackWatch {
     panicked: Arc<AtomicBool>,
     stderr_done: mpsc::Receiver<()>,
     tail: Arc<Mutex<String>>,
+    recipe: LaunchRecipe,
+}
+
+#[derive(Clone)]
+struct LaunchRecipe {
     exe: PathBuf,
     swf: String,
     cli: catalog::Cli,
-    quality: RuffleQuality,
+    settings: RuffleSettings,
     save_directory: Option<PathBuf>,
 }
 
@@ -108,6 +113,7 @@ struct Tracked {
     engine: Engine,
     child: Child,
     killed: Arc<AtomicBool>,
+    recipe: Option<LaunchRecipe>,
     watch: Option<FallbackWatch>,
 }
 
@@ -382,10 +388,10 @@ impl Players {
         settings: &RuffleSettings,
         save_directory: Option<&Path>,
     ) -> Result<String, String> {
+        let _gate = self.launch_gate.lock().unwrap();
         self.launch_hold.store(true, Ordering::SeqCst);
         let _hold = LaunchHold(&self.launch_hold);
-        let _gate = self.launch_gate.lock().unwrap();
-        self.start_player(exe, engine, cli, swf, settings, save_directory)
+        self.start_player(exe, engine, cli, swf, settings, save_directory, true)
     }
 
     fn start_player(
@@ -396,12 +402,28 @@ impl Players {
         swf: &str,
         settings: &RuffleSettings,
         save_directory: Option<&Path>,
+        prepare_existing: bool,
     ) -> Result<String, String> {
-        if let Some(msg) = self.prepare(engine) {
-            return Ok(msg);
+        if self.shutting_down.load(Ordering::SeqCst) {
+            return Err("AquaStar is closing".into());
+        }
+        if prepare_existing {
+            if let Some(msg) = self.prepare(engine) {
+                return Ok(msg);
+            }
+        }
+        if self.shutting_down.load(Ordering::SeqCst) {
+            return Err("AquaStar is closing".into());
         }
         let save_directory = save_directory.map(Path::to_path_buf);
         let settings = settings.for_platform(std::env::consts::OS);
+        let recipe = (engine == Engine::Ruffle).then(|| LaunchRecipe {
+            exe: exe.to_path_buf(),
+            swf: swf.to_string(),
+            cli,
+            settings: settings.clone(),
+            save_directory: save_directory.clone(),
+        });
         let graphics = settings.graphics;
         let ruffle_may_fallback = engine == Engine::Ruffle && graphics != RuffleGraphics::Gl;
         let args = argv(&cli, &movie_from_arg(swf), &settings, save_directory.as_deref());
@@ -456,13 +478,9 @@ impl Players {
                     panicked,
                     stderr_done: stderr_done.expect("stderr watch"),
                     tail,
-                    exe: exe.to_path_buf(),
-                    swf: swf.to_string(),
-                    cli,
-                    quality: settings.quality,
-                    save_directory,
+                    recipe: recipe.clone().expect("Ruffle recipe"),
                 });
-                self.adopt(engine, child, killed, watch)?;
+                self.adopt(engine, child, killed, recipe, watch)?;
                 Ok(format!("{engine:?} started (pid {pid})"))
             }
             Err(e) => Err(format!("could not check {engine:?}: {e}")),
@@ -491,6 +509,7 @@ impl Players {
         engine: Engine,
         mut child: Child,
         killed: Arc<AtomicBool>,
+        recipe: Option<LaunchRecipe>,
         watch: Option<FallbackWatch>,
     ) -> Result<(), String> {
         let mut list = self.children.lock().unwrap();
@@ -505,6 +524,7 @@ impl Players {
             engine,
             child,
             killed,
+            recipe,
             watch,
         });
         drop(list);
@@ -549,11 +569,78 @@ impl Players {
         let pid = child.id();
         let killed = Arc::new(AtomicBool::new(false));
         flash_menu::watch(Engine::Ruffle, pid, killed.clone());
-        self.adopt(Engine::Ruffle, child, killed, None)?;
+        self.adopt(
+            Engine::Ruffle,
+            child,
+            killed,
+            Some(LaunchRecipe {
+                exe: exe.to_path_buf(),
+                swf: swf.to_string(),
+                cli,
+                settings: settings.clone(),
+                save_directory: save_directory.map(Path::to_path_buf),
+            }),
+            None,
+        )?;
         Ok(format!(
             "Ruffle ({}) crashed; relaunched with {backend} (pid {pid})",
             from.as_str()
         ))
+    }
+
+    pub fn restart_ruffle(&self) -> Result<String, String> {
+        let _gate = self.launch_gate.lock().unwrap();
+        if self.shutting_down.load(Ordering::SeqCst) {
+            return Err("AquaStar is closing".into());
+        }
+        self.launch_hold.store(true, Ordering::SeqCst);
+        let _hold = LaunchHold(&self.launch_hold);
+
+        let (mut tracked, recipe, index) = {
+            let mut list = self.children.lock().unwrap();
+            let Some(index) = list.iter().position(|entry| entry.engine == Engine::Ruffle) else {
+                return Err("No active Ruffle game to restart".into());
+            };
+            match list[index].child.try_wait() {
+                Ok(None) => {}
+                Ok(Some(_)) => {
+                    list.remove(index);
+                    return Err("No active Ruffle game to restart".into());
+                }
+                Err(error) => return Err(format!("could not check Ruffle: {error}")),
+            }
+            let recipe = list[index]
+                .recipe
+                .clone()
+                .ok_or_else(|| "The active Ruffle launch details are unavailable".to_string())?;
+            let tracked = list.remove(index);
+            (tracked, recipe, index)
+        };
+
+        tracked.killed.store(true, Ordering::SeqCst);
+        let stopped = match tracked.child.kill() {
+            Ok(()) => tracked.child.wait(),
+            Err(error) => {
+                tracked.killed.store(false, Ordering::SeqCst);
+                Err(error)
+            }
+        };
+        if let Err(error) = stopped {
+            self.children.lock().unwrap().insert(index, tracked);
+            return Err(format!("could not stop Ruffle for restart: {error}"));
+        }
+        if self.shutting_down.load(Ordering::SeqCst) {
+            return Err("AquaStar is closing".into());
+        }
+        self.start_player(
+            &recipe.exe,
+            Engine::Ruffle,
+            recipe.cli,
+            &recipe.swf,
+            &recipe.settings,
+            recipe.save_directory.as_deref(),
+            false,
+        )
     }
 
     fn ensure_reaper(&self) {
@@ -571,10 +658,22 @@ impl Players {
     }
 
     fn reap(&self) {
-        if let Some((status, tracked)) = self.take_exited_watch() {
-            self.fallback(status, tracked);
+        let transition = {
+            let Ok(_gate) = self.launch_gate.try_lock() else {
+                return;
+            };
+            if let Some((status, tracked)) = self.take_exited_watch() {
+                self.launch_hold.store(true, Ordering::SeqCst);
+                {
+                    let _hold = LaunchHold(&self.launch_hold);
+                    self.fallback(status, tracked);
+                }
+            }
+            self.update_presence()
+        };
+        if let Some(presence) = transition {
+            self.dispatch_presence(presence);
         }
-        self.emit_presence();
     }
 
     fn take_exited_watch(&self) -> Option<(std::process::ExitStatus, Tracked)> {
@@ -622,8 +721,6 @@ impl Players {
             .map(|text| text.clone())
             .unwrap_or_default();
         log_fallback(&report, &tail_text);
-        self.launch_hold.store(true, Ordering::SeqCst);
-        let _gate = self.launch_gate.lock().unwrap();
         let busy = {
             let mut list = self.children.lock().unwrap();
             list.retain_mut(|tracked| matches!(tracked.child.try_wait(), Ok(None)));
@@ -631,17 +728,16 @@ impl Players {
         };
         if !busy {
             if let Err(err) = self.relaunch_gl(
-                &watch.exe,
-                &watch.swf,
-                watch.cli,
-                watch.quality,
+                &watch.recipe.exe,
+                &watch.recipe.swf,
+                watch.recipe.cli,
+                watch.recipe.settings.quality,
                 watch.graphics,
-                watch.save_directory.as_deref(),
+                watch.recipe.save_directory.as_deref(),
             ) {
                 eprintln!("aquastar-lite: OpenGL relaunch failed: {err}");
             }
         }
-        self.launch_hold.store(false, Ordering::SeqCst);
     }
 
     pub fn capture_pids(&self) -> Vec<u32> {
@@ -649,13 +745,34 @@ impl Players {
             .filter_map(|tracked| matches!(tracked.child.try_wait(), Ok(None)).then(|| tracked.child.id())).collect()
     }
 
+    pub fn has_live_ruffle(&self) -> bool {
+        self.children
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .iter_mut()
+            .any(|tracked| {
+                tracked.engine == Engine::Ruffle && matches!(tracked.child.try_wait(), Ok(None))
+            })
+    }
+
     pub fn presence(&self) -> Presence {
         self.last_presence.lock().unwrap().unwrap_or(Presence::Idle)
     }
 
-    fn emit_presence(&self) {
+    pub fn current_presence(&self) -> Presence {
+        let alive = self.children.lock().unwrap_or_else(|e| e.into_inner())
+            .iter_mut()
+            .any(|tracked| matches!(tracked.child.try_wait(), Ok(None)));
+        if alive || self.launch_hold.load(Ordering::SeqCst) {
+            Presence::Running
+        } else {
+            Presence::Idle
+        }
+    }
+
+    fn update_presence(&self) -> Option<Presence> {
         if self.shutting_down.load(Ordering::SeqCst) {
-            return;
+            return None;
         }
         let alive = {
             let mut list = self.children.lock().unwrap();
@@ -668,22 +785,22 @@ impl Players {
             count
         };
         let hold = self.launch_hold.load(Ordering::SeqCst);
-        let mut last = self.last_presence.lock().unwrap();
+        let mut last = self.last_presence.lock().unwrap_or_else(|e| e.into_inner());
         if alive > 0 && *last != Some(Presence::Running) {
             *last = Some(Presence::Running);
-            drop(last);
-            self.emit(Presence::Running);
+            Some(Presence::Running)
         } else if alive == 0 && !hold && *last == Some(Presence::Running) {
-            drop(last);
-            if self.shutting_down.load(Ordering::SeqCst) {
-                return;
-            }
-            self.emit(Presence::Idle);
-            *self.last_presence.lock().unwrap() = Some(Presence::Idle);
+            *last = Some(Presence::Idle);
+            Some(Presence::Idle)
+        } else {
+            None
         }
     }
 
-    fn emit(&self, presence: Presence) {
+    fn dispatch_presence(&self, presence: Presence) {
+        if self.shutting_down.load(Ordering::SeqCst) {
+            return;
+        }
         let hook = self.presence_hook.lock().unwrap().clone();
         if let Some(hook) = hook {
             hook(presence);
@@ -692,6 +809,7 @@ impl Players {
 
     pub fn kill_all(&self) {
         self.shutting_down.store(true, Ordering::SeqCst);
+        let _gate = self.launch_gate.lock().unwrap();
         for mut tracked in self.children.lock().unwrap().drain(..) {
             tracked.killed.store(true, Ordering::SeqCst);
             let _ = tracked.child.kill();
@@ -1377,8 +1495,19 @@ mod tests {
         let players = Players::default();
         let seen = record(&players);
         let _stop = Stop(players.clone());
+        let explicit_vulkan = RuffleSettings {
+            quality: RuffleQuality::Low,
+            graphics: RuffleGraphics::Vulkan,
+        };
         let msg = players
-            .launch_at(&exe, Engine::Ruffle, catalog::Cli::Stock, "movie.swf", &automatic_low(), None)
+            .launch_at(
+                &exe,
+                Engine::Ruffle,
+                catalog::Cli::Stock,
+                "movie.swf",
+                &explicit_vulkan,
+                None,
+            )
             .unwrap();
         assert!(msg.contains("relaunched with OpenGL"), "{msg}");
         assert!(wait_until(|| seen
@@ -1392,12 +1521,22 @@ mod tests {
         );
         let lines = log_lines(&log);
         assert_eq!(lines.len(), 2, "{lines:?}");
-        assert!(lines[0].contains("--graphics default"), "{lines:?}");
+        assert!(lines[0].contains("--graphics vulkan"), "{lines:?}");
         assert!(lines[0].contains("--quality low"), "{lines:?}");
         assert!(lines[0].ends_with("movie.swf"), "{lines:?}");
         assert!(lines[1].contains("--graphics gl"), "{lines:?}");
         assert!(lines[1].contains("--quality low"), "{lines:?}");
         assert_eq!(players.children.lock().unwrap().len(), 1);
+        assert_eq!(
+            players.children.lock().unwrap()[0]
+                .recipe
+                .as_ref()
+                .unwrap()
+                .settings
+                .graphics,
+            ruffle::safe_graphics(std::env::consts::OS)
+        );
+        assert!(players.children.lock().unwrap()[0].watch.is_none());
         drop(_stop);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1534,7 +1673,7 @@ mod tests {
         let log = dir.join("args");
         let exe = write_script(
             &dir,
-            &format!("printf '%s\\n' \"$*\" >> '{}'\nsleep 60", log.display()),
+            &format!("printf '%s\\n' \"$*\" >> '{}'\nexec sleep 60", log.display()),
         );
         let players = Players::default();
         let seen = record(&players);
@@ -1559,7 +1698,7 @@ mod tests {
         let log = dir.join("args");
         let exe = write_script(
             &dir,
-            &format!("printf '%s\\n' \"$*\" >> '{}'\nsleep 60", log.display()),
+            &format!("printf '%s\\n' \"$*\" >> '{}'\nexec sleep 60", log.display()),
         );
         let players = Players::default();
         let _stop = Stop(players.clone());
@@ -1587,6 +1726,150 @@ mod tests {
         assert_eq!(log_lines(&log), ["movie.swf"]);
         assert_eq!(players.children.lock().unwrap().len(), 1);
         drop(_stop);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn restart_reuses_the_live_launch_arguments_without_an_idle_transition() {
+        let dir = scratch("restart-reuses-launch");
+        let log = dir.join("args");
+        let exe = write_script(
+            &dir,
+            &format!("printf '%s\\n' \"$*\" >> '{}'\nexec sleep 60", log.display()),
+        );
+        let save_directory = dir.join("saves");
+        let settings = RuffleSettings {
+            quality: RuffleQuality::Low,
+            graphics: RuffleGraphics::Automatic,
+        };
+        let players = Players::default();
+        let _stop = Stop(players.clone());
+        let seen = record(&players);
+        players
+            .launch_at(
+                &exe,
+                Engine::Ruffle,
+                catalog::Cli::Artix,
+                "https://example.test/live.swf?slot=4",
+                &settings,
+                Some(&save_directory),
+            )
+            .unwrap();
+        let old_pid = players.children.lock().unwrap()[0].child.id();
+        players.reap();
+        assert_eq!(*seen.lock().unwrap(), vec![Presence::Running]);
+
+        let result = players.restart_ruffle().unwrap();
+        assert!(result.contains("started"), "{result}");
+        let kids = players.children.lock().unwrap();
+        assert_eq!(kids.len(), 1);
+        assert_eq!(kids[0].engine, Engine::Ruffle);
+        assert_ne!(kids[0].child.id(), old_pid);
+        assert_eq!(kids[0].recipe.as_ref().unwrap().settings, settings);
+        drop(kids);
+        let args = log_lines(&log);
+        assert_eq!(args.len(), 2, "{args:?}");
+        assert_eq!(args[0], args[1]);
+        assert!(args[0].contains("--quality low"), "{args:?}");
+        assert!(args[0].contains("--graphics default"), "{args:?}");
+        assert!(args[0].contains("--save-directory"), "{args:?}");
+        assert!(
+            args[0].contains(save_directory.to_string_lossy().as_ref()),
+            "{args:?}"
+        );
+        assert!(
+            args[0].contains("https://example.test/live.swf?slot=4"),
+            "{args:?}"
+        );
+        assert_eq!(*seen.lock().unwrap(), vec![Presence::Running]);
+    }
+
+    #[test]
+    fn restart_without_ruffle_leaves_flash_running() {
+        let dir = scratch("restart-flash-untouched");
+        let log = dir.join("args");
+        let exe = write_script(
+            &dir,
+            &format!("printf '%s\\n' \"$*\" >> '{}'\nexec sleep 60", log.display()),
+        );
+        let players = Players::default();
+        let _stop = Stop(players.clone());
+        players
+            .launch_at(
+                &exe,
+                Engine::Flash,
+                catalog::Cli::Projector,
+                "flash-movie.swf",
+                &RuffleSettings::default(),
+                None,
+            )
+            .unwrap();
+        let flash_pid = players.children.lock().unwrap()[0].child.id();
+
+        let error = players.restart_ruffle().unwrap_err();
+
+        assert!(error.contains("No active Ruffle"), "{error}");
+        let children = players.children.lock().unwrap();
+        assert_eq!(children.len(), 1);
+        assert_eq!(children[0].engine, Engine::Flash);
+        assert_eq!(children[0].child.id(), flash_pid);
+        assert_eq!(log_lines(&log), ["flash-movie.swf"]);
+    }
+
+    #[test]
+    fn a_failed_replacement_does_not_resurrect_the_old_fallback_watch() {
+        let dir = scratch("restart-failed-replacement");
+        let log = dir.join("args");
+        let exe = write_script(
+            &dir,
+            &format!(
+                "printf '%s\\n' \"$*\" >> '{}'\n\
+                 if [ \"$(wc -l < '{}')\" -eq 1 ]; then exec sleep 60; else exit 0; fi",
+                log.display(),
+                log.display()
+            ),
+        );
+        let players = Players::default();
+        let _stop = Stop(players.clone());
+        let seen = record(&players);
+        players
+            .launch_at(&exe, Engine::Ruffle, catalog::Cli::Stock, "movie.swf", &automatic_low(), None)
+            .unwrap();
+        players.reap();
+        assert_eq!(*seen.lock().unwrap(), vec![Presence::Running]);
+
+        let error = players.restart_ruffle().unwrap_err();
+        assert!(error.contains("exited immediately"), "{error}");
+        assert!(players.children.lock().unwrap().is_empty());
+        std::thread::sleep(Duration::from_millis(500));
+        assert_eq!(log_lines(&log).len(), 2, "stale fallback relaunched: {:?}", log_lines(&log));
+        players.reap();
+        assert_eq!(*seen.lock().unwrap(), vec![Presence::Running, Presence::Idle]);
+    }
+
+    #[test]
+    fn presence_callback_can_shutdown_players_without_reaper_gate_deadlock() {
+        let dir = scratch("presence-callback-shutdown");
+        let exe = write_script(&dir, "sleep 1");
+        let players = Players::default();
+        let _stop = Stop(players.clone());
+        players
+            .launch_at(&exe, Engine::Ruffle, catalog::Cli::Stock, "movie.swf", &automatic_low(), None)
+            .unwrap();
+        players.reap();
+        let callback_players = players.clone();
+        players
+            .watch_presence(move |presence| {
+                if presence == Presence::Idle {
+                    callback_players.kill_all();
+                }
+            })
+            .unwrap();
+
+        std::thread::sleep(Duration::from_millis(1100));
+        players.reap();
+
+        assert!(players.children.lock().unwrap().is_empty());
         let _ = fs::remove_dir_all(&dir);
     }
 

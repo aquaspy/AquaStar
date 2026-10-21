@@ -81,6 +81,8 @@ Preferences is the single settings destination in the launcher, with General, Ad
 
 The old Electron plugin-selection, renderer and Ruffle updater controls are not shown in 3.x. Manage plugins owns desktop plugin installation and enablement. Inactive compatibility settings remain stored; changing a visible field preserves unrelated and unknown values. Main Preferences remains the authority for Ruffle quality and graphics, without importing a duplicate legacy quality value.
 
+Preferences → General → **Restart Ruffle** closes and reopens the active Ruffle game with its resolved movie, quality, graphics selection and save directory. It reuses the active launch options, including the safe backend after GPU recovery; later preference edits apply to a normal new launch. The game may return to login. The launcher stays hidden during replacement when that preference is enabled and returns if replacement fails. Stop an active recording before restarting. This action does not clear cache or change Flash, and it does not add a global keyboard shortcut.
+
 The in-window menu bar is hidden by default on Linux and Windows. Enable **Preferences → Show menu bar** to show it; keyboard shortcuts work with either setting. macOS keeps its system application menu.
 
 Inventory sync uses the saved account session. If the visible Account window is closed, the launcher initializes the account session in a hidden window using the same browser profile. An expired login offers **Open Account**; game login and account-site login are separate sessions.

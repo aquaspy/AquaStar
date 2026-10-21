@@ -3,6 +3,7 @@ identifier = "launcher-commands"
 description = "Launcher window"
 commands.allow = [
   "play",
+  "restart_ruffle",
   "capture_show",
   "capture_info",
   "capture_choose_folder",

@@ -433,6 +433,22 @@
   document.getElementById('preferences').append(live);
   let loadPromise = null;
   document.getElementById('preferences-restart-button').addEventListener('click', () => invoke('restart_app').catch((error) => announce(String(error), true)));
+  const restartRuffleButton = document.getElementById('restart-ruffle-button');
+  const restartRuffleStatus = document.getElementById('restart-ruffle-status');
+  restartRuffleButton.addEventListener('click', async () => {
+    restartRuffleButton.disabled = true;
+    restartRuffleStatus.textContent = '';
+    restartRuffleStatus.dataset.error = 'false';
+    try {
+      await invoke('restart_ruffle');
+      restartRuffleStatus.textContent = 'Ruffle restarted.';
+    } catch (error) {
+      restartRuffleStatus.textContent = String(error);
+      restartRuffleStatus.dataset.error = 'true';
+    } finally {
+      restartRuffleButton.disabled = false;
+    }
+  });
   load();
 
   function showRestartNotice() {

@@ -79,18 +79,20 @@ impl CaptureState {
             std::thread::sleep(Duration::from_millis(25));
         }
     }
-    fn begin(&self) -> Result<(), String> {
-        self.0
-            .busy
-            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-            .map_err(|_| "A capture is already running.".to_string())?;
-        self.0.stop.store(false, Ordering::SeqCst);
-        Ok(())
+    pub(crate) fn begin(&self, admission: &crate::RestartAdmission) -> Result<(), String> {
+        admission.with_recording_start(|| {
+            self.0
+                .busy
+                .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+                .map_err(|_| "A capture is already running.".to_string())?;
+            self.0.stop.store(false, Ordering::SeqCst);
+            Ok(())
+        })
     }
     fn finish(&self, app: &tauri::AppHandle) {
         self.0.busy.store(false, Ordering::SeqCst);
         if app.state::<crate::players::Players>().presence() == crate::players::Presence::Idle {
-            crate::sync_launcher(app, crate::players::Presence::Idle);
+            crate::sync_launcher(app);
         }
     }
     fn status(&self) -> Status {
@@ -376,7 +378,8 @@ pub async fn capture_start(
 }
 pub async fn start(app: tauri::AppHandle, id: Option<String>) -> Result<(), String> {
     let state = app.state::<CaptureState>().inner().clone();
-    state.begin()?;
+    let admission = app.state::<crate::RestartAdmission>();
+    state.begin(admission.inner())?;
     state.update(&app, "preparing", 0, None, None);
     let outcome = tauri::async_runtime::spawn_blocking({
         let app = app.clone();
@@ -585,14 +588,16 @@ mod tests {
     #[test]
     fn concurrent_start_requests_cannot_create_two_recordings() {
         let state = CaptureState::default();
+        let admission = crate::RestartAdmission::default();
         let barrier = Arc::new(std::sync::Barrier::new(8));
         let workers: Vec<_> = (0..8)
             .map(|_| {
                 let state = state.clone();
+                let admission = admission.clone();
                 let barrier = barrier.clone();
                 std::thread::spawn(move || {
                     barrier.wait();
-                    state.begin().is_ok()
+                    state.begin(&admission).is_ok()
                 })
             })
             .collect();
