@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash scripts/ci/expect-one.sh artifacts 'AquaStar-+([0-9]).+([0-9]).+([0-9]).AppImage'
+          bash scripts/ci/expect-one.sh artifacts 'AquaStar-!(*-i386|*-armv7l).AppImage'
           bash scripts/ci/expect-one.sh artifacts 'AquaStar-*-i386.AppImage'
           bash scripts/ci/expect-one.sh artifacts 'AquaStar-*-armv7l.AppImage'
           bash scripts/ci/expect-one.sh artifacts 'AquaStar_*_amd64.deb'
