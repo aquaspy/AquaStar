@@ -2,6 +2,9 @@
 # Install the downloaded desktop package and, on Linux, a virtual display.
 set -euo pipefail
 
+here=$(cd "$(dirname "$0")" && pwd)
+source "$here/one-match.sh"
+
 pkg="${PACKAGE:?}"
 bin=""
 
@@ -24,7 +27,7 @@ case "$(uname -s)" in
       sudo apt-get install -y ./dist/*.deb
       bin=$(command -v aquastar-neo)
     elif [ "$pkg" = appimage ]; then
-      bin=$(echo "$PWD"/dist/*.AppImage)
+      bin=$(one_match "$PWD"/dist/*.AppImage)
       chmod +x "$bin"
       echo "APPIMAGE_EXTRACT_AND_RUN=1" >> "$GITHUB_ENV"
     else
