@@ -54,9 +54,25 @@ case "$(uname -s)" in
     fi
     DISPLAY=:99 openbox >/tmp/openbox.log 2>&1 &
     sleep 1
-    echo "DISPLAY=:99" >> "$GITHUB_ENV"
+    export DISPLAY=:99
     # The runner has no GPU. Ruffle's default on Linux is OpenGL, so use llvmpipe.
+    export LIBGL_ALWAYS_SOFTWARE=1
+    echo "DISPLAY=:99" >> "$GITHUB_ENV"
     echo "LIBGL_ALWAYS_SOFTWARE=1" >> "$GITHUB_ENV"
+    # The deb depends on xdg-desktop-portal. systemd starts that unit without
+    # this job's DISPLAY, the GTK backend exits ("cannot open display"), and
+    # the unit stays activating. The published launcher waits on that bus name
+    # before it maps a window. Hand the user manager the display, then start
+    # the portal, so registration returns.
+    if systemctl --user show-environment >/dev/null 2>&1; then
+      systemctl --user import-environment DISPLAY LIBGL_ALWAYS_SOFTWARE
+      echo "imported DISPLAY=$DISPLAY into the systemd user session"
+      if timeout 20 systemctl --user start xdg-desktop-portal.service; then
+        echo "xdg-desktop-portal is active"
+      else
+        echo "xdg-desktop-portal did not become active before launch" >&2
+      fi
+    fi
     ;;
   Darwin)
     brew install cliclick

@@ -87,6 +87,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-notification",
  "tauri-plugin-single-instance",
+ "tokio",
  "ureq",
  "windows-capture",
  "x11rb",

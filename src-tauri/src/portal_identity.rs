@@ -1,6 +1,21 @@
 //! Uninstalled binaries and AppImages also need a stable portal application ID.
 use std::sync::OnceLock;
+use std::time::Duration;
+
+/// A systemd user bus can leave `xdg-desktop-portal.service` in `activating`
+/// when its GTK backend has no `DISPLAY`. That state was still `activating`
+/// after 25s, and the launcher had printed nothing and mapped no window.
+/// Registration is metadata for later portal calls. Startup must not wait it out.
+const PORTAL_BUDGET: Duration = Duration::from_secs(3);
+
 pub async fn register() -> Result<(), String> {
+    match tokio::time::timeout(PORTAL_BUDGET, register_with_portal()).await {
+        Ok(result) => result,
+        Err(_) => Err("desktop portal did not answer".into()),
+    }
+}
+
+async fn register_with_portal() -> Result<(), String> {
     static REGISTERED: OnceLock<tauri::async_runtime::Mutex<bool>> = OnceLock::new();
     let mut registered = REGISTERED
         .get_or_init(|| tauri::async_runtime::Mutex::new(false))
