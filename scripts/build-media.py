@@ -10,6 +10,8 @@ import shutil
 import sys
 import subprocess
 import tarfile
+import time
+import urllib.error
 import urllib.request
 
 SOURCES = {
@@ -23,6 +25,17 @@ def media_cache(repo_root: Path) -> Path:
 
 def run(args, cwd, env):
     subprocess.run([str(a) for a in args], cwd=cwd, env=env, check=True)
+
+def fetch(url, archive):
+    for attempt in range(1, 5):
+        try:
+            urllib.request.urlretrieve(url, archive)
+            return
+        except (urllib.error.URLError, TimeoutError, OSError):
+            archive.unlink(missing_ok=True)
+            if attempt == 4:
+                raise
+            time.sleep(2 ** attempt)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -46,7 +59,7 @@ def main():
         archive = work / (f'{name}-{version}.tar.xz' if name == 'ffmpeg' else f'{name}-{version}.tar.gz')
         if not archive.exists():
             print(f'Downloading {name} {version} source…', flush=True)
-            urllib.request.urlretrieve(url, archive)
+            fetch(url, archive)
         if hashlib.sha256(archive.read_bytes()).hexdigest() != digest:
             raise RuntimeError(f'{name} source checksum mismatch')
         tree = work / f'{name}-{version}'
