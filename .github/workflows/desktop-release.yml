@@ -167,6 +167,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           KIND: ${{ needs.gate.outputs.kind }}
+        shell: bash
         run: |
           set -euo pipefail
           if [ "$KIND" = "stable" ]; then
@@ -233,6 +234,7 @@ jobs:
         if: matrix.platform == 'windows-latest' && needs.gate.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
           while IFS= read -r asset; do
             [ -z "$asset" ] || gh release delete-asset "$GITHUB_REF_NAME" "$asset" --yes --repo "$GITHUB_REPOSITORY"
