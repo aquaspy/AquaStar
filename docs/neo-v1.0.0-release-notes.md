@@ -49,7 +49,6 @@ The `v3.0.0-rc` builds were early versions of this app. There is no AquaStar 3.x
 | Windows 10 or 11 x64, installer | `aquastar-neo_1.0.0_x64-setup.exe` |
 | Windows 10 or 11 x64, portable | `aquastar-neo_1.0.0_x64-portable.zip` |
 | macOS 11 or later, Apple Silicon and Intel | `aquastar-neo_1.0.0_universal.dmg` |
-| macOS, app bundle in a tarball (the `.dmg` is recommended) | `AquaStar.NEO_universal.app.tar.gz` |
 | Debian or Ubuntu x64 | `aquastar-neo_1.0.0_amd64.deb` |
 | Other Linux x64 | `aquastar-neo_1.0.0_amd64.AppImage` |
 | Arch Linux x64 | `aquastar-neo-1.0.0-1-x86_64.pkg.tar.zst` |
