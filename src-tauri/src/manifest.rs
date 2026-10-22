@@ -979,7 +979,7 @@ mod tests {
             seen.insert(page.url.clone());
         }
         let expected: BTreeSet<String> = [
-            "http://aqwwiki.wikidot.com/new-releases",
+            "https://aqwwiki.wikidot.com/new-releases",
             "https://www.aq.com/gamedesignnotes/",
             "https://www.aq.com/gamedesignnotes/AQW-Balance-PatchNotes-9515",
             "https://account.aq.com/",

@@ -7,7 +7,7 @@
       "id": "useful",
       "labelKey": "menuOtherPages",
       "items": [
-        { "id": "wiki", "labelKey": "menuWiki", "url": "http://aqwwiki.wikidot.com/new-releases", "keybind": "wiki" },
+        { "id": "wiki", "labelKey": "menuWiki", "url": "https://aqwwiki.wikidot.com/new-releases", "keybind": "wiki" },
         { "id": "design", "labelKey": "menuDesign", "url": "https://www.aq.com/gamedesignnotes/", "keybind": "design" },
         { "id": "balancePatchNotes", "labelKey": "menuBalancePatchNotes", "url": "https://www.aq.com/gamedesignnotes/AQW-Balance-PatchNotes-9515" },
         { "id": "account", "labelKey": "menuAccount", "url": "https://account.aq.com/", "keybind": "account" },

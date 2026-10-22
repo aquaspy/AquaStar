@@ -2,8 +2,5 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "wiki",
   "windows": ["wiki", "releases", "account", "char-page", "charpage"],
-  "remote": {
-    "urls": ["https://aqwwiki.wikidot.com/*", "http://aqwwiki.wikidot.com/*"]
-  },
   "permissions": ["core:default", "wiki-commands"]
 }

@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""Launch one AquaStar player from a release build and record the screen.
-
-Pass/fail is the process. rc.9 ignores AQUASTAR_LITE_SMOKE, so this clicks the
-Play button when the player does not appear on its own. A later build that
-honors the variable starts the player before the click.
-"""
-
 import argparse
 import os
 import platform
@@ -60,7 +53,6 @@ def command_of(pid):
 
 
 def pids_named(names):
-    """Process ids whose image name is exactly one of `names`."""
     system = platform.system()
     found = []
     if system == "Windows":
@@ -88,8 +80,13 @@ def pids_named(names):
         )
         if listed.returncode == 0:
             found.extend(pid for pid in listed.stdout.split() if pid)
-    if found:
-        return found
+    return found
+
+
+def pids_matching_command(names):
+    if platform.system() == "Windows":
+        return []
+    found = []
     for name in names:
         listed = subprocess.run(
             ["pgrep", "-f", name],
@@ -195,7 +192,7 @@ def mac_scales(image_width):
 
 
 def raise_player(engine):
-    pids = pids_named(player_names(engine))
+    pids = pids_named(player_names(engine)) or pids_matching_command(player_names(engine))
     if not pids:
         return
     pid = pids[0]
@@ -288,15 +285,14 @@ def wait_for(predicate, seconds, launcher):
 
 
 def remain_for(seconds, launcher, engine):
-    """True when the player is still alive at the end of the full wait."""
     deadline = time.time() + seconds
     while time.time() < deadline:
-        if launcher.poll() is not None or not pids_named(player_names(engine)):
+        if launcher.poll() is not None or not (pids_named(player_names(engine)) or pids_matching_command(player_names(engine))):
             return False
         left = int(deadline - time.time())
         print(f"{engine} still alive, {left}s left in the wait")
         time.sleep(5)
-    return launcher.poll() is None and bool(pids_named(player_names(engine)))
+    return launcher.poll() is None and bool(pids_named(player_names(engine)) or pids_matching_command(player_names(engine)))
 
 
 def focus_launcher(launcher):
@@ -326,11 +322,10 @@ def click_scales(image):
 
 
 def click_play(engine, out_dir, launcher, seconds):
-    """Click Play until the player appears. The WebKit window can stay black for a while."""
     names = player_names(engine)
     deadline = time.time() + seconds
     while time.time() < deadline and launcher.poll() is None:
-        if pids_named(names):
+        if pids_named(names) or pids_matching_command(names):
             return True
         focus_launcher(launcher)
         image = screenshot(out_dir / "launcher.png")
@@ -343,9 +338,9 @@ def click_play(engine, out_dir, launcher, seconds):
         for scale in click_scales(image):
             focus_launcher(launcher)
             click_at(x // scale, y // scale)
-            if wait_for(lambda: bool(pids_named(names)), 4, launcher):
+            if wait_for(lambda: bool(pids_named(names) or pids_matching_command(names)), 4, launcher):
                 return True
-    return bool(pids_named(names))
+    return bool(pids_named(names) or pids_matching_command(names))
 
 
 def judge(engine, launcher, log_path, player_up):
@@ -357,7 +352,7 @@ def judge(engine, launcher, log_path, player_up):
     else:
         lines.append(f"launcher exited {code}")
         ok = False
-    if player_up and pids_named(player_names(engine)):
+    if player_up and (pids_named(player_names(engine)) or pids_matching_command(player_names(engine))):
         lines.append(f"{engine} process still alive after {SOAK_SECONDS}s")
     else:
         lines.append(f"{engine} process was not alive after the wait")
@@ -408,7 +403,7 @@ def main():
     log_handle = None
     try:
         launcher, log_handle = launch(binary, engine, args.arch.strip(), log_path)
-        appeared = wait_for(lambda: bool(pids_named(player_names(engine))), HOOK_WAIT, launcher)
+        appeared = wait_for(lambda: bool(pids_named(player_names(engine)) or pids_matching_command(player_names(engine))), HOOK_WAIT, launcher)
         if not appeared and launcher.poll() is None:
             print(f"{engine} did not start from the env hook; clicking Play")
             appeared = click_play(engine, out_dir, launcher, CLICK_WAIT)

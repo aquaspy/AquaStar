@@ -2,8 +2,5 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "account",
   "windows": ["account", "char-page", "charpage"],
-  "remote": {
-    "urls": ["https://account.aq.com/*", "http://account.aq.com/*"]
-  },
   "permissions": ["core:default", "account-commands"]
 }

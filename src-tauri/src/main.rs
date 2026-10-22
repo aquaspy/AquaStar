@@ -1608,6 +1608,35 @@ mod tests {
     }
 
     #[test]
+    fn remote_pages_do_not_receive_core_default_or_cleartext_origins() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("capabilities");
+        let mut remote_files = 0;
+        for entry in std::fs::read_dir(&root).unwrap() {
+            let path = entry.unwrap().path();
+            let value: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+            let Some(remote) = value.get("remote") else {
+                continue;
+            };
+            remote_files += 1;
+            let permissions = value["permissions"].as_array().unwrap();
+            assert!(
+                !permissions.iter().any(|item| item == "core:default"),
+                "{}",
+                path.display()
+            );
+            let urls = remote["urls"].as_array().unwrap();
+            assert!(!urls.is_empty(), "{}", path.display());
+            assert!(
+                urls.iter().all(|url| url.as_str().unwrap().starts_with("https://")),
+                "{}",
+                path.display()
+            );
+        }
+        assert_eq!(remote_files, 2);
+    }
+
+    #[test]
     fn launcher_pages_open_on_allowed_hosts_and_are_not_ad_hosts() {
         let pages = [
             "https://account.aq.com/CharPage",
