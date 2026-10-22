@@ -25,7 +25,6 @@ pub(crate) enum Arch {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Cli {
     Artix,
-    Stock,
     Projector,
 }
 
@@ -102,7 +101,9 @@ pub(super) struct Pin {
     pub dir: String,
     pub sha256: String,
     pub binary_sha256: Option<String>,
+    pub inner_sha256: Option<String>,
     pub exe: String,
+    pub arch: Arch,
     pub url: String,
     pub kind: ArchiveKind,
     pub extract: Extract,
@@ -209,18 +210,11 @@ impl Catalog {
                     Some("macos-cli") => Extract::MacosCli,
                     Some(other) => return Err(format!("unknown extract {other}")),
                 };
-                let binary_sha256 = match artifact.get("binarySha256") {
-                    None => None,
-                    Some(value) => {
-                        let text = value.as_str().ok_or("binarySha256 is not a string")?;
-                        if !sha_ok(text) {
-                            return Err(format!(
-                                "binarySha256 is not 64 lowercase hex digits: {text}"
-                            ));
-                        }
-                        Some(text.to_string())
-                    }
-                };
+                let binary_sha256 = optional_sha(artifact, "binarySha256")?;
+                let inner_sha256 = optional_sha(artifact, "innerSha256")?;
+                if inner_sha256.is_some() && extract != Extract::SingleExe {
+                    return Err("innerSha256 is only valid for a windows single-exe pin".into());
+                }
                 if !url.starts_with("https://") {
                     return Err(format!("url is not https: {url}"));
                 }
@@ -245,11 +239,13 @@ impl Catalog {
                     dir: dir.to_string(),
                     sha256: sha256.to_string(),
                     binary_sha256,
+                    inner_sha256,
                     exe: exe.to_string(),
                     url: url.to_string(),
                     kind,
                     extract,
                     cli,
+                    arch: native,
                     version: version.clone(),
                 };
                 let mut claims = vec![(native, ClaimRank::Native)];
@@ -318,11 +314,24 @@ fn also_arches(artifact: &serde_json::Value) -> Result<Vec<Arch>, String> {
     }
 }
 
+fn optional_sha(artifact: &serde_json::Value, name: &str) -> Result<Option<String>, String> {
+    match artifact.get(name) {
+        None => Ok(None),
+        Some(value) => {
+            let text = value.as_str().ok_or_else(|| format!("{name} is not a string"))?;
+            if !sha_ok(text) {
+                return Err(format!("{name} is not 64 lowercase hex digits: {text}"));
+            }
+            Ok(Some(text.to_string()))
+        }
+    }
+}
+
 fn parse_cli(text: &str) -> Result<Cli, String> {
     match text {
         "artix" => Ok(Cli::Artix),
-        "stock" => Ok(Cli::Stock),
         "projector" => Ok(Cli::Projector),
+        "stock" => Err("stock Ruffle is not a NEO player".into()),
         other => Err(format!("unknown cli {other}")),
     }
 }
@@ -330,7 +339,7 @@ fn parse_cli(text: &str) -> Result<Cli, String> {
 fn cli_matches_engine(engine: Engine, cli: Cli) -> bool {
     matches!(
         (engine, cli),
-        (Engine::Ruffle, Cli::Artix | Cli::Stock) | (Engine::Flash, Cli::Projector)
+        (Engine::Ruffle, Cli::Artix) | (Engine::Flash, Cli::Projector)
     )
 }
 
@@ -340,8 +349,12 @@ fn ruffle_exe_matches(cli: Cli, exe: &str) -> bool {
         .and_then(|part| part.to_str())
         .unwrap_or("");
     match cli {
-        Cli::Artix => name == "ruffle_desktop" || name == "ruffle_desktop.exe",
-        Cli::Stock => name == "ruffle" || name == "ruffle.exe",
+        Cli::Artix => {
+            name == "ruffle_desktop"
+                || name == "ruffle_desktop.exe"
+                || name == "Artix Games Launcher.exe"
+                || name == "Artix Games Launcher · Ruffle"
+        }
         Cli::Projector => false,
     }
 }
@@ -523,9 +536,85 @@ fn unpack(pin: &Pin, bytes: &[u8], dest: &Path) -> Result<(), String> {
 }
 
 fn unpack_zip(bytes: &[u8], dest: &Path) -> Result<(), String> {
-    zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec()))
-        .and_then(|mut archive| archive.extract(dest))
-        .map_err(|e| e.to_string())
+    let mut archive =
+        zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).map_err(|e| e.to_string())?;
+    for index in 0..archive.len() {
+        let mut file = archive.by_index(index).map_err(|e| e.to_string())?;
+        let name = recovered_zip_name(file.name());
+        let rel = safe_zip_path(&name)?;
+        let target = dest.join(&rel);
+        if file.is_dir() || name.ends_with('/') || name.ends_with('\\') {
+            fs::create_dir_all(&target).map_err(|e| e.to_string())?;
+            continue;
+        }
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        let mut out = fs::File::create(&target).map_err(|e| e.to_string())?;
+        std::io::copy(&mut file, &mut out).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// IBM code page 437 codepoints for bytes 0x80..=0xFF, in order.
+const CP437_HIGH: [u32; 128] = [
+    0x00c7, 0x00fc, 0x00e9, 0x00e2, 0x00e4, 0x00e0, 0x00e5, 0x00e7, 0x00ea, 0x00eb, 0x00e8, 0x00ef,
+    0x00ee, 0x00ec, 0x00c4, 0x00c5, 0x00c9, 0x00e6, 0x00c6, 0x00f4, 0x00f6, 0x00f2, 0x00fb, 0x00f9,
+    0x00ff, 0x00d6, 0x00dc, 0x00a2, 0x00a3, 0x00a5, 0x20a7, 0x0192, 0x00e1, 0x00ed, 0x00f3, 0x00fa,
+    0x00f1, 0x00d1, 0x00aa, 0x00ba, 0x00bf, 0x2310, 0x00ac, 0x00bd, 0x00bc, 0x00a1, 0x00ab, 0x00bb,
+    0x2591, 0x2592, 0x2593, 0x2502, 0x2524, 0x2561, 0x2562, 0x2556, 0x2555, 0x2563, 0x2551, 0x2557,
+    0x255d, 0x255c, 0x255b, 0x2510, 0x2514, 0x2534, 0x252c, 0x251c, 0x2500, 0x253c, 0x255e, 0x255f,
+    0x255a, 0x2554, 0x2569, 0x2566, 0x2560, 0x2550, 0x256c, 0x2567, 0x2568, 0x2564, 0x2565, 0x2559,
+    0x2558, 0x2552, 0x2553, 0x256b, 0x256a, 0x2518, 0x250c, 0x2588, 0x2584, 0x258c, 0x2590, 0x2580,
+    0x03b1, 0x00df, 0x0393, 0x03c0, 0x03a3, 0x03c3, 0x00b5, 0x03c4, 0x03a6, 0x0398, 0x03a9, 0x03b4,
+    0x221e, 0x03c6, 0x03b5, 0x2229, 0x2261, 0x00b1, 0x2265, 0x2264, 0x2320, 0x2321, 0x00f7, 0x2248,
+    0x00b0, 0x2219, 0x00b7, 0x221a, 0x207f, 0x00b2, 0x25a0, 0x00a0,
+];
+
+fn cp437_byte(ch: char) -> Option<u8> {
+    let code = ch as u32;
+    if code < 0x80 {
+        return Some(code as u8);
+    }
+    CP437_HIGH
+        .iter()
+        .position(|point| *point == code)
+        .map(|index| index as u8 + 0x80)
+}
+
+/// Artix's macOS zip stores UTF-8 names (the middle dot in the binary) without
+/// the zip UTF-8 flag. Readers then decode those bytes as CP437. Encoding that
+/// string back to CP437 and reading it as UTF-8 restores the original name. A
+/// name that was really CP437, or that was already UTF-8, is left as decoded.
+fn recovered_zip_name(name: &str) -> String {
+    let mut bytes = Vec::with_capacity(name.len());
+    for ch in name.chars() {
+        match cp437_byte(ch) {
+            Some(byte) => bytes.push(byte),
+            None => return name.to_string(),
+        }
+    }
+    String::from_utf8(bytes).unwrap_or_else(|_| name.to_string())
+}
+
+fn safe_zip_path(name: &str) -> Result<PathBuf, String> {
+    let name = name.replace('\\', "/");
+    let path = Path::new(&name);
+    if path.is_absolute() {
+        return Err(format!("zip entry escapes destination: {name}"));
+    }
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Normal(part) => out.push(part),
+            Component::CurDir => {}
+            _ => return Err(format!("zip entry escapes destination: {name}")),
+        }
+    }
+    if out.as_os_str().is_empty() {
+        return Err(format!("zip entry escapes destination: {name}"));
+    }
+    Ok(out)
 }
 
 fn arrange(pin: &Pin, dest: &Path) -> Result<(), String> {
@@ -582,6 +671,9 @@ fn arrange_appimage(pin: &Pin, dest: &Path) -> Result<(), String> {
 }
 
 fn arrange_single_exe(pin: &Pin, dest: &Path) -> Result<(), String> {
+    if let Some(expected) = &pin.inner_sha256 {
+        lift_nested_windows_zip(pin.arch, dest, expected)?;
+    }
     let published = dest.join(&pin.exe);
     if !published.is_file() {
         let source = sole_file(dest, |path| {
@@ -595,6 +687,54 @@ fn arrange_single_exe(pin: &Pin, dest: &Path) -> Result<(), String> {
         require_sha(&published, sha)?;
     }
     keep_only(dest, &[&pin.exe])
+}
+
+fn nested_windows_suffix(arch: Arch) -> Result<&'static str, String> {
+    match arch {
+        Arch::X86_64 => Ok("windows-x64.zip"),
+        Arch::Aarch64 => Ok("windows-arm64.zip"),
+        Arch::X86 => Err("Artix Ruffle publishes no windows x86 build".into()),
+    }
+}
+
+fn lift_nested_windows_zip(arch: Arch, dest: &Path, expected: &str) -> Result<(), String> {
+    let suffix = nested_windows_suffix(arch)?;
+    let mut files = Vec::new();
+    walk_files(dest, &mut files)?;
+    let matched: Vec<PathBuf> = files
+        .into_iter()
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.ends_with(suffix))
+        })
+        .collect();
+    if matched.len() != 1 {
+        return Err(format!(
+            "expected one {suffix} in {}, found {}",
+            dest.display(),
+            matched.len()
+        ));
+    }
+    let archive = &matched[0];
+    require_sha(archive, expected)?;
+    let bytes = fs::read(archive).map_err(|e| e.to_string())?;
+    let nested = dest.join(".nested");
+    let _ = remove_path(&nested);
+    fs::create_dir_all(&nested).map_err(|e| e.to_string())?;
+    unpack_zip(&bytes, &nested)?;
+    for entry in fs::read_dir(dest).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        if entry.file_name() == ".nested" {
+            continue;
+        }
+        remove_path(&entry.path())?;
+    }
+    for entry in fs::read_dir(&nested).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        fs::rename(entry.path(), dest.join(entry.file_name())).map_err(|e| e.to_string())?;
+    }
+    remove_path(&nested)
 }
 
 fn arrange_macos_cli(pin: &Pin, dest: &Path) -> Result<(), String> {
@@ -907,13 +1047,11 @@ mod tests {
         format!("{byte:02x}").repeat(32)
     }
 
-    fn cli_name(engine: &str, exe: &str) -> &'static str {
+    fn cli_name(engine: &str, _exe: &str) -> &'static str {
         if engine == "flash" {
             "projector"
-        } else if exe.contains("ruffle_desktop") {
-            "artix"
         } else {
-            "stock"
+            "artix"
         }
     }
 
@@ -942,63 +1080,45 @@ mod tests {
                 Os::Linux,
                 Arch::X86_64,
                 Cli::Artix,
-                "ruffle-artix-1.7.0",
+                "ruffle-artix-2.1.0",
                 "ruffle_desktop",
-                "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-linux-x64.zip",
-            ),
-            (
-                Engine::Ruffle,
-                Os::Linux,
-                Arch::X86,
-                Cli::Stock,
-                "ruffle-0.7.1-linux-x86",
-                "ruffle",
-                "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-i686.tar.gz",
-            ),
-            (
-                Engine::Ruffle,
-                Os::Linux,
-                Arch::Aarch64,
-                Cli::Stock,
-                "ruffle-0.7.1-linux-aarch64",
-                "ruffle",
-                "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-aarch64.tar.gz",
+                "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2.1.0-linux-x64.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Windows,
                 Arch::X86_64,
                 Cli::Artix,
-                "ruffle-artix-1.7.0",
-                "ruffle_desktop.exe",
-                "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-windows-x64.zip",
+                "ruffle-artix-2.1.0-x64",
+                "Artix Games Launcher.exe",
+                "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2_1_0-windows.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Windows,
-                Arch::X86,
-                Cli::Stock,
-                "ruffle-0.7.1-windows-x86",
-                "ruffle.exe",
-                "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-windows-x86_32.zip",
+                Arch::Aarch64,
+                Cli::Artix,
+                "ruffle-artix-2.1.0-arm64",
+                "Artix Games Launcher.exe",
+                "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2_1_0-windows.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Macos,
                 Arch::Aarch64,
                 Cli::Artix,
-                "ruffle-artix-1.7.0",
-                "ruffle_desktop",
-                "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-macOS-arm64.zip",
+                "ruffle-artix-2.1.0",
+                "Artix Games Launcher · Ruffle",
+                "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2.1.0-macOS-universal.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Macos,
                 Arch::X86_64,
-                Cli::Stock,
-                "ruffle-0.7.1",
-                "Ruffle.app/Contents/MacOS/ruffle",
-                "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-macos-universal.tar.gz",
+                Cli::Artix,
+                "ruffle-artix-2.1.0",
+                "Artix Games Launcher · Ruffle",
+                "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2.1.0-macOS-universal.zip",
             ),
             (
                 Engine::Flash,
@@ -1065,7 +1185,11 @@ mod tests {
         let apple = catalog
             .select(Engine::Ruffle, Os::Macos, Arch::Aarch64)
             .unwrap();
-        assert!(!apple.url.contains("macos-universal"));
+        let intel = catalog
+            .select(Engine::Ruffle, Os::Macos, Arch::X86_64)
+            .unwrap();
+        assert_eq!(apple.url, intel.url);
+        assert!(apple.url.contains("macOS-universal"));
         assert_eq!(apple.extract, Extract::MacosCli);
         let artix = catalog
             .select(Engine::Ruffle, Os::Linux, Arch::X86_64)
@@ -1073,15 +1197,25 @@ mod tests {
         assert_eq!(artix.extract, Extract::AppImage);
         assert_eq!(
             artix.binary_sha256.as_deref(),
-            Some("9ad71857ea0c3546b7666addea064d14f1bcb214e148b2e34f99c04af2eff2a8")
+            Some("1f07cf7393ec78c5b9c2ab5be505dd4d21e1ffc4320d698c37be0531e55501b0")
         );
+        let windows = catalog
+            .select(Engine::Ruffle, Os::Windows, Arch::X86_64)
+            .unwrap();
+        assert_eq!(windows.extract, Extract::SingleExe);
         assert_eq!(
-            catalog
-                .select(Engine::Ruffle, Os::Windows, Arch::X86_64)
-                .unwrap()
-                .extract,
-            Extract::SingleExe
+            windows.inner_sha256.as_deref(),
+            Some("d294149f521bcc16133b053a50ce21573ab4f35718b621a59320f0585deabc6d")
         );
+        assert!(catalog
+            .select(Engine::Ruffle, Os::Linux, Arch::X86)
+            .is_none());
+        assert!(catalog
+            .select(Engine::Ruffle, Os::Linux, Arch::Aarch64)
+            .is_none());
+        assert!(catalog
+            .select(Engine::Ruffle, Os::Windows, Arch::X86)
+            .is_none());
         assert!(catalog
             .select(Engine::Flash, Os::Linux, Arch::X86)
             .is_none());
@@ -1093,7 +1227,7 @@ mod tests {
             .is_none());
         assert!(catalog
             .select(Engine::Ruffle, Os::Windows, Arch::Aarch64)
-            .is_none());
+            .is_some());
     }
 
     #[test]
@@ -1134,7 +1268,7 @@ mod tests {
             "tar.gz",
             "https://example.com/r.tar.gz",
             &ok_sha,
-            "ruffle",
+            "ruffle_desktop",
         ))
         .is_ok());
         let same_dir = format!(
@@ -1170,7 +1304,7 @@ mod tests {
                     {{"os":"macos","arch":"aarch64","dir":"artix","cli":"artix","kind":"zip","url":"https://example.com/artix.zip","sha256":"{ok_sha}","exe":"ruffle_desktop"}}
                 ]}},
                 {{"engine":"ruffle","version":"1","artifacts":[
-                    {{"os":"macos","arch":"x86_64","also":["aarch64"],"dir":"stock","cli":"stock","kind":"tar.gz","url":"https://example.com/stock.tar.gz","sha256":"{ok_sha}","exe":"ruffle"}}
+                    {{"os":"macos","arch":"x86_64","also":["aarch64"],"dir":"compat","cli":"artix","kind":"tar.gz","url":"https://example.com/compat.tar.gz","sha256":"{ok_sha}","exe":"ruffle_desktop"}}
                 ]}}
             ]}}"#
         );
@@ -1187,7 +1321,7 @@ mod tests {
                 .select(Engine::Ruffle, Os::Macos, Arch::X86_64)
                 .unwrap()
                 .url,
-            "https://example.com/stock.tar.gz"
+            "https://example.com/compat.tar.gz"
         );
         let stock_named_artix = format!(
             r#"{{"players":[{{"engine":"ruffle","version":"1","artifacts":[
@@ -1249,7 +1383,7 @@ mod tests {
             "linux",
             "x86_64",
             "zip",
-            "ruffle",
+            "ruffle_desktop",
         ))
         .is_ok());
         assert!(Catalog::parse(&base(
@@ -1257,7 +1391,7 @@ mod tests {
             "linux",
             "aarch64",
             "tar.gz",
-            "ruffle",
+            "ruffle_desktop",
         ))
         .is_ok());
         assert!(Catalog::parse(
@@ -1340,11 +1474,13 @@ mod tests {
             dir: "player-under-test".into(),
             sha256: sha(0x44),
             binary_sha256: None,
+            inner_sha256: None,
             exe: "player".into(),
+            arch: Arch::X86_64,
             url: "https://example.invalid/player.tar.gz".into(),
             kind: ArchiveKind::TarGz,
             extract: Extract::Archive,
-            cli: Cli::Stock,
+            cli: Cli::Artix,
             version: String::new(),
         }
     }
@@ -1378,7 +1514,9 @@ mod tests {
             dir: "ruffle-artix".into(),
             sha256: sha(0x11),
             binary_sha256: Some(format!("{:x}", Sha256::digest(b"ruffle-bytes"))),
+            inner_sha256: None,
             exe: "ruffle_desktop.exe".into(),
+            arch: Arch::X86_64,
             url: "https://example.invalid/r.zip".into(),
             kind: ArchiveKind::Zip,
             extract: Extract::SingleExe,
@@ -1404,7 +1542,9 @@ mod tests {
             dir: "ruffle-artix".into(),
             sha256: sha(0x12),
             binary_sha256: Some(format!("{:x}", Sha256::digest(b"arm64-ruffle"))),
+            inner_sha256: None,
             exe: "ruffle_desktop".into(),
+            arch: Arch::Aarch64,
             url: "https://example.invalid/r.zip".into(),
             kind: ArchiveKind::Zip,
             extract: Extract::MacosCli,
@@ -1427,7 +1567,9 @@ mod tests {
             dir: "ruffle-artix".into(),
             sha256: sha(0x13),
             binary_sha256: Some(sha(0x99)),
+            inner_sha256: None,
             exe: "ruffle_desktop.exe".into(),
+            arch: Arch::X86_64,
             url: "https://example.invalid/r.zip".into(),
             kind: ArchiveKind::Zip,
             extract: Extract::SingleExe,
@@ -1435,6 +1577,154 @@ mod tests {
             version: String::new(),
         };
         assert!(arrange(&pin, &dir).is_err());
+    }
+
+    #[test]
+    fn single_exe_extract_lifts_the_arch_zip_then_publishes_one_exe() {
+        let dir = scratch("nested-exe");
+        let inner_path = dir.join("ArtixGamesLauncher-Ruffle-2.1.0-windows-x64.zip");
+        {
+            let file = fs::File::create(&inner_path).unwrap();
+            let mut zip = zip::ZipWriter::new(file);
+            zip.start_file(
+                "Artix Games Launcher.exe",
+                zip::write::SimpleFileOptions::default(),
+            )
+            .unwrap();
+            std::io::Write::write_all(&mut zip, b"nested-exe").unwrap();
+            zip.finish().unwrap();
+        }
+        let inner_bytes = fs::read(&inner_path).unwrap();
+        fs::write(dir.join("readme.txt"), b"outer").unwrap();
+        let pin = Pin {
+            dir: "ruffle-artix".into(),
+            sha256: sha(0x21),
+            binary_sha256: Some(format!("{:x}", Sha256::digest(b"nested-exe"))),
+            inner_sha256: Some(format!("{:x}", Sha256::digest(&inner_bytes))),
+            exe: "Artix Games Launcher.exe".into(),
+            arch: Arch::X86_64,
+            url: "https://example.invalid/r.zip".into(),
+            kind: ArchiveKind::Zip,
+            extract: Extract::SingleExe,
+            cli: Cli::Artix,
+            version: String::new(),
+        };
+        arrange(&pin, &dir).unwrap();
+        assert_eq!(
+            fs::read(dir.join("Artix Games Launcher.exe")).unwrap(),
+            b"nested-exe"
+        );
+        assert!(!dir.join("readme.txt").exists());
+        assert!(!inner_path.exists());
+
+        let wrong = scratch("nested-wrong-arch");
+        fs::write(
+            wrong.join("ArtixGamesLauncher-Ruffle-2.1.0-windows-x64.zip"),
+            &inner_bytes,
+        )
+        .unwrap();
+        let mut arm = pin.clone();
+        arm.arch = Arch::Aarch64;
+        arm.inner_sha256 = Some(format!("{:x}", Sha256::digest(&inner_bytes)));
+        let err = arrange(&arm, &wrong).unwrap_err();
+        assert!(err.contains("windows-arm64.zip"), "{err}");
+    }
+
+    #[test]
+    fn macos_cli_extract_flattens_the_merged_binary() {
+        let dir = scratch("macos-merged");
+        let nested = dir.join("Artix Games Launcher · Ruffle.app/Contents/MacOS");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(nested.join("Artix Games Launcher · Ruffle"), b"universal").unwrap();
+        let pin = Pin {
+            dir: "ruffle-artix".into(),
+            sha256: sha(0x22),
+            binary_sha256: Some(format!("{:x}", Sha256::digest(b"universal"))),
+            inner_sha256: None,
+            exe: "Artix Games Launcher · Ruffle".into(),
+            arch: Arch::Aarch64,
+            url: "https://example.invalid/r.zip".into(),
+            kind: ArchiveKind::Zip,
+            extract: Extract::MacosCli,
+            cli: Cli::Artix,
+            version: String::new(),
+        };
+        arrange(&pin, &dir).unwrap();
+        assert_eq!(
+            fs::read(dir.join("Artix Games Launcher · Ruffle")).unwrap(),
+            b"universal"
+        );
+        assert!(!dir.join("Artix Games Launcher · Ruffle.app").exists());
+    }
+
+    #[test]
+    fn a_zip_without_the_utf8_flag_keeps_the_middle_dot_name() {
+        let name = "App.app/Contents/MacOS/Artix Games Launcher · Ruffle";
+        let bytes = stored_zip(name, b"player");
+        let dir = scratch("zip-dot");
+        unpack_zip(&bytes, &dir).unwrap();
+        let published = dir.join(name);
+        assert!(published.is_file(), "{}", published.display());
+        assert_eq!(fs::read(&published).unwrap(), b"player");
+        assert_eq!(
+            recovered_zip_name("Artix Games Launcher ┬╖ Ruffle"),
+            "Artix Games Launcher · Ruffle"
+        );
+        assert_eq!(recovered_zip_name("ruffle_desktop"), "ruffle_desktop");
+    }
+
+    fn stored_zip(name: &str, data: &[u8]) -> Vec<u8> {
+        let name_bytes = name.as_bytes();
+        let crc = crc32(data);
+        let mut out = Vec::new();
+        let local = |out: &mut Vec<u8>| {
+            out.extend_from_slice(&20u16.to_le_bytes());
+            out.extend_from_slice(&0u16.to_le_bytes());
+            out.extend_from_slice(&0u16.to_le_bytes());
+            out.extend_from_slice(&0u16.to_le_bytes());
+            out.extend_from_slice(&0u16.to_le_bytes());
+            out.extend_from_slice(&crc.to_le_bytes());
+            out.extend_from_slice(&(data.len() as u32).to_le_bytes());
+            out.extend_from_slice(&(data.len() as u32).to_le_bytes());
+            out.extend_from_slice(&(name_bytes.len() as u16).to_le_bytes());
+            out.extend_from_slice(&0u16.to_le_bytes());
+        };
+        out.extend_from_slice(b"PK\x03\x04");
+        local(&mut out);
+        out.extend_from_slice(name_bytes);
+        out.extend_from_slice(data);
+        let cd_offset = out.len() as u32;
+        out.extend_from_slice(b"PK\x01\x02");
+        out.extend_from_slice(&20u16.to_le_bytes());
+        local(&mut out);
+        out.extend_from_slice(&0u16.to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes());
+        out.extend_from_slice(&0u32.to_le_bytes());
+        out.extend_from_slice(&0u32.to_le_bytes());
+        out.extend_from_slice(name_bytes);
+        let cd_size = out.len() as u32 - cd_offset;
+        out.extend_from_slice(b"PK\x05\x06");
+        out.extend_from_slice(&0u16.to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes());
+        out.extend_from_slice(&1u16.to_le_bytes());
+        out.extend_from_slice(&1u16.to_le_bytes());
+        out.extend_from_slice(&cd_size.to_le_bytes());
+        out.extend_from_slice(&cd_offset.to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes());
+        out
+    }
+
+    fn crc32(data: &[u8]) -> u32 {
+        let mut crc = 0xffff_ffffu32;
+        for byte in data {
+            crc ^= u32::from(*byte);
+            for _ in 0..8 {
+                let mask = (crc & 1).wrapping_neg();
+                crc = (crc >> 1) ^ (0xedb8_8320 & mask);
+            }
+        }
+        !crc
     }
 
     #[test]

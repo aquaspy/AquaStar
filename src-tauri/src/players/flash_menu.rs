@@ -7,9 +7,9 @@ pub const PLAYER_TITLE: &str = "AquaStar NEO";
 /// Whether a window title should be replaced.
 ///
 /// Flash is matched by window class on Windows. This title check covers the
-/// titles that player still writes after the window exists. Stock Ruffle 0.7.1
-/// has no command-line title, and its window starts as `Ruffle - <movie>`.
-/// Artix's `ruffle_desktop` is passed `--title` instead.
+/// titles that player still writes after the window exists. Artix Ruffle is
+/// passed `--title`. A window that still starts as `Ruffle - <movie>` is
+/// retitled from outside the process.
 pub fn replacement_title(current: &str, flash: bool) -> Option<&'static str> {
     let replace = if flash {
         current.is_empty() || current.starts_with("Adobe Flash Player") || current == PLAYER_TITLE

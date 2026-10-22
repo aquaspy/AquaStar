@@ -24,8 +24,34 @@ function Move-Incoming([string]$incoming, [string]$live, [string]$trash) {
     if (Test-Path -LiteralPath $trash) { Remove-Item -LiteralPath $trash -Recurse -Force }
 }
 
-function Finish-Extract([string]$extract, [string]$exe, [string]$binarySha, [string]$into) {
+function Expand-NestedWindowsZip([string]$arch, [string]$innerSha, [string]$into) {
+    if (-not $innerSha) { return }
+    $suffix = switch ($arch) {
+        "x86_64" { "windows-x64.zip" }
+        "aarch64" { "windows-arm64.zip" }
+        default { throw "Artix Ruffle publishes no windows $arch build" }
+    }
+    $zips = @(Get-ChildItem -LiteralPath $into -Recurse -File | Where-Object { $_.Name.EndsWith($suffix) })
+    if ($zips.Count -ne 1) { throw "expected one $suffix in $into, found $($zips.Count)" }
+    $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $zips[0].FullName).Hash.ToLower()
+    if ($got -ne $innerSha) { throw "inner zip checksum mismatch for $($zips[0].Name)" }
+    $nested = Join-Path $into ".nested"
+    if (Test-Path -LiteralPath $nested) { Remove-Item -LiteralPath $nested -Recurse -Force }
+    New-Item -ItemType Directory -Force -Path $nested | Out-Null
+    & tar.exe -xf $zips[0].FullName -C $nested
+    if ($LASTEXITCODE -ne 0) { throw "tar.exe failed for nested $($zips[0].Name)" }
+    Get-ChildItem -LiteralPath $into -Force | Where-Object { $_.Name -ne ".nested" } | ForEach-Object {
+        Remove-Item -LiteralPath $_.FullName -Recurse -Force
+    }
+    Get-ChildItem -LiteralPath $nested -Force | ForEach-Object {
+        Move-Item -LiteralPath $_.FullName -Destination (Join-Path $into $_.Name)
+    }
+    Remove-Item -LiteralPath $nested -Recurse -Force
+}
+
+function Finish-Extract([string]$extract, [string]$exe, [string]$binarySha, [string]$into, [string]$arch, [string]$innerSha) {
     if ($extract -eq "single-exe") {
+        Expand-NestedWindowsZip $arch $innerSha $into
         $target = Join-Path $into $exe
         if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
             $exes = @(Get-ChildItem -LiteralPath $into -Recurse -File -Filter *.exe)
@@ -61,7 +87,7 @@ function Expand-Player([string]$kind, [string]$url, [string]$archive, [string]$i
     }
 }
 
-function Publish-Player($dir, $sha, $url, $kind, $exe, $extract, $binarySha) {
+function Publish-Player($dir, $sha, $url, $kind, $exe, $extract, $binarySha, $arch, $innerSha) {
     $live = Join-Path $dest $dir
     $incoming = Join-Path $dest ".$dir.incoming"
     $trash = Join-Path $dest ".$dir.trash"
@@ -91,7 +117,7 @@ function Publish-Player($dir, $sha, $url, $kind, $exe, $extract, $binarySha) {
     New-Item -ItemType Directory -Force -Path $incoming | Out-Null
     try {
         Expand-Player $kind $url $temp $incoming
-        Finish-Extract $extract $exe $binarySha $incoming
+        Finish-Extract $extract $exe $binarySha $incoming $arch $innerSha
         Set-Content -Encoding ascii -Path (Join-Path $incoming ".aquastar-pin") -Value "$sha`n" -NoNewline
         if (-not (Test-TreeMatch $incoming $exe $sha)) {
             throw "unpacked $url is missing $exe"
@@ -120,7 +146,9 @@ foreach ($player in $json.players) {
         if ($art.os -ne "windows") { continue }
         if ($art.arch -ne $hostArch -and $also -notcontains $hostArch) { continue }
         if (-not $selected.Contains($art.dir)) { $selected.Add($art.dir) }
-        Publish-Player $art.dir $art.sha256 $art.url $art.kind $art.exe $art.extract $art.binarySha256
+        $inner = ""
+        if ($null -ne $art.innerSha256) { $inner = [string]$art.innerSha256 }
+        Publish-Player $art.dir $art.sha256 $art.url $art.kind $art.exe $art.extract $art.binarySha256 $art.arch $inner
     }
 }
 if ($selected.Count -eq 0) { throw "players.json has no windows artifacts" }

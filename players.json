@@ -2,90 +2,58 @@
   "players": [
     {
       "engine": "ruffle",
-      "version": "0.7.1",
-      "artifacts": [
-        {
-          "os": "linux",
-          "arch": "x86",
-          "dir": "ruffle-0.7.1-linux-x86",
-          "cli": "stock",
-          "kind": "tar.gz",
-          "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-i686.tar.gz",
-          "sha256": "b2228c49fb1164deac58233b81ba53eac50522472c10a092f63c039f650ee572",
-          "exe": "ruffle"
-        },
-        {
-          "os": "linux",
-          "arch": "aarch64",
-          "dir": "ruffle-0.7.1-linux-aarch64",
-          "cli": "stock",
-          "kind": "tar.gz",
-          "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-linux-aarch64.tar.gz",
-          "sha256": "36b222a53062709772c8dcd454fdd1dafa67ab743497e38a0a5d2ed8c0a6597f",
-          "exe": "ruffle"
-        },
-        {
-          "os": "windows",
-          "arch": "x86",
-          "dir": "ruffle-0.7.1-windows-x86",
-          "cli": "stock",
-          "kind": "zip",
-          "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-windows-x86_32.zip",
-          "sha256": "40bafa16ade6e449a4d5405f9ec81afea6246868cefd544534a6856e2d2fddfc",
-          "exe": "ruffle.exe"
-        },
-        {
-          "os": "macos",
-          "arch": "x86_64",
-          "also": ["aarch64"],
-          "dir": "ruffle-0.7.1",
-          "cli": "stock",
-          "kind": "tar.gz",
-          "url": "https://github.com/ruffle-rs/ruffle/releases/download/v0.7.1/ruffle-0.7.1-macos-universal.tar.gz",
-          "sha256": "7a86a09b0ca1d5756abcbb093108265019d77edad79e91c98689126c940bea4e",
-          "exe": "Ruffle.app/Contents/MacOS/ruffle"
-        }
-      ]
-    },
-    {
-      "engine": "ruffle",
-      "version": "1.7.0",
+      "version": "2.1.0",
       "artifacts": [
         {
           "os": "linux",
           "arch": "x86_64",
-          "dir": "ruffle-artix-1.7.0",
+          "dir": "ruffle-artix-2.1.0",
           "cli": "artix",
           "kind": "zip",
           "extract": "appimage",
-          "url": "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-linux-x64.zip",
-          "sha256": "961dec3632b11d8f49d2b38e6368aa39b05a179bac047416ddb1d4f5a1cf17db",
-          "binarySha256": "9ad71857ea0c3546b7666addea064d14f1bcb214e148b2e34f99c04af2eff2a8",
+          "url": "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2.1.0-linux-x64.zip",
+          "sha256": "b78874cc31fbd20b6a2ca862bf8eabe5d102b3d7d458f23ee50ffd703018b87f",
+          "binarySha256": "1f07cf7393ec78c5b9c2ab5be505dd4d21e1ffc4320d698c37be0531e55501b0",
           "exe": "ruffle_desktop"
         },
         {
           "os": "windows",
           "arch": "x86_64",
-          "dir": "ruffle-artix-1.7.0",
+          "dir": "ruffle-artix-2.1.0-x64",
           "cli": "artix",
           "kind": "zip",
           "extract": "single-exe",
-          "url": "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-windows-x64.zip",
-          "sha256": "0fa3d531afc04611645019af94de5e85d800cfd482f7b65d74328ca70f6f12ae",
-          "binarySha256": "1ee60154a491bb61c069a7dbd7de6419b894457d50b44a9611a21eced3d27f09",
-          "exe": "ruffle_desktop.exe"
+          "url": "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2_1_0-windows.zip",
+          "sha256": "fd0c3d347c3585fbaeec5bed602fd3152fd6974fd21a1e1f9527df7116e5cde2",
+          "innerSha256": "d294149f521bcc16133b053a50ce21573ab4f35718b621a59320f0585deabc6d",
+          "binarySha256": "e4c170c6f2e90addf9a17787fc56c1576dcda060cfe052421946fcfc19cc2127",
+          "exe": "Artix Games Launcher.exe"
+        },
+        {
+          "os": "windows",
+          "arch": "aarch64",
+          "dir": "ruffle-artix-2.1.0-arm64",
+          "cli": "artix",
+          "kind": "zip",
+          "extract": "single-exe",
+          "url": "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2_1_0-windows.zip",
+          "sha256": "fd0c3d347c3585fbaeec5bed602fd3152fd6974fd21a1e1f9527df7116e5cde2",
+          "innerSha256": "3b418e709b5336876edc85c9ccd35bd5e4924f5cbd960dae823bdaa33d0f9230",
+          "binarySha256": "ef86805424c18f8c1b8cc6b820f7b3feb644ffa2cade0823c7ff41139ff0bd69",
+          "exe": "Artix Games Launcher.exe"
         },
         {
           "os": "macos",
           "arch": "aarch64",
-          "dir": "ruffle-artix-1.7.0",
+          "also": ["x86_64"],
+          "dir": "ruffle-artix-2.1.0",
           "cli": "artix",
           "kind": "zip",
           "extract": "macos-cli",
-          "url": "https://chaoslabs.artix.com/Ruffle/1.7.0/ArtixGamesLauncher-Ruffle-1.7.0-macOS-arm64.zip",
-          "sha256": "ab859ad5ae942eef35399dd376d46bcc07dd555c8a388b0bc22c436dc10546c7",
-          "binarySha256": "bfbead364812dd3c82c22a4829e86ecc13022f093468e301a6362b5c8905a3e4",
-          "exe": "ruffle_desktop"
+          "url": "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2.1.0-macOS-universal.zip",
+          "sha256": "9b4ebd29d5602f32470acfd18d7d58d79dc246cc6ccc61245396d2d424afdc0c",
+          "binarySha256": "97b10f4ce2e8a6b031e107e78972b6cb10314adfc09e110ac88ea0f651e05edc",
+          "exe": "Artix Games Launcher · Ruffle"
         }
       ]
     },

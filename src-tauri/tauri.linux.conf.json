@@ -10,6 +10,7 @@
       "deb": {
         "depends": [
           "libgtk2.0-0t64 | libgtk2.0-0",
+          "libstdc++6",
           "libnss3",
           "libxkbcommon-x11-0",
           "libssl3",

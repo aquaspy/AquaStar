@@ -161,6 +161,12 @@ pub fn probably_direct(cli: &Cli, has_saved: bool) -> bool {
     }
 }
 
+/// `--ruffle0.7` and `--ruffle0.7.1` asked for the removed stock build. That
+/// request now launches the Artix pin that ships.
+fn retired_stock_ruffle(wanted: &str) -> bool {
+    wanted == "0.7" || wanted == "0.7.1" || wanted.starts_with("0.7.")
+}
+
 pub fn decide(
     cli: &Cli,
     saved: Option<(&str, &str)>,
@@ -273,6 +279,11 @@ pub fn decide(
             Some(format!("{} is not available for {} on this system.", engine_name(request.engine), game.name))
         } else {
             match (&request.version, &shipped) {
+                (Some(wanted), Some(_actual))
+                    if request.engine == Engine::Ruffle && retired_stock_ruffle(wanted) =>
+                {
+                    None
+                }
                 (Some(wanted), Some(actual)) if !cli::version_matches(actual, wanted) => Some(format!(
                     "{} {wanted} is not available here; AquaStar NEO ships {} {actual}.",
                     engine_name(request.engine),
@@ -466,8 +477,8 @@ mod tests {
     #[test]
     fn naming_a_plugin_opens_its_default_game_with_the_requested_player() {
         assert_eq!(
-            run("--aqw --no-launcher --ruffle1.7", None),
-            direct("adventure-quest-worlds", "aqw", Some((Engine::Ruffle, Some("1.7"))))
+            run("--aqw --no-launcher --ruffle2.1", None),
+            direct("adventure-quest-worlds", "aqw", Some((Engine::Ruffle, Some("2.1"))))
         );
         assert_eq!(run("--aqw --no-launcher", None), direct("adventure-quest-worlds", "aqw", None));
         assert_eq!(
@@ -483,7 +494,7 @@ mod tests {
         assert_eq!(page.direct, None);
         assert_eq!(page.show_plugin.as_deref(), Some("adventure-quest-worlds"));
         assert_eq!(page.notice, None);
-        let hinted = run("--aqw --ruffle1.7", None);
+        let hinted = run("--aqw --ruffle2.1", None);
         assert_eq!(hinted.direct, None);
         assert!(hinted.notice.unwrap().contains("--no-launcher"));
         assert_eq!(run("--aqw --game=dragonfable", Some(("adventure-quest-worlds", "aqw"))).direct, None);
@@ -524,6 +535,11 @@ mod tests {
         let wrong = run("--aqw --no-launcher --ruffle9.9", None);
         assert_eq!(wrong.direct, None);
         assert!(wrong.notice.unwrap().contains("9.9 is not available"));
+        let previous = run("--aqw --no-launcher --ruffle1.7", None);
+        assert_eq!(previous.direct, None);
+        assert!(previous.notice.unwrap().contains("1.7 is not available"));
+        assert!(run("--aqw --no-launcher --ruffle0.7", None).direct.is_some());
+        assert!(run("--aqw --no-launcher --ruffle0.7.1", None).direct.is_some());
         let not_offered = run("--arcade --game=plain --no-launcher --ruffle", None);
         assert_eq!(not_offered.direct, None, "the game only lists Flash Player");
         assert!(not_offered.notice.unwrap().contains("Ruffle is not available for Plain"));

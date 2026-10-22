@@ -151,10 +151,15 @@ pub fn profile_preferences(files: &ProfileFiles) -> Result<ProfilePreferences, S
     if files.canonical_settings.exists() {
         let text = fs::read_to_string(&files.canonical_settings)
             .map_err(|error| format!("Could not read AquaStar NEO settings: {error}"))?;
-        let canonical: Value = serde_json::from_str(&text)
+        let mut canonical: Value = serde_json::from_str(&text)
             .map_err(|error| format!("Could not read AquaStar NEO settings: {error}"))?;
         if !canonical.is_object() {
             return Err("AquaStar NEO settings must contain a JSON object".into());
+        }
+        if let Some(map) = canonical.as_object_mut() {
+            if crate::ruffle::migrate_retired_ruffle_map(map) {
+                let _ = write_electron_atomic(&files.canonical_settings, &canonical);
+            }
         }
     }
     let values = merge_settings(&files.settings_files);
@@ -216,6 +221,13 @@ pub fn profile_preferences(files: &ProfileFiles) -> Result<ProfilePreferences, S
         new_instance_engine: values
             .get("newInstanceEngine")
             .and_then(Value::as_str)
+            .map(|engine| {
+                if crate::ruffle::retired_stock_marker(engine) {
+                    "ruffle"
+                } else {
+                    engine
+                }
+            })
             .filter(|engine| ["automatic", "ruffle", "flash"].contains(engine))
             .unwrap_or("automatic")
             .to_string(),
@@ -1177,6 +1189,21 @@ mod tests {
             ProfilePreferenceChange::NewInstanceEngine("vulkan".into())
         )
         .is_err());
+    }
+
+    #[test]
+    fn a_saved_stock_new_instance_engine_becomes_ruffle() {
+        let files = scratch("new-instance-stock");
+        let source = r#"{"newInstanceEngine":"stock","customUrl":"https://cdn.example/game.swf","untouched":true}"#;
+        fs::write(&files.canonical_settings, source).unwrap();
+        let loaded = profile_preferences(&files).unwrap();
+        assert_eq!(loaded.new_instance_engine, "ruffle");
+        assert_eq!(loaded.custom_url, "https://cdn.example/game.swf");
+        let text = fs::read_to_string(&files.canonical_settings).unwrap();
+        assert!(text.contains("\"newInstanceEngine\": \"ruffle\""));
+        assert!(text.contains("https://cdn.example/game.swf"));
+        assert!(text.contains("\"untouched\": true"));
+        assert!(!text.contains("stock"));
     }
 
     #[test]

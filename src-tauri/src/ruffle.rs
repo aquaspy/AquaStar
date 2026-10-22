@@ -1,13 +1,13 @@
 //! Ruffle desktop options shared by the launcher UI and the player process.
 //!
-//! Ruffle 0.7.1's desktop CLI (`desktop/src/cli.rs`, `render/wgpu/src/clap.rs`,
-//! `render/src/quality.rs`) takes:
+//! Artix Ruffle 2.1.0's desktop CLI takes:
 //! - `--quality low|medium|high` (high is Ruffle's own default: 4x MSAA; low is no anti-aliasing)
 //! - `--graphics default|vulkan|metal|dx12|gl`
+//! - `--title`
 //!
-//! Artix Experimental Launcher 1.7.0's `ruffle_desktop` accepts those same
-//! values, plus `--title`. Smooth Motion (`frame_interpolation`) is a saved
-//! context-menu preference in that build, not a command-line flag.
+//! `--performance-mode` exists and defaults to `auto`. AquaStar NEO does not
+//! pass it. Smooth Motion (`frame_interpolation`) is a saved context-menu
+//! preference in that build, not a command-line flag.
 //!
 //! Automatic (`default`) lets Ruffle choose the backend on every platform.
 //! Crash recovery retries once with OpenGL on Linux/Windows or Metal on macOS.
@@ -70,7 +70,7 @@ pub struct RuffleSettings {
     pub graphics: RuffleGraphics,
 }
 
-/// OpenGL on Linux and Windows. Metal on macOS. The v0.7.1 Mac binary links Metal and does not link OpenGL.
+/// OpenGL on Linux and Windows. Metal on macOS. The Artix Mac binary links Metal.
 pub fn safe_graphics(platform: &str) -> RuffleGraphics {
     if platform == "macos" {
         RuffleGraphics::Metal
@@ -244,15 +244,58 @@ impl RuffleSettings {
     }
 }
 
+/// A saved choice that named the removed stock Ruffle build.
+pub fn retired_stock_marker(value: &str) -> bool {
+    matches!(
+        value,
+        "stock"
+            | "ruffle-stock"
+            | "ruffle_stock"
+            | "0.7"
+            | "0.7.1"
+            | "ruffle-0.7"
+            | "ruffle0.7"
+            | "ruffle-0.7.1"
+            | "ruffle0.7.1"
+    )
+}
+
+/// Rewrite retired stock markers to Artix's engine id. Other keys stay. Returns
+/// whether anything changed. Callers that cannot parse the file must not write.
+pub fn migrate_retired_ruffle_map(map: &mut serde_json::Map<String, serde_json::Value>) -> bool {
+    let mut changed = false;
+    if let Some(serde_json::Value::String(engine)) = map.get_mut("newInstanceEngine") {
+        if retired_stock_marker(engine) {
+            *engine = "ruffle".to_string();
+            changed = true;
+        }
+    }
+    if let Some(serde_json::Value::Object(engines)) = map.get_mut("gameEngine") {
+        for value in engines.values_mut() {
+            if let serde_json::Value::String(engine) = value {
+                if retired_stock_marker(engine) {
+                    *engine = "ruffle".to_string();
+                    changed = true;
+                }
+            }
+        }
+    }
+    changed
+}
+
 fn settings_object(dir: &Path) -> serde_json::Map<String, serde_json::Value> {
-    fs::read_to_string(dir.join(SETTINGS_FILE))
-        .ok()
-        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
-        .and_then(|value| match value {
-            serde_json::Value::Object(map) => Some(map),
-            _ => None,
-        })
-        .unwrap_or_default()
+    let text = match fs::read_to_string(dir.join(SETTINGS_FILE)) {
+        Ok(text) => text,
+        Err(_) => return serde_json::Map::new(),
+    };
+    let mut map = match serde_json::from_str::<serde_json::Value>(&text) {
+        Ok(serde_json::Value::Object(map)) => map,
+        _ => return serde_json::Map::new(),
+    };
+    if migrate_retired_ruffle_map(&mut map) {
+        let _ = write_settings(dir, &map);
+    }
+    map
 }
 
 fn write_settings(
@@ -768,6 +811,54 @@ mod tests {
 
         fs::write(dir.join(SETTINGS_FILE), r#"{"hideLauncher":"yes"}"#).unwrap();
         assert!(!load_hide_launcher(&dir));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_saved_stock_ruffle_choice_becomes_ruffle_and_other_settings_stay() {
+        let dir = std::env::temp_dir().join(format!(
+            "aquastar-lite-stock-migrate-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let source = r#"{
+  "hideLauncher": true,
+  "ruffleQuality": "low",
+  "customNote": {"keep": 1},
+  "newInstanceEngine": "0.7.1",
+  "gameEngine": {
+    "adventure-quest-worlds/aqw": "stock",
+    "adventure-quest-worlds/dragonfable": "ruffle-0.7.1",
+    "other/game": "flash"
+  }
+}"#;
+        fs::write(dir.join(SETTINGS_FILE), source).unwrap();
+        assert_eq!(
+            load_game_engine(&dir, "adventure-quest-worlds/aqw").as_deref(),
+            Some("ruffle")
+        );
+        assert_eq!(
+            load_game_engine(&dir, "adventure-quest-worlds/dragonfable").as_deref(),
+            Some("ruffle")
+        );
+        assert_eq!(load_game_engine(&dir, "other/game").as_deref(), Some("flash"));
+        let text = fs::read_to_string(dir.join(SETTINGS_FILE)).unwrap();
+        assert!(text.contains("\"hideLauncher\": true"));
+        assert!(text.contains("\"ruffleQuality\": \"low\""));
+        assert!(text.contains("\"keep\": 1"));
+        assert!(text.contains("\"newInstanceEngine\": \"ruffle\""));
+        assert!(!text.contains("stock"));
+        assert!(!text.contains("0.7.1"));
+        assert_eq!(RuffleSettings::load(&dir).quality, RuffleQuality::Low);
+
+        let broken = "{not json";
+        fs::write(dir.join(SETTINGS_FILE), broken).unwrap();
+        assert_eq!(load_game_engine(&dir, "adventure-quest-worlds/aqw"), None);
+        assert_eq!(fs::read_to_string(dir.join(SETTINGS_FILE)).unwrap(), broken);
+        fs::write(dir.join(SETTINGS_FILE), "[]").unwrap();
+        assert_eq!(load_game_engine(&dir, "adventure-quest-worlds/aqw"), None);
+        assert_eq!(fs::read_to_string(dir.join(SETTINGS_FILE)).unwrap(), "[]");
         let _ = fs::remove_dir_all(&dir);
     }
 }

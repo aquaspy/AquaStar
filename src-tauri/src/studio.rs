@@ -191,7 +191,7 @@ fn materialize(app: &tauri::AppHandle, renderer: Renderer) -> Result<PathBuf, St
 }
 
 fn player_arguments(
-    artix: bool,
+    _artix: bool,
     pairs: &[(String, String)],
     swf: &Path,
     width: u32,
@@ -219,9 +219,7 @@ fn player_arguments(
         ]
         .map(str::to_string),
     );
-    if artix {
-        args.extend(["--title".to_string(), "AquaStar NEO Char Page Studio".to_string()]);
-    }
+    args.extend(["--title".to_string(), "AquaStar NEO Char Page Studio".to_string()]);
     args.push(swf.display().to_string());
     args
 }
@@ -737,8 +735,8 @@ mod tests {
         assert!(args.contains(&"--dummy-external-interface".to_string()));
         assert!(args.windows(2).any(|w| w == ["--title", "AquaStar NEO Char Page Studio"]));
         assert_eq!(args.last().unwrap(), "C:/x/scene.swf");
-        let stock = player_arguments(false, &pairs, Path::new("s.swf"), 715, 455, &settings);
-        assert!(!stock.contains(&"--title".to_string()), "stock Ruffle 0.7.1 rejects --title");
+        let also = player_arguments(false, &pairs, Path::new("s.swf"), 715, 455, &settings);
+        assert!(also.windows(2).any(|w| w == ["--title", "AquaStar NEO Char Page Studio"]));
     }
 
     #[test]

@@ -72,7 +72,7 @@ impl Engine {
         }
     }
 
-    /// Version of the player AquaStar NEO ships for this system (`1.7.0`, `32.0.0.465`).
+    /// Version of the player AquaStar NEO ships for this system (`2.1.0`, `32.0.0.465`).
     pub fn version_on(&self, os: catalog::Os, arch: catalog::Arch) -> Option<String> {
         catalog::Catalog::pinned()
             .select(*self, os, arch)
@@ -130,7 +130,7 @@ impl LaunchRecipe {
         save_directory: Option<&Path>,
     ) -> Result<Self, String> {
         match (engine, cli) {
-            (Engine::Ruffle, catalog::Cli::Artix | catalog::Cli::Stock) => {
+            (Engine::Ruffle, catalog::Cli::Artix) => {
                 Ok(Self::Ruffle(RuffleLaunch {
                     exe: exe.to_path_buf(),
                     swf: swf.to_string(),
@@ -960,8 +960,8 @@ impl Players {
 }
 
 /// Start a Ruffle window of this system's pinned build with arguments the caller built, outside
-/// the game tracking (no presence, no relaunch). `build` is told whether it is Artix's build, which
-/// accepts `--title`.
+/// the game tracking (no presence, no relaunch). `build` is told that the pin is Artix's build,
+/// which accepts `--title`. Ruffle pins are Artix.
 pub(crate) fn start_ruffle(
     roots: &PlayerRoots,
     build: impl FnOnce(bool) -> Vec<String>,
@@ -1003,7 +1003,7 @@ fn argv(
     let arg = movie.player_arg();
     match cli {
         catalog::Cli::Projector => vec![arg],
-        catalog::Cli::Stock | catalog::Cli::Artix => {
+        catalog::Cli::Artix => {
             let mut args = ruffle::ruffle_args(&arg, settings, std::env::consts::OS);
             if let Some(dir) = save_directory {
                 let movie_arg = args.pop().expect("ruffle args end with the movie");
@@ -1298,20 +1298,24 @@ mod pin_tests {
         );
         assert_eq!(
             Engine::preferred_for(catalog::Os::Linux, catalog::Arch::Aarch64),
-            Some(Engine::Ruffle)
+            None
         );
         assert_eq!(
             Engine::preferred_for(catalog::Os::Linux, catalog::Arch::X86),
-            Some(Engine::Ruffle)
+            None
         );
         assert_eq!(
             Engine::preferred_for(catalog::Os::Windows, catalog::Arch::X86),
-            Some(Engine::Ruffle)
+            Some(Engine::Flash)
         );
         assert_eq!(
             Engine::preferred_for(catalog::Os::Windows, catalog::Arch::Aarch64),
-            None
+            Some(Engine::Ruffle)
         );
+        assert!(!Engine::Ruffle.supported_on(catalog::Os::Linux, catalog::Arch::Aarch64));
+        assert!(!Engine::Ruffle.supported_on(catalog::Os::Linux, catalog::Arch::X86));
+        assert!(!Engine::Ruffle.supported_on(catalog::Os::Windows, catalog::Arch::X86));
+        assert!(Engine::Ruffle.supported_on(catalog::Os::Windows, catalog::Arch::Aarch64));
         assert!(Engine::Flash.supported_on(catalog::Os::Macos, catalog::Arch::Aarch64));
         assert!(Engine::Flash.supported_on(catalog::Os::Macos, catalog::Arch::X86_64));
         assert!(Engine::Ruffle.supported_on(catalog::Os::Linux, catalog::Arch::X86_64));
@@ -1644,7 +1648,7 @@ mod tests {
             .launch_at(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "movie.swf",
                 &explicit_vulkan,
                 None,
@@ -1702,7 +1706,7 @@ mod tests {
             .launch_at(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "movie.swf",
                 &automatic_low(),
                 None,
@@ -1735,7 +1739,7 @@ mod tests {
             .launch_at(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "movie.swf",
                 &automatic_low(),
                 None,
@@ -1774,7 +1778,7 @@ mod tests {
             .launch_at(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "movie.swf",
                 &automatic_low(),
                 None,
@@ -1852,7 +1856,7 @@ mod tests {
             .launch_at(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "movie.swf",
                 &automatic_low(),
                 None,
@@ -1986,7 +1990,7 @@ mod tests {
             .launch_at(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "first.swf",
                 &settings,
                 None,
@@ -1996,7 +2000,7 @@ mod tests {
             .launch_at_with_mode(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "second.swf",
                 &settings,
                 None,
@@ -2092,7 +2096,7 @@ mod tests {
             .launch_at(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "movie.swf",
                 &automatic_low(),
                 None,
@@ -2128,7 +2132,7 @@ mod tests {
             .launch_at(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "movie.swf",
                 &automatic_low(),
                 None,
@@ -2165,7 +2169,7 @@ mod tests {
             .launch_at(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "ruffle.swf",
                 &RuffleSettings::default(),
                 None,
@@ -2212,7 +2216,7 @@ mod tests {
             .launch_at(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "movie.swf",
                 &settings,
                 None,
@@ -2247,7 +2251,7 @@ mod tests {
             .launch_at(
                 &exe,
                 Engine::Ruffle,
-                catalog::Cli::Stock,
+                catalog::Cli::Artix,
                 "movie.swf",
                 &automatic_low(),
                 Some(&saves),
@@ -2299,26 +2303,15 @@ mod save_directory_tests {
     }
 
     fn omits_companion(args: &[String]) {
-        for flag in ["--title", "--companion", "--companion-name"] {
+        for flag in ["--companion", "--companion-name"] {
             assert!(!args.iter().any(|arg| arg == flag), "{flag} in {args:?}");
         }
     }
 
     #[test]
-    fn stock_argv_omits_title_and_companion() {
+    fn artix_argv_sets_the_title_and_omits_companion() {
         let settings = low_automatic();
         let movie = primary_movie();
-        let stock = argv(
-            &catalog::Cli::Stock,
-            &movie,
-            &settings,
-            Some(Path::new(SAVE)),
-        );
-        assert!(stock
-            .windows(2)
-            .any(|pair| pair == ["--save-directory", SAVE]));
-        assert_eq!(stock.last().map(String::as_str), Some(SWF));
-        omits_companion(&stock);
         let artix = argv(
             &catalog::Cli::Artix,
             &movie,
@@ -2333,8 +2326,7 @@ mod save_directory_tests {
             .position(|pair| pair == ["--title", "AquaStar NEO"])
             .expect("artix title");
         assert_eq!(artix.get(title_at + 2).map(String::as_str), Some(SWF));
-        assert!(!artix.iter().any(|arg| arg == "--companion"));
-        assert!(!artix.iter().any(|arg| arg == "--companion-name"));
+        omits_companion(&artix);
         assert_eq!(
             argv(
                 &catalog::Cli::Projector,
@@ -2351,7 +2343,7 @@ mod save_directory_tests {
         let settings = low_automatic();
         let movie = primary_movie();
         assert_eq!(
-            argv(&catalog::Cli::Stock, &movie, &settings, None),
+            argv(&catalog::Cli::Artix, &movie, &settings, None),
             vec![
                 "--tcp-connections".to_string(),
                 "allow".to_string(),
@@ -2364,12 +2356,14 @@ mod save_directory_tests {
                 "--graphics".to_string(),
                 "default".to_string(),
                 "--no-gui".to_string(),
+                "--title".to_string(),
+                "AquaStar NEO".to_string(),
                 SWF.to_string(),
             ]
         );
         assert_eq!(
             argv(
-                &catalog::Cli::Stock,
+                &catalog::Cli::Artix,
                 &movie,
                 &settings,
                 Some(Path::new(SAVE))
@@ -2388,6 +2382,8 @@ mod save_directory_tests {
                 "--no-gui".to_string(),
                 "--save-directory".to_string(),
                 SAVE.to_string(),
+                "--title".to_string(),
+                "AquaStar NEO".to_string(),
                 SWF.to_string(),
             ]
         );
