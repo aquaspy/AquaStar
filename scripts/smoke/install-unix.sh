@@ -22,7 +22,11 @@ case "$(uname -s)" in
     if apt-cache show libasound2t64 >/dev/null 2>&1; then
       alsa=libasound2t64
     fi
-    sudo apt-get install -y xvfb openbox scrot xdotool "$gtk" libnss3 libegl1 libxkbcommon-x11-0 libgl1-mesa-dri fonts-liberation libssl3 "$alsa" libfontconfig1
+    pipewire=libpipewire-0.3-0
+    if apt-cache show libpipewire-0.3-0t64 >/dev/null 2>&1; then
+      pipewire=libpipewire-0.3-0t64
+    fi
+    sudo apt-get install -y xvfb openbox scrot xdotool "$gtk" libnss3 libegl1 libxkbcommon-x11-0 libgl1-mesa-dri fonts-liberation libssl3 "$alsa" "$pipewire" libfontconfig1
     if [ "$pkg" = deb ]; then
       sudo apt-get install -y ./dist/*.deb
       bin=$(command -v aquastar-neo)

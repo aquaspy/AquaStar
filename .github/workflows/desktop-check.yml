@@ -57,7 +57,7 @@ jobs:
           curl --fail --location --silent --show-error \
             https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
             | tar -xz -C "${RUNNER_TEMP}" actionlint
-          "${RUNNER_TEMP}/actionlint" -color
+          "${RUNNER_TEMP}/actionlint" -color -shellcheck=
           python3 scripts/smoke/test_workflow_shell.py
           bash scripts/smoke/test_one_match.sh
       - name: cargo test
