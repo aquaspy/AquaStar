@@ -147,8 +147,12 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: ./scripts/fetch-players.ps1
+      # On macOS, tauri-action would upload the .app tarball before
+      # finish-macos-app.sh re-signs the nested players and media helpers. So the
+      # macOS job only builds here, and the finished .dmg is uploaded after that
+      # script runs.
       - name: Build and publish release (tag push)
-        if: needs.gate.outputs.publish == 'true'
+        if: needs.gate.outputs.publish == 'true' && matrix.platform != 'macos-latest'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -176,9 +180,10 @@ jobs:
             gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false
           fi
       # Manual runs only build and upload workflow artifacts, so the bundles can be
-      # tested before tagging. They never create or touch a release.
-      - name: Build only (manual run)
-        if: needs.gate.outputs.publish != 'true'
+      # tested before tagging. They never create or touch a release. The macOS job
+      # of a tag push also builds here, so nothing is uploaded before it is signed.
+      - name: Build only (manual run, or macOS)
+        if: needs.gate.outputs.publish != 'true' || matrix.platform == 'macos-latest'
         uses: tauri-apps/tauri-action@v0
         with:
           projectPath: '.'
