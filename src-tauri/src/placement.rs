@@ -480,6 +480,9 @@ mod tests {
         }
         assert!(yml.contains("actions/upload-artifact@v4"));
         assert!(yml.contains("AQUASTAR_LITE_SMOKE"));
+        assert!(yml.contains("player-probe"));
+        assert!(yml.contains("scripts/smoke/probe-player.py"));
+        assert!(yml.contains("players.json"));
         assert_eq!(yml.matches("os: macos-latest").count(), 2);
         assert!(!yml.contains("electron_mac.py"));
         let unix = include_str!("../../scripts/smoke/install-unix.sh");
@@ -573,6 +576,9 @@ mod tests {
         assert!(ps.contains("$art.os"));
         assert!(ps.contains("$art.also"));
         assert!(ps.contains("$hostArch"));
+        assert!(ps.contains("innerSha256"));
+        assert!(ps.contains("windows-x64.zip"));
+        assert!(ps.contains("windows-arm64.zip"));
     }
 
     #[test]

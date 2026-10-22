@@ -26,6 +26,9 @@ on:
     paths:
       - .github/workflows/desktop-smoke.yml
       - scripts/smoke/**
+      - scripts/fetch-players.sh
+      - scripts/fetch-players.ps1
+      - players.json
 
 concurrency:
   group: desktop-smoke-${{ github.ref }}
@@ -151,3 +154,31 @@ jobs:
           name: smoke-${{ matrix.os }}-${{ matrix.package }}-ruffle${{ matrix.flash_arch && format('-{0}', matrix.flash_arch) || '' }}
           path: smoke-out/ruffle/
           if-no-files-found: warn
+
+  # No neo-v release exists yet, so the artifact smoke job above is skipped.
+  # This job still downloads the host pin and runs the real binary, including
+  # the macOS universal binary on Apple silicon and Intel.
+  player-probe:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest, macos-15-intel]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch the pinned players
+        shell: bash
+        run: |
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            pwsh -File scripts/fetch-players.ps1
+          else
+            bash scripts/fetch-players.sh
+          fi
+      - name: Probe Artix Ruffle
+        shell: bash
+        run: python3 scripts/smoke/probe-player.py
