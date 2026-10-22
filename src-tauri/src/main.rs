@@ -1123,6 +1123,18 @@ fn spawn_play(app: &tauri::AppHandle, movie: MovieKind) {
     });
 }
 
+fn extension_bindings(
+    book: &std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String>,
+) -> Vec<(tauri_plugin_global_shortcut::Shortcut, String)> {
+    let mut kept: Vec<_> = book
+        .iter()
+        .filter(|(_, id)| id.starts_with("extension:"))
+        .map(|(shortcut, id)| (*shortcut, id.clone()))
+        .collect();
+    kept.sort_by(|left, right| left.1.cmp(&right.1));
+    kept
+}
+
 fn register_saved_shortcuts(app: &tauri::AppHandle) {
     register_saved_shortcuts_inner(app, None);
 }
@@ -1143,6 +1155,7 @@ fn register_saved_shortcuts_inner(app: &tauri::AppHandle, trace: Option<&mut Hid
             .lock()
             .unwrap_or_else(|e| e.into_inner()),
     );
+    let kept_extensions = extension_bindings(&old);
     for shortcut in old.keys() {
         let _ = app.global_shortcut().unregister(*shortcut);
     }
@@ -1204,6 +1217,22 @@ fn register_saved_shortcuts_inner(app: &tauri::AppHandle, trace: Option<&mut Hid
                         bind.id
                     );
                 }
+            }
+        }
+    }
+    for (shortcut, id) in kept_extensions {
+        if map.contains_key(&shortcut) {
+            eprintln!(
+                "aquastar-neo: extension shortcut for {id} was not registered (already reserved)"
+            );
+            continue;
+        }
+        match app.global_shortcut().register(shortcut) {
+            Ok(()) => {
+                map.insert(shortcut, id);
+            }
+            Err(err) => {
+                eprintln!("aquastar-neo: extension shortcut for {id} was not registered ({err})");
             }
         }
     }
@@ -1301,9 +1330,7 @@ fn main() {
     let extension_state = extensions::Extensions::load(extension_root);
     let extension_sources = extension_state.sources();
     let builder = tauri::Builder::default();
-    #[cfg(not(target_os = "linux"))]
-    let builder = builder.plugin(tauri_plugin_notification::init());
-    let app = extensions::runtime::configure(builder, extension_sources)
+    let builder = extensions::runtime::configure(builder, extension_sources)
         .manage(extension_state)
         .manage(menu_visibility::Visibility::default())
         .on_page_load(|webview, _| menu_visibility::apply_to_window(webview))
@@ -1318,7 +1345,10 @@ fn main() {
             } else {
                 startup::show_main(app);
             }
-        }))
+        }));
+    #[cfg(not(target_os = "linux"))]
+    let builder = builder.plugin(tauri_plugin_notification::init());
+    let app = builder
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, shortcut, event| {
@@ -1518,6 +1548,19 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_shortcut_refresh_keeps_extension_bindings_and_drops_app_bindings() {
+        let extension = shortcut_from(&profile::parse_accelerator("Alt+Shift+E").unwrap()).unwrap();
+        let screenshot = shortcut_from(&profile::parse_accelerator("F2").unwrap()).unwrap();
+        let mut book = std::collections::HashMap::new();
+        book.insert(screenshot, "sshot".into());
+        book.insert(extension, "extension:demo:open".into());
+        assert_eq!(
+            extension_bindings(&book),
+            vec![(extension, "extension:demo:open".into())]
+        );
+    }
 
     #[test]
     fn restart_admission_is_exclusive_until_the_guard_drops() {
