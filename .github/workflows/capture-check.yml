@@ -70,6 +70,10 @@ jobs:
             : > /tmp/aquastar-capture-wm.log
             openbox >/tmp/aquastar-capture-wm.log 2>&1 &
             wm_pid=$!
+            if ! bash scripts/smoke/wait-for-wm.sh; then
+              cat /tmp/aquastar-capture-wm.log >&2 || true
+              exit 1
+            fi
             if python scripts/smoke/capture.py \
               --binary src-tauri/target/debug/examples/capture-probe \
               --encoder src-tauri/media/ffmpeg-linux-x86_64 \
