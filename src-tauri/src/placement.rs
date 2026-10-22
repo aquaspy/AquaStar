@@ -579,6 +579,7 @@ mod tests {
         assert!(ps.contains("innerSha256"));
         assert!(ps.contains("windows-x64.zip"));
         assert!(ps.contains("windows-arm64.zip"));
+        assert!(ps.contains("System32\\tar.exe"));
     }
 
     #[test]

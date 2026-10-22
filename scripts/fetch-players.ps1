@@ -38,7 +38,7 @@ function Expand-NestedWindowsZip([string]$arch, [string]$innerSha, [string]$into
     $nested = Join-Path $into ".nested"
     if (Test-Path -LiteralPath $nested) { Remove-Item -LiteralPath $nested -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $nested | Out-Null
-    & tar.exe -xf $zips[0].FullName -C $nested
+    & "$env:SystemRoot\System32\tar.exe" -xf $zips[0].FullName -C $nested
     if ($LASTEXITCODE -ne 0) { throw "tar.exe failed for nested $($zips[0].Name)" }
     Get-ChildItem -LiteralPath $into -Force | Where-Object { $_.Name -ne ".nested" } | ForEach-Object {
         Remove-Item -LiteralPath $_.FullName -Recurse -Force
@@ -71,7 +71,7 @@ function Finish-Extract([string]$extract, [string]$exe, [string]$binarySha, [str
 function Expand-Player([string]$kind, [string]$url, [string]$archive, [string]$into) {
     switch ($kind) {
         "zip" {
-            & tar.exe -xf $archive -C $into
+            & "$env:SystemRoot\System32\tar.exe" -xf $archive -C $into
             if ($LASTEXITCODE -ne 0) { throw "tar.exe failed for $url" }
         }
         "exe" {
@@ -80,7 +80,7 @@ function Expand-Player([string]$kind, [string]$url, [string]$archive, [string]$i
             Copy-Item -LiteralPath $archive -Destination (Join-Path $into $name)
         }
         "tar.gz" {
-            & tar.exe -xzf $archive -C $into
+            & "$env:SystemRoot\System32\tar.exe" -xzf $archive -C $into
             if ($LASTEXITCODE -ne 0) { throw "tar.exe failed for $url" }
         }
         default { throw "fetch-players.ps1 cannot unpack kind $kind" }
