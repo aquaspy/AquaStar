@@ -23,9 +23,9 @@ Artix does not support third-party launchers. Report AquaStar issues in this rep
 | ---------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Launcher                                       | Electron 11.5.0, pinned for PPAPI support     | Tauri 2 with the system webview                                                                                            |
 | Game window                                    | Embedded in the Electron window               | Separate standalone player window                                                                                          |
-| Default player                                 | Flash through PPAPI                           | Ruffle standalone                                                                                                          |
-| Alternative player                             | Ruffle Web inside the game page               | Adobe Flash standalone projector                                                                                           |
-| Ruffle build                                   | Browser build embedded in Electron            | Artix/AE patched standalone Ruffle 1.7.0 on Windows x64, Linux x64, and Apple Silicon. Official Ruffle 0.7.1 on Intel Macs |
+| Default player                                 | Flash through PPAPI                           | Artix Games' Ruffle 2.1.0, standalone                                                                                      |
+| Alternative player                             | Ruffle Web inside the game page               | Optional Adobe Flash standalone projector                                                                                  |
+| Ruffle build                                   | Browser build embedded in Electron            | Artix Games' standalone Ruffle 2.1.0 on Windows, Linux x64, and macOS (Intel and Apple Silicon). No stock Ruffle build     |
 | Ruffle defaults                                | High quality, automatic browser renderer      | High quality, Automatic graphics backend                                                                                   |
 | AQW and DragonFable                            | Yes                                           | Yes                                                                                                                        |
 | Inventory and Buy Back sync                    | Yes, after logging in to the AQW account site | Yes, after logging in to the AQW account site                                                                              |
@@ -57,7 +57,7 @@ On Linux and Windows, the NEO menu bar is hidden by default. Enable **Preference
 
 The [NEO platform matrix](https://github.com/aquaspy/AquaStar/blob/neo/docs/neo-plan.md#platform-matrix) distinguishes published package targets from other player pins and possible ports. A player pin does not mean an installer exists for that architecture. There is no Android build.
 
-On Apple Silicon, NEO runs the launcher and Artix Ruffle natively. The Flash projector is Intel and requires Rosetta. Intel Macs use the pinned official Ruffle build. The macOS builds are not notarized. Installation details are in the [NEO guide](https://github.com/aquaspy/AquaStar/blob/neo/README.md).
+On macOS, NEO runs the launcher and Artix Ruffle natively on Intel and Apple Silicon. The optional Flash projector is Intel and requires Rosetta on Apple Silicon. The macOS builds are not notarized. Installation details are in the [NEO guide](https://github.com/aquaspy/AquaStar/blob/neo/README.md).
 
 ## Downloads
 
@@ -65,7 +65,9 @@ On Apple Silicon, NEO runs the launcher and Artix Ruffle natively. The Flash pro
 
 Choose the installer or portable package for your system and architecture. The macOS ZIP contains an Intel application; Apple Silicon uses Rosetta. On Linux, mark an AppImage executable before opening it, or install the Debian package with your package manager.
 
-AquaStar NEO is developed on [`neo-dev`](https://github.com/aquaspy/AquaStar/tree/neo-dev). Stable NEO is [`neo`](https://github.com/aquaspy/AquaStar/tree/neo). Its version sequence starts at 1.0.0. Release tags use `neo-v*`. Those releases are not marked Latest. Latest stays this classic Electron release. Older `v3.0.0-*` tags remain as history. Build instructions are in the [NEO guide](https://github.com/aquaspy/AquaStar/blob/neo/README.md).
+**[Download AquaStar NEO 1.0.0](https://github.com/aquaspy/AquaStar/releases/tag/neo-v1.0.0)**, the lightweight Tauri launcher, for Windows x64, macOS 11 or later (universal), and Linux x64 (deb, AppImage, and Arch package).
+
+AquaStar NEO is developed on [`neo-dev`](https://github.com/aquaspy/AquaStar/tree/neo-dev). Stable NEO is [`neo`](https://github.com/aquaspy/AquaStar/tree/neo). Its version sequence starts at 1.0.0. Release tags use `neo-v*`. Those releases are not marked Latest. Latest stays this classic Electron release. There is no AquaStar 3.x: the old `v3.0.0-*` release candidates became AquaStar NEO, and their tags remain as history. Build instructions are in the [NEO guide](https://github.com/aquaspy/AquaStar/blob/neo/README.md).
 
 ## Branches
 
