@@ -24,7 +24,7 @@ This tree does not contain the NEO launcher. NEO keeps its own copies of the plu
 - `neo`: AquaStar NEO stable.
 - `neo-dev`: AquaStar NEO development.
 
-Electron workflows in this tree run on `main` and `dev`. They do not build NEO. A release tag, a change to GitHub Latest, or a merge from `dev` into `main` still needs its own approval.
+The Test workflow runs on pushes and pull requests for `main` and `dev`. The Build workflow runs on pushes and pull requests for `main`, and from a manual run. The Release workflow runs on `v*` tags other than `v3` and `v3.*`. A manual Release run builds the same artifacts and does not publish. A push that only changes Markdown, `docs/`, or `.cursor/` does not start Test or Build. These workflows do not run for `neo`, `neo-dev`, or `neo-v*` tags. A release tag, a change to GitHub Latest, or a merge from `dev` into `main` still needs its own approval.
 
 ## Generated files
 
