@@ -41,8 +41,7 @@
     "asar": false,
     "files": [
       "**/*",
-      "!squashfs-root/**",
-      "!desktop/**"
+      "!squashfs-root/**"
     ],
     "appId": "io.github.aquaspy.aquastar",
     "afterPack": "./scripts/strip-mac-signature.js",

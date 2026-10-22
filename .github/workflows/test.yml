@@ -3,11 +3,25 @@ name: Test
 on:
   push:
     branches: [main, dev]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.cursor/**'
   pull_request:
+    branches: [main, dev]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.cursor/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   unit:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,13 +33,30 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: python3 scripts/smoke/test_deb_version.py
-      # The release stages the app by an explicit file list (scripts/build-arch.sh); stage it and
-      # verify it can start, so a missing folder fails here instead of in a published release.
-      - run: STAGE_ONLY=1 bash scripts/build-arch.sh linux x64
-      - run: STAGE_ONLY=1 bash scripts/build-arch.sh win x64
+      - name: Asset checker fails closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          if bash scripts/ci/expect-one.sh "$tmp" 'AquaStar-Setup-x64.exe'; then
+            echo 'empty directory should fail' >&2
+            exit 1
+          fi
+          touch "$tmp/AquaStar-2.1.0.AppImage" "$tmp/AquaStar-2.1.0-i386.AppImage" "$tmp/AquaStar-Setup-x64.exe" "$tmp/also.exe"
+          bash scripts/ci/expect-one.sh "$tmp" 'AquaStar-+([0-9]).+([0-9]).+([0-9]).AppImage' >/dev/null
+          bash scripts/ci/expect-one.sh "$tmp" 'AquaStar-*-i386.AppImage' >/dev/null
+          if bash scripts/ci/expect-one.sh "$tmp" '*.exe'; then
+            echo 'two exes should fail' >&2
+            exit 1
+          fi
+      - name: Stage linux x64 and verify runtime files
+        run: STAGE_ONLY=1 bash scripts/build-arch.sh linux x64
+      - name: Stage win x64 and verify runtime files
+        run: STAGE_ONLY=1 bash scripts/build-arch.sh win x64
 
   package-windows:
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,8 +65,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run pack
+        shell: bash
       # electron-builder --dir must ship the bundled AQW plugin (asar: false → resources/app)
       - name: Assert bundled AQW plugin in pack output
+        shell: bash
         run: >
           node -e "const fs=require('fs');const path=require('path');
           const rels=['plugins/adventure-quest-worlds/plugin.json','plugins/adventure-quest-worlds/main.js','plugins/adventure-quest-worlds/features/reminders/reminders.js','plugins/adventure-quest-worlds/processes/charpage-studio-process.js'];
