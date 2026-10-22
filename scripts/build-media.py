@@ -18,12 +18,15 @@ SOURCES = {
 }
 ROOT = Path(__file__).resolve().parents[1]
 
+def media_cache(repo_root: Path) -> Path:
+    return repo_root.parent.parent / 'AquaStar-workspace' / 'builds' / 'media'
+
 def run(args, cwd, env):
     subprocess.run([str(a) for a in args], cwd=cwd, env=env, check=True)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--work', type=Path, default=ROOT.parent.parent / 'AquaStar-workspace/builds/media')
+    parser.add_argument('--work', type=Path, default=media_cache(ROOT))
     parser.add_argument('--source-bundle', action='store_true', help='Archive corresponding sources, notices and the build recipe beside the build cache')
     parser.add_argument('--arch', choices=['x86_64', 'aarch64'], default='aarch64' if platform.machine().lower() in ('arm64','aarch64') else 'x86_64')
     args = parser.parse_args()
