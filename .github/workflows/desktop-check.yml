@@ -14,7 +14,7 @@ on:
       - 'vendor/**'
       - 'packaging/**'
       - 'players.json'
-      - '.github/workflows/desktop-*.yml'
+      - '.github/workflows/*.yml'
   push:
     branches: [neo, neo-dev]
     paths:
@@ -26,10 +26,15 @@ on:
       - 'vendor/**'
       - 'packaging/**'
       - 'players.json'
-      - '.github/workflows/desktop-*.yml'
+      - '.github/workflows/*.yml'
+
+concurrency:
+  group: desktop-check-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch') }}
 
 jobs:
   test:
+    timeout-minutes: 30
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -40,13 +45,21 @@ jobs:
       - name: Linux deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libpipewire-0.3-dev libxcb-randr0-dev libgbm-dev libclang-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libpipewire-0.3-dev libxcb-randr0-dev libgbm-dev libclang-dev python3-yaml
       - name: Debian package migration check
         run: python3 scripts/smoke/test_deb_version.py
       - name: Tauri release artifact naming check
         run: python3 scripts/smoke/test_tauri_artifacts.py
       - name: Media cache path check
         run: python3 scripts/smoke/test_media_cache.py
+      - name: Lint workflows
+        run: |
+          curl --fail --location --silent --show-error \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
+            | tar -xz -C "${RUNNER_TEMP}" actionlint
+          "${RUNNER_TEMP}/actionlint" -color
+          python3 scripts/smoke/test_workflow_shell.py
+          bash scripts/smoke/test_one_match.sh
       - name: cargo test
         working-directory: src-tauri
         run: cargo test --locked
@@ -55,6 +68,7 @@ jobs:
         run: bash scripts/fetch-players.sh
 
   macos-check:
+    timeout-minutes: 20
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4

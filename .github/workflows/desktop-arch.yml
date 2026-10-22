@@ -32,13 +32,21 @@ on:
       - 'players.json'
       - '.github/workflows/desktop-arch.yml'
 
+concurrency:
+  group: native-arch-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch') }}
+
 permissions:
   contents: read
 
 jobs:
   package:
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     container: archlinux:base-devel
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Native build dependencies
         run: |
@@ -46,10 +54,25 @@ jobs:
           useradd --create-home builder
           install -d -o builder -g builder /tmp/aquastar-neo
       - uses: actions/checkout@v4
+      - name: Remember the Arch rustc
+        id: rustc
+        run: echo "version=$(rustc --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            /home/builder/.cargo/registry
+            /home/builder/.cargo/git
+            /home/builder/cargo-target
+          key: arch-cargo-v1-${{ steps.rustc.outputs.version }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            arch-cargo-v1-${{ steps.rustc.outputs.version }}-
+            arch-cargo-v1-
       - name: Build and test as an unprivileged user
         run: |
-          chown -R builder:builder "$GITHUB_WORKSPACE"
-          runuser -u builder -- bash scripts/build-arch-package.sh --output /tmp/aquastar-neo
+          mkdir -p /home/builder/.cargo /home/builder/cargo-target
+          printf '%s\n' '[build]' 'target-dir = "/home/builder/cargo-target"' > /home/builder/.cargo/config.toml
+          chown -R builder:builder /home/builder "$GITHUB_WORKSPACE"
+          runuser -u builder -- env CARGO_HOME=/home/builder/.cargo CARGO_TARGET_DIR=/home/builder/cargo-target bash scripts/build-arch-package.sh --output /tmp/aquastar-neo
       - name: Inspect native package
         run: |
           pacman -Qip /tmp/aquastar-neo/aquastar-neo-*.pkg.tar.zst
@@ -78,6 +101,7 @@ jobs:
   attach-release:
     if: inputs.release_tag != ''
     needs: package
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     permissions:
       contents: write

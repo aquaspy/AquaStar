@@ -44,6 +44,7 @@ jobs:
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
        startsWith(github.event.workflow_run.head_branch, 'neo-v'))
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
@@ -155,9 +156,6 @@ jobs:
           path: smoke-out/ruffle/
           if-no-files-found: warn
 
-  # No neo-v release exists yet, so the artifact smoke job above is skipped.
-  # This job still downloads the host pin and runs the real binary, including
-  # the macOS universal binary on Apple silicon and Intel.
   player-probe:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}

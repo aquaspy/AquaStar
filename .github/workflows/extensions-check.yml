@@ -20,6 +20,10 @@ on:
       - '.github/workflows/extensions-check.yml'
   workflow_dispatch:
 
+concurrency:
+  group: extensions-check-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch') }}
+
 permissions:
   contents: read
 
@@ -29,6 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, windows-latest, macos-latest]
+    timeout-minutes: 40
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
