@@ -307,13 +307,34 @@ jobs:
       actions: write
     uses: ./.github/workflows/desktop-arch.yml
     with:
-      release_tag: ${{ needs.gate.outputs.publish == 'true' && github.ref_name || '' }}
+      release_tag: ''
+
+  attach-arch:
+    needs: [build, native-arch, gate]
+    if: needs.gate.outputs.publish == 'true' && needs.build.result == 'success' && needs.native-arch.result == 'success'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: AquaStar-NEO-Arch-x86_64
+          path: native-arch
+      - name: Attach native Arch installers and sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber \
+            native-arch/*.pkg.tar.zst native-arch/*.AppImage \
+            native-arch/AquaStar-media-sources.tar.xz native-arch/PKGBUILD \
+            native-arch/.SRCINFO native-arch/aquastar-neo-*.tar.gz
 
   # tauri-action cannot mark a release as Latest, and its update of an
   # existing release does not send prerelease. Reassert both after every
   # platform has uploaded. Stable and prerelease tags stay off Latest.
   keep-prerelease:
-    needs: [build, native-arch, gate]
+    needs: [build, native-arch, attach-arch, gate]
     if: ${{ always() && needs.gate.outputs.publish == 'true' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
