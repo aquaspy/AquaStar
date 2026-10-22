@@ -1,6 +1,6 @@
 # AquaStar NEO
 
-AquaStar NEO is the Tauri launcher, version 1.0.0. It is a separate product from classic AquaStar. Classic AquaStar is the Electron app on the `main` and `dev` branches. This branch, `neo-dev`, contains only NEO. Stable NEO work belongs on `neo`. Release tags use `neo-v*` (for example `neo-v1.0.0`). An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. Latest stays the classic Electron release. There is no AquaStar 3.x: the old `v3.0.0-*` release candidates became AquaStar NEO, and their tags stay as history.
+AquaStar NEO is the Tauri launcher, version 1.0.0. It is a separate product from classic AquaStar. Classic AquaStar is the Electron app on the `main` and `dev` branches. This branch, `neo-dev`, contains only NEO. Stable NEO work belongs on `neo`. Release tags use `neo-v*` (for example `neo-v1.0.0`). An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. Latest stays the classic Electron release. There is no AquaStar 3.x: the old `v3.0.0-*` release candidates became AquaStar NEO. Their tags and releases were deleted on 2026-10-22, as were the `lite-v*` tags.
 
 **[Download AquaStar NEO 1.0.0](https://github.com/aquaspy/AquaStar/releases/tag/neo-v1.0.0)**: Windows x64 installer and portable zip, macOS 11 or later universal disk image, and Linux x64 deb, AppImage, and Arch package. Classic AquaStar is on the [Latest release](https://github.com/aquaspy/AquaStar/releases/latest).
 

@@ -28,7 +28,7 @@ Locales, default reminder and strategy lists, studio movies, platform strings, a
 - `main`: classic Electron stable. It is not in this history after the split.
 - `dev`: classic Electron development. It is not in this history after the split.
 
-Release tags for this product use `neo-v*`. An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. The [NEO plan](neo-plan.md) records the product split. Older `v3.0.0-*` tags stay as history.
+Release tags for this product use `neo-v*`. An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. The [NEO plan](neo-plan.md) records the product split. The older `v3.0.0-*` and `lite-v*` tags were deleted on 2026-10-22.
 
 ## Generated files
 

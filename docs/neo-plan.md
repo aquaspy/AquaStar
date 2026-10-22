@@ -2,7 +2,7 @@
 
 **All implementation work on AquaStar NEO is done in pstack poteto-mode.** Use the pstack principles, and the pstack skills when a task calls for one.
 
-AquaStar NEO is a separate product from classic AquaStar. Classic AquaStar is the Electron app on `main` and `dev`. NEO development is `neo-dev`. Stable NEO is `neo`. The version sequence starts at `1.0.0`. Tags use `neo-v*` (for example `neo-v1.0.0`). An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. Latest stays the classic Electron release. Older `v3.0.0-*` tags stay as history.
+AquaStar NEO is a separate product from classic AquaStar. Classic AquaStar is the Electron app on `main` and `dev`. NEO development is `neo-dev`. Stable NEO is `neo`. The version sequence starts at `1.0.0`. Tags use `neo-v*` (for example `neo-v1.0.0`). An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. Latest stays the classic Electron release. The old `v3.0.0-*`, `v2.1.1-rc.*` and `lite-v*` tags and their releases were deleted on 2026-10-22.
 
 The sections below record the earlier plan, when this launcher was called AquaStar 3.0 and lived in `desktop/`. The [product split on 21 October 2026](#product-split-21-october-2026) replaces that plan's branch and release rules.
 
@@ -109,7 +109,7 @@ Before the first commit that changes the product, cut `electron-2.x` from `dev`.
 
 Work lands on `neo-dev` by direct commit. Stable NEO is `neo`. Do not open pull requests for NEO work.
 
-`.github/workflows/desktop-release.yml` builds this tree for `neo-v*` tags. A tag with `-rc`, `-alpha`, or `-beta` is a prerelease. A `neo-v*` tag without those suffixes is a stable NEO release. Both pass `--latest=false`. Latest stays the classic Electron release. Do not push a `v*` or `v3.0.0-*` tag for a NEO build. Existing `v3.0.0-*` tags stay untouched.
+`.github/workflows/desktop-release.yml` builds this tree for `neo-v*` tags. A tag with `-rc`, `-alpha`, or `-beta` is a prerelease. A `neo-v*` tag without those suffixes is a stable NEO release. Both pass `--latest=false`. Latest stays the classic Electron release. Do not push a `v*` or `v3.0.0-*` tag for a NEO build. The old `v3.0.0-*` tags were deleted on 2026-10-22.
 
 Each finished phase is a pre-release. The smoke workflow has to pass on the tagged commit.
 
@@ -260,7 +260,7 @@ The user requested the updated public README and fresh pre-releases for both mai
 
 ## Desktop naming and candidate update, 17 October 2026
 
-The user requested renaming the active `lite/` source to `desktop/`, removing retired Tauri snapshots from the other branches, and deleting the previously preserved cursor branch. That branch tip is preserved in the verified pre-cleanup bundle. The final candidate tags for this revision are `v3.0.0-rc.3` and `v2.1.1-rc.9`; the already pushed `rc.2` and `rc.8` builds were canceled before publication when these changes were requested. Tags are retained as history, not moved.
+The user requested renaming the active `lite/` source to `desktop/`, removing retired Tauri snapshots from the other branches, and deleting the previously preserved cursor branch. That branch tip is preserved in the verified pre-cleanup bundle. The final candidate tags for this revision are `v3.0.0-rc.3` and `v2.1.1-rc.9`; the already pushed `rc.2` and `rc.8` builds were canceled before publication when these changes were requested. Those tags were not moved at the time. The old `v3.0.0-*`, `v2.1.1-rc.*` and `lite-v*` tags and their releases were deleted on 2026-10-22.
 
 The public product name is AquaStar NEO. Release numbers remain on the 3.x sequence. The executable and package names use AquaStar NEO; the stable application identifier remains unchanged so profiles, portal grants and shortcut bindings continue to work. Debian candidate control versions use the `~rc` form so that a later stable version sorts after its candidate. Public filenames identify the product, candidate, and architecture. The README compares the Artix/AE patched standalone player in 3.x with the browser Ruffle used in 2.x; Intel Mac uses the official standalone pin.
 
@@ -271,5 +271,5 @@ The owner approved a repository split. AquaStar NEO is no longer AquaStar 3.0, a
 - This tree is NEO only. The launcher, plugins, scripts, and workflows live at the repository root. The Electron application is not in this tree.
 - `neo-dev` is NEO development. `neo` is the NEO stable branch. Classic Electron `main` and `dev` are a separate history.
 - The version in `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` is `1.0.0`. The Cargo package and binary stay `aquastar-neo`. The bundle identifier stays `io.github.aquaspy.aquastar-lite`, so existing settings, portal grants, and shortcut bindings keep their directory.
-- Release tags are `neo-v*`. An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. The `v3.0.0-*` tags already published stay where they are.
+- Release tags are `neo-v*`. An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. The old `v3.0.0-*`, `v2.1.1-rc.*` and `lite-v*` tags and their releases were deleted on 2026-10-22.
 - CI for this tree runs on pushes to `neo` and `neo-dev`.
