@@ -19,7 +19,7 @@ SOURCES = {
 ROOT = Path(__file__).resolve().parents[1]
 
 def media_cache(repo_root: Path) -> Path:
-    return repo_root.parent.parent / 'AquaStar-workspace' / 'builds' / 'media'
+    return repo_root.parent / 'AquaStar-workspace' / 'builds' / 'media'
 
 def run(args, cwd, env):
     subprocess.run([str(a) for a in args], cwd=cwd, env=env, check=True)
