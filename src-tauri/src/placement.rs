@@ -561,6 +561,7 @@ mod tests {
         assert!(yml.contains("kind=stable"));
         assert!(yml.contains("--prerelease=false --latest=false"));
         assert!(yml.contains("--prerelease --latest=false"));
+        assert!(yml.contains("gh release create"));
         assert!(!yml.contains("--latest=true"));
         assert!(!yml.contains("make_latest"));
     }

@@ -54,7 +54,7 @@ To retain the native library environment in an AppImage, install
 
 ```sh
 APPIMAGETOOL=/path/to/appimagetool bash scripts/appimage-from-arch.sh \
-  /path/aquastar-neo-1.0.0rc.1-1-x86_64.pkg.tar.zst /path/aquastar-neo_1.0.0-rc.1_Arch-native_x86_64.AppImage
+  /path/aquastar-neo-1.0.0-1-x86_64.pkg.tar.zst /path/aquastar-neo_1.0.0_Arch-native_x86_64.AppImage
 ```
 
 This variant uses the same system dependencies and downloaded players as the

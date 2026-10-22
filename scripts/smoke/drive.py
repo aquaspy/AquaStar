@@ -23,11 +23,11 @@ CLICK_WAIT = 45
 SOAK_SECONDS = 40
 PLAYER_NAMES = {
     ("Windows", "flash"): ["flashplayer_32_sa.exe"],
-    ("Windows", "ruffle"): ["ruffle.exe", "ruffle_desktop.exe"],
+    ("Windows", "ruffle"): ["Artix Games Launcher.exe"],
     ("Darwin", "flash"): ["Flash Player"],
-    ("Darwin", "ruffle"): ["ruffle", "ruffle_desktop"],
+    ("Darwin", "ruffle"): ["Artix Games Launcher · Ruffle"],
     ("Linux", "flash"): ["flashplayer"],
-    ("Linux", "ruffle"): ["ruffle", "ruffle_desktop"],
+    ("Linux", "ruffle"): ["ruffle_desktop"],
 }
 LAUNCHER_NAMES = {
     "Windows": ["aquastar-neo.exe"],

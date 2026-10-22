@@ -2,7 +2,7 @@
 
 **All implementation work on AquaStar NEO is done in pstack poteto-mode.** Use the pstack principles, and the pstack skills when a task calls for one.
 
-AquaStar NEO is a separate product from classic AquaStar. Classic AquaStar is the Electron app on `main` and `dev`. NEO development is `neo-dev`. Stable NEO is `neo`. The version sequence starts at `1.0.0`. Tags use `neo-v*` (for example `neo-v1.0.0-rc.1`). An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. Latest stays the classic Electron release. Older `v3.0.0-*` tags stay as history.
+AquaStar NEO is a separate product from classic AquaStar. Classic AquaStar is the Electron app on `main` and `dev`. NEO development is `neo-dev`. Stable NEO is `neo`. The version sequence starts at `1.0.0`. Tags use `neo-v*` (for example `neo-v1.0.0`). An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. Latest stays the classic Electron release. Older `v3.0.0-*` tags stay as history.
 
 The sections below record the earlier plan, when this launcher was called AquaStar 3.0 and lived in `desktop/`. The [product split on 21 October 2026](#product-split-21-october-2026) replaces that plan's branch and release rules.
 
@@ -101,7 +101,7 @@ AdventureQuest Worlds content moves out of `plugins/adventure-quest-worlds/` int
 
 Two Linux workarounds already in Lite stay. `WEBKIT_DISABLE_DMABUF_RENDERER=1` avoids the WebKit DMA-BUF memory growth and the NVIDIA blank window. The fontconfig allowlist stops WebKit from scanning a huge font set at startup.
 
-The repo stores pin URLs, and the first launch downloads the Artix and stock players. Bundle a player into the installer only after its license allows it.
+The repo stores pin URLs in `players.json`. The first launch downloads the pinned Artix player and, on targets that have one, the Flash projector. Bundle a player into the installer only after its license allows it.
 
 Before the first commit that changes the product, cut `electron-2.x` from `dev`. That branch is the Electron 2.x line. This plan can live on both branches.
 
@@ -270,6 +270,6 @@ The owner approved a repository split. AquaStar NEO is no longer AquaStar 3.0, a
 
 - This tree is NEO only. The launcher, plugins, scripts, and workflows live at the repository root. The Electron application is not in this tree.
 - `neo-dev` is NEO development. `neo` is the NEO stable branch. Classic Electron `main` and `dev` are a separate history.
-- The version in `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` is `1.0.0-rc.1`. The Cargo package and binary stay `aquastar-neo`. The bundle identifier stays `io.github.aquaspy.aquastar-lite`, so existing settings, portal grants, and shortcut bindings keep their directory.
+- The version in `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` is `1.0.0`. The Cargo package and binary stay `aquastar-neo`. The bundle identifier stays `io.github.aquaspy.aquastar-lite`, so existing settings, portal grants, and shortcut bindings keep their directory.
 - Release tags are `neo-v*`. An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. The `v3.0.0-*` tags already published stay where they are.
 - CI for this tree runs on pushes to `neo` and `neo-dev`.

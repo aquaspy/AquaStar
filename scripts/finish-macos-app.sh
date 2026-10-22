@@ -40,7 +40,7 @@ if [[ -d "$players" ]]; then
   done < <(find "$players" -type d -name "*.app")
   while IFS= read -r loose; do
     codesign --force -s - "$loose"
-  done < <(find "$players" -type f \( -name 'ruffle_desktop' -o -name '*.dylib' \))
+  done < <(find "$players" -type f \( -name 'Artix Games Launcher · Ruffle' -o -name '*.dylib' \))
 fi
 if [[ -d "$app/Contents/Resources/media" ]]; then
   while IFS= read -r media; do codesign --force -s - "$media"; done < <(find "$app/Contents/Resources/media" -type f \( -name 'ffmpeg-macos-*' -o -name 'capture-macos-*' \))

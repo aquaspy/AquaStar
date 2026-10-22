@@ -36,8 +36,47 @@ jobs:
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
           echo "kind=$kind" >> "$GITHUB_OUTPUT"
 
-  build:
+  prepare-release:
     needs: gate
+    if: always() && needs.gate.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.gate.outputs.publish == 'true'
+      - name: Open the GitHub release off Latest
+        if: needs.gate.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KIND: ${{ needs.gate.outputs.kind }}
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          notes="docs/${tag}-release-notes.md"
+          title="AquaStar NEO ${tag#neo-v}"
+          if [ "$KIND" != "stable" ]; then
+            title="$title - Pre-release"
+          fi
+          if [ -f "$notes" ]; then
+            notes_args=(--notes-file "$notes")
+          else
+            notes_args=(--notes "AquaStar NEO ${tag}.")
+          fi
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            if [ "$KIND" = "stable" ]; then
+              gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --prerelease=false --latest=false --title "$title" "${notes_args[@]}"
+            else
+              gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false --title "$title" "${notes_args[@]}"
+            fi
+          else
+            if [ "$KIND" = "stable" ]; then
+              gh release create "$tag" --repo "$GITHUB_REPOSITORY" --prerelease=false --latest=false --title "$title" "${notes_args[@]}"
+            else
+              gh release create "$tag" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false --title "$title" "${notes_args[@]}"
+            fi
+          fi
+
+  build:
+    needs: [gate, prepare-release]
     strategy:
       fail-fast: false
       matrix:
@@ -123,6 +162,18 @@ jobs:
           # not a prerelease. No NEO tag becomes Latest. Latest stays the classic release.
           prerelease: ${{ needs.gate.outputs.kind != 'stable' }}
           args: ${{ matrix.args }}
+      - name: Keep this upload off Latest
+        if: needs.gate.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KIND: ${{ needs.gate.outputs.kind }}
+        run: |
+          set -euo pipefail
+          if [ "$KIND" = "stable" ]; then
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease=false --latest=false
+          else
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false
+          fi
       # Manual runs only build and upload workflow artifacts, so the bundles can be
       # tested before tagging. They never create or touch a release.
       - name: Build only (manual run)
@@ -251,15 +302,24 @@ jobs:
     if: ${{ always() && needs.gate.outputs.publish == 'true' }}
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Keep the release off Latest
         env:
           GH_TOKEN: ${{ github.token }}
           KIND: ${{ needs.gate.outputs.kind }}
         run: |
-          if [ "$KIND" = "stable" ]; then
-            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease=false --latest=false
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          notes="docs/${tag}-release-notes.md"
+          if [ -f "$notes" ]; then
+            extra=(--notes-file "$notes")
           else
-            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false
+            extra=()
+          fi
+          if [ "$KIND" = "stable" ]; then
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --prerelease=false --latest=false "${extra[@]}"
+          else
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false "${extra[@]}"
           fi
 
   # workflow_dispatch only works from the default branch. main is the classic
