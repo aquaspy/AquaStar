@@ -5,6 +5,7 @@ on:
     tags:
       - 'neo-v*'
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
   group: desktop-release-${{ github.ref }}
