@@ -8,6 +8,7 @@ on:
       - 'scripts/**'
       - 'plugins/**'
       - 'native/**'
+      - 'vendor/**'
       - '.github/workflows/capture-check.yml'
   pull_request:
     paths:
@@ -16,6 +17,7 @@ on:
       - 'scripts/**'
       - 'plugins/**'
       - 'native/**'
+      - 'vendor/**'
       - '.github/workflows/capture-check.yml'
   workflow_dispatch:
 
