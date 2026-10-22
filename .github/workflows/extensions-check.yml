@@ -11,7 +11,7 @@ on:
       - 'vendor/**'
       - '.github/workflows/extensions-check.yml'
   push:
-    branches: [neo, neo-dev]
+    branches: [neo-dev]
     paths:
       - 'src-tauri/**'
       - 'ui/**'

@@ -22,7 +22,7 @@ on:
     workflows: ['AquaStar NEO Desktop Release']
     types: [completed]
   push:
-    branches: [neo, neo-dev]
+    branches: [neo-dev]
     paths:
       - .github/workflows/desktop-smoke.yml
       - scripts/smoke/**
