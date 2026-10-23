@@ -74,13 +74,11 @@ parentMonitor.schedule(deadline: .now() + 1, repeating: 1)
 parentMonitor.setEventHandler { if getppid() != captureParent { exit(0) } }
 parentMonitor.resume()
 
-if #available(macOS 12.3, *) {
-    // ScreenCaptureKit hits CGS_REQUIRE_INIT unless AppKit has started.
-    let app = NSApplication.shared
-    app.setActivationPolicy(.prohibited)
-    Task { @MainActor in
-        do { try await runCapture() }
-        catch { FileHandle.standardError.write(Data("Capture: \(error)\n".utf8)); exit(1) }
-    }
-    app.run()
-} else { FileHandle.standardError.write(Data("ScreenCaptureKit requires macOS 12.3.\n".utf8)); exit(1) }
+// ScreenCaptureKit hits CGS_REQUIRE_INIT unless AppKit has started.
+let app = NSApplication.shared
+app.setActivationPolicy(.prohibited)
+Task { @MainActor in
+    do { try await runCapture() }
+    catch { FileHandle.standardError.write(Data("Capture: \(error)\n".utf8)); exit(1) }
+}
+app.run()

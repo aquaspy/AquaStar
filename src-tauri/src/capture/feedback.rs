@@ -6,30 +6,34 @@ extern "C" {
     fn aquastar_capture_notify(title: *const std::ffi::c_char, body: *const std::ffi::c_char);
 }
 
-pub fn screenshot_taken(_target: &super::backend::Target) {
-    #[cfg(target_os = "macos")]
+#[cfg(target_os = "macos")]
+pub fn screenshot_taken(target: &super::backend::Target) {
     unsafe {
-        aquastar_capture_screenshot_border(_target.pid, _target.id);
+        aquastar_capture_screenshot_border(target.pid, target.id);
     }
 }
+
+#[cfg(not(target_os = "macos"))]
+pub fn screenshot_taken<T>(_target: &T) {}
 
 pub struct RecordingBorder {
     #[cfg(target_os = "macos")]
     generation: u64,
 }
 impl RecordingBorder {
-    pub fn new(_target: &super::backend::Target) -> Self {
-        #[cfg(target_os = "macos")]
-        {
-            use std::sync::atomic::{AtomicU64, Ordering};
-            static GENERATION: AtomicU64 = AtomicU64::new(1);
-            let generation = GENERATION.fetch_add(1, Ordering::Relaxed);
-            unsafe {
-                aquastar_capture_recording_border(_target.pid, _target.id, generation, true);
-            }
-            Self { generation }
+    #[cfg(target_os = "macos")]
+    pub fn new(target: &super::backend::Target) -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static GENERATION: AtomicU64 = AtomicU64::new(1);
+        let generation = GENERATION.fetch_add(1, Ordering::Relaxed);
+        unsafe {
+            aquastar_capture_recording_border(target.pid, target.id, generation, true);
         }
-        #[cfg(not(target_os = "macos"))]
+        Self { generation }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub fn new<T>(_target: &T) -> Self {
         Self {}
     }
 }

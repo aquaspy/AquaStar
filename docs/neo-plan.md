@@ -27,7 +27,7 @@ The sections below record the earlier plan, when this launcher was called AquaSt
 
 ## Platform matrix
 
-The shell uses the operating system's webview. Windows uses WebView2, macOS uses WKWebView, and Linux uses WebKitGTK 4.1. Tauri documents macOS 10.15 as its floor, and WebKitGTK 4.1 on Ubuntu 22.04, Debian 12, and Fedora 37. The current Lite config asks for macOS 11.0.
+The shell uses the operating system's webview. Windows uses WebView2, macOS uses WKWebView, and Linux uses WebKitGTK 4.1. Tauri documents macOS 10.15 as its floor, and WebKitGTK 4.1 on Ubuntu 22.04, Debian 12, and Fedora 37. The current Lite config asks for macOS 12.3.
 
 | System | 3.0 | Notes |
 | --- | --- | --- |
@@ -35,9 +35,9 @@ The shell uses the operating system's webview. Windows uses WebView2, macOS uses
 | Windows 10 or later, x86 | Flash only | Artix 2.1.0 publishes no Windows x86 Ruffle build. The projector is the player used there. |
 | Windows on ARM | Yes | Artix 2.1.0 windows-arm64. |
 | Windows 7 and 8.1 | Stay on 2.x | WebView2 runtime 109 is the last one that starts. Runtime and SDK 110.0.1519.0 and higher do not support these systems. A 3.0 build counts only if one pinned to runtime 109 actually launches. |
-| macOS 11 and later, Apple silicon | Yes | Artix player. |
-| macOS 11 and later, Intel | Yes | The same Artix 2.1.0 universal binary as Apple silicon. |
-| macOS 10.15 | Only if a build runs | Tauri's documented floor is 10.15. The current config asks for 11.0, so 10.15 is in only after that floor is lowered and a launch works. |
+| macOS 12.3 and later, Apple silicon | Yes | Artix player. |
+| macOS 12.3 and later, Intel | Yes | The same Artix 2.1.0 universal binary as Apple silicon. |
+| macOS 10.15 through 12.2 | Out | The config asks for macOS 12.3, and ScreenCaptureKit needs 12.3. |
 | macOS below 10.15 | Stay on 2.x | |
 | Linux x64 with WebKitGTK 4.1 | Yes | Artix player. |
 | Linux i686 with WebKitGTK 4.1 | No player | Artix 2.1.0 publishes no i686 build, and there is no projector pin. |
@@ -218,7 +218,7 @@ Stable publication remains on hold for the performance and interface review. The
 ## Risks
 
 - WebView2 109 is frozen. A current Tauri build links a newer WebView2 and will not start on Windows 7 or 8.1. Those systems stay on 2.x unless a 109-pinned build is proven.
-- macOS below 10.15 cannot follow Tauri's documented floor. macOS 10.15 still has to be proven, because the current config asks for 11.0.
+- macOS below 10.15 cannot follow Tauri's documented floor of 10.15. This product's floor is macOS 12.3.
 - Linux without WebKitGTK 4.1 stays on 2.x.
 - The Artix player is an unsigned binary pinned by URL. Treat an upstream URL change as a new pin, with a smoke run, before a release.
 - The removed stock Ruffle build had no `--title` or `--companion`. The Artix 2.1.0 pin accepts both, and every Ruffle launch passes `--title`.

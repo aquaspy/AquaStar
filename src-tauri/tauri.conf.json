@@ -33,7 +33,7 @@
     "macOS": {
       "signingIdentity": "-",
       "hardenedRuntime": false,
-      "minimumSystemVersion": "11.0",
+      "minimumSystemVersion": "12.3",
       "bundleName": "AquaStar NEO",
       "infoPlist": "Info.plist"
     },

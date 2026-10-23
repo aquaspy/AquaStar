@@ -9,7 +9,7 @@ fn main() {
             arch => panic!("Unsupported macOS capture feedback architecture: {arch}"),
         };
         let status = std::process::Command::new("xcrun")
-            .args(["clang", "-arch", arch, "-mmacosx-version-min=11.0", "-fobjc-arc", "-fblocks", "-O2", "-c", "src/capture/feedback_macos.m", "-o"])
+            .args(["clang", "-arch", arch, "-mmacosx-version-min=12.3", "-fobjc-arc", "-fblocks", "-O2", "-c", "src/capture/feedback_macos.m", "-o"])
             .arg(&object)
             .status()
             .expect("Xcode command line tools are required for macOS capture feedback");

@@ -73,7 +73,7 @@ def main():
     if shutil.which('nasm', path=env.get('PATH')) is None:
         make_args.append('USE_ASM=No')
     if host == 'macos':
-        env['MACOSX_DEPLOYMENT_TARGET'] = '11.0'
+        env['MACOSX_DEPLOYMENT_TARGET'] = '12.3'
         env['CC'] = f'clang -arch {arch}'
         env['CXX'] = f'clang++ -arch {arch}'
         make_args += [f'CC={env["CC"]}',f'CXX={env["CXX"]}', 'OS=darwin']
@@ -111,7 +111,7 @@ def main():
     binary.chmod(0o755)
     if host == 'macos':
         helper = destination / f'capture-{tag}'
-        run(['swiftc', '-O', '-target', f'{arch}-apple-macosx11.0', '-Xlinker', '-weak_framework', '-Xlinker', 'ScreenCaptureKit', ROOT / 'native/capture-macos.swift', '-o', helper], work, env)
+        run(['swiftc', '-O', '-target', f'{arch}-apple-macosx12.3', '-Xlinker', '-weak_framework', '-Xlinker', 'ScreenCaptureKit', ROOT / 'native/capture-macos.swift', '-o', helper], work, env)
         run(['codesign','--force','--sign','-',helper],work,env)
     notices = destination / f'licenses-{tag}' 
     notices.mkdir(exist_ok=True)

@@ -13,10 +13,6 @@ use std::{
     time::{Duration, Instant},
 };
 pub fn fps() -> u32 {
-    #[cfg(target_os = "macos")]
-    if !mac_modern() {
-        return 15;
-    }
     30
 }
 pub fn is_wayland() -> bool {
@@ -333,13 +329,14 @@ impl Source {
             });
         }
         #[cfg(target_os = "macos")]
-        if mac_modern() {
+        {
             return Ok(Self {
                 target: target.clone(),
                 native: Some(mac_frames(target)?),
                 cancel,
             });
         }
+        #[cfg(not(target_os = "macos"))]
         Ok(Self {
             target: target.clone(),
             native: None,
@@ -357,11 +354,6 @@ impl Source {
         if let Some(native) = self.native.as_ref() {
             return native.frame(self.cancel.as_deref());
         }
-        #[cfg(target_os = "macos")]
-        {
-            let _ = &self.target;
-            return Err("Screen capture requires macOS 12.3.".into());
-        }
         #[cfg(not(target_os = "macos"))]
         {
             let owned_window = window(&self.target)?;
@@ -373,6 +365,8 @@ impl Source {
                 .capture_image()
                 .map_err(|e| format!("Cannot capture game window: {e}"))
         }
+        #[cfg(target_os = "macos")]
+        self.native.as_ref().unwrap().frame(self.cancel.as_deref())
     }
 }
 pub struct Frames {
@@ -414,19 +408,6 @@ impl Drop for Frames {
     fn drop(&mut self) {
         self.stop.store(true, std::sync::atomic::Ordering::SeqCst);
     }
-}
-#[cfg(target_os = "macos")]
-fn mac_modern() -> bool {
-    std::process::Command::new("/usr/bin/sw_vers")
-        .arg("-productVersion")
-        .output()
-        .ok()
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .is_some_and(|v| {
-            let mut parts = v.trim().split('.').filter_map(|v| v.parse::<u32>().ok());
-            let major = parts.next().unwrap_or(0);
-            major > 12 || (major == 12 && parts.next().unwrap_or(0) >= 3)
-        })
 }
 #[cfg(target_os = "macos")]
 pub fn mac_helper() -> Result<std::path::PathBuf, String> {
