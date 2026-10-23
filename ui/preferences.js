@@ -11,6 +11,7 @@
   const aqwPanel = panels.aqw;
   const keybindPanel = panels.keybinds;
   const state = { mode: 'loading', activeTab: 'general', snapshot: null, recorder: null, loaded: false, groupResetting: false };
+  const usesCommandKey = /Mac|iPhone|iPad/.test(navigator.userAgent);
   const keybindLabels = {
     sshot: ['Capture', 'Take game screenshot'],
     record: ['Capture', 'Start/stop game recording'],
@@ -266,7 +267,11 @@
   }
 
   function shortcutText(binding) {
-    return Array.isArray(binding) ? binding.join(', ') : String(binding ?? '');
+    let text = Array.isArray(binding) ? binding.join(', ') : String(binding ?? '');
+    if (usesCommandKey) {
+      text = text.replaceAll('CmdOrCtrl', 'Cmd').replaceAll('Meta', 'Cmd').replaceAll('Alt', 'Option');
+    }
+    return text;
   }
 
   function groupName(id) {
@@ -285,7 +290,10 @@
       if (!groups.has(group)) groups.set(group, []);
       groups.get(group).push(item);
     }
-    const content = [element('p', { class: 'hint', text: 'Saved shortcuts may require restarting AquaStar NEO.' })];
+    const hint = usesCommandKey
+      ? 'Saved shortcuts apply immediately. Option is the Option key and Control stays Control.'
+      : 'Saved shortcuts apply immediately.';
+    const content = [element('p', { class: 'hint', text: hint })];
     for (const [group, items] of groups) {
       const card = element('section', { class: 'pref keybind-group' },
         element('div', { class: 'keybind-group-head' },
@@ -346,7 +354,7 @@
     if (!key || key === 'Tab') return null;
     const parts = [];
     if (event.ctrlKey) parts.push('Ctrl');
-    if (event.metaKey) parts.push('Meta');
+    if (event.metaKey) parts.push(usesCommandKey ? 'Cmd' : 'Meta');
     if (event.altKey) parts.push('Alt');
     if (event.shiftKey) parts.push('Shift');
     parts.push(key);
@@ -404,8 +412,7 @@
       input.value = shortcutText(updated.binding);
       rowStatus.textContent = (saved.keybindDiagnostics || []).find((message) => message.startsWith(`${item.id}:`)) || '';
       rowStatus.dataset.error = 'false';
-      showRestartNotice();
-      if (!quiet) announce(`${displayName(item.id)} shortcut saved. Restart AquaStar NEO to apply saved keybinds.`);
+      if (!quiet) announce(`${displayName(item.id)} shortcut saved.`);
     } catch (error) {
       rowStatus.textContent = String(error);
       rowStatus.dataset.error = 'true';

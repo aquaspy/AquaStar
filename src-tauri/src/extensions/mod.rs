@@ -436,12 +436,19 @@ pub fn install_contributions(app: &tauri::AppHandle) {
                 continue;
             };
             let key = format!("extension:{id}:{}", action.id);
+            let accelerator = plugin
+                .manifest
+                .shortcuts
+                .iter()
+                .find(|shortcut| shortcut.action == action.id)
+                .map(|shortcut| shortcut.accelerator.trim())
+                .filter(|accelerator| !accelerator.is_empty());
             if let Ok(item) = MenuItem::with_id(
                 app,
                 &key,
                 format!("{} · {}", plugin.manifest.name, action.name),
                 true,
-                None::<&str>,
+                accelerator,
             ) {
                 let _ = menu.append(&item);
             }
@@ -454,8 +461,12 @@ pub fn install_contributions(app: &tauri::AppHandle) {
             let Some(key) = crate::shortcut_from(&parsed) else {
                 continue;
             };
+            let binding = format!("extension:{id}:{}", shortcut.action);
             let book = app.state::<crate::ShortcutBook>();
             let mut map = book.0.lock().unwrap_or_else(|e| e.into_inner());
+            if map.get(&key) == Some(&binding) {
+                continue;
+            }
             if map.contains_key(&key) {
                 state.error(format!(
                     "{id}: shortcut {} is already reserved",
@@ -465,7 +476,7 @@ pub fn install_contributions(app: &tauri::AppHandle) {
             }
             match app.global_shortcut().register(key) {
                 Ok(()) => {
-                    map.insert(key, format!("extension:{id}:{}", shortcut.action));
+                    map.insert(key, binding);
                 }
                 Err(error) => {
                     state.error(format!("{id}: shortcut {}: {error}", shortcut.accelerator))
