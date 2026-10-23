@@ -61,9 +61,76 @@ pub fn show(app: &tauri::AppHandle, title: &str, body: &str) {
         });
         let _ = queue.try_send((title, body));
     }
+    #[cfg(target_os = "macos")]
+    if title.contains("failed") && body.contains("Screen Recording") {
+        mac_open_screen_recording_settings();
+        mac_alert(&title, &body);
+    }
     #[cfg(not(target_os = "linux"))]
     {
         use tauri_plugin_notification::NotificationExt;
         let _ = app.notification().builder().title(title).body(body).show();
+    }
+}
+#[cfg(target_os = "macos")]
+fn mac_open_screen_recording_settings() {
+    let _ = std::process::Command::new("/usr/bin/open")
+        .arg("x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ScreenCapture")
+        .spawn();
+}
+#[cfg(target_os = "macos")]
+fn mac_alert(title: &str, body: &str) {
+    use std::ffi::{c_void, CString};
+    #[link(name = "CoreFoundation", kind = "framework")]
+    extern "C" {
+        fn CFStringCreateWithCString(
+            alloc: *const c_void,
+            cstr: *const i8,
+            encoding: u32,
+        ) -> *const c_void;
+        fn CFRelease(value: *const c_void);
+        fn CFUserNotificationDisplayAlert(
+            timeout: f64,
+            flags: usize,
+            icon: *const c_void,
+            sound: *const c_void,
+            localization: *const c_void,
+            header: *const c_void,
+            message: *const c_void,
+            default_button: *const c_void,
+            alternate_button: *const c_void,
+            other_button: *const c_void,
+            response: *mut usize,
+        ) -> i32;
+    }
+    const UTF8: u32 = 0x0800_0100;
+    let string = |text: &str| {
+        let c = CString::new(text).unwrap_or_else(|_| CString::new("AquaStar NEO").unwrap());
+        unsafe { CFStringCreateWithCString(std::ptr::null(), c.as_ptr(), UTF8) }
+    };
+    unsafe {
+        let header = string(title);
+        let message = string(body);
+        let button = string("OK");
+        if !header.is_null() && !message.is_null() {
+            let _ = CFUserNotificationDisplayAlert(
+                0.0,
+                1,
+                std::ptr::null(),
+                std::ptr::null(),
+                std::ptr::null(),
+                header,
+                message,
+                button,
+                std::ptr::null(),
+                std::ptr::null(),
+                std::ptr::null_mut(),
+            );
+        }
+        for value in [header, message, button] {
+            if !value.is_null() {
+                CFRelease(value);
+            }
+        }
     }
 }

@@ -47,23 +47,223 @@ pub fn targets(pids: &[u32]) -> Result<Vec<Target>, String> {
             })
             .collect());
     }
-    let windows = xcap::Window::all().map_err(|e| format!("Cannot list game windows: {e}"))?;
-    Ok(windows
+    // Without Screen Recording permission, macOS reports other apps' windows
+    // with sharing state 0. xcap drops those, so F2 and Ctrl+J look dead even
+    // though the game window is on screen. The window id is still valid for
+    // ScreenCaptureKit, which is what asks for permission.
+    #[cfg(target_os = "macos")]
+    {
+        let windows = mac_windows();
+        let found = targets_from_listed(&windows, pids);
+        if found.is_empty() {
+            eprintln!(
+                "aquastar-neo: no on-screen game window for pids {pids:?} ({} windows listed)",
+                windows.len()
+            );
+        }
+        return Ok(found);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let windows = xcap::Window::all().map_err(|e| format!("Cannot list game windows: {e}"))?;
+        return Ok(windows
+            .into_iter()
+            .filter_map(|w| {
+                let pid = w.pid().ok()?;
+                if !pids.contains(&pid) {
+                    return None;
+                }
+                Some(Target {
+                    id: w.id().ok()?,
+                    pid,
+                    title: w.title().unwrap_or_else(|_| "Game".into()),
+                    focused: w.is_focused().unwrap_or(false),
+                    token: format!("{pid}:{}", w.id().ok()?),
+                })
+            })
+            .collect());
+    }
+}
+struct ListedWindow {
+    id: u32,
+    pid: u32,
+    layer: i32,
+    width: i64,
+    height: i64,
+    title: String,
+}
+fn targets_from_listed(windows: &[ListedWindow], pids: &[u32]) -> Vec<Target> {
+    let owned: Vec<&ListedWindow> = windows
+        .iter()
+        .filter(|window| window.layer == 0 && pids.contains(&window.pid))
+        .collect();
+    let playable: Vec<&ListedWindow> = owned
+        .iter()
+        .copied()
+        .filter(|window| window.width >= 200 && window.height >= 200)
+        .collect();
+    let chosen = if playable.is_empty() { owned } else { playable };
+    let best = chosen
+        .iter()
+        .max_by_key(|window| window.width.saturating_mul(window.height))
+        .map(|window| window.id);
+    chosen
         .into_iter()
-        .filter_map(|w| {
-            let pid = w.pid().ok()?;
-            if !pids.contains(&pid) {
+        .map(|window| Target {
+            id: window.id,
+            pid: window.pid,
+            title: if window.title.is_empty() {
+                "Game".into()
+            } else {
+                window.title.clone()
+            },
+            focused: Some(window.id) == best,
+            token: format!("{}:{}", window.pid, window.id),
+        })
+        .collect()
+}
+#[cfg(target_os = "macos")]
+fn mac_windows() -> Vec<ListedWindow> {
+    use std::ffi::c_void;
+    extern "C" {
+        static _dispatch_main_q: u8;
+        fn dispatch_sync_f(
+            queue: *mut c_void,
+            context: *mut c_void,
+            work: extern "C" fn(*mut c_void),
+        );
+        fn pthread_main_np() -> i32;
+    }
+    extern "C" fn fill(context: *mut c_void) {
+        let slot = unsafe { &mut *(context as *mut Vec<ListedWindow>) };
+        *slot = mac_windows_inner();
+    }
+    if unsafe { pthread_main_np() } != 0 {
+        return mac_windows_inner();
+    }
+    let mut windows = Vec::new();
+    unsafe {
+        dispatch_sync_f(
+            std::ptr::addr_of!(_dispatch_main_q) as *mut c_void,
+            &mut windows as *mut Vec<ListedWindow> as *mut c_void,
+            fill,
+        );
+    }
+    windows
+}
+#[cfg(target_os = "macos")]
+fn mac_windows_inner() -> Vec<ListedWindow> {
+    use std::ffi::{c_void, CStr, CString};
+    #[link(name = "CoreGraphics", kind = "framework")]
+    extern "C" {
+        fn CGWindowListCopyWindowInfo(option: u32, relative: u32) -> *const c_void;
+    }
+    #[link(name = "CoreFoundation", kind = "framework")]
+    extern "C" {
+        fn CFArrayGetCount(array: *const c_void) -> isize;
+        fn CFArrayGetValueAtIndex(array: *const c_void, index: isize) -> *const c_void;
+        fn CFDictionaryGetValue(dict: *const c_void, key: *const c_void) -> *const c_void;
+        fn CFStringCreateWithCString(
+            alloc: *const c_void,
+            cstr: *const i8,
+            encoding: u32,
+        ) -> *const c_void;
+        fn CFStringGetCString(
+            string: *const c_void,
+            buffer: *mut i8,
+            size: isize,
+            encoding: u32,
+        ) -> bool;
+        fn CFNumberGetValue(number: *const c_void, kind: isize, value: *mut c_void) -> bool;
+        fn CFGetTypeID(value: *const c_void) -> usize;
+        fn CFStringGetTypeID() -> usize;
+        fn CFNumberGetTypeID() -> usize;
+        fn CFDictionaryGetTypeID() -> usize;
+        fn CFRelease(value: *const c_void);
+    }
+    const ON_SCREEN: u32 = 1 | 16;
+    const UTF8: u32 = 0x0800_0100;
+    const SINT64: isize = 4;
+    unsafe {
+        let list = CGWindowListCopyWindowInfo(ON_SCREEN, 0);
+        if list.is_null() {
+            return Vec::new();
+        }
+        let make_key = |name: &str| {
+            let c = CString::new(name).unwrap();
+            CFStringCreateWithCString(std::ptr::null(), c.as_ptr(), UTF8)
+        };
+        let pid_key = make_key("kCGWindowOwnerPID");
+        let id_key = make_key("kCGWindowNumber");
+        let layer_key = make_key("kCGWindowLayer");
+        let bounds_key = make_key("kCGWindowBounds");
+        let width_key = make_key("Width");
+        let height_key = make_key("Height");
+        let name_key = make_key("kCGWindowName");
+        let owner_key = make_key("kCGWindowOwnerName");
+        let number = |value: *const c_void| -> Option<i64> {
+            if value.is_null() || CFGetTypeID(value) != CFNumberGetTypeID() {
                 return None;
             }
-            Some(Target {
-                id: w.id().ok()?,
-                pid,
-                title: w.title().unwrap_or_else(|_| "Game".into()),
-                focused: w.is_focused().unwrap_or(false),
-                token: format!("{pid}:{}", w.id().ok()?),
-            })
-        })
-        .collect())
+            let mut out = 0i64;
+            CFNumberGetValue(value, SINT64, &mut out as *mut i64 as *mut c_void).then_some(out)
+        };
+        let text = |value: *const c_void| -> String {
+            if value.is_null() || CFGetTypeID(value) != CFStringGetTypeID() {
+                return String::new();
+            }
+            let mut buf = [0i8; 512];
+            if CFStringGetCString(value, buf.as_mut_ptr(), buf.len() as isize, UTF8) {
+                CStr::from_ptr(buf.as_ptr()).to_string_lossy().into_owned()
+            } else {
+                String::new()
+            }
+        };
+        let mut windows = Vec::new();
+        for index in 0..CFArrayGetCount(list) {
+            let dict = CFArrayGetValueAtIndex(list, index);
+            if dict.is_null() || CFGetTypeID(dict) != CFDictionaryGetTypeID() {
+                continue;
+            }
+            let Some(pid) = number(CFDictionaryGetValue(dict, pid_key)) else {
+                continue;
+            };
+            let Some(id) = number(CFDictionaryGetValue(dict, id_key)) else {
+                continue;
+            };
+            let bounds = CFDictionaryGetValue(dict, bounds_key);
+            let (width, height) = if !bounds.is_null() && CFGetTypeID(bounds) == CFDictionaryGetTypeID()
+            {
+                (
+                    number(CFDictionaryGetValue(bounds, width_key)).unwrap_or(0),
+                    number(CFDictionaryGetValue(bounds, height_key)).unwrap_or(0),
+                )
+            } else {
+                (0, 0)
+            };
+            let mut title = text(CFDictionaryGetValue(dict, name_key));
+            if title.is_empty() {
+                title = text(CFDictionaryGetValue(dict, owner_key));
+            }
+            windows.push(ListedWindow {
+                id: id as u32,
+                pid: pid as u32,
+                layer: number(CFDictionaryGetValue(dict, layer_key)).unwrap_or(0) as i32,
+                width,
+                height,
+                title,
+            });
+        }
+        for key in [
+            pid_key, id_key, layer_key, bounds_key, width_key, height_key, name_key, owner_key,
+        ] {
+            if !key.is_null() {
+                CFRelease(key);
+            }
+        }
+        CFRelease(list);
+        windows
+    }
 }
 pub fn select(targets: Vec<Target>, id: Option<String>) -> Result<Target, String> {
     if let Some(id) = id {
@@ -83,6 +283,7 @@ pub fn select(targets: Vec<Target>, id: Option<String>) -> Result<Target, String
         }
     })
 }
+#[cfg(not(target_os = "macos"))]
 fn window(target: &Target) -> Result<xcap::Window, String> {
     xcap::Window::all()
         .map_err(|e| e.to_string())?
@@ -94,6 +295,14 @@ pub fn minimized(target: &Target) -> Result<bool, String> {
     if is_wayland() {
         return Ok(false);
     }
+    #[cfg(target_os = "macos")]
+    {
+        let listed = mac_windows();
+        return Ok(!listed
+            .iter()
+            .any(|window| window.id == target.id && window.pid == target.pid));
+    }
+    #[cfg(not(target_os = "macos"))]
     window(target)?.is_minimized().map_err(|e| e.to_string())
 }
 pub struct Source {
@@ -148,14 +357,22 @@ impl Source {
         if let Some(native) = self.native.as_ref() {
             return native.frame(self.cancel.as_deref());
         }
-        let owned_window = window(&self.target)?;
-        #[cfg(target_os = "linux")]
-        if let Ok(frame) = x11::grab(self.target.id) {
-            return Ok(frame);
+        #[cfg(target_os = "macos")]
+        {
+            let _ = &self.target;
+            return Err("Screen capture requires macOS 12.3.".into());
         }
-        owned_window
-            .capture_image()
-            .map_err(|e| format!("Cannot capture game window: {e}"))
+        #[cfg(not(target_os = "macos"))]
+        {
+            let owned_window = window(&self.target)?;
+            #[cfg(target_os = "linux")]
+            if let Ok(frame) = x11::grab(self.target.id) {
+                return Ok(frame);
+            }
+            owned_window
+                .capture_image()
+                .map_err(|e| format!("Cannot capture game window: {e}"))
+        }
     }
 }
 pub struct Frames {
@@ -236,19 +453,118 @@ pub fn mac_helper() -> Result<std::path::PathBuf, String> {
         .ok_or("The bundled macOS capture component is missing.".into())
 }
 #[cfg(target_os = "macos")]
+fn mac_screen_capture_allowed() -> bool {
+    #[link(name = "CoreGraphics", kind = "framework")]
+    extern "C" {
+        fn CGPreflightScreenCaptureAccess() -> bool;
+    }
+    unsafe { CGPreflightScreenCaptureAccess() }
+}
+#[cfg(target_os = "macos")]
+fn mac_request_screen_capture() {
+    #[link(name = "CoreGraphics", kind = "framework")]
+    extern "C" {
+        fn CGRequestScreenCaptureAccess() -> bool;
+    }
+    unsafe {
+        let _ = CGRequestScreenCaptureAccess();
+    }
+}
+#[cfg(target_os = "macos")]
+fn mac_activate() {
+    use std::ffi::c_void;
+    #[link(name = "objc")]
+    extern "C" {
+        fn objc_getClass(name: *const i8) -> *mut c_void;
+        fn sel_registerName(name: *const i8) -> *mut c_void;
+        fn objc_msgSend();
+    }
+    unsafe {
+        let class = objc_getClass(c"NSApplication".as_ptr());
+        if class.is_null() {
+            return;
+        }
+        let shared: unsafe extern "C" fn(*mut c_void, *mut c_void) -> *mut c_void =
+            std::mem::transmute(objc_msgSend as *const ());
+        let app = shared(class, sel_registerName(c"sharedApplication".as_ptr()));
+        if app.is_null() {
+            return;
+        }
+        let activate: unsafe extern "C" fn(*mut c_void, *mut c_void, bool) =
+            std::mem::transmute(objc_msgSend as *const ());
+        activate(
+            app,
+            sel_registerName(c"activateIgnoringOtherApps:".as_ptr()),
+            true,
+        );
+    }
+}
+/// Screen Recording prompts are dropped when this runs off the main thread, so
+/// Control+J looks like it did nothing. Ask on the main thread, in front.
+#[cfg(target_os = "macos")]
+fn mac_prepare_screen_capture() -> bool {
+    use std::{ffi::c_void, sync::atomic::{AtomicBool, Ordering}};
+    static ALLOWED: AtomicBool = AtomicBool::new(false);
+    extern "C" {
+        // C `dispatch_get_main_queue()` is `&_dispatch_main_q`.
+        static _dispatch_main_q: u8;
+        fn dispatch_sync_f(
+            queue: *mut c_void,
+            context: *mut c_void,
+            work: extern "C" fn(*mut c_void),
+        );
+        fn pthread_main_np() -> i32;
+    }
+    extern "C" fn work(_: *mut c_void) {
+        mac_activate();
+        if !mac_screen_capture_allowed() {
+            mac_request_screen_capture();
+        }
+        ALLOWED.store(mac_screen_capture_allowed(), Ordering::SeqCst);
+    }
+    unsafe {
+        if pthread_main_np() != 0 {
+            work(std::ptr::null_mut());
+        } else {
+            dispatch_sync_f(
+                std::ptr::addr_of!(_dispatch_main_q) as *mut c_void,
+                std::ptr::null_mut(),
+                work,
+            );
+        }
+    }
+    ALLOWED.load(Ordering::SeqCst)
+}
+#[cfg(target_os = "macos")]
+fn screen_recording_denied() -> String {
+    "Turn on AquaStar NEO in Privacy & Security, Screen Recording, then quit and reopen AquaStar NEO.".into()
+}
+#[cfg(target_os = "macos")]
 fn mac_frames(target: &Target) -> Result<Frames, String> {
     use std::{
         io::Read,
         process::{Command, Stdio},
         sync::atomic::Ordering,
     };
+    if !mac_prepare_screen_capture() {
+        return Err(screen_recording_denied());
+    }
     let mut child = Command::new(mac_helper()?)
         .args(["frames", &target.pid.to_string(), &target.id.to_string()])
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| e.to_string())?;
     let mut output = child.stdout.take().unwrap();
+    let helper_error = Arc::new(Mutex::new(String::new()));
+    if let Some(mut stderr) = child.stderr.take() {
+        let helper_error = helper_error.clone();
+        std::thread::spawn(move || {
+            let mut text = String::new();
+            let _ = stderr.read_to_string(&mut text);
+            *helper_error.lock().unwrap() = text;
+        });
+    }
     let frames = Frames::new();
     let latest = frames.latest.clone();
     let error = frames.error.clone();
@@ -267,6 +583,7 @@ fn mac_frames(target: &Target) -> Result<Frames, String> {
         let _ = child.kill();
         let _ = child.wait();
     });
+    let helper_error = helper_error.clone();
     std::thread::spawn(move || {
         let result = (|| -> Result<(), String> {
             while !stop.load(Ordering::SeqCst) {
@@ -291,10 +608,32 @@ fn mac_frames(target: &Target) -> Result<Frames, String> {
             Ok(())
         })();
         if let Err(e) = result {
-            *error.lock().unwrap() = Some(e);
+            *error.lock().unwrap() = Some(native_capture_error(e, &helper_error));
         }
     });
     Ok(frames)
+}
+#[cfg(target_os = "macos")]
+fn native_capture_error(fallback: String, helper_error: &Arc<Mutex<String>>) -> String {
+    let mut helper = String::new();
+    for _ in 0..10 {
+        helper = helper_error.lock().unwrap().clone();
+        if !helper.trim().is_empty() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    if let Some(line) = helper.lines().map(str::trim).find(|line| !line.is_empty()) {
+        if line.contains("declined TCCs") || line.contains("ScreenCaptureKit") {
+            eprintln!("aquastar-neo: capture helper: {line}");
+            return screen_recording_denied();
+        }
+        return line.to_string();
+    }
+    if !mac_screen_capture_allowed() {
+        return screen_recording_denied();
+    }
+    fallback
 }
 #[cfg(test)]
 mod tests {
@@ -314,5 +653,48 @@ mod tests {
         assert_eq!(select(vec![t(1, false)], None).unwrap().id, 1);
         assert!(select(vec![t(1, false), t(2, false)], None).is_err());
         assert_eq!(select(vec![t(1, false), t(2, true)], None).unwrap().id, 2);
+    }
+    #[test]
+    fn keeps_the_visible_game_window() {
+        let windows = vec![
+            ListedWindow {
+                id: 1,
+                pid: 10,
+                layer: 0,
+                width: 40,
+                height: 40,
+                title: "tiny".into(),
+            },
+            ListedWindow {
+                id: 2,
+                pid: 10,
+                layer: 0,
+                width: 960,
+                height: 578,
+                title: String::new(),
+            },
+            ListedWindow {
+                id: 3,
+                pid: 99,
+                layer: 0,
+                width: 960,
+                height: 578,
+                title: "other".into(),
+            },
+            ListedWindow {
+                id: 4,
+                pid: 10,
+                layer: 3,
+                width: 960,
+                height: 578,
+                title: "overlay".into(),
+            },
+        ];
+        let found = targets_from_listed(&windows, &[10]);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].id, 2);
+        assert!(found[0].focused);
+        assert_eq!(found[0].title, "Game");
+        assert_eq!(found[0].token, "10:2");
     }
 }
