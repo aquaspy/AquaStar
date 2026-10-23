@@ -2,7 +2,7 @@
 
 **All implementation work on AquaStar NEO is done in pstack poteto-mode.** Use the pstack principles, and the pstack skills when a task calls for one.
 
-AquaStar NEO is a separate product from classic AquaStar. Classic AquaStar is the Electron app on `main` and `dev`. NEO development is `neo-dev`. Stable NEO is `neo`. The version sequence starts at `1.0.0`. Tags use `neo-v*` (for example `neo-v1.0.0`). An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. Latest stays the classic Electron release. The old `v3.0.0-*`, `v2.1.1-rc.*` and `lite-v*` tags and their releases were deleted on 2026-10-22.
+AquaStar NEO is a separate product from classic AquaStar. Classic AquaStar is the Electron app on `main` and `dev`. NEO development is `neo-dev`. Stable NEO is `neo`. The version sequence starts at `1.0.0`. Tags use `neo-v*` (for example `neo-v1.0.1`). An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. Latest stays the classic Electron release. The old `v3.0.0-*`, `v2.1.1-rc.*` and `lite-v*` tags and their releases were deleted on 2026-10-22.
 
 The sections below record the earlier plan, when this launcher was called AquaStar 3.0 and lived in `desktop/`. The [product split on 21 October 2026](#product-split-21-october-2026) replaces that plan's branch and release rules.
 
@@ -270,6 +270,6 @@ The owner approved a repository split. AquaStar NEO is no longer AquaStar 3.0, a
 
 - This tree is NEO only. The launcher, plugins, scripts, and workflows live at the repository root. The Electron application is not in this tree.
 - `neo-dev` is NEO development. `neo` is the NEO stable branch. Classic Electron `main` and `dev` are a separate history.
-- The version in `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` is `1.0.0`. The Cargo package and binary stay `aquastar-neo`. The bundle identifier stays `io.github.aquaspy.aquastar-lite`, so existing settings, portal grants, and shortcut bindings keep their directory.
+- The version in `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` is `1.0.1`. The Cargo package and binary stay `aquastar-neo`. The bundle identifier stays `io.github.aquaspy.aquastar-lite`, so existing settings, portal grants, and shortcut bindings keep their directory.
 - Release tags are `neo-v*`. An `rc`, `alpha`, or `beta` tag is a prerelease. No NEO release is marked Latest. The old `v3.0.0-*`, `v2.1.1-rc.*` and `lite-v*` tags and their releases were deleted on 2026-10-22.
 - CI for this tree runs on pushes to `neo` and `neo-dev`.
