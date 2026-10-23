@@ -631,7 +631,7 @@ impl Players {
     /// previous player's engine so a regular launch replaces the current game.
     fn prepare(&self, engine: Engine) -> Option<String> {
         let mut list = self.children.lock().unwrap();
-        list.retain_mut(|t| matches!(t.child.try_wait(), Ok(None)));
+        list.retain_mut(|t| still_running(&mut t.child));
         if list.iter().any(|t| t.recipe.engine() == engine) {
             return Some(format!("{engine:?} is already running"));
         }
@@ -652,7 +652,7 @@ impl Players {
         watch: Option<FallbackWatch>,
     ) -> Result<(), String> {
         let mut list = self.children.lock().unwrap();
-        list.retain_mut(|t| matches!(t.child.try_wait(), Ok(None)));
+        list.retain_mut(|t| still_running(&mut t.child));
         if self.shutting_down.load(Ordering::SeqCst) {
             drop(list);
             let _ = child.kill();
@@ -725,7 +725,7 @@ impl Players {
 
         let mut tracked = {
             let mut list = self.children.lock().unwrap();
-            list.retain_mut(|entry| matches!(entry.child.try_wait(), Ok(None)));
+            list.retain_mut(|entry| still_running(&mut entry.child));
             let indices: Vec<usize> = list
                 .iter()
                 .enumerate()
@@ -827,8 +827,14 @@ impl Players {
                         list.remove(index);
                     }
                 }
-                Err(_) => {
-                    list.remove(index);
+                Err(err) => {
+                    let pid = list[index].child.id();
+                    if wait_error_but_alive(pid) {
+                        eprintln!("aquastar-neo: player {pid} is still running ({err})");
+                        index += 1;
+                    } else {
+                        list.remove(index);
+                    }
                 }
             }
         }
@@ -877,9 +883,7 @@ impl Players {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .iter_mut()
-            .filter_map(|tracked| {
-                matches!(tracked.child.try_wait(), Ok(None)).then(|| tracked.child.id())
-            })
+            .filter_map(|tracked| still_running(&mut tracked.child).then(|| tracked.child.id()))
             .collect()
     }
 
@@ -889,7 +893,7 @@ impl Players {
             .unwrap_or_else(|error| error.into_inner())
             .iter_mut()
             .any(|tracked| {
-                tracked.recipe.engine() == engine && matches!(tracked.child.try_wait(), Ok(None))
+                tracked.recipe.engine() == engine && still_running(&mut tracked.child)
             })
     }
 
@@ -903,7 +907,7 @@ impl Players {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .iter_mut()
-            .any(|tracked| matches!(tracked.child.try_wait(), Ok(None)));
+            .any(|tracked| still_running(&mut tracked.child));
         if alive || self.launch_hold.load(Ordering::SeqCst) {
             Presence::Running
         } else {
@@ -919,7 +923,7 @@ impl Players {
             let mut list = self.children.lock().unwrap();
             let mut count = 0;
             for tracked in list.iter_mut() {
-                if matches!(tracked.child.try_wait(), Ok(None)) {
+                if still_running(&mut tracked.child) {
                     count += 1;
                 }
             }
@@ -1066,6 +1070,49 @@ fn spawn_failure(exe: &Path, err: std::io::Error) -> String {
         );
     }
     format!("could not start {}: {err}", exe.display())
+}
+
+fn wait_error_but_alive(pid: u32) -> bool {
+    #[cfg(unix)]
+    {
+        process_alive(pid)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = pid;
+        false
+    }
+}
+
+#[cfg(unix)]
+fn process_alive(pid: u32) -> bool {
+    extern "C" {
+        fn kill(pid: i32, sig: i32) -> i32;
+    }
+    let rc = unsafe { kill(pid as i32, 0) };
+    // EPERM: the process exists, but this caller cannot signal it.
+    rc == 0 || (rc == -1 && std::io::Error::last_os_error().raw_os_error() == Some(1))
+}
+
+/// `try_wait` can fail with EINTR while the player is still running. Dropping
+/// the handle in that case unregisters screenshot and record shortcuts.
+fn still_running(child: &mut Child) -> bool {
+    match child.try_wait() {
+        Ok(None) => true,
+        Ok(Some(_)) => false,
+        #[cfg(unix)]
+        Err(err) => {
+            let pid = child.id();
+            if process_alive(pid) {
+                eprintln!("aquastar-neo: player {pid} is still running ({err})");
+                true
+            } else {
+                false
+            }
+        }
+        #[cfg(not(unix))]
+        Err(_) => false,
+    }
 }
 
 fn spawn_player(

@@ -1,4 +1,33 @@
 fn main() {
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
+        let out = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+        let object = out.join("capture_feedback.o");
+        let archive = out.join("libaquastar_capture_feedback.a");
+        let arch = match std::env::var("CARGO_CFG_TARGET_ARCH").unwrap().as_str() {
+            "aarch64" => "arm64",
+            "x86_64" => "x86_64",
+            arch => panic!("Unsupported macOS capture feedback architecture: {arch}"),
+        };
+        let status = std::process::Command::new("xcrun")
+            .args(["clang", "-arch", arch, "-mmacosx-version-min=12.3", "-fobjc-arc", "-fblocks", "-O2", "-c", "src/capture/feedback_macos.m", "-o"])
+            .arg(&object)
+            .status()
+            .expect("Xcode command line tools are required for macOS capture feedback");
+        assert!(status.success(), "Failed to build macOS capture feedback");
+        let status = std::process::Command::new("xcrun")
+            .args(["ar", "crs"])
+            .arg(&archive)
+            .arg(&object)
+            .status()
+            .expect("Failed to archive macOS capture feedback");
+        assert!(status.success(), "Failed to archive macOS capture feedback");
+        println!("cargo:rerun-if-changed=src/capture/feedback_macos.m");
+        println!("cargo:rustc-link-search=native={}", out.display());
+        println!("cargo:rustc-link-lib=static=aquastar_capture_feedback");
+        println!("cargo:rustc-link-lib=framework=AppKit");
+        println!("cargo:rustc-link-lib=framework=QuartzCore");
+        println!("cargo:rustc-link-lib=framework=UserNotifications");
+    }
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
         let out = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
         let so = out.join("libaquastar_flash_gtk.so");

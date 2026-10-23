@@ -8,7 +8,6 @@ Shortcuts act directly: neither F2 nor Ctrl+J opens a control window or an AquaS
 
 - Screenshots retain the captured window's pixel resolution.
 - Video uses H.264 in MP4, up to 1920×1080 at 30 FPS, without enlarging smaller windows. Its dimensions stay fixed if the game is resized.
-- macOS before 12.3 uses the legacy image capture path at 15 FPS.
 - Recordings contain video only. Game, microphone and system audio are not captured. There is no audio option.
 - Default folders are the system Pictures directory's `AquaStar Screenshots` and Videos directory's `AquaStar Recordings`. Change them through the native folder picker.
 
@@ -20,14 +19,21 @@ Settings are stored separately in `capture-settings.json` in the Tauri configura
 | --- | --- | --- |
 | Windows | Windows Graphics Capture, targeting the player window | None |
 | macOS 12.3+ | ScreenCaptureKit helper targeting the player window | None |
-| macOS 11–12.2 | Core Graphics image capture, capped at 15 FPS | None |
 | Linux X11 | XComposite window pixmap, with window-drawable fallback | None |
 | Linux Wayland | ScreenCast portal and its private PipeWire remote | None |
 
 On Wayland, select the game window in the system picker. Desktops that support only monitor capture are reported as unsupported; AquaStar NEO does not capture the entire monitor instead. The portal cannot reliably expose the selected window's PID, so select the window matching the game chosen in AquaStar NEO. Audio is not captured.
 
 
-Minimizing an X11/Windows game ends the current recording and saves its completed portion. Closing or automatically replacing a player process never transfers an ongoing recording to another process. Capture availability does not change the launcher's operating-system minimum.
+Minimizing an X11/Windows game ends the current recording and saves its completed portion. Closing or automatically replacing a player process never transfers an ongoing recording to another process. The launcher requires macOS 12.3 or later, the same floor as ScreenCaptureKit.
+
+### macOS capture feedback
+
+A successful screenshot briefly flashes a blue outline around its game window. A red outline stays visible while video frames are being recorded and disappears when recording stops, before MP4 finalization. The outlines track the player's window, ignore mouse input, and never take keyboard focus. They hide when that player is not the foreground app or its window is off screen. A screenshot taken during recording briefly shows blue over the red outline; both overlays are excluded from the captured game window.
+
+Native macOS notifications use AquaStar NEO's installed application identity and display **Screenshot taken**, **Recording started**, and **Recording stopped** (after the video is saved). The first notification requests permission. macOS notification settings and Focus can suppress banners; capture and its border do not depend on notification permission. Standalone Cargo executables do not impersonate Terminal or Finder to send notifications.
+
+On macOS 27 with Apple Silicon and the bundled Ruffle player, the tester confirmed the blue/red outlines and all three native banners after enabling AquaStar NEO in System Settings → Notifications. The same test saved a 2.47-second H.264 MP4 at 30 FPS with no audio stream. This does not cover every display/Spaces arrangement or long recordings.
 
 ## Encoder and packaging
 

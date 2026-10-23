@@ -27,7 +27,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use players::Engine;
 use players::MovieKind;
@@ -533,9 +533,26 @@ fn get_profile_preferences() -> Result<profile::ProfilePreferences, String> {
 
 #[tauri::command]
 fn change_profile_preference(
+    app: tauri::AppHandle,
     change: profile::ProfilePreferenceChange,
 ) -> Result<profile::ProfilePreferences, String> {
-    profile::change_profile_preference(&profile::live_files(), change)
+    let refresh_shortcuts = matches!(change, profile::ProfilePreferenceChange::Keybind(_));
+    let saved = profile::change_profile_preference(&profile::live_files(), change)?;
+    if refresh_shortcuts {
+        let app = app.clone();
+        if let Err(error) = app.clone().run_on_main_thread(move || {
+            register_saved_shortcuts_inner(&app, None);
+            let lang = current_language();
+            if let Err(err) = manifest::install_menu(&app, lang.as_str()) {
+                eprintln!("aquastar-neo: menu was not installed ({err})");
+            } else {
+                extensions::install_contributions(&app);
+            }
+        }) {
+            eprintln!("aquastar-neo: saved shortcut was not applied ({error})");
+        }
+    }
+    Ok(saved)
 }
 
 #[tauri::command]
@@ -1023,6 +1040,12 @@ fn open_dialog(
 }
 
 fn dispatch(app: &tauri::AppHandle, id: &str, from_menu: bool) {
+    // A menu key equivalent and the global hotkey can both deliver one
+    // keypress while the launcher is focused. Record would toggle twice and
+    // a screenshot would be taken twice.
+    if !begin_shortcut_action(id) {
+        return;
+    }
     if extensions::dispatch_action(app, id) {
         return;
     }
@@ -1136,7 +1159,18 @@ fn extension_bindings(
 }
 
 fn register_saved_shortcuts(app: &tauri::AppHandle) {
-    register_saved_shortcuts_inner(app, None);
+    let app = app.clone();
+    // Setup runs on the main thread, so this closure runs inline and the book
+    // is populated before plugin contributions read it. The presence reaper
+    // calls this off the main thread: queue the refresh and return. Waiting
+    // there stalls process cleanup, and the old unregister-all path dropped
+    // every hotkey when the later register did not land.
+    if let Err(error) =
+        app.clone()
+            .run_on_main_thread(move || register_saved_shortcuts_inner(&app, None))
+    {
+        eprintln!("aquastar-neo: could not refresh shortcuts ({error})");
+    }
 }
 
 fn register_saved_shortcuts_with_trace(app: &tauri::AppHandle, trace: &mut HideLauncherTrace) {
@@ -1144,24 +1178,8 @@ fn register_saved_shortcuts_with_trace(app: &tauri::AppHandle, trace: &mut HideL
 }
 
 fn register_saved_shortcuts_inner(app: &tauri::AppHandle, trace: Option<&mut HideLauncherTrace>) {
-    use tauri_plugin_global_shortcut::GlobalShortcutExt;
     let mut trace = trace;
     let total_started = trace.as_ref().map(|_| Instant::now());
-    let phase_started = trace.as_ref().map(|_| Instant::now());
-    let old = std::mem::take(
-        &mut *app
-            .state::<ShortcutBook>()
-            .0
-            .lock()
-            .unwrap_or_else(|e| e.into_inner()),
-    );
-    let kept_extensions = extension_bindings(&old);
-    for shortcut in old.keys() {
-        let _ = app.global_shortcut().unregister(*shortcut);
-    }
-    if let (Some(trace), Some(started)) = (trace.as_deref_mut(), phase_started) {
-        trace.shortcut_cleanup_ms = started.elapsed().as_secs_f64() * 1000.0;
-    }
     let phase_started = trace.as_ref().map(|_| Instant::now());
     capture::sync_shortcuts(app);
     if let (Some(trace), Some(started)) = (trace.as_deref_mut(), phase_started) {
@@ -1175,77 +1193,172 @@ fn register_saved_shortcuts_inner(app: &tauri::AppHandle, trace: Option<&mut Hid
             trace.wayland_shortcut_sync_ms = started.elapsed().as_secs_f64() * 1000.0;
         }
     }
-    let running = !app.state::<Players>().capture_pids().is_empty();
+    let old = app
+        .state::<ShortcutBook>()
+        .0
+        .lock()
+        .unwrap_or_else(|err| err.into_inner())
+        .clone();
     let phase_started = trace.as_ref().map(|_| Instant::now());
-    let merged = profile::merged_settings(&profile::live_files());
+    let desired = desired_shortcut_book(app, &old);
     if let (Some(trace), Some(started)) = (trace.as_deref_mut(), phase_started) {
         trace.profile_merge_ms = started.elapsed().as_secs_f64() * 1000.0;
     }
-    let mut map = std::collections::HashMap::new();
     let phase_started = trace.as_ref().map(|_| Instant::now());
-    for bind in manifest::keybinds() {
-        #[cfg(target_os = "linux")]
-        if capture::is_wayland() {
-            // The global-shortcut plugin currently speaks X11 on Linux. The
-            // Wayland portal owns these bindings while a game process is live.
-            continue;
-        }
-        if matches!(bind.id.as_str(), "sshot" | "record")
-            && (!running || capture::gnome_shortcuts_enabled(app) || capture::is_wayland())
-        {
-            continue;
-        }
-        for accel in manifest::accelerators(&bind, merged.get(&bind.id)) {
-            let Some(parsed) = profile::parse_accelerator(&accel) else {
-                eprintln!(
-                    "aquastar-neo: skipping invalid shortcut {accel} for {}",
-                    bind.id
-                );
-                continue;
-            };
-            let Some(shortcut) = shortcut_from(&parsed) else {
-                eprintln!("aquastar-neo: cannot map shortcut {accel} for {}", bind.id);
-                continue;
-            };
-            match app.global_shortcut().register(shortcut) {
-                Ok(()) => {
-                    map.insert(shortcut, bind.id.clone());
-                }
-                Err(err) => {
-                    eprintln!(
-                        "aquastar-neo: shortcut {accel} for {} was not registered ({err})",
-                        bind.id
-                    );
-                }
-            }
-        }
-    }
-    for (shortcut, id) in kept_extensions {
-        if map.contains_key(&shortcut) {
-            eprintln!(
-                "aquastar-neo: extension shortcut for {id} was not registered (already reserved)"
-            );
-            continue;
-        }
-        match app.global_shortcut().register(shortcut) {
-            Ok(()) => {
-                map.insert(shortcut, id);
-            }
-            Err(err) => {
-                eprintln!("aquastar-neo: extension shortcut for {id} was not registered ({err})");
-            }
-        }
-    }
+    let next = commit_shortcut_book(app, &old, &desired);
     if let (Some(trace), Some(started)) = (trace.as_deref_mut(), phase_started) {
         trace.native_registration_ms = started.elapsed().as_secs_f64() * 1000.0;
     }
     *app.state::<ShortcutBook>()
         .0
         .lock()
-        .unwrap_or_else(|err| err.into_inner()) = map;
+        .unwrap_or_else(|err| err.into_inner()) = next;
     if let (Some(trace), Some(started)) = (trace.as_deref_mut(), total_started) {
         trace.shortcut_total_ms = started.elapsed().as_secs_f64() * 1000.0;
     }
+}
+
+fn desired_shortcut_book(
+    app: &tauri::AppHandle,
+    old: &std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String>,
+) -> std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String> {
+    let mut desired = std::collections::HashMap::new();
+    // Wayland has no X11 global shortcuts. Leave app chords out of the book so
+    // the refresh releases them and the portal owns capture.
+    if !capture::is_wayland() {
+        let running = !app.state::<Players>().capture_pids().is_empty();
+        let merged = profile::merged_settings(&profile::live_files());
+        for bind in manifest::keybinds() {
+            if matches!(bind.id.as_str(), "sshot" | "record")
+                && (!running || capture::gnome_shortcuts_enabled(app))
+            {
+                continue;
+            }
+            for accel in manifest::accelerators(&bind, merged.get(&bind.id)) {
+                let Some(parsed) = profile::parse_accelerator(&accel) else {
+                    eprintln!(
+                        "aquastar-neo: skipping invalid shortcut {accel} for {}",
+                        bind.id
+                    );
+                    continue;
+                };
+                let Some(shortcut) = shortcut_from(&parsed) else {
+                    eprintln!("aquastar-neo: cannot map shortcut {accel} for {}", bind.id);
+                    continue;
+                };
+                if let Some(previous) = desired.insert(shortcut, bind.id.clone()) {
+                    eprintln!(
+                        "aquastar-neo: shortcut {accel} for {} replaces {previous}",
+                        bind.id
+                    );
+                }
+            }
+        }
+    }
+    for (shortcut, id) in extension_bindings(old) {
+        if desired.contains_key(&shortcut) {
+            eprintln!(
+                "aquastar-neo: extension shortcut for {id} was not registered (already reserved)"
+            );
+            continue;
+        }
+        desired.insert(shortcut, id);
+    }
+    desired
+}
+
+fn commit_shortcut_book(
+    app: &tauri::AppHandle,
+    old: &std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String>,
+    desired: &std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String>,
+) -> std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String> {
+    use tauri_plugin_global_shortcut::GlobalShortcutExt;
+    let mut next = std::collections::HashMap::new();
+    for (shortcut, id) in desired {
+        if old.get(shortcut) == Some(id) {
+            next.insert(*shortcut, id.clone());
+            continue;
+        }
+        if old.contains_key(shortcut) {
+            let _ = app.global_shortcut().unregister(*shortcut);
+        }
+        match app.global_shortcut().register(*shortcut) {
+            Ok(()) => {
+                next.insert(*shortcut, id.clone());
+            }
+            Err(err) => {
+                if app.global_shortcut().is_registered(*shortcut) {
+                    next.insert(*shortcut, id.clone());
+                    continue;
+                }
+                eprintln!("aquastar-neo: shortcut for {id} was not registered ({err})");
+                if let Some(previous) = old.get(shortcut) {
+                    if app.global_shortcut().register(*shortcut).is_ok() {
+                        next.insert(*shortcut, previous.clone());
+                    }
+                }
+            }
+        }
+    }
+    for (shortcut, id) in old {
+        if next.contains_key(shortcut) {
+            continue;
+        }
+        let landed = next.values().any(|live| live == id);
+        let wanted = desired.values().any(|wanted| wanted == id);
+        if wanted && !landed {
+            // The replacement chord did not register. Keep the working one.
+            next.insert(*shortcut, id.clone());
+            continue;
+        }
+        if let Err(err) = app.global_shortcut().unregister(*shortcut) {
+            eprintln!("aquastar-neo: shortcut for {id} stayed registered ({err})");
+            next.insert(*shortcut, id.clone());
+        }
+    }
+    next
+}
+
+fn shortcut_book_delta(
+    old: &std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String>,
+    desired: &std::collections::HashMap<tauri_plugin_global_shortcut::Shortcut, String>,
+) -> (Vec<tauri_plugin_global_shortcut::Shortcut>, Vec<tauri_plugin_global_shortcut::Shortcut>) {
+    let mut register = Vec::new();
+    let mut unregister = Vec::new();
+    for (shortcut, id) in desired {
+        if old.get(shortcut) != Some(id) {
+            register.push(*shortcut);
+        }
+    }
+    for shortcut in old.keys() {
+        if !desired.contains_key(shortcut) {
+            unregister.push(*shortcut);
+        }
+    }
+    register.sort_by_key(|shortcut| shortcut.id());
+    unregister.sort_by_key(|shortcut| shortcut.id());
+    (register, unregister)
+}
+
+fn begin_shortcut_action(id: &str) -> bool {
+    let coalesced = id.starts_with("extension:")
+        || manifest::keybinds().iter().any(|bind| bind.id == id);
+    if !coalesced {
+        return true;
+    }
+    static RECENT: Mutex<Vec<(String, Instant)>> = Mutex::new(Vec::new());
+    let mut recent = RECENT.lock().unwrap_or_else(|err| err.into_inner());
+    note_shortcut_action(&mut recent, id, Instant::now())
+}
+
+fn note_shortcut_action(recent: &mut Vec<(String, Instant)>, id: &str, now: Instant) -> bool {
+    const WINDOW: Duration = Duration::from_millis(250);
+    recent.retain(|(_, at)| now.saturating_duration_since(*at) < WINDOW);
+    if recent.iter().any(|(seen, _)| seen == id) {
+        return false;
+    }
+    recent.push((id.to_string(), now));
+    true
 }
 
 fn schedule_inventory_sync(app: tauri::AppHandle) {
@@ -1560,6 +1673,62 @@ mod tests {
             extension_bindings(&book),
             vec![(extension, "extension:demo:open".into())]
         );
+    }
+
+    #[test]
+    fn a_presence_change_keeps_registered_shortcuts_and_only_adds_capture() {
+        let help = shortcut_from(&profile::parse_accelerator("Alt+H").unwrap()).unwrap();
+        let shot = shortcut_from(&profile::parse_accelerator("F2").unwrap()).unwrap();
+        let extension = shortcut_from(&profile::parse_accelerator("Alt+Shift+E").unwrap()).unwrap();
+        let mut old = std::collections::HashMap::new();
+        old.insert(help, "help".into());
+        old.insert(extension, "extension:demo:open".into());
+        let mut desired = old.clone();
+        desired.insert(shot, "sshot".into());
+        let (register, unregister) = shortcut_book_delta(&old, &desired);
+        assert_eq!(register, vec![shot]);
+        assert!(unregister.is_empty());
+    }
+
+    #[test]
+    fn stopping_capture_only_releases_capture_shortcuts() {
+        let help = shortcut_from(&profile::parse_accelerator("Alt+H").unwrap()).unwrap();
+        let shot = shortcut_from(&profile::parse_accelerator("F2").unwrap()).unwrap();
+        let record = shortcut_from(&profile::parse_accelerator("Ctrl+J").unwrap()).unwrap();
+        let mut old = std::collections::HashMap::new();
+        old.insert(help, "help".into());
+        old.insert(shot, "sshot".into());
+        old.insert(record, "record".into());
+        let mut desired = std::collections::HashMap::new();
+        desired.insert(help, "help".into());
+        let (register, unregister) = shortcut_book_delta(&old, &desired);
+        assert!(register.is_empty());
+        let mut expected = vec![shot, record];
+        expected.sort_by_key(|shortcut| shortcut.id());
+        assert_eq!(unregister, expected);
+    }
+
+    #[test]
+    fn one_keypress_does_not_run_the_action_twice() {
+        use std::time::{Duration, Instant};
+        let mut recent = Vec::new();
+        let start = Instant::now();
+        assert!(note_shortcut_action(&mut recent, "record", start));
+        assert!(!note_shortcut_action(
+            &mut recent,
+            "record",
+            start + Duration::from_millis(10)
+        ));
+        assert!(note_shortcut_action(
+            &mut recent,
+            "sshot",
+            start + Duration::from_millis(10)
+        ));
+        assert!(note_shortcut_action(
+            &mut recent,
+            "record",
+            start + Duration::from_millis(251)
+        ));
     }
 
     #[test]

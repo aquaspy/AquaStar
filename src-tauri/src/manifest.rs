@@ -444,9 +444,10 @@ pub fn shell_pages(lang: &str) -> Value {
 
 pub fn install_menu(app: &tauri::AppHandle, lang: &str) -> Result<(), String> {
     use tauri::menu::Menu;
+    let saved = crate::profile::merged_settings(&crate::profile::live_files());
     let menu = Menu::new(app).map_err(|err| err.to_string())?;
     for node in &manifest().menus {
-        append_top(app, &menu, node, lang)?;
+        append_top(app, &menu, node, lang, &saved)?;
     }
     app.set_menu(menu).map_err(|err| err.to_string())?;
     Ok(())
@@ -457,6 +458,7 @@ fn append_top(
     menu: &tauri::menu::Menu<tauri::Wry>,
     node: &MenuNode,
     lang: &str,
+    saved: &Map<String, Value>,
 ) -> Result<(), String> {
     use tauri::menu::{MenuItem, Submenu};
     if let Some(children) = &node.items {
@@ -467,16 +469,17 @@ fn append_top(
             true,
         )
         .map_err(|err| err.to_string())?;
-        fill_submenu(app, &submenu, children, lang)?;
+        fill_submenu(app, &submenu, children, lang, saved)?;
         menu.append(&submenu).map_err(|err| err.to_string())?;
         return Ok(());
     }
+    let accelerator = node_accelerator(node, saved);
     let item = MenuItem::with_id(
         app,
         node.id.clone().unwrap_or_default(),
         node_label(lang, node),
         true,
-        None::<&str>,
+        accelerator.as_deref(),
     )
     .map_err(|err| err.to_string())?;
     menu.append(&item).map_err(|err| err.to_string())?;
@@ -488,6 +491,7 @@ fn fill_submenu(
     submenu: &tauri::menu::Submenu<tauri::Wry>,
     nodes: &[MenuNode],
     lang: &str,
+    saved: &Map<String, Value>,
 ) -> Result<(), String> {
     use tauri::menu::{MenuItem, PredefinedMenuItem, Submenu};
     for node in nodes {
@@ -504,21 +508,40 @@ fn fill_submenu(
                 true,
             )
             .map_err(|err| err.to_string())?;
-            fill_submenu(app, &child, children, lang)?;
+            fill_submenu(app, &child, children, lang, saved)?;
             submenu.append(&child).map_err(|err| err.to_string())?;
             continue;
         }
+        let accelerator = node_accelerator(node, saved);
         let item = MenuItem::with_id(
             app,
             node.id.clone().unwrap_or_default(),
             node_label(lang, node),
             true,
-            None::<&str>,
+            accelerator.as_deref(),
         )
         .map_err(|err| err.to_string())?;
         submenu.append(&item).map_err(|err| err.to_string())?;
     }
     Ok(())
+}
+
+fn node_accelerator(node: &MenuNode, saved: &Map<String, Value>) -> Option<String> {
+    if node.items.is_some() {
+        return None;
+    }
+    let id = node.id.as_deref()?;
+    menu_accelerator(id, saved.get(id))
+}
+
+/// First saved or default chord for a menu item. The stored spellings stay
+/// `Alt` and `Ctrl`; macOS presents `Alt` as Option and `Ctrl` as Control.
+fn menu_accelerator(id: &str, saved: Option<&Value>) -> Option<String> {
+    let bindings = keybinds();
+    let bind = bindings.iter().find(|bind| bind.id == id)?;
+    accelerators(bind, saved)
+        .into_iter()
+        .find(|accel| crate::profile::parse_accelerator(accel).is_some())
 }
 
 pub fn about_dialog(lang: &str) -> Dialog {
@@ -641,7 +664,20 @@ fn display_accel(accel: &str) -> String {
     } else {
         "Ctrl"
     };
-    accel.replace("CmdOrCtrl", replacement)
+    let text = accel.replace("CmdOrCtrl", replacement);
+    if !cfg!(target_os = "macos") {
+        return text;
+    }
+    // The key next to the space bar is labeled Option. Stored defaults keep
+    // the Alt spelling so Windows and Linux bindings do not change.
+    text.split('+')
+        .map(|part| match part.trim() {
+            "Alt" => "Option",
+            "Meta" | "Super" => "Cmd",
+            other => other,
+        })
+        .collect::<Vec<_>>()
+        .join("+")
 }
 
 fn electron_platform() -> &'static str {
@@ -1054,6 +1090,39 @@ mod tests {
     fn help_close_button_uses_the_selected_locale() {
         assert_eq!(help_dialog("en-US", None).close, "Close");
         assert_eq!(help_dialog("pt-BR", None).close, "Fechar");
+    }
+
+    #[test]
+    fn menu_accelerators_follow_the_keybind_table() {
+        assert_eq!(menu_accelerator("help", None).as_deref(), Some("Alt+H"));
+        assert_eq!(menu_accelerator("record", None).as_deref(), Some("Ctrl+J"));
+        assert_eq!(menu_accelerator("sshot", None).as_deref(), Some("F2"));
+        assert!(menu_accelerator("useful", None).is_none());
+        let saved = Value::String("Alt+Shift+H".into());
+        assert_eq!(
+            menu_accelerator("help", Some(&saved)).as_deref(),
+            Some("Alt+Shift+H")
+        );
+        let broken = Value::String("Alt+".into());
+        assert!(menu_accelerator("help", Some(&broken)).is_none());
+    }
+
+    #[test]
+    fn help_dialog_names_modifiers_for_the_host_keyboard() {
+        let help = help_dialog("en-US", None);
+        assert!(help.detail.contains("Ctrl+J"));
+        assert!(help.detail.contains("F2"));
+        if cfg!(target_os = "macos") {
+            assert!(help.detail.contains("Option+H"));
+            assert!(!help.detail.contains("Alt+H"));
+            assert_eq!(display_accel("Alt+Shift+U"), "Option+Shift+U");
+            assert_eq!(display_accel("CmdOrCtrl+S"), "Cmd+S");
+            assert_eq!(display_accel("Meta+K"), "Cmd+K");
+        } else {
+            assert!(help.detail.contains("Alt+H"));
+            assert_eq!(display_accel("Alt+H"), "Alt+H");
+            assert_eq!(display_accel("CmdOrCtrl+S"), "Ctrl+S");
+        }
     }
 
     #[test]
