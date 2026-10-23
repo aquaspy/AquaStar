@@ -500,7 +500,8 @@ fn mac_activate() {
     }
 }
 /// Screen Recording prompts are dropped when this runs off the main thread, so
-/// Control+J looks like it did nothing. Ask on the main thread, in front.
+/// Control+J looks like it did nothing. Bring the app forward only when asking
+/// for permission; an authorized capture must leave the game focused.
 #[cfg(target_os = "macos")]
 fn mac_prepare_screen_capture() -> bool {
     use std::{ffi::c_void, sync::atomic::{AtomicBool, Ordering}};
@@ -516,8 +517,8 @@ fn mac_prepare_screen_capture() -> bool {
         fn pthread_main_np() -> i32;
     }
     extern "C" fn work(_: *mut c_void) {
-        mac_activate();
         if !mac_screen_capture_allowed() {
+            mac_activate();
             mac_request_screen_capture();
         }
         ALLOWED.store(mac_screen_capture_allowed(), Ordering::SeqCst);

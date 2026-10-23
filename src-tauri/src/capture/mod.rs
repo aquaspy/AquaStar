@@ -486,10 +486,9 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
                     Err(_) if state.0.stop.load(Ordering::SeqCst) => break,
                     Err(error) => return Err(error),
                 };
-                while frames <= due {
-                    encoder.write(&frame)?;
-                    frames += 1;
-                }
+                let count = due - frames + 1;
+                encoder.write_repeated(&frame, count)?;
+                frames += count;
             }
             if seconds != now.as_secs() {
                 seconds = now.as_secs();

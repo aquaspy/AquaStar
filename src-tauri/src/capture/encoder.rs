@@ -261,9 +261,19 @@ impl Video {
         })
     }
     pub fn write(&mut self, image: &xcap::image::RgbaImage) -> Result<(), String> {
+        self.write_repeated(image, 1)
+    }
+    pub fn write_repeated(
+        &mut self,
+        image: &xcap::image::RgbaImage,
+        count: u64,
+    ) -> Result<(), String> {
         use xcap::image::{imageops, RgbaImage};
         if image.dimensions() == self.size {
-            return self.process.write(image.as_raw());
+            for _ in 0..count {
+                self.process.write(image.as_raw())?;
+            }
+            return Ok(());
         }
         let (width, height) = image.dimensions();
         let factor = (self.size.0 as f64 / width as f64)
@@ -282,7 +292,10 @@ impl Video {
             ((self.size.0 - scaled.width()) / 2) as i64,
             ((self.size.1 - scaled.height()) / 2) as i64,
         );
-        self.process.write(frame.as_raw())
+        for _ in 0..count {
+            self.process.write(frame.as_raw())?;
+        }
+        Ok(())
     }
     pub fn finish(&mut self) -> Result<(), String> {
         self.process.finish()
