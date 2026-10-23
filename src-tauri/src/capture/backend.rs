@@ -535,9 +535,16 @@ fn mac_prepare_screen_capture() -> bool {
     }
     ALLOWED.load(Ordering::SeqCst)
 }
-#[cfg(target_os = "macos")]
+/// A switch that already looks on is not a grant for this process. macOS
+/// keeps the old grant until the switch is toggled and the app is reopened.
+#[cfg(any(target_os = "macos", test))]
 fn screen_recording_denied() -> String {
-    "Turn on AquaStar NEO in Privacy & Security, Screen Recording, then quit and reopen AquaStar NEO.".into()
+    "In Privacy & Security, Screen Recording, switch AquaStar NEO off and back on, then quit and reopen AquaStar NEO.".into()
+}
+#[cfg(any(target_os = "macos", test))]
+fn helper_line_denies_screen_recording(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    lower.contains("declined tccs") || lower.contains("code=-3801")
 }
 #[cfg(target_os = "macos")]
 fn mac_frames(target: &Target) -> Result<Frames, String> {
@@ -546,9 +553,9 @@ fn mac_frames(target: &Target) -> Result<Frames, String> {
         process::{Command, Stdio},
         sync::atomic::Ordering,
     };
-    if !mac_prepare_screen_capture() {
-        return Err(screen_recording_denied());
-    }
+    // Preflight stays false while the switch is already on. Ask here, then
+    // let ScreenCaptureKit accept or return the real denial.
+    let _ = mac_prepare_screen_capture();
     let mut child = Command::new(mac_helper()?)
         .args(["frames", &target.pid.to_string(), &target.id.to_string()])
         .stdout(Stdio::piped())
@@ -624,7 +631,7 @@ fn native_capture_error(fallback: String, helper_error: &Arc<Mutex<String>>) -> 
         std::thread::sleep(Duration::from_millis(20));
     }
     if let Some(line) = helper.lines().map(str::trim).find(|line| !line.is_empty()) {
-        if line.contains("declined TCCs") || line.contains("ScreenCaptureKit") {
+        if helper_line_denies_screen_recording(line) {
             eprintln!("aquastar-neo: capture helper: {line}");
             return screen_recording_denied();
         }
@@ -696,5 +703,19 @@ mod tests {
         assert!(found[0].focused);
         assert_eq!(found[0].title, "Game");
         assert_eq!(found[0].token, "10:2");
+    }
+    #[test]
+    fn only_a_tcc_denial_asks_to_reset_screen_recording() {
+        assert!(helper_line_denies_screen_recording(
+            "Capture: Error Domain=com.apple.ScreenCaptureKit.SCStreamErrorDomain Code=-3801 \"The user declined TCCs for application, window, display capture\""
+        ));
+        assert!(!helper_line_denies_screen_recording(
+            "ScreenCaptureKit requires macOS 12.3."
+        ));
+        assert!(!helper_line_denies_screen_recording(
+            "Capture: Error Domain=Game window is no longer available Code=4"
+        ));
+        assert!(screen_recording_denied().contains("off and back on"));
+        assert!(screen_recording_denied().contains("Screen Recording"));
     }
 }
