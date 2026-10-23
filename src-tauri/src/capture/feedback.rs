@@ -1,4 +1,47 @@
-//! Short, silent desktop feedback; never creates or focuses an AquaStar NEO window.
+//! Silent desktop feedback and nonactivating game borders; never focuses a window.
+#[cfg(target_os = "macos")]
+extern "C" {
+    fn aquastar_capture_screenshot_border(pid: u32, window: u32);
+    fn aquastar_capture_recording_border(pid: u32, window: u32, generation: u64, active: bool);
+    fn aquastar_capture_notify(title: *const std::ffi::c_char, body: *const std::ffi::c_char);
+}
+
+pub fn screenshot_taken(_target: &super::backend::Target) {
+    #[cfg(target_os = "macos")]
+    unsafe {
+        aquastar_capture_screenshot_border(_target.pid, _target.id);
+    }
+}
+
+pub struct RecordingBorder {
+    #[cfg(target_os = "macos")]
+    generation: u64,
+}
+impl RecordingBorder {
+    pub fn new(_target: &super::backend::Target) -> Self {
+        #[cfg(target_os = "macos")]
+        {
+            use std::sync::atomic::{AtomicU64, Ordering};
+            static GENERATION: AtomicU64 = AtomicU64::new(1);
+            let generation = GENERATION.fetch_add(1, Ordering::Relaxed);
+            unsafe {
+                aquastar_capture_recording_border(_target.pid, _target.id, generation, true);
+            }
+            Self { generation }
+        }
+        #[cfg(not(target_os = "macos"))]
+        Self {}
+    }
+}
+impl Drop for RecordingBorder {
+    fn drop(&mut self) {
+        #[cfg(target_os = "macos")]
+        unsafe {
+            aquastar_capture_recording_border(0, 0, self.generation, false);
+        }
+    }
+}
+
 pub fn show(app: &tauri::AppHandle, title: &str, body: &str) {
     let title = title.to_owned();
     let body: String = body.chars().take(240).collect();
@@ -62,11 +105,23 @@ pub fn show(app: &tauri::AppHandle, title: &str, body: &str) {
         let _ = queue.try_send((title, body));
     }
     #[cfg(target_os = "macos")]
-    if title.contains("failed") && body.contains("Screen Recording") {
-        mac_open_screen_recording_settings();
-        mac_alert(&title, &body);
+    {
+        let _ = app;
+        if title.contains("failed") && body.contains("Screen Recording") {
+            mac_open_screen_recording_settings();
+            mac_alert(&title, &body);
+        }
+        let title = match title.as_str() {
+            "AquaStar NEO · Screenshot saved" => "Screenshot taken",
+            "AquaStar NEO · Recording" => "Recording started",
+            "AquaStar NEO · Video saved" => "Recording stopped",
+            _ => &title,
+        };
+        if let (Ok(title), Ok(body)) = (std::ffi::CString::new(title), std::ffi::CString::new(body)) {
+            unsafe { aquastar_capture_notify(title.as_ptr(), body.as_ptr()) };
+        }
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         use tauri_plugin_notification::NotificationExt;
         let _ = app.notification().builder().title(title).body(body).show();

@@ -29,6 +29,14 @@ On Wayland, select the game window in the system picker. Desktops that support o
 
 Minimizing an X11/Windows game ends the current recording and saves its completed portion. Closing or automatically replacing a player process never transfers an ongoing recording to another process. Capture availability does not change the launcher's operating-system minimum.
 
+### macOS capture feedback
+
+A successful screenshot briefly flashes a blue outline around its game window. A red outline stays visible while video frames are being recorded and disappears when recording stops, before MP4 finalization. The outlines track the player's window, ignore mouse input, and never take keyboard focus. They hide when that player is not the foreground app or its window is off screen. A screenshot taken during recording briefly shows blue over the red outline; both overlays are excluded from the captured game window.
+
+Native macOS notifications use AquaStar NEO's installed application identity and display **Screenshot taken**, **Recording started**, and **Recording stopped** (after the video is saved). The first notification requests permission. macOS notification settings and Focus can suppress banners; capture and its border do not depend on notification permission. Standalone Cargo executables do not impersonate Terminal or Finder to send notifications.
+
+On macOS 27 with Apple Silicon and the bundled Ruffle player, the tester confirmed the blue/red outlines and all three native banners after enabling AquaStar NEO in System Settings → Notifications. The same test saved a 2.47-second H.264 MP4 at 30 FPS with no audio stream. This does not cover every display/Spaces arrangement or long recordings.
+
 ## Encoder and packaging
 
 The installer includes a minimal standalone FFmpeg 8.1.3/OpenH264 2.6.0 build. No download or separately installed FFmpeg is needed at runtime. Only file/pipe protocols and the required codecs, filters and containers are enabled. The Linux x64 component measured approximately 4.4 MiB before installer compression.

@@ -339,6 +339,7 @@ pub async fn screenshot(app: tauri::AppHandle, id: Option<String>) -> Result<Pat
             .save_with_format(&temporary, xcap::image::ImageFormat::Png)
             .map_err(|e| e.to_string())?;
         fs::rename(&temporary, &path).map_err(|e| e.to_string())?;
+        feedback::screenshot_taken(&target);
         let state = app.state::<CaptureState>();
         *state.0.screenshot.lock().unwrap() = Some(path.clone());
         feedback::show(
@@ -461,6 +462,7 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
     let mut encoder = encoder::Video::new(&binary, &temporary, size, fps)?;
     let started = Instant::now();
     encoder.write(&first)?;
+    let border = feedback::RecordingBorder::new(&target);
     let mut frames = 1u64;
     let mut seconds = u64::MAX;
     let result = (|| {
@@ -498,6 +500,7 @@ fn record(app: &tauri::AppHandle, state: &CaptureState, prepared: Prepared) -> R
         }
         Ok(())
     })();
+    drop(border);
     state.update(
         app,
         "finalizing",
