@@ -32,35 +32,35 @@ The shell uses the operating system's webview. Windows uses WebView2, macOS uses
 | System | 3.0 | Notes |
 | --- | --- | --- |
 | Windows 10 or later, x64 | Yes | WebView2. Artix player. |
-| Windows 10 or later, x86 | Flash only | Artix 2.1.0 publishes no Windows x86 Ruffle build. The projector is the player used there. |
-| Windows on ARM | Yes | Artix 2.1.0 windows-arm64. |
+| Windows 10 or later, x86 | Flash only | Artix 3.0.0 publishes no Windows x86 Ruffle build. The projector is the player used there. |
+| Windows on ARM | Yes | Artix 3.0.0 windows-arm64. |
 | Windows 7 and 8.1 | Stay on 2.x | WebView2 runtime 109 is the last one that starts. Runtime and SDK 110.0.1519.0 and higher do not support these systems. A 3.0 build counts only if one pinned to runtime 109 actually launches. |
 | macOS 12.3 and later, Apple silicon | Yes | Artix player. |
-| macOS 12.3 and later, Intel | Yes | The same Artix 2.1.0 universal binary as Apple silicon. |
+| macOS 12.3 and later, Intel | Yes | The same Artix 3.0.0 universal binary as Apple silicon. |
 | macOS 10.15 through 12.2 | Out | The config asks for macOS 12.3, and ScreenCaptureKit needs 12.3. |
 | macOS below 10.15 | Stay on 2.x | |
 | Linux x64 with WebKitGTK 4.1 | Yes | Artix player. |
-| Linux i686 with WebKitGTK 4.1 | No player | Artix 2.1.0 publishes no i686 build, and there is no projector pin. |
-| Linux aarch64 with WebKitGTK 4.1 | No player | Artix 2.1.0 publishes no aarch64 build, and there is no projector pin. |
+| Linux i686 with WebKitGTK 4.1 | No player | Artix 3.0.0 publishes no i686 build, and there is no projector pin. |
+| Linux aarch64 with WebKitGTK 4.1 | No player | Artix 3.0.0 publishes no aarch64 build, and there is no projector pin. |
 | Older Linux without WebKitGTK 4.1 | Stay on 2.x | |
 | Android | No | |
 
 ## Player matrix
 
-The players that ship are in `players.json`. Ruffle is Artix 2.1.0 on Linux x64, Windows x64, Windows ARM, and macOS. One universal macOS zip covers Apple silicon and Intel. The Flash projector 32.0.0.465 is optional and is never the default. Linux i686 and Linux aarch64 have no player pin. Windows x86 has the projector only. AquaStar NEO does not pass `--performance-mode`. Artix's default is `auto`.
+The players that ship are in `players.json`. Ruffle is Artix 3.0.0 on Linux x64, Windows x64, Windows ARM, and macOS. One universal macOS zip covers Apple silicon and Intel. The Flash projector 32.0.0.465 is optional and is never the default. Linux i686 and Linux aarch64 have no player pin. Windows x86 has the projector only. Artix 3.0.0 removed `--performance-mode`. AquaStar NEO does not pass that flag.
 
 | Target | Default | Also available |
 | --- | --- | --- |
-| Windows x64 | Artix 2.1.0 | Flash projector. The pinned Windows projector is a 32-bit program. |
-| Windows ARM | Artix 2.1.0 | No projector pin. |
+| Windows x64 | Artix 3.0.0 | Flash projector. The pinned Windows projector is a 32-bit program. |
+| Windows ARM | Artix 3.0.0 | No projector pin. |
 | Windows x86 | Flash projector | No Ruffle pin. |
-| Linux x64 | Artix 2.1.0 | Flash projector for Linux x64. |
+| Linux x64 | Artix 3.0.0 | Flash projector for Linux x64. |
 | Linux i686 | None | No Ruffle pin and no projector pin. |
 | Linux aarch64 | None | No Ruffle pin and no projector pin. |
-| macOS arm64 | Artix 2.1.0 universal | The pinned macOS projector is an Intel build. |
-| macOS x64 | Artix 2.1.0 universal | Flash projector. |
+| macOS arm64 | Artix 3.0.0 universal | The pinned macOS projector is an Intel build. |
+| macOS x64 | Artix 3.0.0 universal | Flash projector. |
 
-The Artix binary accepts `--title`, `--companion`, `--companion-name`, `--tcp-connections allow`, `--graphics`, `--quality`, and `--performance-mode`. Every Ruffle launch passes `--title`. On Linux the existing `flash_gtk.c` preload sets the projector window title, because the projector has no title flag. The paragraphs further down that still name stock Ruffle 0.7.1 describe the earlier plan.
+The Artix binary accepts `--title`, `--companion`, `--companion-name`, `--tcp-connections allow`, `--graphics`, and `--quality`. Artix 3.0.0 removed `--performance-mode`. Every Ruffle launch passes `--title`. On Linux the existing `flash_gtk.c` preload sets the projector window title, because the projector has no title flag. The paragraphs further down that still name stock Ruffle 0.7.1 describe the earlier plan.
 
 ## Feature migration
 
@@ -203,7 +203,7 @@ No shared history with `main`, `dev`, or `electron-2.x`. Deleting the branch dro
 - `ruffle-native-gl`. OpenGL default for Ruffle desktop. That behavior is on `dev`.
 - `ruffle-native-prune`. Prune old downloaded Ruffle versions.
 - `strategyboard`. September 2026 strategy board merge fix.
-- `update-flash34-ruffle071`. Flash 34 and Ruffle 0.7.1 pin. That Ruffle pin was removed. Artix 2.1.0 is the Ruffle pin that ships.
+- `update-flash34-ruffle071`. Flash 34 and Ruffle 0.7.1 pin. That Ruffle pin was removed. Artix 3.0.0 is the Ruffle pin that ships.
 
 The check is that the user has confirmed the stable tag, smoke passed on that commit, and any merge to `main` has its own confirmation. A branch rename or deletion also needs its own approval.
 
@@ -221,8 +221,8 @@ Stable publication remains on hold for the performance and interface review. The
 - macOS below 10.15 cannot follow Tauri's documented floor of 10.15. This product's floor is macOS 12.3.
 - Linux without WebKitGTK 4.1 stays on 2.x.
 - The Artix player is an unsigned binary pinned by URL. Treat an upstream URL change as a new pin, with a smoke run, before a release.
-- The removed stock Ruffle build had no `--title` or `--companion`. The Artix 2.1.0 pin accepts both, and every Ruffle launch passes `--title`.
-- Windows on ARM had no desktop player in the Ruffle 0.7.1 release. Artix 2.1.0 publishes a windows-arm64 build, and that is the pin that ships.
+- The removed stock Ruffle build had no `--title` or `--companion`. The Artix 3.0.0 pin accepts both, and every Ruffle launch passes `--title`.
+- Windows on ARM had no desktop player in the Ruffle 0.7.1 release. Artix 3.0.0 publishes a windows-arm64 build, and that is the pin that ships.
 - The shell should use less memory than Electron. The player process is still there. Measure a real session before quoting a savings.
 - The Electron app rewrites the User-Agent on `*.aq.com` page loads. The game no longer loads in the shell webview, so that rewrite has nothing to attach to. Confirm the Artix player is accepted without it.
 - Linux WebKit still needs the DMA-BUF switch and the font allowlist. Dropping either one brings back the memory growth, the NVIDIA blank window, or the startup hang.
@@ -231,7 +231,7 @@ Stable publication remains on hold for the performance and interface review. The
 ## Resolved decisions
 
 1. AquaStar 3.0 fully replaces the Electron app. The 2.x line stays maintained on `electron-2.x` for people who prefer the old launcher. `desktop/` evolves into 3.0. The `lite-v0.2.0` pre-releases were the lab. Lite is not released as a separate product.
-2. Support as many desktop systems as the matrix above allows. The Ruffle pin that ships is Artix 2.1.0. The Flash projector remains an option where the platform has one, and it is never the default. Linux i686 and Linux aarch64 have no player. Windows x86 uses the projector. PPAPI is dropped. There is no Android build. Windows 7, Windows 8.1, and macOS below 10.15 stay on 2.x unless a Tauri build is shown to run. WebView2 runtime 109 is the last runtime for Windows 7 and 8.1.
+2. Support as many desktop systems as the matrix above allows. The Ruffle pin that ships is Artix 3.0.0. The Flash projector remains an option where the platform has one, and it is never the default. Linux i686 and Linux aarch64 have no player. Windows x86 uses the projector. PPAPI is dropped. There is no Android build. Windows 7, Windows 8.1, and macOS below 10.15 stay on 2.x unless a Tauri build is shown to run. WebView2 runtime 109 is the last runtime for Windows 7 and 8.1.
 3. Char Page Studio, Alt+K char page print, and screen recording, including F2 capture, are dropped for 3.0. Native MP4 recording of the standalone player window is a possible 3.1 item.
 4. The UI matches the Electron UI as closely as possible. No SWF is modified.
 5. The plugin host is not ported. Each game is a JSON manifest. First-party pages sit on a fixed Tauri command API, with a capability file per window.
@@ -241,7 +241,7 @@ Stable publication remains on hold for the performance and interface review. The
 ## Sources
 
 - WebView2 runtime 109 is the last runtime for Windows 7 and 8.1, per [Introduction to Microsoft Edge WebView2](https://learn.microsoft.com/en-us/microsoft-edge/webview2/).
-- The Artix 2.1.0 player archives are the Linux x64 zip, the macOS universal zip, and the Windows zip of per-arch zips under https://chaoslabs.artix.com/Ruffle/2.1.0/. The pins are `players.json`.
+- The Artix 3.0.0 player archives are the Linux x64 zip, the macOS universal zip, and the Windows zip of per-arch zips under https://chaoslabs.artix.com/Ruffle/3.0.0/. The pins are `players.json`.
 - Player pins and the current macOS floor are `players.json` and `src-tauri/tauri.conf.json`.
 
 ## Repository organization completed, 17 October 2026

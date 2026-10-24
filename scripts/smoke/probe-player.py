@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the pinned Artix Ruffle binary and record how it answers CLI flags.
 
-The macOS 2.1.0 zip publishes one universal binary and no ruffle_desktop file.
+The macOS 3.0.0 zip publishes one universal binary and no ruffle_desktop file.
 This probe checks that --version, --help, and --no-gui are handled by that
 binary (and by the Linux and Windows binaries) instead of by a launcher that
 ignores arguments. The --no-gui result is printed either way. A missing flag
@@ -28,7 +28,6 @@ REQUIRED_HELP = [
     "--quality",
     "--tcp-connections",
     "--letterbox",
-    "--performance-mode",
     "--save-directory",
     "--companion",
 ]
@@ -96,7 +95,7 @@ def main() -> int:
         failed = True
         lines.append("Missing help flags: " + ", ".join(missing or ["(help timed out)"]))
     else:
-        lines.append("Help still lists the flags AquaStar NEO passes, plus `--performance-mode`.")
+        lines.append("Help still lists the flags AquaStar NEO passes.")
     mode = ""
     for line in help_text.splitlines():
         if "--performance-mode" in line:

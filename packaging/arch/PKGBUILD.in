@@ -6,8 +6,8 @@ arch=('x86_64')
 url='https://github.com/aquaspy/AquaStar'
 license=('MIT' 'LGPL-2.1-or-later' 'BSD-2-Clause')
 depends=('glibc' 'gcc-libs' 'webkit2gtk-4.1' 'gtk3' 'libpipewire' 'dbus'
-         'openssl' 'alsa-lib' 'fontconfig' 'libxkbcommon-x11' 'libglvnd'
-         'libxcomposite' 'libxrandr')
+         'openssl' 'alsa-lib' 'fontconfig' 'zlib' 'systemd-libs'
+         'libxkbcommon-x11' 'libglvnd' 'libxcomposite' 'libxrandr')
 makedepends=('rust' 'clang' 'python' 'pkgconf')
 optdepends=('xdg-desktop-portal: Wayland screenshots and recording'
             'xdg-desktop-portal-hyprland: Hyprland capture and global shortcuts'

@@ -861,7 +861,7 @@ fn vendor_macos_dylibs(exe: &Path) -> Result<(), String> {
             if !own_id && !queued.contains(&local) {
                 if !Path::new(&dep).is_file() {
                     return Err(format!(
-                        "missing {dep}, required by {}. The Apple Silicon build vendors this library next to ruffle_desktop.",
+                        "missing {dep}, required by {}. The macOS build vendors this library next to the player.",
                         bin.display()
                     ));
                 }
@@ -1080,45 +1080,45 @@ mod tests {
                 Os::Linux,
                 Arch::X86_64,
                 Cli::Artix,
-                "ruffle-artix-2.1.0",
+                "ruffle-artix-3.0.0",
                 "ruffle_desktop",
-                "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2.1.0-linux-x64.zip",
+                "https://chaoslabs.artix.com/Ruffle/3.0.0/ArtixGamesLauncher-Ruffle-3.0.0-linux-x64.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Windows,
                 Arch::X86_64,
                 Cli::Artix,
-                "ruffle-artix-2.1.0-x64",
+                "ruffle-artix-3.0.0-x64",
                 "Artix Games Launcher.exe",
-                "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2_1_0-windows.zip",
+                "https://chaoslabs.artix.com/Ruffle/3.0.0/ArtixGamesLauncher-3_0_0-windows.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Windows,
                 Arch::Aarch64,
                 Cli::Artix,
-                "ruffle-artix-2.1.0-arm64",
+                "ruffle-artix-3.0.0-arm64",
                 "Artix Games Launcher.exe",
-                "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2_1_0-windows.zip",
+                "https://chaoslabs.artix.com/Ruffle/3.0.0/ArtixGamesLauncher-3_0_0-windows.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Macos,
                 Arch::Aarch64,
                 Cli::Artix,
-                "ruffle-artix-2.1.0",
+                "ruffle-artix-3.0.0",
                 "Artix Games Launcher · Ruffle",
-                "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2.1.0-macOS-universal.zip",
+                "https://chaoslabs.artix.com/Ruffle/3.0.0/ArtixGamesLauncher-Ruffle-3.0.0-macOS-universal.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Macos,
                 Arch::X86_64,
                 Cli::Artix,
-                "ruffle-artix-2.1.0",
+                "ruffle-artix-3.0.0",
                 "Artix Games Launcher · Ruffle",
-                "https://chaoslabs.artix.com/Ruffle/2.1.0/ArtixGamesLauncher-Ruffle-2.1.0-macOS-universal.zip",
+                "https://chaoslabs.artix.com/Ruffle/3.0.0/ArtixGamesLauncher-Ruffle-3.0.0-macOS-universal.zip",
             ),
             (
                 Engine::Flash,
@@ -1197,7 +1197,7 @@ mod tests {
         assert_eq!(artix.extract, Extract::AppImage);
         assert_eq!(
             artix.binary_sha256.as_deref(),
-            Some("1f07cf7393ec78c5b9c2ab5be505dd4d21e1ffc4320d698c37be0531e55501b0")
+            Some("840b26ce1b66a0023a023a77091cbfa5ca575af309a4e029f67c69723035a9ec")
         );
         let windows = catalog
             .select(Engine::Ruffle, Os::Windows, Arch::X86_64)
@@ -1205,7 +1205,7 @@ mod tests {
         assert_eq!(windows.extract, Extract::SingleExe);
         assert_eq!(
             windows.inner_sha256.as_deref(),
-            Some("d294149f521bcc16133b053a50ce21573ab4f35718b621a59320f0585deabc6d")
+            Some("a0b35bbfa775825076b4ae7a83e9aa80e7da56cff0436b5d4b0673023cd1f19d")
         );
         assert!(catalog
             .select(Engine::Ruffle, Os::Linux, Arch::X86)
@@ -1582,7 +1582,7 @@ mod tests {
     #[test]
     fn single_exe_extract_lifts_the_arch_zip_then_publishes_one_exe() {
         let dir = scratch("nested-exe");
-        let inner_path = dir.join("ArtixGamesLauncher-Ruffle-2.1.0-windows-x64.zip");
+        let inner_path = dir.join("ArtixGamesLauncher-Ruffle-3.0.0-windows-x64.zip");
         {
             let file = fs::File::create(&inner_path).unwrap();
             let mut zip = zip::ZipWriter::new(file);
@@ -1619,7 +1619,7 @@ mod tests {
 
         let wrong = scratch("nested-wrong-arch");
         fs::write(
-            wrong.join("ArtixGamesLauncher-Ruffle-2.1.0-windows-x64.zip"),
+            wrong.join("ArtixGamesLauncher-Ruffle-3.0.0-windows-x64.zip"),
             &inner_bytes,
         )
         .unwrap();
