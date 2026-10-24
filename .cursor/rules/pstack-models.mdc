@@ -6,6 +6,7 @@ alwaysApply: true
 # `inherit-parent` or `auto` as a value: the role runs on the parent chat model (omit Task `model`). Alias entries in a panel list still count toward its fan-out.
 # Never use fast-mode slugs.
 # Based on CursorBench 4.0 (2026-10-24): 4.7 high beats 4.6 high and costs less per task; 4.7 medium is the cost lever for bulk/parallel roles.
+# Grok 4.6 high stays as a second voice on review panels: AkitaOnRails LLM Benchmark v4 (code-review vigilance) scored it 98.5 vs 83.5 for 4.7.
 # budget: medium (high)
 feature, refactoring: grok-4.7-high
 bug-fix: grok-4.7-high
@@ -20,7 +21,7 @@ why synthesizer: grok-4.7-high
 reflect tooling: grok-4.7-high
 reflect judgment, divergent, synthesizer: grok-4.7-high
 arena runners: grok-4.7-high, grok-4.7-medium
-arena cross-judge pool: grok-4.7-high
+arena cross-judge pool: grok-4.7-high, cursor-grok-4.6-high
 swarm workers: grok-4.7-medium
 architect runners: grok-4.7-high, grok-4.7-medium
-interrogate reviewers: grok-4.7-high, grok-4.7-medium
+interrogate reviewers: grok-4.7-high, cursor-grok-4.6-high
