@@ -89,6 +89,8 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tokio",
  "ureq",
+ "wayland-client",
+ "wayland-protocols-wlr",
  "windows-capture",
  "x11rb",
  "xcap",

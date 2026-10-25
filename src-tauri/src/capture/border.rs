@@ -439,6 +439,7 @@ fn covers(px: i32, py: i32, width: u32, height: u32) -> bool {
     inner > 0.0
 }
 
+#[derive(Clone, Copy)]
 struct Output {
     id: i64,
     x: i32,
