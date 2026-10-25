@@ -76,17 +76,33 @@ pub fn start(id: u32) -> Result<Frames, String> {
     } else {
         MinimumUpdateIntervalSettings::Default
     };
-    let settings = Settings::new(
-        Window::from_raw_hwnd(id as usize as *mut _),
-        cursor,
-        DrawBorderSettings::Default,
-        SecondaryWindowSettings::Default,
-        interval,
-        DirtyRegionSettings::Default,
-        ColorFormat::Rgba8,
-        flags,
-    );
-    let control = Handler::start_free_threaded(settings).map_err(|e| e.to_string())?;
+    // Default leaves the yellow Graphics Capture border on for the whole session.
+    // WithoutBorder needs the IsBorderRequired property. Older Windows 10 builds
+    // reject that setting, so a failed start is retried with Default.
+    let hide_system_border = GraphicsCaptureApi::is_border_settings_supported().unwrap_or(false);
+    let border = if hide_system_border {
+        DrawBorderSettings::WithoutBorder
+    } else {
+        DrawBorderSettings::Default
+    };
+    let open_session = |flags, border| {
+        let settings = Settings::new(
+            Window::from_raw_hwnd(id as usize as *mut _),
+            cursor,
+            border,
+            SecondaryWindowSettings::Default,
+            interval,
+            DirtyRegionSettings::Default,
+            ColorFormat::Rgba8,
+            flags,
+        );
+        Handler::start_free_threaded(settings).map_err(|e| e.to_string())
+    };
+    let control = match open_session(flags.clone(), border) {
+        Ok(control) => control,
+        Err(_) if hide_system_border => open_session(flags, DrawBorderSettings::Default)?,
+        Err(error) => return Err(error),
+    };
     let flag = frames.stop.clone();
     let error = frames.error.clone();
     std::thread::spawn(move || {
