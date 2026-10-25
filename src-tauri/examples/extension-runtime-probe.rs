@@ -1,5 +1,5 @@
 #[cfg(target_os = "linux")]
-#[path = "../src/capture/feedback.rs"]
+#[path = "../src/capture/notify_linux.rs"]
 mod capture_feedback;
 #[path = "../src/menu_visibility.rs"]
 mod menu_visibility;

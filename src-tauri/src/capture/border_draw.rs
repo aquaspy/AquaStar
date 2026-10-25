@@ -1,6 +1,6 @@
 use super::{
-    Applied, ByteOrder, Desired, Host, Kind, NativeId, NativeOp, Observation, Output, OutputPlace,
-    Paint, Pid, Rect, SampleHint, Seen, Srgb,
+    Applied, Desired, Host, Kind, NativeId, NativeOp, Observation, Paint, Pid, Rect, SampleHint,
+    Seen, Srgb,
 };
 
 pub(super) struct Drawer {
@@ -52,11 +52,11 @@ impl Drawer {
     }
 
     pub(super) fn sync(&mut self, goal: &Desired) {
-        for op in super::plan(&self.applied, goal) {
+        for op in plan(&self.applied, goal) {
             if !self.perform(&op) {
                 break;
             }
-            super::commit(&mut self.applied, &op);
+            commit(&mut self.applied, &op);
         }
         #[cfg(target_os = "linux")]
         if let Shell::X11(state) = &mut self.shell {
@@ -102,18 +102,274 @@ fn stroke_bytes(
     let buf_w = buf_w as usize;
     let buf_h = buf_h as usize;
     let step = scale as usize;
-    let (red, green, blue) = super::channels(color);
+    let (red, green, blue) = channels(color);
     let mut data = vec![0u8; bytes as usize];
     for y in 0..buf_h {
         for x in 0..buf_w {
-            if super::covers((x / step) as i32, (y / step) as i32, width, height) {
-                let pixel = super::pack_pixel(red, green, blue, 255, order);
+            if covers((x / step) as i32, (y / step) as i32, width, height) {
+                let pixel = pack_pixel(red, green, blue, 255, order);
                 let index = (y * buf_w + x) * 4;
                 data[index..index + 4].copy_from_slice(&pixel);
             }
         }
     }
     Some(data)
+}
+
+fn plan(applied: &Applied, goal: &Desired) -> Vec<NativeOp> {
+    let mut ops = Vec::new();
+    push_slot(
+        &mut ops,
+        Kind::Recording,
+        applied.recording.as_ref(),
+        goal.recording.as_ref(),
+    );
+    push_slot(
+        &mut ops,
+        Kind::Flash,
+        applied.flash.as_ref(),
+        goal.flash.as_ref(),
+    );
+    ops
+}
+
+fn push_slot(ops: &mut Vec<NativeOp>, kind: Kind, applied: Option<&Paint>, goal: Option<&Paint>) {
+    match (applied, goal) {
+        (None, None) => {}
+        (Some(_), None) => ops.push(NativeOp::Destroy { kind }),
+        (None, Some(paint)) => ops.push(NativeOp::Create {
+            kind,
+            paint: *paint,
+        }),
+        (Some(current), Some(paint)) if same_paint(current, paint) => {}
+        (Some(_), Some(paint)) => ops.push(NativeOp::Move {
+            kind,
+            paint: *paint,
+        }),
+    }
+}
+
+fn same_paint(left: &Paint, right: &Paint) -> bool {
+    left.rect == right.rect && channels(left.color) == channels(right.color)
+}
+
+fn commit(applied: &mut Applied, op: &NativeOp) {
+    match op {
+        NativeOp::Create { kind, paint } | NativeOp::Move { kind, paint } => match kind {
+            Kind::Flash => applied.flash = Some(*paint),
+            Kind::Recording => applied.recording = Some(*paint),
+        },
+        NativeOp::Destroy { kind } => match kind {
+            Kind::Flash => applied.flash = None,
+            Kind::Recording => applied.recording = None,
+        },
+    }
+}
+
+fn channels(color: Srgb) -> (u8, u8, u8) {
+    (channel(color.r), channel(color.g), channel(color.b))
+}
+
+fn channel(value: f32) -> u8 {
+    (value.clamp(0.0, 1.0) * 255.0).round() as u8
+}
+
+fn premultiply(r: u8, g: u8, b: u8, a: u8) -> (u8, u8, u8, u8) {
+    let scale = |c: u8| ((u16::from(c) * u16::from(a) + 127) / 255) as u8;
+    (scale(r), scale(g), scale(b), a)
+}
+
+#[derive(Clone, Copy)]
+enum ByteOrder {
+    /// Little-endian ARGB word. Memory order is B, G, R, A.
+    Lsb,
+    /// Big-endian ARGB word. Memory order is A, R, G, B.
+    Msb,
+}
+
+fn pack_pixel(r: u8, g: u8, b: u8, a: u8, order: ByteOrder) -> [u8; 4] {
+    let (r, g, b, a) = premultiply(r, g, b, a);
+    match order {
+        ByteOrder::Lsb => [b, g, r, a],
+        ByteOrder::Msb => [a, r, g, b],
+    }
+}
+
+const STROKE: i32 = 3;
+const RADIUS: f32 = 7.0;
+
+fn rounded_distance(x: f32, y: f32, width: f32, height: f32, radius: f32) -> f32 {
+    let radius = if width <= 0.0 || height <= 0.0 {
+        0.0
+    } else {
+        radius.clamp(0.0, width.min(height) / 2.0)
+    };
+    let qx = (x - width / 2.0).abs() - (width / 2.0 - radius);
+    let qy = (y - height / 2.0).abs() - (height / 2.0 - radius);
+    qx.max(0.0).hypot(qy.max(0.0)) + qx.max(qy).min(0.0) - radius
+}
+
+/// `px` and `py` are integer pixel coordinates in the same space as `Rect`.
+/// Coverage uses the pixel center. The stroke is the outer rounded rect
+/// minus the rect inset by `STROKE`.
+fn covers(px: i32, py: i32, width: u32, height: u32) -> bool {
+    let x = px as f32 + 0.5;
+    let y = py as f32 + 0.5;
+    let w = width as f32;
+    let h = height as f32;
+    if rounded_distance(x, y, w, h, RADIUS) > 0.0 {
+        return false;
+    }
+    let inner_w = w - (STROKE as f32) * 2.0;
+    let inner_h = h - (STROKE as f32) * 2.0;
+    if inner_w <= 0.0 || inner_h <= 0.0 {
+        return true;
+    }
+    let inner = rounded_distance(
+        x - STROKE as f32,
+        y - STROKE as f32,
+        inner_w,
+        inner_h,
+        RADIUS - STROKE as f32,
+    );
+    inner > 0.0
+}
+
+#[derive(Clone, Copy)]
+struct Output {
+    id: i64,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+}
+
+struct OutputPlace {
+    output_id: i64,
+    margin_left: i32,
+    margin_top: i32,
+    width: u32,
+    height: u32,
+}
+
+/// Clip `window` onto one monitor and return layer-shell margins in that
+/// monitor's local coordinates. Margins are never negative. `None` means
+/// the border hides, because a layer surface cannot be placed safely.
+fn output_place(window: Rect, monitor_id: Option<i64>, outputs: &[Output]) -> Option<OutputPlace> {
+    if window.width == 0 || window.height == 0 {
+        return None;
+    }
+    let named = monitor_id
+        .and_then(|id| outputs.iter().find(|output| output.id == id))
+        .filter(|output| intersects(window, output));
+    let output = named.or_else(|| output_containing_center(window, outputs))?;
+    let left = window.x.max(output.x);
+    let top = window.y.max(output.y);
+    let right = (window.x.saturating_add(window.width as i32))
+        .min(output.x.saturating_add(output.width as i32));
+    let bottom = (window.y.saturating_add(window.height as i32))
+        .min(output.y.saturating_add(output.height as i32));
+    if right <= left || bottom <= top {
+        return None;
+    }
+    Some(OutputPlace {
+        output_id: output.id,
+        margin_left: left - output.x,
+        margin_top: top - output.y,
+        width: (right - left) as u32,
+        height: (bottom - top) as u32,
+    })
+}
+
+fn intersects(window: Rect, output: &Output) -> bool {
+    let right = window.x.saturating_add(window.width as i32);
+    let bottom = window.y.saturating_add(window.height as i32);
+    let output_right = output.x.saturating_add(output.width as i32);
+    let output_bottom = output.y.saturating_add(output.height as i32);
+    window.x < output_right && right > output.x && window.y < output_bottom && bottom > output.y
+}
+
+fn output_containing_center(window: Rect, outputs: &[Output]) -> Option<&Output> {
+    let cx = window.x.saturating_add((window.width / 2) as i32);
+    let cy = window.y.saturating_add((window.height / 2) as i32);
+    outputs.iter().find(|output| {
+        cx >= output.x
+            && cy >= output.y
+            && cx < output.x.saturating_add(output.width as i32)
+            && cy < output.y.saturating_add(output.height as i32)
+    })
+}
+
+/// Hyprland `j/activewindow` JSON. Extra fields are ignored. Bad JSON is `None`.
+#[derive(serde::Deserialize)]
+struct ActiveWindowJson {
+    pid: i64,
+    at: [i32; 2],
+    size: [i32; 2],
+    monitor: i64,
+    #[serde(default = "mapped_by_default")]
+    mapped: bool,
+    #[serde(default)]
+    hidden: bool,
+}
+
+fn mapped_by_default() -> bool {
+    true
+}
+
+#[derive(serde::Deserialize)]
+struct MonitorJson {
+    id: i64,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+}
+
+struct ActiveWindow {
+    pid: Pid,
+    bounds: Rect,
+    monitor_id: i64,
+}
+
+fn parse_active(json: &str) -> Option<ActiveWindow> {
+    let parsed: ActiveWindowJson = serde_json::from_str(json).ok()?;
+    if parsed.pid < 0
+        || parsed.size[0] <= 0
+        || parsed.size[1] <= 0
+        || !parsed.mapped
+        || parsed.hidden
+    {
+        return None;
+    }
+    Some(ActiveWindow {
+        pid: Pid(parsed.pid as u32),
+        bounds: Rect {
+            x: parsed.at[0],
+            y: parsed.at[1],
+            width: parsed.size[0] as u32,
+            height: parsed.size[1] as u32,
+        },
+        monitor_id: parsed.monitor,
+    })
+}
+
+fn parse_monitors(json: &str) -> Vec<Output> {
+    let parsed: Vec<MonitorJson> = match serde_json::from_str(json) {
+        Ok(parsed) => parsed,
+        Err(_) => return Vec::new(),
+    };
+    parsed
+        .into_iter()
+        .filter(|monitor| monitor.width > 0 && monitor.height > 0)
+        .map(|monitor| Output {
+            id: monitor.id,
+            x: monitor.x,
+            y: monitor.y,
+            width: monitor.width as u32,
+            height: monitor.height as u32,
+        })
+        .collect()
 }
 
 #[cfg(target_os = "linux")]
@@ -690,10 +946,10 @@ mod hypr {
         pub(super) fn sample(&mut self, _hint: &super::SampleHint) -> Observation {
             let active = hypr_command("j/activewindow")
                 .as_deref()
-                .and_then(super::super::parse_active);
+                .and_then(super::parse_active);
             self.monitors = hypr_command("j/monitors")
                 .as_deref()
-                .map(super::super::parse_monitors)
+                .map(super::parse_monitors)
                 .unwrap_or_default();
             self.monitor_id = active.as_ref().map(|window| window.monitor_id);
             let _ = self.ensure();
@@ -781,8 +1037,7 @@ mod hypr {
                 return false;
             };
             let monitors = layout_monitors(&session.state, &self.monitors);
-            let Some(place) = super::super::output_place(paint.rect, self.monitor_id, &monitors)
-            else {
+            let Some(place) = super::output_place(paint.rect, self.monitor_id, &monitors) else {
                 destroy_slot(&mut session.state, kind);
                 return false;
             };
@@ -1984,5 +2239,122 @@ mod win32 {
     extern "system" {
         fn GetModuleHandleW(name: *const u16) -> *mut c_void;
         fn GetLastError() -> u32;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{Pid, Rect, FLASH_COLOR, RECORD_COLOR};
+    use super::*;
+
+    fn rect(x: i32, y: i32, width: u32, height: u32) -> Rect {
+        Rect {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    #[test]
+    fn channels_match_the_srgb_bytes_the_panels_paint() {
+        assert_eq!(channels(FLASH_COLOR), (26, 133, 255));
+        assert_eq!(channels(RECORD_COLOR), (255, 46, 56));
+        assert_eq!(premultiply(10, 20, 30, 255), (10, 20, 30, 255));
+        assert_eq!(premultiply(10, 20, 30, 0), (0, 0, 0, 0));
+        assert_eq!(
+            pack_pixel(10, 20, 30, 255, ByteOrder::Lsb),
+            [30, 20, 10, 255]
+        );
+        assert_eq!(
+            pack_pixel(10, 20, 30, 255, ByteOrder::Msb),
+            [255, 10, 20, 30]
+        );
+        assert_eq!(pack_pixel(10, 20, 30, 0, ByteOrder::Lsb), [0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn covers_keeps_the_stroke_inside_the_rounded_rect() {
+        assert!(!covers(0, 0, 200, 200));
+        assert!(covers(1, 100, 200, 200));
+        assert!(!covers(4, 100, 200, 200));
+        assert!(!covers(100, 100, 200, 200));
+    }
+
+    #[test]
+    fn output_place_uses_monitor_local_margins_and_never_goes_negative() {
+        let window = rect(100, 200, 800, 600);
+        let origin = [Output {
+            id: 1,
+            x: 0,
+            y: 0,
+            width: 1920,
+            height: 1080,
+        }];
+        let placed = output_place(window, Some(1), &origin).unwrap();
+        assert_eq!(placed.margin_left, 100);
+        assert_eq!(placed.margin_top, 200);
+        assert_eq!((placed.width, placed.height), (800, 600));
+
+        let elsewhere = [Output {
+            id: 2,
+            x: 1920,
+            y: 0,
+            width: 1920,
+            height: 1080,
+        }];
+        assert!(output_place(window, Some(2), &elsewhere).is_none());
+
+        let clipped = output_place(
+            rect(1900, 10, 200, 100),
+            Some(3),
+            &[Output {
+                id: 3,
+                x: 1920,
+                y: 0,
+                width: 1920,
+                height: 1080,
+            }],
+        )
+        .unwrap();
+        assert_eq!(clipped.margin_left, 0);
+        assert_eq!(clipped.margin_top, 10);
+        assert_eq!((clipped.width, clipped.height), (180, 100));
+    }
+
+    #[test]
+    fn output_place_uses_the_output_that_contains_the_center() {
+        let window = rect(100, 100, 40, 40);
+        let outputs = [
+            Output {
+                id: 9,
+                x: 5000,
+                y: 5000,
+                width: 100,
+                height: 100,
+            },
+            Output {
+                id: 1,
+                x: 0,
+                y: 0,
+                width: 200,
+                height: 200,
+            },
+        ];
+        let placed = output_place(window, Some(9), &outputs).unwrap();
+        assert_eq!(placed.output_id, 1);
+        assert!(output_place(rect(0, 0, 10, 10), None, &outputs[..1]).is_none());
+    }
+
+    #[test]
+    fn parse_active_reads_a_mapped_window_and_rejects_a_partial_payload() {
+        let parsed =
+            parse_active(r#"{"pid":42,"at":[10,20],"size":[30,40],"monitor":7,"mapped":true}"#)
+                .unwrap();
+        assert_eq!(parsed.pid, Pid(42));
+        assert_eq!(parsed.bounds, rect(10, 20, 30, 40));
+        assert_eq!(parsed.monitor_id, 7);
+        assert!(parse_active(r#"{"pid":1}"#).is_none());
+        assert!(parse_monitors("nope").is_empty());
     }
 }
