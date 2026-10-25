@@ -14,10 +14,18 @@ pub fn screenshot_taken(target: &super::backend::Target) {
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn screenshot_taken<T>(_target: &T) {}
+#[path = "border.rs"]
+mod border;
+
+#[cfg(not(target_os = "macos"))]
+pub fn screenshot_taken(target: &super::backend::Target) {
+    border::flash(target);
+}
 
 pub struct RecordingBorder {
     #[cfg(target_os = "macos")]
+    generation: u64,
+    #[cfg(not(target_os = "macos"))]
     generation: u64,
 }
 impl RecordingBorder {
@@ -33,8 +41,10 @@ impl RecordingBorder {
     }
 
     #[cfg(not(target_os = "macos"))]
-    pub fn new<T>(_target: &T) -> Self {
-        Self {}
+    pub fn new(target: &super::backend::Target) -> Self {
+        Self {
+            generation: border::show_recording(target),
+        }
     }
 }
 impl Drop for RecordingBorder {
@@ -43,6 +53,8 @@ impl Drop for RecordingBorder {
         unsafe {
             aquastar_capture_recording_border(0, 0, self.generation, false);
         }
+        #[cfg(not(target_os = "macos"))]
+        border::hide_recording(self.generation);
     }
 }
 
