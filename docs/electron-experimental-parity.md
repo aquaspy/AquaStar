@@ -19,7 +19,7 @@ Counts: 17 ported, 13 ported with changes, 5 not possible. 35 items.
 | `useDirectWmode` and `wmode=direct` | not possible | Those settings existed so the Pepper plugin could draw straight to the screen, and so macOS screenshots could see an opaque surface. Ruffle draws a canvas. The saved keys are ignored. |
 | PPAPI Flash Player and the `FlashPlayer/` binaries | not possible | Chromium dropped PPAPI. This branch deletes the plugin and the switches that pointed at it. |
 | Pepper trust directory (`nw-flash-trust`) | not possible | Ruffle has no PPAPI trust folder. `res/flash.js` is a stub so older requires do not throw. `host.trustFlashUrls` still stores the list. |
-| Stock ruffle.rs download replacing the bundled player | not possible | A stock build would drop the AQW patches in the pinned toommyliu commit. While `res/ruffle/PROVENANCE` exists, `downloadLatest` returns without writing files, and `ruffleAutoUpdate` stays off. |
+| Stock ruffle.rs download replacing the bundled player | not possible | A stock v0.7.1 build would drop the toommyliu patches in `ruffle/patches/`. While `res/ruffle/PROVENANCE` exists, `downloadLatest` returns without writing files, and `ruffleAutoUpdate` stays off. |
 | Minimize pauses the movie | ported with changes | A SWF window sets `renderingSuspended` and calls `releaseMemory` on minimize, and resumes on restore. |
 
 ## Game loading

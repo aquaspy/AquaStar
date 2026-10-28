@@ -1,0 +1,17 @@
+Upstream tag v0.7.1 is commit 89a7049965f3090e706265670df309a5128233ac (2026-10-07).
+The previous pin was toommyliu/ruffle a260c80124d2e4fee320b0cd7e595ded3f4b88b8, whose parent chain includes upstream e2643c2d1.
+
+patches/toommyliu-on-v0.7.1.patch is the code change from e2643c2d1 to a260c801, merged onto v0.7.1.
+git cherry against v0.7.1 marked all 124 of those commits as not already upstream.
+Upstream's own 64 commits in that span are releases, dependency bumps, HTML image text, and AVM1 Point/Matrix/Rectangle moved to ActionScript. They merged without overlapping the performance edits.
+
+Dropped, and not in the patch:
+- Changes under .github (remove workflows, the Linux/Windows Rust test workflow edit, the pull request template). v0.7.1 had edited the same files. They are not player code. The released workflows stay.
+- c1233491b (wgpu-hal: skip GL calls a submit already set). Cherry-pick onto this tree fails. v0.7.1 does not vendor wgpu-hal, and vendor/wgpu-hal/src/gles is absent. The commit edits the desktop GLES queue. The web player uses wgpu-webgl, webgpu, webgl, then canvas.
+
+Kept: the rest of that range, including the wgpu and core performance work and the web APIs releaseMemory, renderingSuspended, renderScale, and Smooth Motion. Smooth Motion stays off unless a previous context-menu choice set localStorage.
+
+Adapted after the merge compiled:
+v0.7.1 removed SwfSlice.movie and made the version private (commits 99d0eece23 and 0c71add8de). The lazy shape decode still stores the tag slice, and now also stores the Arc movie on GraphicShared. SwfSlice::version returns the stored SWF version. MovieClip preload and DefineShape read shared.movie and swf_data instead of the deleted fields.
+
+License of the patched tree remains MIT OR Apache-2.0. No Mugetsu code.

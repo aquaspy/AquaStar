@@ -6,6 +6,7 @@ on:
     branches: [electron-experimental]
     paths:
       - ruffle/RUFFLE_COMMIT
+      - ruffle/patches/**
       - scripts/build-ruffle-web.sh
       - .github/workflows/ruffle-web.yml
 
@@ -35,9 +36,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             .ruffle-src/target
-          key: ruffle-web-${{ hashFiles('ruffle/RUFFLE_COMMIT') }}-${{ runner.os }}
+          key: ruffle-web-${{ hashFiles('ruffle/RUFFLE_COMMIT', 'ruffle/patches/**') }}-${{ runner.os }}
           restore-keys: |
-            ruffle-web-${{ hashFiles('ruffle/RUFFLE_COMMIT') }}-
+            ruffle-web-${{ hashFiles('ruffle/RUFFLE_COMMIT', 'ruffle/patches/**') }}-
       - name: Install wasm-opt
         run: |
           set -euo pipefail

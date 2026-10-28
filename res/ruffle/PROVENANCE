@@ -1,8 +1,12 @@
-source: https://github.com/toommyliu/ruffle
-commit: a260c80124d2e4fee320b0cd7e595ded3f4b88b8
-upstream-base: e2643c2d1 (https://github.com/ruffle-rs/ruffle/commit/e2643c2d1)
+source: https://github.com/ruffle-rs/ruffle
+tag: v0.7.1
+commit: 89a7049965f3090e706265670df309a5128233ac
+patches: ruffle/patches/toommyliu-on-v0.7.1.patch
+patch-base: toommyliu/ruffle a260c80124d2e4fee320b0cd7e595ded3f4b88b8
+upstream-old-base: e2643c2d1
 cherry-pick: c1233491b skipped
-cherry-pick-reason: does not apply cleanly (vendor/wgpu-hal GLES files were deleted on main)
+cherry-pick-reason: v0.7.1 does not vendor wgpu-hal GLES sources, so the desktop GL queue patch does not apply
 license: MIT OR Apache-2.0
 player: web/packages/selfhosted/dist
-built: 2026-10-28T15:59:48Z
+renderer-order: wgpu-webgl, webgpu, webgl, canvas
+built: 2026-10-28T17:57:29Z

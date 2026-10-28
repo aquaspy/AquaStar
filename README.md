@@ -6,9 +6,9 @@
 
 This branch plays Adventure Quest Worlds inside Electron 45 with the Ruffle web player (WebAssembly in the page) instead of PPAPI Flash. One web build is used on every operating system.
 
-Ruffle web build from toommyliu/ruffle (https://github.com/toommyliu/ruffle), AQW-focused patches on top of Ruffle (https://ruffle.rs), MIT/Apache-2.0.
+Ruffle web build from toommyliu/ruffle (https://github.com/toommyliu/ruffle), AQW-focused patches on top of Ruffle (https://ruffle.rs), MIT/Apache-2.0. Those patches are ported onto Ruffle v0.7.1 (https://github.com/ruffle-rs/ruffle/releases/tag/v0.7.1).
 
-The bundled player is `res/ruffle/`. License notices for that build are `res/ruffle/LICENSE_MIT` and `res/ruffle/LICENSE_APACHE`. `res/ruffle/PROVENANCE` records the commit that was built. The pin lives in `ruffle/RUFFLE_COMMIT`. Rebuild with `bash scripts/build-ruffle-web.sh` (Rust stable, `wasm32-unknown-unknown`, `wasm-bindgen` 0.2.127, Java, Node 24). The renderer is Ruffle's default order: wgpu-webgl, then webgpu, then webgl, then canvas.
+The bundled player is `res/ruffle/`. License notices for that build are `res/ruffle/LICENSE_MIT` and `res/ruffle/LICENSE_APACHE`. `res/ruffle/PROVENANCE` records the upstream commit and the patch that was built. The pin lives in `ruffle/RUFFLE_COMMIT`. The patch lives in `ruffle/patches/`. What was kept and dropped is in `ruffle/PORT.txt`. Rebuild with `bash scripts/build-ruffle-web.sh` (Rust stable, `wasm32-unknown-unknown`, `wasm-bindgen` 0.2.127, Java, Node 24). The renderer is Ruffle's default order: wgpu-webgl, then webgpu, then webgl, then canvas.
 
 AquaStar is a desktop launcher and companion for AdventureQuest Worlds, with support for DragonFable. It provides inventory tools, wiki access, reminders, tasks, and strategy planning. It does not automate gameplay.
 

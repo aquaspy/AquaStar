@@ -27,7 +27,7 @@ The test workflow runs `npm test` on pull requests and packages the Windows app 
 - **`contextIsolation: true` and `nodeIntegration: false`.** Renderers talk to the main process through preloads and `contextBridge`. Do not add `@electron/remote`.
 - **Game and main windows use `sandbox: true`.** Char Page print and Char Page Studio stay `sandbox: false` and `webSecurity: false` so a page can load the local `ruffle.js` polyfill. List-style feature windows stay sandboxed.
 - **One active plugin per process** (`activePluginId`); switching requires an app restart. `AQUASTAR_DISABLE_PLUGINS=1` or `"pluginSystem": false` is safe mode: only the bundled default plugin (the one whose manifest says `bundledDefault`) is activated. There is no legacy boot path and the platform has no built-in game.
-- **Do not replace `res/ruffle/` with a stock ruffle.rs download.** `PROVENANCE` makes `downloadLatest` return without writing files. The AQW patches live only in the pinned toommyliu build.
+- **Do not replace `res/ruffle/` with a stock ruffle.rs download.** `PROVENANCE` makes `downloadLatest` return without writing files. The AQW patches are the port of toommyliu/ruffle onto Ruffle v0.7.1, applied from `ruffle/patches/` by `scripts/build-ruffle-web.sh`.
 
 ## Architecture
 
@@ -38,7 +38,7 @@ The test workflow runs `npm test` on pull requests and packages the Windows app 
 | `plugins/adventure-quest-worlds/` | Bundled AQW plugin: URLs, session rules, navigation injections, menus/keybinds, features, Studio processes, locales, web contribute |
 | `plugins/_template/` | Starter plugin for third-party games |
 | `res/flash.js` | No-op stub. Helper processes and tests still require the module. It does not register a plugin. |
-| `res/ruffle/` | Vendored toommyliu selfhosted web build (`ruffle.js`, one wasm, licenses, `PROVENANCE`) |
+| `res/ruffle/` | Vendored selfhosted web build of Ruffle v0.7.1 plus the toommyliu port (`ruffle.js`, one wasm, licenses, `PROVENANCE`) |
 | `res/ruffle_wrapper.html` | Page that creates a `RufflePlayer` and calls `load`. Renderer order is left at Ruffle's default. |
 | `res/const.js` | Core app-wide constants (no game URLs: those live in plugins; exposes `customSwfUrl` for the platform SWF override) |
 | `res/instances.js` | Window factory, screenshot/charpage capture, context menus; delegates did-finish-load to plugin navigation hooks when set |
