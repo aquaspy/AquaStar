@@ -268,7 +268,7 @@ AquaStar/
 
 ### Plugin loading on Electron 11
 
-Constraints: CommonJS only; `asar: false`; no native ESM in main; no bundler required for plugins.
+Constraints: CommonJS only; plugins load from inside the app asar; no native ESM in main; no bundler required for plugins.
 
 Loader algorithm:
 

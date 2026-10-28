@@ -52,6 +52,7 @@ global.test = function (name, fn) {
   './unit/locale-templates.test.js',
   './unit/aqw-navigation.test.js',
   './unit/sandbox-ruffle-origin.test.js',
+  './unit/helper-process.test.js',
   './unit/aqw-menus.test.js',
   './unit/namespaced-store.test.js',
   './unit/settings-resolve.test.js',

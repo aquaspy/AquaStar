@@ -33,6 +33,19 @@ function buildHelperArgs(scriptPath, extraArgs, runtime) {
  * Inspect argv at process start.
  * @returns {{ requested: boolean, script: string|null, error: string|null }}
  */
+// realpath follows symlinks in a dev tree. Inside app.asar it throws, but the member
+// is still readable and require() can load it, so an existing archive path is accepted.
+function resolveExisting(file, io) {
+    const files = io || fs;
+    const resolved = path.resolve(file);
+    try {
+        return files.realpathSync(resolved);
+    } catch (e) {
+        if (files.existsSync(resolved)) return resolved;
+        throw e;
+    }
+}
+
 function resolveHelperScript(argv, appRoot) {
     const arg = (argv || []).find(function (a) { return typeof a === 'string' && a.indexOf(HELPER_FLAG) === 0; });
     if (!arg) return { requested: false, script: null, error: null };
@@ -41,8 +54,8 @@ function resolveHelperScript(argv, appRoot) {
     let script;
     let allowedRoot;
     try {
-        script = fs.realpathSync(requested);
-        allowedRoot = fs.realpathSync(path.join(appRoot, 'plugins'));
+        script = resolveExisting(requested);
+        allowedRoot = resolveExisting(path.join(appRoot, 'plugins'));
     } catch (e) {
         return { requested: true, script: null, error: 'helper script not found: ' + requested };
     }
@@ -56,5 +69,6 @@ function resolveHelperScript(argv, appRoot) {
 module.exports = {
     HELPER_FLAG: HELPER_FLAG,
     buildHelperArgs: buildHelperArgs,
+    resolveExisting: resolveExisting,
     resolveHelperScript: resolveHelperScript
 };

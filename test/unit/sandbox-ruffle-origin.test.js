@@ -18,6 +18,7 @@ test('ruffle origin resolves files inside the player directory and rejects escap
 });
 
 test('ruffle origin echoes only origins the caller allowed', () => {
+  assert.strictEqual(ruffleOrigin.isAllowedOrigin('null'), true);
   assert.strictEqual(ruffleOrigin.isAllowedOrigin('https://account.aq.com'), false);
   ruffleOrigin.allowOrigins(['https://account.aq.com', 'null']);
   assert.strictEqual(ruffleOrigin.isAllowedOrigin('https://account.aq.com'), true);

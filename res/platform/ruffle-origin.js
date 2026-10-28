@@ -7,7 +7,8 @@ const path = require('path');
 
 const SCHEME = 'aquastar';
 const HOST = 'ruffle';
-const allowedOrigins = new Set();
+// "null" is the opaque origin of this app's own file pages, including the game wrapper.
+const allowedOrigins = new Set(['null']);
 let installed = false;
 let schemeRegistered = false;
 

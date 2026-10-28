@@ -38,7 +38,7 @@
   },
   "build": {
     "publish": null,
-    "asar": false,
+    "asar": true,
     "files": [
       "**/*",
       "!squashfs-root/**"

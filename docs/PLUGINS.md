@@ -34,7 +34,7 @@ At startup AquaStar scans folders for `plugin.json`:
 
 `plugins/_template/` is **skipped** by discovery (name `_template`).
 
-**Installer / portable:** electron-builder uses `asar: false` and `files: ["**/*", …]`, so everything under repo `plugins/` (except ignored junk) is copied into the app. Runtime then reads `__dirname/plugins`, not your git checkout.
+**Installer / portable:** electron-builder packs the app into an asar. Everything under repo `plugins/` (except ignored junk) is inside that archive. Runtime reads `__dirname/plugins`, not your git checkout. `require()` and the main-process filesystem can read the archive. A renderer `fetch` of a `file://` URL inside it cannot.
 
 **Id collision:** if a local plugin reuses a bundled `id`, it is rejected unless **Allow local plugins to override bundled ids** is enabled.
 

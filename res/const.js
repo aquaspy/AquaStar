@@ -235,8 +235,9 @@ exports.appdataJsonPath = appdataJsonPath;
 exports.inPathJsonPath  = inPathJsonPath;
 exports.legacyAppdataJsonPath = legacyAppdataJsonPath;
 
-const bundledRufflePlayerPath = path.join(appRoot, 'res', 'ruffle', 'ruffle.js');
-exports.rufflePlayerUrl = _getFileUrl(bundledRufflePlayerPath);
+// The renderer fetches the wasm. file:// inside an asar archive cannot serve that
+// fetch, so the player is the app scheme, which the main process reads from the archive.
+exports.rufflePlayerUrl = require('./platform/ruffle-origin.js').scriptUrl();
 exports.ruffleDirectory = appDataDirectory;
 
 // Local SWF override (Settings → Custom SWF File). The lookup lives in customSwf.js; the
