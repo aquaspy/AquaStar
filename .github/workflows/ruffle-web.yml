@@ -1,0 +1,54 @@
+name: Ruffle web
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [electron-experimental]
+    paths:
+      - ruffle/RUFFLE_COMMIT
+      - scripts/build-ruffle-web.sh
+      - .github/workflows/ruffle-web.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: rust-src
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            .ruffle-src/target
+          key: ruffle-web-${{ hashFiles('ruffle/RUFFLE_COMMIT') }}-${{ runner.os }}
+          restore-keys: |
+            ruffle-web-${{ hashFiles('ruffle/RUFFLE_COMMIT') }}-
+      - name: Install wasm-opt
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/binaryen.tgz \
+            https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-x86_64-linux.tar.gz
+          tar -xzf /tmp/binaryen.tgz -C /tmp
+          sudo install -m 755 /tmp/binaryen-version_123/bin/wasm-opt /usr/local/bin/wasm-opt
+      - name: Build the pinned web player
+        run: bash scripts/build-ruffle-web.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ruffle-selfhosted-dist
+          path: res/ruffle/
+          if-no-files-found: error

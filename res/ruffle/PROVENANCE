@@ -1,0 +1,8 @@
+source: https://github.com/toommyliu/ruffle
+commit: a260c80124d2e4fee320b0cd7e595ded3f4b88b8
+upstream-base: e2643c2d1 (https://github.com/ruffle-rs/ruffle/commit/e2643c2d1)
+cherry-pick: c1233491b skipped
+cherry-pick-reason: does not apply cleanly (vendor/wgpu-hal GLES files were deleted on main)
+license: MIT OR Apache-2.0
+player: web/packages/selfhosted/dist
+built: 2026-10-28T15:59:48Z

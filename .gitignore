@@ -22,3 +22,6 @@ swf2png-master
 # Local diagnostic output and architecture staging
 logs/
 work-*/
+
+# toommyliu/ruffle checkout used by scripts/build-ruffle-web.sh
+.ruffle-src/
