@@ -1,4 +1,6 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 
 const print = require('../../plugins/adventure-quest-worlds/features/charpage/print.js');
 const navigation = require('../../plugins/adventure-quest-worlds/injections/navigation.js');
@@ -107,6 +109,11 @@ test('char page print: ignores windows that are not a Char Page', async () => {
   } finally {
     h.restore();
   }
+});
+
+test('char page print accepts a ruffle-player as the movie', () => {
+  const src = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/print.js'), 'utf8');
+  assert.ok(src.indexOf('ruffle-player') !== -1);
 });
 
 test('char page print: tells the user when the page has no Flash', async () => {

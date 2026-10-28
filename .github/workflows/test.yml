@@ -2,13 +2,13 @@ name: Test
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, electron-experimental]
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - '.cursor/**'
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, electron-experimental]
     paths-ignore:
       - '**.md'
       - 'docs/**'

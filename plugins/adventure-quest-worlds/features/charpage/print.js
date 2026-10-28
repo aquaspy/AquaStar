@@ -1,6 +1,6 @@
 // Char Page screenshot (Alt+K). Opens the focused Char Page in a hidden window, waits for the
-// Flash to render, crops the original 715x455 area and saves a screenshot. The user is kept
-// informed through the focused window's title. The title flash helpers, the JS runner and the
+// movie to render, crops the original 715x455 area and saves a screenshot. The user is kept
+// informed through the focused window's title. The title helpers, the JS runner and the
 // screenshot writer are generic platform services handed in by the caller.
 
 // Original Char Page Flash proportion.
@@ -55,7 +55,7 @@ function createCharPagePrint(deps) {
         if (deps.classify(url) !== 'charpage') return;
 
         const messages = deps.getMessages() || {};
-        const code = '(document.getElementsByTagName("object")[0] == undefined)? false : true;';
+        const code = 'document.querySelector("object, embed, ruffle-player") != null';
         deps.executeJavaScript(focusedWindow.webContents, code, 'Char page check').then(function (flashExists) {
             if (!flashExists) {
                 deps.notify(focusedWindow, messages.invalid);

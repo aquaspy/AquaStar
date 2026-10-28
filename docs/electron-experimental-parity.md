@@ -41,7 +41,7 @@ Counts: 17 ported, 13 ported with changes, 5 not possible. 35 items.
 | --- | --- | --- |
 | Several game windows | ported with changes | `new-window` is gone in this Electron. `setWindowOpenHandler` opens the child and denies the default popup. |
 | Accounts, wiki, design notes, and other HTML pages | ported | Ordinary browser windows. Sandbox stays on. |
-| Char page and char-page print | ported with changes | The page loads `res/ruffle/ruffle.js` so the selfhosted polyfill replaces the Flash `<object>`. Those windows use `webSecurity: false` so the local script and the remote SWF can load. `sandbox: false` stays, because the preload still uses Node. |
+| Char page and char-page print | ported with changes | The page loads `res/ruffle/ruffle.js` so the selfhosted polyfill replaces the Flash `<object>`. Alt+K treats `object`, `embed`, or `ruffle-player` as the movie. Those windows use `webSecurity: false` so the local script and the remote SWF can load. `sandbox: false` stays, because the preload still uses Node. |
 | Char Page Studio | ported with changes | Helper process remains. It no longer starts PPAPI. The lab page loads `ruffle.js` before the embed. Popups are denied. |
 | Screenshots (F2) | ported | `capturePage` from the main process. The smoke hook wrote PNGs of the game window. |
 | Screen recording (Ctrl+J) | ported with changes | Still MediaRecorder via the capture preload. The format is the first one in the settings list that this Chromium supports. A recording was not taken in the headless run. |
@@ -71,3 +71,5 @@ Counts: 17 ported, 13 ported with changes, 5 not possible. 35 items.
 - Gameplay frame rate on a GPU. xvfb blocklists WebGL, so Ruffle used the canvas renderer. A machine with a GPU should get wgpu-webgl first.
 - Windows and macOS packages were not built here. The mac zip and `strip-mac-signature` were not executed.
 - A screen recording file was not written.
+- `release.yml` is unchanged. A `v*` tag pushed from this branch would still run Release, and a tag with no hyphen would replace GitHub Latest. Do not push a tag.
+- GitHub Pages deploy is skipped when the workflow ref is `electron-experimental`. A dispatch of that workflow on this branch does not publish the tools site.

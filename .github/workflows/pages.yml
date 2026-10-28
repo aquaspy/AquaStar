@@ -26,6 +26,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.ref != 'refs/heads/electron-experimental'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
