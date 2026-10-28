@@ -87,7 +87,8 @@ function newBrowserWindow(new_path, isMainWin=false){
             socketProxy.start();
         }
         new_path = constant.wrapRuffleUrl(new_path, ruffleOpts,
-            keybinds.keybinds && keybinds.keybinds.ruffleQuality);
+            keybinds.keybinds && keybinds.keybinds.ruffleQuality,
+            keybinds.keybinds && keybinds.keybinds.ruffleRenderScale);
     }
     
     const newWin = new BrowserWindow(config);

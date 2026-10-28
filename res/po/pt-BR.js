@@ -93,6 +93,7 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "Canal de Atualização do Ruffle",
         ruffleAutoUpdate: "Baixar atualizações automaticamente",
         ruffleQuality: "Qualidade do Ruffle",
+        ruffleRenderScale: "Escala de renderização",
         showGameMenu: "Mostrar menu acima das janelas do jogo",
         enableDevTools: "Ativar DevTools"
     },
@@ -103,9 +104,27 @@ exports.settingsMessages = {
         renderMode: "Esta build abre SWFs com o player web do Ruffle que veio empacotado.",
         ruffleUpdateChannel: "Downloads do Ruffle oficial estão desligados. Esta build mantém o player empacotado.",
         ruffleAutoUpdate: "Fica desligado. Um player empacotado não é trocado por um download do Ruffle oficial.",
-        ruffleQuality: "Qualidade de renderização do Ruffle. Alta é a mais nítida; Baixa desliga o anti-aliasing e é bem mais rápida em GPUs fracas ou sem aceleração. Vale para janelas de jogo abertas depois da mudança.",
+        ruffleQuality: "Qualidade de renderização do Ruffle. Alta é o padrão. Melhor, 8x8 e 16x16 usam mais amostras e custam mais. Baixa desliga o anti-aliasing e é bem mais rápida em GPUs fracas ou sem aceleração. Vale para janelas de jogo abertas depois da mudança.",
+        ruffleRenderScale: "O tamanho em que o Ruffle desenha em relação à janela. 100% é um quadro na resolução da janela, o padrão do player. Valores menores desenham menos pixels e rodam mais rápido. 200% é o máximo que o player aceita. Vale para janelas de jogo abertas depois da mudança.",
         showGameMenu: "Mostra uma barra de menu acima das janelas de jogo com os mesmos comandos dos atalhos. Desative se preferir só teclado.",
         enableDevTools: "Abre o console de DevTools automaticamente ao iniciar."
+    },
+    qualityChoiceLabels: {
+        low: "Baixa (mais rápida)",
+        medium: "Média",
+        high: "Alta (padrão)",
+        best: "Melhor",
+        "8x8": "Alta 8x8",
+        "8x8linear": "Alta 8x8 linear",
+        "16x16": "Alta 16x16",
+        "16x16linear": "Alta 16x16 linear"
+    },
+    renderScaleChoiceLabels: {
+        "0.5": "50%",
+        "0.75": "75%",
+        "1": "100% (padrão)",
+        "1.5": "150%",
+        "2": "200%"
     },
     languageChoiceLabels: {
         system: "Padrão do sistema",

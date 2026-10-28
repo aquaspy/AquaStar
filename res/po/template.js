@@ -93,6 +93,7 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "",
         ruffleAutoUpdate: "",
         ruffleQuality: "",
+        ruffleRenderScale: "",
         showGameMenu: "",
         enableDevTools: ""
     },
@@ -104,8 +105,26 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "",
         ruffleAutoUpdate: "",
         ruffleQuality: "",
+        ruffleRenderScale: "",
         showGameMenu: "",
         enableDevTools: ""
+    },
+    qualityChoiceLabels: {
+        low: "",
+        medium: "",
+        high: "",
+        best: "",
+        "8x8": "",
+        "8x8linear": "",
+        "16x16": "",
+        "16x16linear": ""
+    },
+    renderScaleChoiceLabels: {
+        "1": "",
+        "2": "",
+        "0.5": "",
+        "0.75": "",
+        "1.5": ""
     },
     languageChoiceLabels: {
         system: "",

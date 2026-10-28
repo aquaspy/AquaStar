@@ -16,7 +16,15 @@
   var swfUrl = params.get('swf');
   var proxyUrl = params.get('proxy');
   var ruffleUrl = params.get('ruffle') || 'ruffle/ruffle.js';
-  var quality = /^(high|medium|low)$/.test(params.get('quality') || '') ? params.get('quality') : 'high';
+  var qualities = {
+    low: true, medium: true, high: true, best: true,
+    '8x8': true, '8x8linear': true, '16x16': true, '16x16linear': true
+  };
+  var requestedQuality = params.get('quality') || '';
+  var quality = qualities[requestedQuality] ? requestedQuality : 'high';
+  var scales = { '0.5': 0.5, '0.75': 0.75, '1': 1, '1.5': 1.5, '2': 2 };
+  var requestedScale = params.get('scale') || '1';
+  var renderScale = Object.prototype.hasOwnProperty.call(scales, requestedScale) ? scales[requestedScale] : 1;
   if (!swfUrl) return;
 
   // Some Flash games talk to their servers over raw TCP, which Ruffle (sandboxed, no raw
@@ -81,6 +89,7 @@
     var ruffle = window.RufflePlayer.newest();
     var player = ruffle.createPlayer();
     document.getElementById('container').appendChild(player);
+    player.renderScale = renderScale;
 
     var loadOpts = {
       url: swfUrl,

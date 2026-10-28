@@ -116,14 +116,15 @@ exports.isRuffleEligible = function(swfUrl) {
     } catch (e) { return false; }
 }
 // ruffleOpts: the owning plugin's wrap.ruffle ({ socket: { serversApi, fallbackHosts, policyPort } }).
-exports.wrapRuffleUrl = function(swfUrl, ruffleOpts, quality) {
+exports.wrapRuffleUrl = function(swfUrl, ruffleOpts, quality, renderScale) {
     if (!swfUrl) return swfUrl;
     const cfg = ruffleOpts && ruffleOpts.socket ? { socket: ruffleOpts.socket } : {};
     return ruffleWrapperUrl + '?swf=' + encodeURIComponent(swfUrl) +
         '&cfg=' + encodeURIComponent(JSON.stringify(cfg)) +
         '&proxy=' + encodeURIComponent(socketProxy.proxyUrl) +
         '&ruffle=' + encodeURIComponent(exports.rufflePlayerUrl) +
-        '&quality=' + encodeURIComponent(exports.normalizeRuffleQuality(quality));
+        '&quality=' + encodeURIComponent(exports.normalizeRuffleQuality(quality)) +
+        '&scale=' + encodeURIComponent(exports.normalizeRuffleRenderScale(renderScale));
 }
 
 /// -------------------------------
@@ -188,19 +189,11 @@ exports.ruffleUpdateChannelChoices = Object.keys(ruffleUpdateChannels).map((id) 
     { id: id, label: ruffleUpdateChannels[id].label }
 ));
 
-// Ruffle render quality. "high" is Ruffle's default (4x MSAA on WebGL); lower levels
-// trade anti-aliasing for frame rate on weak or software-rendered GPUs.
-const ruffleQualities = {
-    high:   { label: 'High (default)' },
-    medium: { label: 'Medium' },
-    low:    { label: 'Low (fastest)' }
-};
-exports.ruffleQualityChoices = Object.keys(ruffleQualities).map((id) => (
-    { id: id, label: ruffleQualities[id].label }
-));
-exports.normalizeRuffleQuality = function (value) {
-    return Object.prototype.hasOwnProperty.call(ruffleQualities, value) ? value : 'high';
-};
+const ruffleDisplay = require('./ruffle-display.js');
+exports.ruffleQualityChoices = ruffleDisplay.qualities;
+exports.normalizeRuffleQuality = ruffleDisplay.normalizeQuality;
+exports.ruffleRenderScaleChoices = ruffleDisplay.scales;
+exports.normalizeRuffleRenderScale = ruffleDisplay.normalizeScale;
 
 exports.appLanguageChoices = [
     { id: 'system', label: 'System default' },
@@ -222,6 +215,7 @@ const originalOptions = {
     ruffleUpdateChannel: 'latest',
     ruffleAutoUpdate:  false,
     ruffleQuality:     'high',
+    ruffleRenderScale: '1',
     // Native menu bar on game windows (mirrors shortcuts). Default on.
     showGameMenu:      true,
     // Dev-only escape hatch, warned about on enable in the Settings screen.

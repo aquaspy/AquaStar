@@ -14,7 +14,7 @@ Counts: 17 ported, 13 ported with changes, 5 not possible. 35 items.
 
 | Item | Status | Note |
 | --- | --- | --- |
-| SWF opens in a player inside the Electron window | ported with changes | Every `.swf` URL goes through `res/ruffle_wrapper.html`. `RufflePlayer.load` gets the URL, base, quality, letterbox, networking, and the socket proxy list. `preferredRenderer` is not set, so Ruffle tries wgpu-webgl, then webgpu, then webgl, then canvas. |
+| SWF opens in a player inside the Electron window | ported with changes | Every `.swf` URL goes through `res/ruffle_wrapper.html`. `RufflePlayer.load` gets the URL, base, quality, letterbox, networking, and the socket proxy list. Quality can be low, medium, high, best, 8x8, 8x8 linear, 16x16, or 16x16 linear. Render scale is set on the player before load and defaults to 1. `preferredRenderer` is not set, so Ruffle tries wgpu-webgl, then webgpu, then webgl, then canvas. |
 | Saved `renderMode: flash` or `ruffle-native` | ported with changes | Both migrate to `ruffle`. Settings has one player. |
 | `useDirectWmode` and `wmode=direct` | not possible | Those settings existed so the Pepper plugin could draw straight to the screen, and so macOS screenshots could see an opaque surface. Ruffle draws a canvas. The saved keys are ignored. |
 | PPAPI Flash Player and the `FlashPlayer/` binaries | not possible | Chromium dropped PPAPI. This branch deletes the plugin and the switches that pointed at it. |

@@ -193,6 +193,7 @@
     ruffleUpdateChannel: 'select',
     ruffleAutoUpdate:  'boolean',
     ruffleQuality:     'select',
+    ruffleRenderScale: 'select',
     showGameMenu:      'boolean',
     enableDevTools:    'boolean'
   };
@@ -292,6 +293,7 @@
   let messages, defaults, current, options;
   let updateChannelChoices = [];
   let ruffleQualityChoices = [];
+  let ruffleRenderScaleChoices = [];
   // key -> { comboEl, initial: string, value: string, recording: bool, type: 'keybind'|'option' }
   const rowState = {};
   let activeRecordingKey = null;
@@ -672,7 +674,8 @@
     // makes the stable release the normal path and nightly an explicit opt-in.
     const updateChannelRow = buildSelectOptionRow('ruffleUpdateChannel', updateChannelChoices);
     const qualityRow = buildSelectOptionRow('ruffleQuality', ruffleQualityChoices);
-    return [heading, statusRow, qualityRow, updateChannelRow, updateRow, buildBooleanOptionRow('ruffleAutoUpdate'), restoreRow];
+    const scaleRow = buildSelectOptionRow('ruffleRenderScale', ruffleRenderScaleChoices);
+    return [heading, statusRow, qualityRow, scaleRow, updateChannelRow, updateRow, buildBooleanOptionRow('ruffleAutoUpdate'), restoreRow];
   }
 
   async function refreshCustomSwfStatus() {
@@ -1123,7 +1126,14 @@
       renderMode:      kb.renderModeChoices || []
     };
     updateChannelChoices = kb.ruffleUpdateChannelChoices || [];
-    ruffleQualityChoices = kb.ruffleQualityChoices || [];
+    function localizeChoices(choices, table) {
+      return (choices || []).map(function (choice) {
+        const localized = table && table[choice.id];
+        return localized ? { id: choice.id, label: localized } : choice;
+      });
+    }
+    ruffleQualityChoices = localizeChoices(kb.ruffleQualityChoices, messages.qualityChoiceLabels);
+    ruffleRenderScaleChoices = localizeChoices(kb.ruffleRenderScaleChoices, messages.renderScaleChoiceLabels);
 
     // General: plugins meta first, then platform options, primary SWF override, Ruffle.
     appendNodes(generalEl, buildPluginsSection(pluginList, pluginSettings || layout.pluginSettings || {}));
@@ -1133,7 +1143,8 @@
       !CUSTOM_SWF_SECTION_KEYS.has(key) &&
       key !== 'ruffleUpdateChannel' &&
       key !== 'ruffleAutoUpdate' &&
-      key !== 'ruffleQuality'
+      key !== 'ruffleQuality' &&
+      key !== 'ruffleRenderScale'
     );
     if (platformOptionKeys.length) {
       const heading = document.createElement('div');

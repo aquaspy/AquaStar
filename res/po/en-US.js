@@ -93,6 +93,7 @@ exports.settingsMessages = {
         ruffleUpdateChannel: "Ruffle Update Channel",
         ruffleAutoUpdate: "Automatically download updates",
         ruffleQuality: "Ruffle Quality",
+        ruffleRenderScale: "Render Scale",
         showGameMenu: "Show menu above game windows",
         enableDevTools: "Enable DevTools"
     },
@@ -103,9 +104,27 @@ exports.settingsMessages = {
         renderMode: "This build plays SWFs with the pinned Ruffle web player.",
         ruffleUpdateChannel: "Stock Ruffle downloads are disabled. This build keeps the pinned player.",
         ruffleAutoUpdate: "Left off. A pinned player is not replaced by a stock Ruffle download.",
-        ruffleQuality: "Ruffle render quality. High is sharpest; Low turns off anti-aliasing and is much faster on weak or software-only GPUs. Applies to newly opened game windows.",
+        ruffleQuality: "Ruffle render quality. High is the default. Best, 8x8, and 16x16 draw more samples and cost more. Low turns off anti-aliasing and is much faster on weak or software-only GPUs. Applies to newly opened game windows.",
+        ruffleRenderScale: "How large Ruffle draws compared with the window. 100% is a full-resolution frame, which is the player's own default. Lower values render fewer pixels and run faster. 200% is the highest the player accepts. Applies to newly opened game windows.",
         showGameMenu: "Shows a menu bar above game windows with the same commands as the shortcuts. Turn it off for keyboard-only controls.",
         enableDevTools: "Opens the DevTools console automatically on startup."
+    },
+    qualityChoiceLabels: {
+        low: "Low (fastest)",
+        medium: "Medium",
+        high: "High (default)",
+        best: "Best",
+        "8x8": "High 8x8",
+        "8x8linear": "High 8x8 linear",
+        "16x16": "High 16x16",
+        "16x16linear": "High 16x16 linear"
+    },
+    renderScaleChoiceLabels: {
+        "0.5": "50%",
+        "0.75": "75%",
+        "1": "100% (default)",
+        "1.5": "150%",
+        "2": "200%"
     },
     languageChoiceLabels: {
         system: "System default",
