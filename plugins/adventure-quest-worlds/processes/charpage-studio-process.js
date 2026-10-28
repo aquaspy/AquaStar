@@ -3,12 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const { spawn } = require('child_process');
-const flash = require('../../../res/flash.js');
 const helperProcess = require('../../../res/platform/helper-process.js');
 const constant = require('../../../res/const.js');
 const locale = require('../../../res/locale.js');
 
-const root = path.join(__dirname, '..', '..', '..');
 const charpageDir = path.join(__dirname, '..', 'features', 'charpage');
 const studioSwf = path.join(charpageDir, 'characterB-studio.swf');
 const emptySceneSwf = path.join(charpageDir, 'characterB-empty-scene.swf');
@@ -149,8 +147,6 @@ ipcMain.handle('charpage-studio-capture-gif', async (event, renderer, flashVars,
         try { fs.rmSync(temporaryDirectory, { recursive: true, force: true }); } catch (error) { /* temporary files are harmless */ }
     }
 });
-app.allowRendererProcessReuse = false;
-flash.flashManager(app, root, root, 'AquaStar');
 app.whenReady().then(() => {
   locale.mergePluginLocales({
     'en-US': require('../locales/en-US.js'),
@@ -159,12 +155,10 @@ app.whenReady().then(() => {
   locale.detectLang(app.getLocale(), {});
   installProtocol();
   Menu.setApplicationMenu(null);
-  studioWindow = new BrowserWindow({ width: 1280, height: 800, icon: constant.iconPath, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false, plugins: true, webSecurity: false, preload: path.join(charpageDir, 'lab', 'preload_lab.js') } });
+  studioWindow = new BrowserWindow({ width: 1280, height: 800, icon: constant.iconPath, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false, webSecurity: false, preload: path.join(charpageDir, 'lab', 'preload_lab.js') } });
   studioWindow.setMenu(null);
   studioWindow.setMenuBarVisibility(false);
-  // This window runs with webSecurity off and Flash on: it must never navigate away from its
-  // packaged page or open other windows, whatever the loaded content asks for.
-  studioWindow.webContents.on('new-window', (event) => event.preventDefault());
+  studioWindow.webContents.setWindowOpenHandler(function () { return { action: 'deny' }; });
   studioWindow.webContents.on('will-navigate', (event) => event.preventDefault());
   studioWindow.loadFile(path.join(charpageDir, 'lab', 'characterB-lab.html'));
   studioWindow.on('closed', () => app.quit());

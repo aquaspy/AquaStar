@@ -1,6 +1,7 @@
 // AQW navigation classification + did-finish-load injections (PR 5).
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 function createNavigationHooks(options) {
     options = options || {};
@@ -88,12 +89,28 @@ function createNavigationHooks(options) {
             );
             await execute(syncBtnSrc, 'Account sync button');
         }
+
+        if (kind === 'charpage') {
+            const ruffleScript = pathToFileURL(
+                path.join(featuresRoot, '..', '..', '..', 'res', 'ruffle', 'ruffle.js')
+            ).href;
+            await execute(
+                '(function(){if(document.querySelector("script[data-aquastar-ruffle]"))return;' +
+                'var s=document.createElement("script");s.dataset.aquastarRuffle="1";s.src=' +
+                JSON.stringify(ruffleScript) + ';document.documentElement.appendChild(s);})()',
+                'Ruffle polyfill'
+            );
+        }
     }
 
     return {
         classify: classify,
         onDidFinishLoad: onDidFinishLoad,
-        allowChildWindow: function () { return true; }
+        allowChildWindow: function () { return true; },
+        webPreferencesFor: function (pageUrl) {
+            if (classify(pageUrl) === 'charpage') return { webSecurity: false };
+            return null;
+        }
     };
 }
 

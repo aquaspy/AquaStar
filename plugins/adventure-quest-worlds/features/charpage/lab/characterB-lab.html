@@ -148,10 +148,11 @@
       </footer>
     </aside>
     <section id="preview-pane" aria-label="Prévia da Char Page">
-      <div class="preview-header">Prévia — Flash Player nativo</div>
+      <div class="preview-header">Prévia — Ruffle</div>
       <div id="stage"></div>
     </section>
   </main>
+  <script src="../../../../../res/ruffle/ruffle.js"></script>
   <script>
   (function () {
     var initialFlashVars = '';
@@ -422,12 +423,7 @@
       }
       var parameters = new URLSearchParams(renderer.flashVars);
       var flashVarString = '&' + parameters.toString();
-      // Pepper Flash also exposes query-string values through
-      // LoaderInfo.parameters. Supplying this second, equivalent route is
-      // essential for a locally packaged movie on Chromium 87.
       var movieUrl = renderer.swfUrl + '?v=2&' + parameters.toString();
-      // Chromium 87's PPAPI reliably receives FlashVars from a direct embed.
-      // This deliberately matches the previously working native Studio path.
       var player = document.createElement('embed');
       player.type = 'application/x-shockwave-flash';
       nativeMovieWidth = Number(renderer.width) || 715;
@@ -455,7 +451,7 @@
       try {
         captureButton.disabled = false;
         captureGifButton.disabled = false;
-        status.textContent = 'Flash Player nativo carregando…';
+        status.textContent = 'Ruffle carregando…';
       } catch (error) {
         status.textContent = 'Falha ao carregar: ' + error.message;
       }

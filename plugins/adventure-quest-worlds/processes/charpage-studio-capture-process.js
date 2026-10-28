@@ -3,9 +3,6 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const { GIFEncoder, quantize, applyPalette } = require('gifenc');
-const flash = require('../../../res/flash.js');
-
-const root = path.join(__dirname, '..', '..', '..');
 const charpageDir = path.join(__dirname, '..', 'features', 'charpage');
 const studioSwf = path.join(charpageDir, 'characterB-studio.swf');
 const emptySceneSwf = path.join(charpageDir, 'characterB-empty-scene.swf');
@@ -79,8 +76,6 @@ if (!requestPath) {
     try { request = JSON.parse(fs.readFileSync(requestPath, 'utf8')); } catch (error) { fail(error); }
 }
 
-app.allowRendererProcessReuse = false;
-flash.flashManager(app, root, root, 'AquaStar');
 app.whenReady().then(async () => {
     try {
         installProtocol();
@@ -100,7 +95,6 @@ app.whenReady().then(async () => {
                 nodeIntegration: false,
                 contextIsolation: true,
                 sandbox: false,
-                plugins: true,
                 webSecurity: false,
                 backgroundThrottling: false
             }

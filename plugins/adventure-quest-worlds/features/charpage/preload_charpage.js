@@ -1,4 +1,13 @@
 (() => {
+    const path = require('path');
+    const { pathToFileURL } = require('url');
+    function injectRuffle() {
+        if (document.querySelector('script[data-aquastar-ruffle]')) return;
+        const script = document.createElement('script');
+        script.dataset.aquastarRuffle = '1';
+        script.src = pathToFileURL(path.join(__dirname, '../../../../res/ruffle/ruffle.js')).href;
+        (document.head || document.documentElement).appendChild(script);
+    }
     function _isnull(variable){
         if (variable == undefined || variable == null) return true;
         else return false;
@@ -56,6 +65,7 @@
                 renderCC(flash, w, newH);
             }
         }
+        injectRuffle();
         return;
     }
     

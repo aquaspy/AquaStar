@@ -31,7 +31,6 @@ function createWindows(deps) {
                 sandbox: true,
                 webviewTag: false,
                 preload: preload(dir, preloadFile),
-                plugins: false,
                 contextIsolation: true
             }
         };
@@ -57,7 +56,7 @@ function createWindows(deps) {
         webPreferences: {
             nodeIntegration: false,
             sandbox: false,
-            plugins: true,
+            webSecurity: false,
             contextIsolation: true,
             preload: preload('charpage', 'preload_charpage.js')
         }
