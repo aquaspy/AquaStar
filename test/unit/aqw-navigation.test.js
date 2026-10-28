@@ -16,13 +16,11 @@ test('AQW navigation classify maps wiki, charpage, and account URLs', () => {
   assert.strictEqual(hooks.classify('https://example.com/'), 'other');
 });
 
-test('char page windows turn web security off and load Ruffle', async () => {
+test('char page windows keep web security on and load Ruffle from the app scheme', async () => {
   const hooks = createNavigationHooks({
     featuresRoot: path.join(__dirname, '../../plugins/adventure-quest-worlds/features')
   });
-  assert.deepStrictEqual(hooks.webPreferencesFor('https://account.aq.com/CharPage?id=Hero'), {
-    webSecurity: false
-  });
+  assert.strictEqual(hooks.webPreferencesFor('https://account.aq.com/CharPage?id=Hero'), null);
   assert.strictEqual(hooks.webPreferencesFor('https://aqwwiki.wikidot.com/sword'), null);
   const scripts = [];
   await hooks.onDidFinishLoad({
@@ -35,7 +33,7 @@ test('char page windows turn web security off and load Ruffle', async () => {
   });
   assert.ok(
     scripts.some(function (s) {
-      return s.label === 'Ruffle polyfill' && s.source.indexOf('ruffle.js') !== -1;
+      return s.label === 'Ruffle polyfill' && s.source.indexOf('aquastar://ruffle/ruffle.js') !== -1;
     })
   );
 });

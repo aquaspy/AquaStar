@@ -60,6 +60,7 @@ async function followLauncherLoader(host, urls) {
 async function activate(host) {
     // Feature modules live under this plugin; keep legacy IPC channel names stable.
     requireLegacyFeatures();
+    require('./ruffle-origins').install();
 
     const urls = require('./urls.js');
     const session = require('./session.js');

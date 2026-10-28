@@ -68,9 +68,6 @@
       ]
     },
     "linux": {
-      "executableArgs": [
-        "--no-sandbox"
-      ],
       "maintainer": "aquastar",
       "synopsis": "AQW launcher using the Ruffle web player",
       "icon": "build/icons",

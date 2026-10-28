@@ -1,5 +1,10 @@
 const {app, session, Menu, BrowserWindow, dialog}  = require('electron')
 
+// Before ready, and before a helper process returns: the sandbox decision and the
+// privileged player scheme have to be registered in every Electron process.
+require('./res/platform/sandbox-fallback.js').applyFallback(app);
+require('./res/platform/ruffle-origin.js').registerScheme();
+
 // Helper processes (host.windows.spawnHelperProcess): a plugin script that needs its own
 // Electron process. The platform runs it instead of the normal app and knows nothing else.
 const helper = require('./res/platform/helper-process.js').resolveHelperScript(process.argv, __dirname);
@@ -254,6 +259,7 @@ let initializationPromise = null;
 function ensureMainWindow() {
   if (!initializationPromise) {
     initializationPromise = app.whenReady().then(() => {
+      require('./res/platform/ruffle-origin.js').install(path.join(__dirname, 'res', 'ruffle'));
       // No AquaStar window needs Chromium's spellchecker. Avoid downloading and
       // loading a Hunspell dictionary into the browser process on every launch.
       try { session.defaultSession.setSpellCheckerLanguages([]); }

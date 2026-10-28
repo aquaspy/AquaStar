@@ -65,7 +65,16 @@ function flashTrustUrlList(primaryUrl) {
     return list;
 }
 
+function applyToSession(electronSession, settings) {
+    const platform = require('../../res/platform');
+    platform.applySessionRules(electronSession, createSessionRules(), {
+        defaultUserAgent: electronSession.getUserAgent(),
+        settings: settings || {}
+    });
+}
+
 module.exports = {
     createSessionRules: createSessionRules,
-    flashTrustUrlList: flashTrustUrlList
+    flashTrustUrlList: flashTrustUrlList,
+    applyToSession: applyToSession
 };

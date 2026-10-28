@@ -41,8 +41,8 @@ Counts: 17 ported, 13 ported with changes, 5 not possible. 35 items.
 | --- | --- | --- |
 | Several game windows | ported with changes | `new-window` is gone in this Electron. `setWindowOpenHandler` opens the child and denies the default popup. |
 | Accounts, wiki, design notes, and other HTML pages | ported | Ordinary browser windows. Sandbox stays on. |
-| Char page and char-page print | ported with changes | The page loads `res/ruffle/ruffle.js` so the selfhosted polyfill replaces the Flash `<object>`. Alt+K treats `object`, `embed`, or `ruffle-player` as the movie. Those windows use `webSecurity: false` so the local script and the remote SWF can load. `sandbox: false` stays, because the preload still uses Node. |
-| Char Page Studio | ported with changes | Helper process remains. It no longer starts PPAPI. The lab page loads `ruffle.js` before the embed. Popups are denied. |
+| Char page and char-page print | ported with changes | The page loads `aquastar://ruffle/ruffle.js` so the selfhosted polyfill replaces the Flash `<object>`. Alt+K treats `object`, `embed`, or `ruffle-player` as the movie. The window is sandboxed with web security on. The player scheme echoes CORS only for origins the plugin allows. |
+| Char Page Studio | ported with changes | Helper process remains. It no longer starts PPAPI. The lab page and the capture page are sandboxed with web security on. They load `aquastar://ruffle/ruffle.js`. The helper serves the two local SWFs on their Artix URLs and adds an Artix CORS header. Popups are denied. Shared focus CSS is inserted from the helper because a `file://` page cannot read a parent file. |
 | Screenshots (F2) | ported | `capturePage` from the main process. The smoke hook wrote PNGs of the game window. |
 | Screen recording (Ctrl+J) | ported with changes | Still MediaRecorder via the capture preload. The format is the first one in the settings list that this Chromium supports. A recording was not taken in the headless run. |
 | Global shortcuts | ported | F2 and Ctrl+J stay on `globalShortcut`. |
@@ -61,7 +61,7 @@ Counts: 17 ported, 13 ported with changes, 5 not possible. 35 items.
 | Plugin web site (`npm run web:build`, `web:preview`) | ported | Scripts were not rewritten. |
 | Game window sandbox | ported with changes | Game and main windows are `sandbox: true` with `contextIsolation` and a preload. `plugins` is no longer a webPreference. |
 | `asar: false` | ported with changes | Kept so the wasm and the plugin tree stay real files. The reason used to be the Pepper plugin. |
-| Windows, Linux, and macOS packages | ported with changes | electron-builder targets stay nsis, AppImage, deb, zip, and dmg. `scripts/strip-mac-signature.js` is still `afterPack`. Packages are x64 only. Linux `--no-sandbox` remains an AppImage argument. |
+| Windows, Linux, and macOS packages | ported with changes | electron-builder targets stay nsis, AppImage, deb, zip, and dmg. `scripts/strip-mac-signature.js` is still `afterPack`. Packages are x64 only. Linux does not pass `--no-sandbox`. The AppImage launcher adds it when user namespaces are missing, and the deb postinstall sets the setuid helper in that same case. |
 | 32-bit and armv7l installers | not possible | Electron 45 does not ship those architectures for this app. `scripts/build-arch.sh` accepts x64 only. |
 | Tests, plugin smoke, lint | ported | `npm test`, `npm run lint`, and `npm run smoke:plugins` are the same commands. |
 

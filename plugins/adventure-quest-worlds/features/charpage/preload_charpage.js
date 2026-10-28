@@ -1,11 +1,9 @@
 (() => {
-    const path = require('path');
-    const { pathToFileURL } = require('url');
     function injectRuffle() {
         if (document.querySelector('script[data-aquastar-ruffle]')) return;
         const script = document.createElement('script');
         script.dataset.aquastarRuffle = '1';
-        script.src = pathToFileURL(path.join(__dirname, '../../../../res/ruffle/ruffle.js')).href;
+        script.src = 'aquastar://ruffle/ruffle.js';
         (document.head || document.documentElement).appendChild(script);
     }
     function _isnull(variable){

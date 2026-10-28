@@ -1,8 +1,9 @@
 const { app, BrowserWindow, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const https = require('https');
 const { GIFEncoder, quantize, applyPalette } = require('gifenc');
+const aqwSession = require('../session.js');
+const studioProtocol = require('./studio-protocol.js');
 const charpageDir = path.join(__dirname, '..', 'features', 'charpage');
 const studioSwf = path.join(charpageDir, 'characterB-studio.swf');
 const emptySceneSwf = path.join(charpageDir, 'characterB-empty-scene.swf');
@@ -10,25 +11,12 @@ const requestArgument = process.argv.find(argument => argument.indexOf('--captur
 const requestPath = requestArgument && requestArgument.slice('--capture-request='.length);
 let request = null;
 
-function fetchUrl(url) {
-    return new Promise((resolve, reject) => https.get(url, { headers: { 'User-Agent': 'AquaStar Char Page Studio' } }, response => {
-        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-            response.resume(); resolve(fetchUrl(new URL(response.headers.location, url).href)); return;
-        }
-        const chunks = []; response.on('data', chunk => chunks.push(chunk));
-        response.on('end', () => resolve({ status: response.statusCode, data: Buffer.concat(chunks), mimeType: String(response.headers['content-type'] || '').split(';')[0] }));
-    }).on('error', reject));
-}
 function installProtocol() {
-    session.defaultSession.protocol.interceptBufferProtocol('https', (networkRequest, callback) => {
-        if (/^https:\/\/game\.aq\.com\/game\/gamefiles\/etc\/chardetail\/characterB-empty-scene\.swf(?:\?|$)/i.test(networkRequest.url)) {
-            callback({ mimeType: 'application/x-shockwave-flash', data: fs.readFileSync(emptySceneSwf) }); return;
-        }
-        if (/^https:\/\/game\.aq\.com\/game\/gamefiles\/etc\/chardetail\/characterB\.swf(?:\?|$)/i.test(networkRequest.url)) {
-            callback({ mimeType: 'application/x-shockwave-flash', data: fs.readFileSync(studioSwf) }); return;
-        }
-        fetchUrl(networkRequest.url).then(callback).catch(error => callback({ mimeType: 'text/plain', data: Buffer.from(error.message) }));
-    });
+    aqwSession.applyToSession(session.defaultSession);
+    studioProtocol.installStudioHttps(session.defaultSession, {
+        emptySceneSwf: emptySceneSwf,
+        studioSwf: studioSwf
+    }, session.defaultSession.getUserAgent());
 }
 function delay(milliseconds) { return new Promise(resolve => setTimeout(resolve, milliseconds)); }
 function rgbaBitmap(image) {
@@ -78,6 +66,7 @@ if (!requestPath) {
 
 app.whenReady().then(async () => {
     try {
+        require('../ruffle-origins').install();
         installProtocol();
         // This intentionally follows the original Char Page print approach:
         // use the biggest hidden window possible, then fit a 715:455 stage
@@ -94,8 +83,7 @@ app.whenReady().then(async () => {
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
-                sandbox: false,
-                webSecurity: false,
+                sandbox: true,
                 backgroundThrottling: false
             }
         });

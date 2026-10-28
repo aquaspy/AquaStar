@@ -55,8 +55,7 @@ function createWindows(deps) {
         resizable: false,
         webPreferences: {
             nodeIntegration: false,
-            sandbox: false,
-            webSecurity: false,
+            sandbox: true,
             contextIsolation: true,
             preload: preload('charpage', 'preload_charpage.js')
         }

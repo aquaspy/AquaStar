@@ -6,6 +6,8 @@ const { spawn } = require('child_process');
 const helperProcess = require('../../../res/platform/helper-process.js');
 const constant = require('../../../res/const.js');
 const locale = require('../../../res/locale.js');
+const aqwSession = require('../session.js');
+const studioProtocol = require('./studio-protocol.js');
 
 const charpageDir = path.join(__dirname, '..', 'features', 'charpage');
 const studioSwf = path.join(charpageDir, 'characterB-studio.swf');
@@ -46,15 +48,11 @@ function charData(html) {
     return { swfUrl: movie.replace(/&amp;/g, '&'), flashVars: params.toString() };
 }
 function installProtocol() {
-    session.defaultSession.protocol.interceptBufferProtocol('https', (request, callback) => {
-        if (/^https:\/\/game\.aq\.com\/game\/gamefiles\/etc\/chardetail\/characterB-empty-scene\.swf(?:\?|$)/i.test(request.url)) {
-            callback({ mimeType: 'application/x-shockwave-flash', data: fs.readFileSync(emptySceneSwf) }); return;
-        }
-        if (/^https:\/\/game\.aq\.com\/game\/gamefiles\/etc\/chardetail\/characterB\.swf(?:\?|$)/i.test(request.url)) {
-            callback({ mimeType: 'application/x-shockwave-flash', data: fs.readFileSync(studioSwf) }); return;
-        }
-        fetchUrl(request.url).then(callback).catch(error => callback({ mimeType: 'text/plain', data: Buffer.from(error.message) }));
-    });
+    aqwSession.applyToSession(session.defaultSession);
+    studioProtocol.installStudioHttps(session.defaultSession, {
+        emptySceneSwf: emptySceneSwf,
+        studioSwf: studioSwf
+    }, session.defaultSession.getUserAgent());
 }
 function rendererConfig(renderer, rawFlashVars) {
     const emptyScene = renderer === 'empty-scene';
@@ -153,13 +151,20 @@ app.whenReady().then(() => {
     'pt-BR': require('../locales/pt-BR.js')
   });
   locale.detectLang(app.getLocale(), {});
+  require('../ruffle-origins').install();
   installProtocol();
   Menu.setApplicationMenu(null);
-  studioWindow = new BrowserWindow({ width: 1280, height: 800, icon: constant.iconPath, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false, webSecurity: false, preload: path.join(charpageDir, 'lab', 'preload_lab.js') } });
+  studioWindow = new BrowserWindow({ width: 1280, height: 800, icon: constant.iconPath, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, preload: path.join(charpageDir, 'lab', 'preload_lab.js') } });
   studioWindow.setMenu(null);
   studioWindow.setMenuBarVisibility(false);
   studioWindow.webContents.setWindowOpenHandler(function () { return { action: 'deny' }; });
   studioWindow.webContents.on('will-navigate', (event) => event.preventDefault());
+  const focusCssPath = path.join(__dirname, '..', '..', '..', 'res', 'features', 'common', 'focus.css');
+  studioWindow.webContents.on('did-finish-load', function () {
+    fs.readFile(focusCssPath, 'utf8', function (err, css) {
+      if (!err && css && studioWindow) studioWindow.webContents.insertCSS(css).catch(function () {});
+    });
+  });
   studioWindow.loadFile(path.join(charpageDir, 'lab', 'characterB-lab.html'));
   studioWindow.on('closed', () => app.quit());
 });

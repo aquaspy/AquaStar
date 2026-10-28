@@ -108,13 +108,14 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
   assert.ok(bridge.indexOf('studioAssetBaseUrl') !== -1, 'local Studio SWF receives its AQW asset root');
   assert.ok(bridge.indexOf('interceptBufferProtocol') === -1, 'Studio must not replace the default HTTPS session');
   assert.ok(bridge.indexOf('.filterResponseData(') === -1, 'Electron 11 does not provide filterResponseData');
-  // The platform knows nothing about the Studio: its window is built by the Studio's own
-  // process, which needs Flash (plugins) and no sandbox, and is launched via the helper API.
+  // The platform knows nothing about the Studio. Its window is built by the Studio's own
+  // helper process, sandboxed, with web security left on.
   assert.strictEqual(platformConfig.indexOf('charPageStudio'), -1);
   assert.strictEqual(instances.indexOf('CharPageStudio'), -1);
   assert.strictEqual(studioProcessSrc.indexOf('plugins: true'), -1);
-  assert.ok(studioProcessSrc.indexOf('sandbox: false') !== -1);
-  assert.ok(studioProcessSrc.indexOf('webSecurity: false') !== -1);
+  assert.ok(studioProcessSrc.indexOf('sandbox: true') !== -1);
+  assert.strictEqual(studioProcessSrc.indexOf('webSecurity: false'), -1);
+  assert.ok(studioProcessSrc.indexOf('ruffle-origins') !== -1);
   assert.ok(aqwKeybinds.indexOf("id: 'studio'") !== -1);
   assert.ok(aqwMenus.indexOf('menuCharPageStudio') !== -1);
   assert.ok(main.indexOf("path.join(pluginFeaturesRoot, 'charpage', 'studio.js')") !== -1);
@@ -224,8 +225,8 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
         path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/lab/capture.html'),
         'utf8'
       )
-      .indexOf('ruffle.js') !== -1,
-    'capture page must load the Ruffle polyfill'
+      .indexOf('aquastar://ruffle/ruffle.js') !== -1,
+    'capture page must load the Ruffle polyfill from the app scheme'
   );
   assert.ok(
     lab.indexOf("var movieUrl = renderer.swfUrl + '?v=2&' + parameters.toString()") !== -1,
@@ -239,8 +240,7 @@ test('Char Page Studio loads an explicitly requested Char Page into native Flash
     lab.indexOf('player.src = movieUrl') > lab.indexOf("player.setAttribute('flashvars', flashVarString)"),
     'set FlashVars before the native plugin source'
   );
-  // The Studio window runs with webSecurity off: popups and navigation are blocked in the
-  // process that actually creates it.
+  // Popups and navigation are blocked in the process that creates the Studio window.
   assert.strictEqual(studioProcessSrc.indexOf("on('new-window'"), -1);
   assert.ok(studioProcessSrc.indexOf("on('will-navigate'") !== -1);
   assert.ok(studioProcessSrc.indexOf('webContents.setWindowOpenHandler(') !== -1);

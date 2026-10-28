@@ -1,7 +1,7 @@
 // AQW navigation classification + did-finish-load injections (PR 5).
 const fs = require('fs');
 const path = require('path');
-const { pathToFileURL } = require('url');
+const ruffleScriptUrl = require('../../../res/platform/ruffle-origin.js').scriptUrl();
 
 function createNavigationHooks(options) {
     options = options || {};
@@ -91,9 +91,7 @@ function createNavigationHooks(options) {
         }
 
         if (kind === 'charpage') {
-            const ruffleScript = pathToFileURL(
-                path.join(featuresRoot, '..', '..', '..', 'res', 'ruffle', 'ruffle.js')
-            ).href;
+            const ruffleScript = ruffleScriptUrl;
             await execute(
                 '(function(){if(document.querySelector("script[data-aquastar-ruffle]"))return;' +
                 'var s=document.createElement("script");s.dataset.aquastarRuffle="1";s.src=' +
@@ -107,8 +105,7 @@ function createNavigationHooks(options) {
         classify: classify,
         onDidFinishLoad: onDidFinishLoad,
         allowChildWindow: function () { return true; },
-        webPreferencesFor: function (pageUrl) {
-            if (classify(pageUrl) === 'charpage') return { webSecurity: false };
+        webPreferencesFor: function () {
             return null;
         }
     };
