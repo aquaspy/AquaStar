@@ -2,9 +2,17 @@
 
 ![AquaStar](https://raw.githubusercontent.com/aquaspy/AquaStar/dev/Icon/Icon_1024.png)
 
+**Experimental branch.** This checkout is `electron-experimental`. It is not a release. Classic AquaStar on `main` and `dev` still uses Electron 11.5.0 and PPAPI Flash. Nothing on this branch publishes a release, and GitHub Latest stays classic `v2.1.0`.
+
+This branch plays Adventure Quest Worlds inside Electron 45 with the Ruffle web player (WebAssembly in the page) instead of PPAPI Flash. One web build is used on every operating system.
+
+Ruffle web build from toommyliu/ruffle (https://github.com/toommyliu/ruffle), AQW-focused patches on top of Ruffle (https://ruffle.rs), MIT/Apache-2.0.
+
+The bundled player is `res/ruffle/`. License notices for that build are `res/ruffle/LICENSE_MIT` and `res/ruffle/LICENSE_APACHE`. `res/ruffle/PROVENANCE` records the commit that was built. The pin lives in `ruffle/RUFFLE_COMMIT`. Rebuild with `bash scripts/build-ruffle-web.sh` (Rust stable, `wasm32-unknown-unknown`, `wasm-bindgen` 0.2.127, Java, Node 24). The renderer is Ruffle's default order: wgpu-webgl, then webgpu, then webgl, then canvas.
+
 AquaStar is a desktop launcher and companion for AdventureQuest Worlds, with support for DragonFable. It provides inventory tools, wiki access, reminders, tasks, and strategy planning. It does not automate gameplay.
 
-Classic AquaStar is this Electron app. The game runs inside its window. Stable releases are on `main`. Development is on `dev`. AquaStar NEO is a separate Tauri launcher. Its source is on the [`neo`](https://github.com/aquaspy/AquaStar/tree/neo) and [`neo-dev`](https://github.com/aquaspy/AquaStar/tree/neo-dev) branches, and it is not in this tree. The game runs in a separate player.
+Classic AquaStar is the Electron app on `main` and `dev`. The game runs inside its window. Stable releases are on `main`. Development is on `dev`. This branch is an experiment beside those. AquaStar NEO is a separate Tauri launcher. Its source is on the [`neo`](https://github.com/aquaspy/AquaStar/tree/neo) and [`neo-dev`](https://github.com/aquaspy/AquaStar/tree/neo-dev) branches, and it is not in this tree. The game runs in a separate player.
 
 ## Project goals
 
@@ -16,6 +24,8 @@ Classic AquaStar is this Electron app. The game runs inside its window. Stable r
 - Test candidate releases before replacing the current stable release.
 
 Artix does not support third-party launchers. Report AquaStar issues in this repository. See the [project history](https://github.com/aquaspy/AquaStar/blob/dev/docs/MOTIVATION.md) for background.
+
+The comparison below is classic AquaStar on `dev` against AquaStar NEO. This branch is a third experiment. See [`docs/electron-experimental-parity.md`](docs/electron-experimental-parity.md) for what was carried over.
 
 ## Choose a version
 
@@ -75,6 +85,7 @@ AquaStar NEO is developed on [`neo-dev`](https://github.com/aquaspy/AquaStar/tre
 | ------------------------------------------------------------- | ----------------------------------------- |
 | `main`                                                        | Classic Electron stable. This is the default branch. |
 | [`dev`](https://github.com/aquaspy/AquaStar/tree/dev)         | Classic Electron development              |
+| `electron-experimental`                                       | Experimental Electron 45 build. Ruffle web player only. Not a release. |
 | [`neo`](https://github.com/aquaspy/AquaStar/tree/neo)         | AquaStar NEO stable                       |
 | [`neo-dev`](https://github.com/aquaspy/AquaStar/tree/neo-dev) | AquaStar NEO development                  |
 
@@ -88,7 +99,7 @@ This checkout is the classic Electron app.
 | --------------------------- | ---------------------------------------------------------------- |
 | `main.js`, `res/`           | Electron entry point and platform code                           |
 | `plugins/`                  | Electron plugins and first-party assets                          |
-| `FlashPlayer/`, `Icon/`, `build/` | Runtime and packaging resources. `build/` contains tracked icons |
+| `res/ruffle/`, `Icon/`, `build/` | Bundled Ruffle web player and packaging resources. `build/` contains tracked icons |
 | `scripts/`                  | Checks and Electron packaging scripts                            |
 | `test/`                     | JavaScript regression tests and fixtures                         |
 | `docs/`                     | Architecture, plans, examples, and project history               |
@@ -101,18 +112,18 @@ Generated dependencies, compiler output, logs, and installers stay outside versi
 
 ## Develop and build
 
-Classic AquaStar:
+This branch:
 
 ```bash
-git clone --branch dev https://github.com/aquaspy/AquaStar.git
+git clone --branch electron-experimental https://github.com/aquaspy/AquaStar.git
 cd AquaStar
 npm ci
 npm start
 ```
 
-`npm run dist` packages Electron for the current operating system. `bash scripts/build-all-arch.sh` is the legacy multi-architecture packaging entry point. Local builds do not publish a release.
+`npm start` needs the Electron binary. If install scripts were skipped, run `node node_modules/electron/install.js` once. `npm run pack` builds an unpacked directory for the current OS. `bash scripts/build-arch.sh` packages linux, win, or mac x64. Local builds do not publish a release.
 
-Run the JavaScript tests and plugin checks from a development checkout:
+Run the JavaScript tests and plugin checks from this checkout:
 
 ```bash
 npm ci

@@ -1,14 +1,14 @@
 # AquaStar – Agent Notes
 
-This is classic AquaStar, the Electron app. `main` is stable. `dev` is development. AquaStar NEO is a separate product on `neo` and `neo-dev` and is not in this tree. See [`docs/REPOSITORY.md`](docs/REPOSITORY.md) for the repository map.
+This checkout is the `electron-experimental` branch. It is an experiment, not a release. `main` is classic stable. `dev` is classic development (Electron 11.5.0 and PPAPI Flash). Do not merge this branch into those, and do not publish tags from it. AquaStar NEO is a separate product on `neo` and `neo-dev` and is not in this tree. See [`docs/REPOSITORY.md`](docs/REPOSITORY.md) for the repository map.
 
-Custom Electron 11 Flash (PPAPI) companion shell. Game-specific behavior lives in **plugins**; the bundled default is Adventure Quest Worlds (`plugins/adventure-quest-worlds/`).
+Electron 45 companion shell. Game SWFs run in the pinned Ruffle web player under `res/ruffle/` (see `res/ruffle/PROVENANCE` and `ruffle/RUFFLE_COMMIT`). Game-specific behavior lives in **plugins**; the bundled default is Adventure Quest Worlds (`plugins/adventure-quest-worlds/`).
 
 Plugin authoring (full guide): [`docs/PLUGINS.md`](docs/PLUGINS.md). Architecture design: [`docs/design/plugin-architecture.md`](docs/design/plugin-architecture.md). Starter: `plugins/_template/`. Worked example: `plugins/example-companion/`. Smoke: `npm run smoke:plugins`.
 
 ## Commands
 
-- `npm install` – install deps (Electron 11.5.0, electron-builder 22.14.x, nw-flash-trust, electron-localshortcut)
+- `npm install` – install deps (Electron 45.1.0, electron-builder 26.18.0, electron-localshortcut). If the Electron binary is missing because install scripts were skipped, run `node node_modules/electron/install.js`.
 - `npm start` – run in dev
 - `npm run dist` – package for current OS (`dist/`)
 - `npm run dist-w` / `dist-l` / `dist-m` – Windows / Linux (AppImage + deb) / Mac (zip + dmg locally; CI builds zip only)
@@ -22,11 +22,12 @@ The test workflow runs `npm test` on pull requests and packages the Windows app 
 
 ## Critical constraints
 
-- **Electron is pinned to `11.5.0`.** This is the last Electron release on Chromium 87, the final Chromium line that supports PPAPI Flash (removed in Chromium 88 / Electron 12+). Do not upgrade to Electron 12+ without a Flash alternative (e.g. Ruffle).
-- **`asar: false` is required.** The PPAPI Flash plugin must exist as a real file on disk (`FlashPlayer/*.so`, `*.dll`, `*.plugin`). Electron passes the path directly to Chromium.
-- **The app runs without `app.enableSandbox()`** in the main process because Electron needs filesystem access to locate the Flash plugin. Game/main windows use `sandbox: false` so PPAPI Flash loads; wiki/settings/reminders-style windows use `sandbox: true`.
-- **Flash `webPreferences.plugins`:** `true` on game/wiki/charpage/studio windows; **`false`** on settings and on a plugin's list-style feature windows (the platform's windows are in `res/windows/config.js`; a plugin defines its own, e.g. `plugins/adventure-quest-worlds/windows.js`). Do not assume Flash is enabled on every window type.
+- **Electron is 45.1.0** with electron-builder 26.18.0. PPAPI Flash is gone. Do not bring back `FlashPlayer/`, `ppapi-flash-path`, or `nw-flash-trust`.
+- **`asar: false` stays.** The Ruffle wasm and plugin files are loaded as real files on disk.
+- **`contextIsolation: true` and `nodeIntegration: false`.** Renderers talk to the main process through preloads and `contextBridge`. Do not add `@electron/remote`.
+- **Game and main windows use `sandbox: true`.** Char Page print and Char Page Studio stay `sandbox: false` and `webSecurity: false` so a page can load the local `ruffle.js` polyfill. List-style feature windows stay sandboxed.
 - **One active plugin per process** (`activePluginId`); switching requires an app restart. `AQUASTAR_DISABLE_PLUGINS=1` or `"pluginSystem": false` is safe mode: only the bundled default plugin (the one whose manifest says `bundledDefault`) is activated. There is no legacy boot path and the platform has no built-in game.
+- **Do not replace `res/ruffle/` with a stock ruffle.rs download.** `PROVENANCE` makes `downloadLatest` return without writing files. The AQW patches live only in the pinned toommyliu build.
 
 ## Architecture
 
@@ -36,7 +37,9 @@ The test workflow runs `npm test` on pull requests and packages the Windows app 
 | `res/platform/` | PluginHost, loader, manifest schema, session-rules applicator, namespaced store, menu registry |
 | `plugins/adventure-quest-worlds/` | Bundled AQW plugin: URLs, session rules, navigation injections, menus/keybinds, features, Studio processes, locales, web contribute |
 | `plugins/_template/` | Starter plugin for third-party games |
-| `res/flash.js` | Picks platform/arch-specific PPAPI binary from `FlashPlayer/` and registers it with `app.commandLine.appendSwitch` |
+| `res/flash.js` | No-op stub. Helper processes and tests still require the module. It does not register a plugin. |
+| `res/ruffle/` | Vendored toommyliu selfhosted web build (`ruffle.js`, one wasm, licenses, `PROVENANCE`) |
+| `res/ruffle_wrapper.html` | Page that creates a `RufflePlayer` and calls `load`. Renderer order is left at Ruffle's default. |
 | `res/const.js` | Core app-wide constants (no game URLs: those live in plugins; exposes `customSwfUrl` for the platform SWF override) |
 | `res/instances.js` | Window factory, screenshot/charpage capture, context menus; delegates did-finish-load to plugin navigation hooks when set |
 | `res/keybindings.js` | Registers app keybinds; Settings IPC for `aquastar.json` |
@@ -67,11 +70,11 @@ The platform (`main.js`, `res/`, shared tooling in `scripts/`) names no game. An
 
 ## Important quirks
 
-- Game SWFs are loaded through **`res/swf_wrapper.html`**. The default `wmode` is `direct` (GPU direct-to-screen). macOS defaults `useDirectWmode` to false because that surface is invisible to F2, and the wrapper then uses `wmode=opaque`. A top-level SWF navigation is the wrong fallback: on a Retina display the Pepper plugin's preferred height is the stage divided by `devicePixelRatio` twice, so the movie sits in a short strip at the top of the window. `"useDirectWmode": true` in `aquastar.json` forces `wmode=direct`.
-- **Background throttling is disabled** via Chromium flags in `res/flash.js` and `backgroundThrottling: false` on game/main windows.
-- **F2 / Ctrl+J** use `globalShortcut` because Flash PPAPI consumes keyboard events before `before-input-event`.
+- Game SWFs are loaded through **`res/ruffle_wrapper.html`**. Any URL that looks like a SWF uses Ruffle. A saved Flash or retired native player id in `aquastar.json` migrates to `ruffle`. `useDirectWmode` no longer changes how the movie is drawn. Ruffle draws a canvas, so capture does not depend on wmode.
+- **Background throttling is disabled** with `backgroundThrottling: false` on game and main windows. The old Chromium command-line flags are gone. Minimizing a SWF window sets `renderingSuspended` and calls `releaseMemory` when the player exposes it.
+- **F2 / Ctrl+J** use `globalShortcut` so a focused game window cannot swallow them.
 - **WikiView's hover-preview image** is fetched from the main process (`plugins/adventure-quest-worlds/features/wikiview/wikiFetch.js`), not the renderer - a page-side `fetch()` to aqwwiki.wikidot.com from an account.aq.com window would be blocked by CORS.
-- **Screen recording** saves WebM (VP8 preferred). Native MP4 is not supported on Chromium 87; upgrading to Electron 12+ drops Flash.
+- **Screen recording** uses MediaRecorder and saves the first supported format from the settings list. The old Chromium 87 VP8-only limit is gone.
 - **User-Agent** for `*.aq.com` requests is an AQW plugin policy (`plugins/adventure-quest-worlds/user-agent.js`, applied by its `artix-ua` session rule): it matches what Artix Game Launcher 2.2.0 actually sends, `... (KHTML, like Gecko) Safari/537.36` with no `Chrome/`, `Electron/` or app-name tokens (the launcher's `replace(/Artix.*\s/, '')` eats them), plus an `artixmode: launcher` header. The platform only passes the browser's own UA to rules as `ctx.defaultUserAgent`.
 - **Ad blocking** blocks known ad domains only (aq.com traffic is not filtered). It is a platform-owned session rule (`res/platform/platform-rules.js`). All session rules, platform and plugin, go through `res/platform/session-rules.js`, which registers one listener per webRequest event, because Electron keeps only one and a second registration silently replaces the first.
 - **Char Page Studio** runs in a second Electron process, launched by the AQW plugin through `host.windows.spawnHelperProcess` (platform side: `res/platform/helper-process.js`; only scripts inside the bundled `plugins/` tree may run that way). Its scripts live under `plugins/adventure-quest-worlds/processes/`.
@@ -80,7 +83,7 @@ The platform (`main.js`, `res/`, shared tooling in `scripts/`) names no game. An
 
 Automated: `npm test` and `npm run smoke:plugins`.
 
-**Manual PPAPI / UI:** follow and tick boxes in [`docs/FLASH_CHECKLIST.md`](docs/FLASH_CHECKLIST.md) (Example, AQW, F2/Ctrl+J/Alt+K, language, local plugins, pack).
+**Manual UI:** [`docs/electron-experimental-parity.md`](docs/electron-experimental-parity.md) is the checklist for this branch. [`docs/FLASH_CHECKLIST.md`](docs/FLASH_CHECKLIST.md) describes the classic PPAPI app on `dev`.
 
 ## Build artifacts
 

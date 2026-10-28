@@ -102,7 +102,7 @@ Classification keys:
 | AQW/DF URL catalog | `res/const.js` | A | Plugin `urls` + `games` |
 | Keybind/option defaults | `res/const.js` | H | Platform schema; AQW supplies defaults |
 | Custom SWF (`aqlite_old.swf`) | `const.js`, Settings IPC | **P** | Platform **primary-game override** for whatever plugin is active (see Key Decisions) |
-| SWF / Ruffle wrappers | `swf_wrapper.html`, `ruffle_wrapper.html`, helpers | H | Wrappers platform; eligibility/opts plugin |
+| Ruffle wrapper | `ruffle_wrapper.html`, helpers | H | Wrapper is platform; eligibility and socket options are the plugin |
 | Socket proxy / Ruffle update | `socketProxy.js`, `ruffleUpdate.js`, `res/ruffle/` | P | Always available; **started/used only when active plugin opts into Ruffle** |
 | JSON store helper | `res/repositories/json-store.js` | P/K | Namespaced store **wraps** this; do not fork a second persistence stack |
 
