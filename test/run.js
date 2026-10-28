@@ -26,6 +26,7 @@ global.test = function (name, fn) {
   './unit/plugin-settings-ui.test.js',
   './unit/settings-layout.test.js',
   './unit/settings-merge.test.js',
+  './unit/recording-format.test.js',
   './unit/preload-bridge.test.js',
   './unit/example-companion.test.js',
   './unit/plugin-isolation-polish.test.js',
