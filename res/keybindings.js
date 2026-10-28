@@ -29,9 +29,12 @@ function setVisibleKeybindIds(ids) {
     visibleKeybindIds = map;
 }
 
+// HTTP cache (ses.clearCache) holds cached SWFs. These storages are the other
+// network caches. localStorage keeps the Ruffle Smooth Motion flag
+// (ruffle-smooth-motion) and Ruffle save slots. cookies keep a signed-in page.
+// aquastar.json is a file, not one of these stores.
 const CACHE_STORAGES = [
-    'appcache', 'shadercache', 'cachestorage', 'localstorage',
-    'cookies', 'filesystem', 'indexdb', 'websql', 'serviceworkers'
+    'appcache', 'shadercache', 'cachestorage', 'serviceworkers'
 ];
 
 function customKeybinds() {

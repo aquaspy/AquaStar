@@ -20,7 +20,7 @@ exports.dialogMessages = {
         expand(k.sshot)     + ' - Salva um print da janela de jogo em foco.\n' +
         expand(k.record)    + ' - Grava a tela do jogo. Use de novo para parar.\n' +
         expand(k.reload)    + ' - Recarrega a página atual.\n' +
-        expand(k.reloadCache)+' - Limpa cache/dados da página e recarrega.\n' +
+        expand(k.reloadCache)+' - Limpa o cache HTTP, inclusive SWFs em cache, e recarrega. Configurações, cookies e a preferência Smooth Motion do Ruffle ficam.\n' +
         expand(k.forward)   + ' / ' + expand(k.backward) + ' - Histórico em janelas de navegação.\n\n' +
         'Atalhos do plugin ativo (se houver) aparecem abaixo.';
     },

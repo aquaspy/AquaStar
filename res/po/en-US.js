@@ -20,7 +20,7 @@ exports.dialogMessages = {
         expand(k.sshot)     + ' - Saves a screenshot of the focused game window.\n' +
         expand(k.record)    + ' - Record the game screen. Use it again to stop.\n' +
         expand(k.reload)    + ' - Reloads the current page.\n' +
-        expand(k.reloadCache)+' - Clears cache/data for the page, then reloads.\n' +
+        expand(k.reloadCache)+' - Clears the HTTP cache, including cached SWFs, then reloads. Settings, cookies, and the Ruffle Smooth Motion preference stay.\n' +
         expand(k.forward)   + ' / ' + expand(k.backward) + ' - Navigate history in browser windows.\n\n' +
         'Active-plugin shortcuts (if any) are listed below.';
     },

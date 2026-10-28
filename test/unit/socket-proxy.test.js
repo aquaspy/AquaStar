@@ -35,7 +35,12 @@ test('the AQW plugin declares exactly the hosts its server list uses', () => {
 test('relay forwards to an allowed host and refuses everything else', async () => {
   socketProxy.allowHosts(['localhost']);
 
+  let live = 0;
   const echo = net.createServer(function (socket) {
+    live += 1;
+    socket.on('close', function () {
+      live -= 1;
+    });
     socket.on('data', function (d) {
       socket.write(d);
     });
@@ -71,6 +76,12 @@ test('relay forwards to an allowed host and refuses everything else', async () =
   try {
     const allowed = await open('host=localhost&port=' + echoPort);
     assert.deepStrictEqual(allowed.messages, ['ping'], 'allowed host is relayed');
+    for (let i = 0; i < 20 && live !== 0; i++) {
+      await new Promise(function (resolve) {
+        setTimeout(resolve, 10);
+      });
+    }
+    assert.strictEqual(live, 0, 'closing the page socket destroys the upstream TCP socket');
 
     const refused = await open('host=example.org&port=80');
     assert.deepStrictEqual(refused.messages, []);

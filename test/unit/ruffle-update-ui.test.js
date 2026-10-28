@@ -78,9 +78,13 @@ test('Ruffle defaults to automatic rendering and High quality while respecting e
       console,
       window: {
         location: { search: '?swf=https://example.com/game/loader.swf' + query },
-        RufflePlayer: { newest: () => ({ createPlayer: () => player }) }
+        RufflePlayer: { newest: () => ({ createPlayer: () => player }) },
+        addEventListener: function () {}
       },
       document: {
+        querySelectorAll: function () {
+          return [];
+        },
         createElement: () => ({}),
         head: {
           appendChild: (value) => {

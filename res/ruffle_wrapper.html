@@ -25,6 +25,17 @@
   var scales = { '0.5': 0.5, '0.75': 0.75, '1': 1, '1.5': 1.5, '2': 2 };
   var requestedScale = params.get('scale') || '1';
   var renderScale = Object.prototype.hasOwnProperty.call(scales, requestedScale) ? scales[requestedScale] : 1;
+  // Reload unloads this document. Removing the player runs its disconnectedCallback,
+  // which destroys the wasm instance and closes the socket-proxy websockets.
+  // The shared relay in the main process stays up for other windows.
+  function tearDownPlayer() {
+    var nodes = document.querySelectorAll('ruffle-player, embed, object');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].parentNode) nodes[i].parentNode.removeChild(nodes[i]);
+    }
+  }
+  window.addEventListener('pagehide', tearDownPlayer);
+
   if (!swfUrl) return;
 
   // Some Flash games talk to their servers over raw TCP, which Ruffle (sandboxed, no raw
