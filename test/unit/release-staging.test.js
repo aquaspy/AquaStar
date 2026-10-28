@@ -34,7 +34,8 @@ test('release staging includes the auxiliary Char Page Studio processes', () => 
     assert.strictEqual(buf.readUInt32BE(20), size, file + ' height');
   });
   assert.ok(buildScript.indexOf('verify-staging.js') !== -1, 'release staging must verify what it staged');
-  assert.ok(buildScript.indexOf('FlashPlayer/') !== -1);
+  assert.strictEqual(buildScript.indexOf('FlashPlayer/'), -1);
+  assert.ok(buildScript.indexOf('res/ruffle/ruffle.js') !== -1);
   ['charpage-studio-process.js', 'charpage-studio-capture-process.js'].forEach((fileName) => {
     assert.ok(fs.existsSync(path.join(processesDir, fileName)), fileName + ' must exist under plugin processes');
   });
@@ -71,7 +72,6 @@ test('verify-staging fails a staged app that has no bundled game plugin (the rel
   try {
     // A staged folder as the old release built it: everything except plugins/ content.
     ['res', 'Icon'].forEach((name) => fs.cpSync(path.join(root, name), path.join(dir, name), { recursive: true }));
-    fs.mkdirSync(path.join(dir, 'FlashPlayer'));
     fs.mkdirSync(path.join(dir, 'node_modules'));
     fs.mkdirSync(path.join(dir, 'plugins'));
     fs.copyFileSync(path.join(root, 'main.js'), path.join(dir, 'main.js'));

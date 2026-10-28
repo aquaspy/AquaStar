@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 // What the app reads at runtime, relative to its root.
-const RUNTIME_ENTRIES = ['main.js', 'package.json', 'res', 'Icon', 'FlashPlayer', 'plugins', 'node_modules'];
+const RUNTIME_ENTRIES = ['main.js', 'package.json', 'res', 'Icon', 'plugins', 'node_modules'];
 
 /** @returns {string[]} problems; empty means the folder can start */
 function verifyStaging(root) {

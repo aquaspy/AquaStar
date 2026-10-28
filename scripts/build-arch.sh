@@ -1,43 +1,27 @@
 #!/usr/bin/env bash
-# Build AquaStar for a single platform/arch with the matching PPAPI Flash binary.
-# Usage: bash scripts/build-arch.sh <linux|win|mac> <x64|ia32|armv7l>
+# Usage: bash scripts/build-arch.sh <linux|win|mac> <x64>
 set -euo pipefail
 
 PLATFORM="${1:-}"
 ARCH="${2:-}"
 
 if [ -z "$PLATFORM" ] || [ -z "$ARCH" ]; then
-    echo "Usage: $0 <linux|win|mac> <x64|ia32|armv7l>" >&2
+    echo "Usage: $0 <linux|win|mac> <x64>" >&2
     exit 1
 fi
 
 case "${PLATFORM}:${ARCH}" in
     linux:x64)
-        FLASH="libpepflashplayer.so"
         BUILD_ARGS=(npm run dist-l)
         ;;
-    linux:ia32)
-        FLASH="libpepflashplayer32bits.so"
-        BUILD_ARGS=(npx electron-builder --linux AppImage --ia32 --publish never)
-        ;;
-    linux:armv7l)
-        FLASH="libpepflashplayerARM.so"
-        BUILD_ARGS=(npx electron-builder --linux AppImage --armv7l --publish never)
-        ;;
     win:x64)
-        FLASH="pepflashplayer.dll"
         BUILD_ARGS=(npm run dist-w)
         ;;
-    win:ia32)
-        FLASH="pepflashplayer32bits.dll"
-        BUILD_ARGS=(npx electron-builder --win nsis --ia32 --publish never)
-        ;;
     mac:x64)
-        FLASH="PepperFlashPlayer.plugin"
         BUILD_ARGS=(npx electron-builder --mac zip --x64 --publish never)
         ;;
     *)
-        echo "Unsupported platform/arch: ${PLATFORM} ${ARCH}" >&2
+        echo "Unsupported platform/arch: ${PLATFORM} ${ARCH} (this branch packages x64 only)" >&2
         exit 1
         ;;
 esac
@@ -45,8 +29,9 @@ esac
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORKDIR="${ROOT}/work-${PLATFORM}-${ARCH}"
 
-if [ ! -e "${ROOT}/FlashPlayer/${FLASH}" ]; then
-    echo "Flash plugin not found: ${ROOT}/FlashPlayer/${FLASH}" >&2
+if [ ! -f "${ROOT}/res/ruffle/ruffle.js" ]; then
+    echo "Ruffle web build missing: ${ROOT}/res/ruffle/ruffle.js" >&2
+    echo "Run: bash scripts/build-ruffle-web.sh" >&2
     exit 1
 fi
 
@@ -55,10 +40,9 @@ if [ ! -d "${ROOT}/node_modules" ]; then
     exit 1
 fi
 
-echo "--> Building ${PLATFORM} ${ARCH} (Flash: ${FLASH})"
+echo "--> Building ${PLATFORM} ${ARCH}"
 
 rm -rf "$WORKDIR"
-mkdir -p "$WORKDIR/FlashPlayer"
 # cp -R, not cp -r. macOS cp -r follows symlinks, so node_modules/.bin/electron-builder
 # becomes a loose copy of the CLI and require('./out/cli/cli') cannot be resolved.
 cp -R \
@@ -73,11 +57,6 @@ cp -R \
     "${ROOT}/package-lock.json" \
     "${ROOT}/node_modules" \
     "$WORKDIR/"
-if [ -d "${ROOT}/FlashPlayer/${FLASH}" ]; then
-    cp -R "${ROOT}/FlashPlayer/${FLASH}" "$WORKDIR/FlashPlayer/"
-else
-    cp "${ROOT}/FlashPlayer/${FLASH}" "$WORKDIR/FlashPlayer/"
-fi
 
 # The staging list above is kept by hand, so check the result with the staged copy of the
 # platform itself: every runtime entry exists and a bundled default plugin can be discovered.

@@ -1,8 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-# Multi-arch release script. Requires npm ci first; Wine for Windows builds on Linux.
-# Outputs land in releases/ (x64 at top level, other archs in subfolders).
+# Packages linux x64 and Windows x64 into releases/. Requires npm ci first.
+# Wine is required for the Windows package when this runs on Linux.
+# On a Mac: bash scripts/build-arch.sh mac x64
 
 releasefolder="releases"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -42,16 +43,7 @@ collect_build() {
     echo -e "${yellow}--> ${platform} ${arch} -> ${dest}${clear}"
 }
 
-# Linux: x64 (AppImage + deb), ia32, armv7l
 collect_build linux x64
-collect_build linux ia32
-collect_build linux armv7l
-
-# Windows: x64 and ia32 (needs Wine when run on Linux)
 collect_build win x64
-collect_build win ia32
-
-# EXPERIMENTAL - macOS, build only on macOS:
-# collect_build mac x64
 
 echo -e "${yellow}--> All builds copied to ${releasefolder}/${clear}"
