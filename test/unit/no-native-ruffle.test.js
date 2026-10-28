@@ -35,6 +35,7 @@ function walk(dir, hits) {
     if (entry.isDirectory()) {
       if (rel === 'docs') return;
       if (skipDirs.has(entry.name) || skipDirs.has(rel)) return;
+      if (entry.name.startsWith('work-')) return;
       walk(path.join(dir, entry.name), hits);
       return;
     }

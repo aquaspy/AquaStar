@@ -34,6 +34,10 @@ test('release staging includes the auxiliary Char Page Studio processes', () => 
     assert.strictEqual(buf.readUInt32BE(20), size, file + ' height');
   });
   assert.ok(buildScript.indexOf('verify-staging.js') !== -1, 'release staging must verify what it staged');
+  assert.ok(
+    /rm -rf "\$WORKDIR"\nmkdir -p "\$WORKDIR"/.test(buildScript),
+    'staging must create the work directory before cp, or cp has nowhere to write'
+  );
   assert.strictEqual(buildScript.indexOf('FlashPlayer/'), -1);
   assert.ok(buildScript.indexOf('res/ruffle/ruffle.js') !== -1);
   ['charpage-studio-process.js', 'charpage-studio-capture-process.js'].forEach((fileName) => {

@@ -43,6 +43,7 @@ fi
 echo "--> Building ${PLATFORM} ${ARCH}"
 
 rm -rf "$WORKDIR"
+mkdir -p "$WORKDIR"
 # cp -R, not cp -r. macOS cp -r follows symlinks, so node_modules/.bin/electron-builder
 # becomes a loose copy of the CLI and require('./out/cli/cli') cannot be resolved.
 cp -R \
