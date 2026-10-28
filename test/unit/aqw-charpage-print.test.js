@@ -112,7 +112,10 @@ test('char page print: ignores windows that are not a Char Page', async () => {
 });
 
 test('char page print accepts a ruffle-player as the movie', () => {
-  const src = fs.readFileSync(path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/print.js'), 'utf8');
+  const src = fs.readFileSync(
+    path.join(__dirname, '../../plugins/adventure-quest-worlds/features/charpage/print.js'),
+    'utf8'
+  );
   assert.ok(src.indexOf('ruffle-player') !== -1);
 });
 

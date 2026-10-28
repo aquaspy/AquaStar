@@ -87,7 +87,10 @@ test('applySessionRules registers matching Electron webRequest handlers', () => 
   assert.ok(response);
   let headersOut = null;
   response.listener(
-    { url: 'https://game.aq.com/game/gamefiles/Loader4.swf', responseHeaders: { 'Content-Type': ['application/x-shockwave-flash'] } },
+    {
+      url: 'https://game.aq.com/game/gamefiles/Loader4.swf',
+      responseHeaders: { 'Content-Type': ['application/x-shockwave-flash'] }
+    },
     function (result) {
       headersOut = result;
     }
