@@ -26,9 +26,9 @@ exports.dialogMessages = {
     helpCustomKeyPath  : "",
 
     aboutTitle     : "About AquaStar Version: ",
-    aboutMessage   : "AquaStar is a Flash companion shell with game plugins.",
+    aboutMessage   : "AquaStar is a companion shell with game plugins. This build plays SWFs with the Ruffle web player.",
     aboutDetail    :
-        "Thanks to everyone who made this possible:\naquaspy{pluginCredits}\nElectron\nAdobe Flash Player\nand you for supporting the project.\n\nGame plugins are not official products of their publishers; use at your own risk.\n\nProject / releases: ",
+        "Thanks to everyone who made this possible:\naquaspy{pluginCredits}\nElectron\nRuffle\nand you for supporting the project.\n\nGame plugins are not official products of their publishers; use at your own risk.\n\nProject / releases: ",
     aboutDebug     : "Debug Info",
 
     aboutGithubPrompt : "AquaStar Releases page",
@@ -89,7 +89,7 @@ exports.settingsMessages = {
         appLanguage: "Language",
         customUrl: "Custom game URL",
         recordingFormat: "Recording Format",
-        renderMode: "Flash Renderer",
+        renderMode: "Player",
         ruffleUpdateChannel: "Ruffle Update Channel",
         ruffleAutoUpdate: "Automatically download updates",
         ruffleQuality: "Ruffle Quality",
@@ -99,10 +99,10 @@ exports.settingsMessages = {
     optionHints: {
         appLanguage: "UI language for AquaStar and the active plugin. Restart required after changing.",
         customUrl: "Loads a different SWF URL instead of the active plugin's primary game. Leave empty for the plugin default. Ignored if a local SWF file (below) is active.",
-        recordingFormat: "File format used when recording the game screen (Ctrl+J). MP4 isn't available on this Electron version.",
-        renderMode: "Which Flash runtime loads game windows from the active plugin. Takes effect after restart when switching to Ruffle.",
-        ruffleUpdateChannel: "Latest uses Ruffle's most recent stable release. Nightly includes newer experimental changes. To apply a channel change, fully close AquaStar and open it again; do not use only the Restart button.",
-        ruffleAutoUpdate: "Checks the selected channel in the background every time AquaStar opens. A download is applied after restart.",
+        recordingFormat: "File format used when recording the game screen (Ctrl+J). The app uses the first format in this list that MediaRecorder supports.",
+        renderMode: "This build plays SWFs with the pinned Ruffle web player.",
+        ruffleUpdateChannel: "Stock Ruffle downloads are disabled. This build keeps the pinned player.",
+        ruffleAutoUpdate: "Left off. A pinned player is not replaced by a stock Ruffle download.",
         ruffleQuality: "Ruffle render quality. High is sharpest; Low turns off anti-aliasing and is much faster on weak or software-only GPUs. Applies to newly opened game windows.",
         showGameMenu: "Shows a menu bar above game windows with the same commands as the shortcuts. Turn it off for keyboard-only controls.",
         enableDevTools: "Opens the DevTools console automatically on startup."
@@ -129,7 +129,7 @@ exports.settingsMessages = {
     ruffleLatestLabel: "Latest (Stable)",
     ruffleNightlyLabel: "Nightly (Experimental)",
     ruffleFallbackLabel: "Bundled fallback: ",
-    ruffleInactiveLabel: "Ruffle is not active; Flash Player is selected.\n",
+    ruffleInactiveLabel: "This build always uses the pinned Ruffle web player.\n",
     ruffleDownloadedLabel: "Downloaded version",
     ruffleBundledLabel: "Bundled fallback",
     ruffleUpdateLabel: "Update Ruffle",
@@ -146,7 +146,7 @@ exports.settingsMessages = {
     ruffleRestoreConfirm: "Restore the Ruffle version packaged with AquaStar? Downloaded Ruffle files will be removed after restart.",
     ruffleRestoreMessage: "Bundled Ruffle will be restored when AquaStar restarts.",
     optionWarnings: {
-        renderMode: "Ruffle is an experimental, open-source Flash emulator. It may be slower, less stable, or behave differently than the real Flash Player, especially in crowded rooms. Switch anyway?",
+        renderMode: "Ruffle is the only player in this build.",
         enableDevTools: "This option is for developers. Normal players usually don't need it. Enable anyway?"
     },
     pluginsHeading: "Plugins",

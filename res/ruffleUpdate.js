@@ -143,6 +143,9 @@ exports.restoreBundled = function (dataDirectory) {
 
 exports.downloadLatest = async function (dataDirectory, channel, bundledPlayerPath) {
     channel = channel === 'nightly' ? 'nightly' : 'latest';
+    if (bundledPlayerPath && fs.existsSync(path.join(path.dirname(bundledPlayerPath), 'PROVENANCE'))) {
+        return { pinned: true, restartRequired: false };
+    }
     const release = await getRelease(channel);
     if (channel === 'latest' && ('v' + bundledVersion(bundledPlayerPath).split(' ')[0]) === release.tag) {
         // A previously downloaded (older) copy in ruffle-current would otherwise keep

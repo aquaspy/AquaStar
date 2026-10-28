@@ -59,7 +59,9 @@ test('a saved native render mode becomes web ruffle', () => {
   assert.strictEqual(saved.ruffleGraphics, 'vulkan');
   assert.strictEqual(saved.sshot, 'F2');
   assert.strictEqual(merge.migrateRetiredRenderMode(saved), false);
-  assert.strictEqual(merge.migrateRetiredRenderMode({ renderMode: 'flash' }), false);
+  const flashSaved = { renderMode: 'flash' };
+  assert.strictEqual(merge.migrateRetiredRenderMode(flashSaved), true);
+  assert.strictEqual(flashSaved.renderMode, 'ruffle');
   assert.strictEqual(merge.migrateRetiredRenderMode({ renderMode: 'ruffle' }), false);
   assert.strictEqual(merge.migrateRetiredRenderMode(null), false);
 });

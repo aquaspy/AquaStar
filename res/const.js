@@ -35,7 +35,8 @@ if (fs.existsSync(restoreBundledRuffleMarker)) {
         if (fs.existsSync(stagedRuffleDirectory)) fs.rmdirSync(stagedRuffleDirectory, { recursive: true });
         fs.unlinkSync(restoreBundledRuffleMarker);
     } catch (e) { console.log('[AquaStar] Could not restore bundled Ruffle: ' + e.message); }
-} else if (fs.existsSync(path.join(stagedRuffleDirectory, 'ruffle.js'))) {
+} else if (!fs.existsSync(path.join(appRoot, 'res', 'ruffle', 'PROVENANCE')) &&
+    fs.existsSync(path.join(stagedRuffleDirectory, 'ruffle.js'))) {
     try {
         if (fs.existsSync(currentRuffleDirectory)) fs.rmdirSync(currentRuffleDirectory, { recursive: true });
         fs.renameSync(stagedRuffleDirectory, currentRuffleDirectory);
@@ -97,29 +98,11 @@ exports.enableDevTools = () => {
     exports.isDevToolsEnabled = true;
 }
 
-// wmode=direct draws the SWF on the GPU, so F2's capturePage bitmap is empty on macOS.
-// Darwin defaults this off. The SWF is still embedded (wmode=opaque). An explicit
-// aquastar.json value still overrides the flag.
 exports.useDirectWmode = process.platform !== 'darwin';
 exports.setUseDirectWmode = (val) => {
     exports.useDirectWmode = val !== false;
 }
 
-const swfWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'swf_wrapper.html'));
-// opts: optional { wmode, scale } forwarded to swf_wrapper.html query string.
-// Plugins pick the options per game through their wrap config; the default is wmode=direct.
-// The wrapper's base= param keeps relative loads resolving against the game's own origin.
-exports.wrapSwfUrl = function(swfUrl, opts) {
-    if (!swfUrl) return swfUrl;
-    var q = '?swf=' + encodeURIComponent(swfUrl);
-    if (opts && opts.wmode) q += '&wmode=' + encodeURIComponent(opts.wmode);
-    if (opts && opts.scale) q += '&scale=' + encodeURIComponent(opts.scale);
-    return swfWrapperUrl + q;
-}
-
-// Ruffle (open-source Flash emulator) as an alternative to the PPAPI Flash plugin -
-// see res/ruffle_wrapper.html. Covers the active plugin's Flash games when Settings →
-// renderMode is "ruffle".
 const ruffleWrapperUrl = _getFileUrl(path.join(appRoot, 'res', 'ruffle_wrapper.html'));
 exports.isRuffleEligible = function(swfUrl) {
     if (!swfUrl) return false;
@@ -170,13 +153,6 @@ const originalKeybinds = {
 }
 exports.originalKeybinds = originalKeybinds;
 
-// Screen recording (Ctrl+J) format choices, shown as a <select> in Settings.
-// Verified against this Electron's bundled Chromium via MediaRecorder.isTypeSupported() -
-// real "video/mp4" muxing isn't available (would need a much newer Chromium than the one
-// bundled here, which would drop PPAPI Flash support - see flash.js). H.264/MKV is kept
-// as the default since H.264 is by far the most widely compatible codec of the three.
-// audioMimeType is used when the capture stream actually got an audio track (desktop
-// audio loopback - Windows only, see res/features/capture/preload_capture.js) - Opus muxes fine into both containers.
 const recordingFormats = {
     'h264-mkv': { mimeType: 'video/x-matroska;codecs=avc1', audioMimeType: 'video/x-matroska;codecs=avc1,opus', extension: 'mkv',  label: 'MKV (H.264)' },
     'vp9-webm': { mimeType: 'video/webm;codecs=vp9',        audioMimeType: 'video/webm;codecs=vp9,opus',        extension: 'webm', label: 'WebM (VP9)'  },
@@ -195,15 +171,11 @@ exports.resolveRecordingFormat = function(id, hasAudio) {
     };
 }
 
-// Which Flash runtime to use for the SWFs AquaStar loads directly, shown as a <select>
-// in Settings. "flash" (default) keeps the exact current PPAPI plugin behavior. "ruffle"
-// is new and marked experimental - see isRuffleEligible()/wrapRuffleUrl() above.
 const renderModes = {
-    'flash':  { label: 'Flash Player' },
-    'ruffle': { label: 'Ruffle (Experimental)' }
+    'ruffle': { label: 'Ruffle' }
 }
 exports.renderModes = renderModes;
-exports.defaultRenderMode = 'flash';
+exports.defaultRenderMode = 'ruffle';
 exports.renderModeChoices = Object.keys(renderModes).map((id) => (
     { id: id, label: renderModes[id].label }
 ));
@@ -248,7 +220,7 @@ const originalOptions = {
     recordingFormat:   exports.defaultRecordingFormat,
     renderMode:        exports.defaultRenderMode,
     ruffleUpdateChannel: 'latest',
-    ruffleAutoUpdate:  true,
+    ruffleAutoUpdate:  false,
     ruffleQuality:     'high',
     // Native menu bar on game windows (mirrors shortcuts). Default on.
     showGameMenu:      true,
@@ -282,12 +254,8 @@ exports.appdataJsonPath = appdataJsonPath;
 exports.inPathJsonPath  = inPathJsonPath;
 exports.legacyAppdataJsonPath = legacyAppdataJsonPath;
 
-// The bundled web/WASM player is always the safe fallback. A downloaded stable
-// or nightly build is selected only after validation and promotion at startup.
 const bundledRufflePlayerPath = path.join(appRoot, 'res', 'ruffle', 'ruffle.js');
-const downloadedRufflePlayerPath = path.join(currentRuffleDirectory, 'ruffle.js');
-exports.rufflePlayerUrl = _getFileUrl(fs.existsSync(downloadedRufflePlayerPath)
-    ? downloadedRufflePlayerPath : bundledRufflePlayerPath);
+exports.rufflePlayerUrl = _getFileUrl(bundledRufflePlayerPath);
 exports.ruffleDirectory = appDataDirectory;
 
 // Local SWF override (Settings → Custom SWF File). The lookup lives in customSwf.js; the

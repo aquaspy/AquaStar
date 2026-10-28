@@ -91,7 +91,8 @@ function splitSavePatch(changed, activePluginId, existingFile) {
 }
 
 const RETIRED_RENDER_MODES = {
-    'ruffle-native': 'ruffle'
+    'ruffle-native': 'ruffle',
+    flash: 'ruffle'
 };
 
 function migrateRetiredRenderMode(settings) {

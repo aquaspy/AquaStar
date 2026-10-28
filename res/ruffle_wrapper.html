@@ -88,7 +88,6 @@
       allowNetworking: 'all',
       allowFullscreen: true,
       splashScreen: false,
-      preloader: false,
       // Match Flash scale=showall: letterbox (black bars) instead of stretching.
       letterbox: 'on',
       socketProxy: socketProxy,
@@ -101,8 +100,6 @@
     });
   }
 
-  // The bundled player remains the offline fallback. When an update exists this
-  // loads its self-hosted JS/WASM files from AquaStar's AppData directory instead.
   var script = document.createElement('script');
   script.src = ruffleUrl;
   script.onload = startPlayer;
