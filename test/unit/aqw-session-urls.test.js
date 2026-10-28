@@ -60,6 +60,9 @@ test('applySessionRules registers matching Electron webRequest handlers', () => 
       },
       onBeforeRequest: function (filter, listener) {
         calls.push({ type: 'request', filter: filter, listener: listener });
+      },
+      onHeadersReceived: function (filter, listener) {
+        calls.push({ type: 'response', filter: filter, listener: listener });
       }
     }
   };
@@ -78,6 +81,18 @@ test('applySessionRules registers matching Electron webRequest handlers', () => 
       return c.type === 'request';
     })
   );
+  const response = calls.filter(function (c) {
+    return c.type === 'response';
+  })[0];
+  assert.ok(response);
+  let headersOut = null;
+  response.listener(
+    { url: 'https://game.aq.com/game/gamefiles/Loader4.swf', responseHeaders: { 'Content-Type': ['application/x-shockwave-flash'] } },
+    function (result) {
+      headersOut = result;
+    }
+  );
+  assert.deepStrictEqual(headersOut.responseHeaders['Access-Control-Allow-Origin'], ['*']);
 });
 
 test('flashTrustUrlList includes primary and known game hosts', () => {

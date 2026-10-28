@@ -24,6 +24,26 @@ function createSessionRules() {
             }
         },
         {
+            id: 'artix-cors',
+            urls: [
+                '*://*.aq.com/*',
+                '*://aq.com/*',
+                '*://*.artix.com/*',
+                '*://artix.com/*',
+                '*://*.dragonfable.com/*',
+                '*://dragonfable.com/*'
+            ],
+            onHeadersReceived: function (details, ctx, callback) {
+                const headers = Object.assign({}, details.responseHeaders);
+                let hasOrigin = false;
+                Object.keys(headers).forEach(function (key) {
+                    if (key.toLowerCase() === 'access-control-allow-origin') hasOrigin = true;
+                });
+                if (!hasOrigin) headers['Access-Control-Allow-Origin'] = ['*'];
+                callback({ responseHeaders: headers });
+            }
+        },
+        {
             id: 'swf-log',
             urls: ['*://game.aq.com/game/*'],
             enabledWhen: function (settings) {

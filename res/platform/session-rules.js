@@ -71,6 +71,7 @@ function applySessionRules(session, rules, ctx) {
 
     const headerRules = active.filter(function (r) { return typeof r.onBeforeSendHeaders === 'function'; });
     const requestRules = active.filter(function (r) { return typeof r.onBeforeRequest === 'function'; });
+    const responseRules = active.filter(function (r) { return typeof r.onHeadersReceived === 'function'; });
 
     if (headerRules.length) {
         session.webRequest.onBeforeSendHeaders({ urls: unionUrls(headerRules) }, function (details, callback) {
@@ -86,6 +87,25 @@ function applySessionRules(session, rules, ctx) {
                     result = result || {};
                     if (result.cancel) { callback({ cancel: true }); return; }
                     if (result.requestHeaders) details.requestHeaders = result.requestHeaders;
+                    next();
+                });
+            })();
+        });
+    }
+
+    if (responseRules.length && typeof session.webRequest.onHeadersReceived === 'function') {
+        session.webRequest.onHeadersReceived({ urls: unionUrls(responseRules) }, function (details, callback) {
+            const matching = responseRules.filter(function (rule) { return ruleMatches(rule, details.url); });
+            let index = 0;
+            (function next() {
+                if (index >= matching.length) {
+                    callback({ responseHeaders: details.responseHeaders });
+                    return;
+                }
+                const rule = matching[index++];
+                rule.onHeadersReceived(details, ctx, function (result) {
+                    result = result || {};
+                    if (result.responseHeaders) details.responseHeaders = result.responseHeaders;
                     next();
                 });
             })();
