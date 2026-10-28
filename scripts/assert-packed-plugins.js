@@ -13,13 +13,20 @@ const REQUIRED_REL = [
     'res/ruffle/ruffle.js'
 ];
 
+// @electron/asar joins header paths with path.join, so a Windows listing is
+// \plugins\... while a POSIX listing is /plugins/...
+function normalizeAsarPath(entry) {
+    const parts = String(entry).split(/[\\/]+/).filter(Boolean);
+    return '/' + parts.join('/');
+}
+
 function listAsar(archive) {
-    return require('@electron/asar').listPackage(archive);
+    return require('@electron/asar').listPackage(archive).map(normalizeAsarPath);
 }
 
 function rootContains(root, rel) {
     if (root.endsWith('.asar')) {
-        const want = '/' + rel.split(path.sep).join('/');
+        const want = normalizeAsarPath(rel);
         return listAsar(root).indexOf(want) !== -1;
     }
     return fs.existsSync(path.join(root, rel));
@@ -74,6 +81,7 @@ if (require.main === module) {
 
 module.exports = {
     REQUIRED_REL: REQUIRED_REL,
+    normalizeAsarPath: normalizeAsarPath,
     findPackedRoots: findPackedRoots,
     missingIn: missingIn,
     assertDist: assertDist

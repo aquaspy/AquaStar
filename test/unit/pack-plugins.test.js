@@ -15,6 +15,14 @@ function listCandidateAppRoots() {
   return packed.findPackedRoots(distRoot);
 }
 
+test('asar listings from Windows and POSIX name the same packed file', () => {
+  assert.strictEqual(
+    packed.normalizeAsarPath('\\plugins\\adventure-quest-worlds\\plugin.json'),
+    '/plugins/adventure-quest-worlds/plugin.json'
+  );
+  assert.strictEqual(packed.normalizeAsarPath('/res/ruffle/ruffle.js'), '/res/ruffle/ruffle.js');
+});
+
 test('source tree includes bundled AQW plugin files', () => {
   assertFilesUnder(repoRoot, 'source tree');
 });
