@@ -389,11 +389,7 @@ function createHostWindowDeps() {
     };
 }
 
-function applyFlashTrust(flashApi) {
-    const flash = flashApi || require('../flash.js');
-    if (typeof flash.refreshTrust !== 'function') return;
-    flash.refreshTrust(getTrustedFlashUrls());
-}
+function applyFlashTrust() {}
 
 module.exports = {
     clear: clear,

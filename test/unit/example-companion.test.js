@@ -21,7 +21,7 @@ test('example-companion ships compiled boxmover.swf and AS3 source', () => {
   assert.ok(swf.length > 500, 'boxmover.swf must be a real compiled movie, not a stub');
 });
 
-test('instances only wraps real .swf URLs with swf_wrapper', () => {
+test('instances only wraps real .swf URLs', () => {
   const src = fs.readFileSync(path.join(__dirname, '../../res/instances.js'), 'utf8');
   assert.ok(src.indexOf('_looksLikeSwfUrl') !== -1);
   assert.ok(src.indexOf('_looksLikeSwfUrl(originalPath)') !== -1);

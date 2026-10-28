@@ -1,69 +1,19 @@
 const assert = require('assert');
 const { chooseGamePresentation } = require('../../res/game-presentation.js');
 
-const aqw = { preferDirectWmode: true, ruffleEligible: true };
-
-test('macOS Flash embeds the SWF with opaque wmode when direct wmode is off', () => {
+test('a SWF opens in Ruffle even when an old Flash setting is still stored', () => {
   const choice = chooseGamePresentation({
     looksLikeSwf: true,
-    wrap: aqw,
-    standalone: false,
-    renderMode: 'flash',
-    ruffleEligible: true,
-    useDirectWmode: false
-  });
-  assert.deepStrictEqual(choice, { kind: 'embed', wmode: 'opaque', scale: 'showall' });
-});
-
-test('direct wmode still uses the wrapper default', () => {
-  const choice = chooseGamePresentation({
-    looksLikeSwf: true,
-    wrap: aqw,
-    standalone: false,
-    renderMode: 'flash',
-    ruffleEligible: true,
-    useDirectWmode: true
-  });
-  assert.deepStrictEqual(choice, { kind: 'embed', wmode: null, scale: null });
-});
-
-test('Ruffle wins over the Flash embed', () => {
-  const choice = chooseGamePresentation({
-    looksLikeSwf: true,
-    wrap: aqw,
-    standalone: false,
-    renderMode: 'ruffle',
-    ruffleEligible: true,
-    useDirectWmode: false
-  });
-  assert.deepStrictEqual(choice, { kind: 'ruffle' });
-});
-
-test('an explicit wrap is kept when direct wmode is off', () => {
-  const choice = chooseGamePresentation({
-    looksLikeSwf: true,
-    wrap: { wmode: 'opaque', scale: 'showall' },
-    standalone: true,
-    renderMode: 'flash',
-    ruffleEligible: true,
-    useDirectWmode: false
-  });
-  assert.deepStrictEqual(choice, { kind: 'embed', wmode: 'opaque', scale: 'showall' });
-});
-
-test('preferDirectWmode false leaves a SWF as the document', () => {
-  const choice = chooseGamePresentation({
-    looksLikeSwf: true,
-    wrap: { preferDirectWmode: false },
+    wrap: { preferDirectWmode: true, ruffleEligible: true, wmode: 'opaque', scale: 'showall' },
     standalone: false,
     renderMode: 'flash',
     ruffleEligible: false,
     useDirectWmode: false
   });
-  assert.deepStrictEqual(choice, { kind: 'raw' });
+  assert.deepStrictEqual(choice, { kind: 'ruffle' });
 });
 
-test('a standalone SWF without an explicit wrap stays raw', () => {
+test('a standalone SWF opens in Ruffle', () => {
   const choice = chooseGamePresentation({
     looksLikeSwf: true,
     wrap: { preferDirectWmode: true },
@@ -72,16 +22,16 @@ test('a standalone SWF without an explicit wrap stays raw', () => {
     ruffleEligible: false,
     useDirectWmode: true
   });
-  assert.deepStrictEqual(choice, { kind: 'raw' });
+  assert.deepStrictEqual(choice, { kind: 'ruffle' });
 });
 
-test('an HTML page is never embedded as Flash', () => {
+test('an HTML page is not sent to Ruffle', () => {
   const choice = chooseGamePresentation({
     looksLikeSwf: false,
-    wrap: aqw,
+    wrap: { preferDirectWmode: true, ruffleEligible: true },
     standalone: false,
-    renderMode: 'flash',
-    ruffleEligible: false,
+    renderMode: 'ruffle',
+    ruffleEligible: true,
     useDirectWmode: false
   });
   assert.deepStrictEqual(choice, { kind: 'raw' });

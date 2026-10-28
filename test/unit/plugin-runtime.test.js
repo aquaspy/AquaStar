@@ -142,7 +142,8 @@ test('main.js boots primary URL from pluginRuntime', () => {
   assert.ok(mainSrc.indexOf('pluginRuntime.getPrimaryUrl') !== -1);
   assert.ok(mainSrc.indexOf('createHostWindowDeps') !== -1);
   assert.ok(mainSrc.indexOf('pluginRuntime.adopt') !== -1);
-  assert.ok(mainSrc.indexOf('applyFlashTrust') !== -1);
+  assert.strictEqual(mainSrc.indexOf('applyFlashTrust'), -1);
+  assert.strictEqual(mainSrc.indexOf('ppapi-flash-path'), -1);
 });
 
 test('instances.js and const.js ask the active plugin about games and know no game themselves', () => {
@@ -253,48 +254,15 @@ test('openFeatureWindow path consults pluginRuntime.getFeatureWindow', () => {
   assert.strictEqual(runtime.getFeatureWindow('settings'), null);
 });
 
-test('plugin-runtime applyFlashTrust refreshes trust list', () => {
+test('plugin-runtime applyFlashTrust does not touch a PPAPI trust manager', () => {
   runtime.clear();
-  const added = [];
-  let emptied = false;
-  runtime.setDependencies({
-    instances: {
-      newBrowserWindow: function () {
-        return {};
-      }
-    },
-    constant: { customSwfUrl: '', isOldAqlite: false }
-  });
-  runtime.adopt(
-    fakeHost({
-      primaryGame: {
-        getUrl: function () {
-          return 'https://plugin.example/game.swf';
-        },
-        isGameUrl: function () {
-          return false;
-        }
-      },
-      launches: [],
-      trustedFlashUrls: ['https://plugin.example/game.swf', 'https://plugin.example/extra.swf'],
-      keybinds: [],
-      keybindDefaults: {},
-      featureWindows: []
-    }),
-    { id: 'sample' }
-  );
-
+  let called = false;
   runtime.applyFlashTrust({
-    refreshTrust: function (urls) {
-      emptied = true;
-      urls.forEach(function (u) {
-        added.push(u);
-      });
+    refreshTrust: function () {
+      called = true;
     }
   });
-  assert.strictEqual(emptied, true);
-  assert.ok(added.indexOf('https://plugin.example/game.swf') !== -1);
-  assert.ok(added.indexOf('https://plugin.example/extra.swf') !== -1);
+  assert.strictEqual(called, false);
 });
 
 test('findGameEntry resolves primary vs launch and exposes wrap/standalone', () => {

@@ -91,7 +91,6 @@ function activate(host) {
                 nodeIntegration: false,
                 sandbox: true,
                 contextIsolation: true,
-                plugins: false,
                 preload: dashboardPreload
             }
         }

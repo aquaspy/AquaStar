@@ -3,8 +3,8 @@
 
 The x64 zip needs Rosetta on Apple Silicon. A Retina display (or
 --force-device-scale-factor=2) is where a top-level SWF collapses. Pass
---require-wrapper to fail unless the page is swf_wrapper.html and the plugin
-box fills the window. Without that flag the script records the page and exits
+--require-wrapper to fail unless the page is ruffle_wrapper.html and the
+player fills the window. Without that flag the script records the page and exits
 0 when the app stayed up, so an older zip can be inspected without a red job.
 """
 
@@ -24,7 +24,7 @@ import zipfile
 from pathlib import Path
 
 EVALUATE = r"""(() => {
-  const e = document.querySelector('object,embed');
+  const e = document.querySelector('ruffle-player') || document.querySelector('object,embed');
   const r = e ? e.getBoundingClientRect() : null;
   return {
     href: location.href,
@@ -55,19 +55,16 @@ def judge_metrics(metrics, require_wrapper):
         lines.append("recorded")
         return True, lines
     ok = True
-    if "swf_wrapper.html" not in href:
-        lines.append("page is not the flash embed")
+    if "ruffle_wrapper.html" not in href:
+        lines.append("page is not the ruffle wrapper")
         ok = False
     height = embed.get("h") if embed else None
     inner_h = inner[1] if len(inner) > 1 else 0
     if not height or not inner_h or height < inner_h * 0.75:
-        lines.append(f"embed height {height} is below 75% of {inner_h}")
+        lines.append(f"player height {height} is below 75% of {inner_h}")
         ok = False
     else:
-        lines.append("embed fills the window")
-    if not any("flash" in str(name).lower() or "shockwave" in str(name).lower() for name in plugins):
-        lines.append("Shockwave Flash is not in navigator.plugins")
-        ok = False
+        lines.append("player fills the window")
     lines.append("pass" if ok else "fail")
     return ok, lines
 
@@ -193,7 +190,7 @@ def wait_for_game_page(port, seconds):
             if page.get("type") != "page":
                 continue
             url = page.get("url") or ""
-            if ".swf" in url or "swf_wrapper.html" in url:
+            if ".swf" in url or "ruffle_wrapper.html" in url:
                 return page
         time.sleep(1)
     return None

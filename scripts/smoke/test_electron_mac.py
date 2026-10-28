@@ -31,14 +31,15 @@ def main():
     check("a short embed fails the wrapper requirement", not ok)
     check("the failure names the height", any("below 75%" in line for line in lines))
     full = dict(tiny)
-    full["href"] = "file:///Applications/AquaStar.app/Contents/Resources/app/res/swf_wrapper.html?swf=x"
+    full["href"] = "file:///Applications/AquaStar.app/Contents/Resources/app/res/ruffle_wrapper.html?swf=x"
     full["embed"] = {"w": 960, "h": 530, "t": 0, "l": 0}
+    full["plugins"] = []
     ok, lines = electron_mac.judge_metrics(full, True)
-    check("a full embed passes", ok and "pass" in lines)
+    check("a full player passes", ok and "pass" in lines)
     missing = dict(full)
-    missing["plugins"] = ["Chromium PDF Viewer"]
+    missing["href"] = "file:///Applications/AquaStar.app/Contents/Resources/app/res/missing.html"
     ok, _lines = electron_mac.judge_metrics(missing, True)
-    check("flash has to be the plugin", not ok)
+    check("a page that is not the wrapper fails", not ok)
     ok, _lines = electron_mac.judge_metrics({"error": "timed out"}, False)
     check("a missed measurement is still recorded", ok)
     ok, _lines = electron_mac.judge_metrics({"error": "timed out"}, True)

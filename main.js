@@ -19,12 +19,9 @@ if (!app.requestSingleInstanceLock()) {
     return;
 }
 
-app.allowRendererProcessReuse = false;
-
 const path     = require('path')
 const fs       = require('fs');
 
-const flash         = require('./res/flash.js');
 const keyb          = require('./res/keybindings.js');
 // Platform IPC (always registered from main — never by plugins).
 const ipcRecording  = require('./res/ipc/recording.js');
@@ -95,7 +92,6 @@ function activatePlugins() {
             platform.pluginRuntime.adopt(runtime.host, pluginInfo);
             // Older local SWF file names this plugin used to read (manifest customSwfAliases).
             constant.setCustomSwfAliases(runtime.plugin.manifest.customSwfAliases);
-            platform.pluginRuntime.applyFlashTrust(flash);
 
             platform.menuRegistry.adoptHostState(state, state.menuProviders || null);
             platform.settingsRegistry.adoptHostState(state, pluginInfo);
@@ -120,10 +116,6 @@ function activatePlugins() {
         return null;
     });
 }
-
-// Flash stuff is isolated in flash.js
-// No game URL is trusted yet: the plugin's trust list is applied right after activation.
-flash.flashManager(app, __dirname, null, constant.appName);
 
 function createWindow () {
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
@@ -185,7 +177,25 @@ function createWindow () {
     let win = inst.newBrowserWindow(bootGameUrl, true);
     // Re-apply after setApplicationMenu so the first window keeps plugin menu entries.
     inst.applyWindowMenu(win, bootGameUrl);
-    
+
+    const smokeShot = process.env.AQUASTAR_SMOKE_SHOT;
+    if (smokeShot && win) {
+        const waitMs = Number(process.env.AQUASTAR_SMOKE_WAIT_MS || 20000);
+        win.webContents.once('did-finish-load', function () {
+            setTimeout(function () {
+                win.webContents.capturePage().then(function (image) {
+                    fs.writeFileSync(smokeShot, image.toPNG());
+                    const size = image.getSize();
+                    console.log('[AquaStar] smoke shot ' + smokeShot + ' ' + size.width + 'x' + size.height);
+                    app.exit(0);
+                }).catch(function (error) {
+                    console.error('[AquaStar] smoke shot failed: ' + (error && error.message ? error.message : error));
+                    app.exit(1);
+                });
+            }, waitMs);
+        });
+    }
+
     win.once('ready-to-show', () => {win.show()});  //show launcher only when ready
     
     win.on('closed', () => {
@@ -228,12 +238,6 @@ function applySessionRules() {
         }
     );
 }
-
-// For anyone looking why we arent sandboxed and neither is AE...
-// To look in the filesystem for the flash plugin, it needs the "no sandbox" part.
-// If anyone out there think we just dont know about it, uncomment here and see for yourself...
-// Game/main windows disable per-window sandbox so PPAPI Flash can load.
-//app.enableSandbox();
 
 app.on('second-instance', () => {
   // Someone tried to run a second AquaStar - focus the existing one instead.

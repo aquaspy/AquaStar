@@ -67,21 +67,19 @@ function newBrowserWindow(new_path, isMainWin=false){
     else if (_isGameWindow(new_path)) config = windowConfig.gameConfig;
     else config = windowConfig.winConfig;
     
-    // How a game is opened is the owning plugin's call (its primary/launch "wrap" config):
-    // Ruffle when Settings → renderMode is "ruffle" and the SWF is eligible, an explicit
-    // wmode/scale HTML embed, or the default embed. Direct wmode is the GPU path. With
-    // it off, the embed uses wmode=opaque so the plugin still has a CSS box.
     var gameEntry = _findGameEntry(originalPath);
     var wrap = (gameEntry && gameEntry.wrap) || null;
-    var renderMode = (keybinds.keybinds && keybinds.keybinds.renderMode) || constant.defaultRenderMode;
     var presentation = chooseGamePresentation({
-        looksLikeSwf: _looksLikeSwfUrl(originalPath),
-        wrap: wrap,
-        standalone: !!(gameEntry && gameEntry.standalone),
-        renderMode: renderMode,
-        ruffleEligible: constant.isRuffleEligible(new_path),
-        useDirectWmode: constant.useDirectWmode
+        looksLikeSwf: _looksLikeSwfUrl(originalPath)
     });
+    if (navigationHooks && typeof navigationHooks.webPreferencesFor === 'function') {
+        var extraPrefs = navigationHooks.webPreferencesFor(originalPath);
+        if (extraPrefs && typeof extraPrefs === 'object') {
+            config = Object.assign({}, config, {
+                webPreferences: Object.assign({}, config.webPreferences, extraPrefs)
+            });
+        }
+    }
     if (presentation.kind === 'ruffle') {
         const ruffleOpts = (wrap && wrap.ruffle) || null;
         if (ruffleOpts && ruffleOpts.socket) {
@@ -90,13 +88,6 @@ function newBrowserWindow(new_path, isMainWin=false){
         }
         new_path = constant.wrapRuffleUrl(new_path, ruffleOpts,
             keybinds.keybinds && keybinds.keybinds.ruffleQuality);
-    } else if (presentation.kind === 'embed') {
-        new_path = constant.wrapSwfUrl(new_path, {
-            wmode: presentation.wmode,
-            scale: presentation.scale
-        });
-        console.log('[AquaStar] flash embed wmode=' + (presentation.wmode || 'direct') +
-            ' scale=' + (presentation.scale || 'showall'));
     }
     
     const newWin = new BrowserWindow(config);
@@ -205,10 +196,22 @@ function _windowAddContext(newWin){
         _windowAddContext(childWin);
         return childWin;
     };
-    newWin.webContents.on('new-window', (event, url) => {
-        event.preventDefault();
-        event.newGuest = openChildWindow(url);
+    newWin.webContents.setWindowOpenHandler(function (details) {
+        openChildWindow(details.url);
+        return { action: 'deny' };
     });
+    if (_looksLikeSwfUrl(newWin.aquaStarSwfUrl)) {
+        var suspendRuffle = function (suspended) {
+            if (newWin.isDestroyed()) return;
+            var source = "(function(){var p=document.querySelector('ruffle-player');" +
+                "if(!p)return false;p.renderingSuspended=" + (suspended ? 'true' : 'false') + ';';
+            if (suspended) source += "if(typeof p.releaseMemory==='function')p.releaseMemory();";
+            source += 'return true;})()';
+            newWin.webContents.executeJavaScript(source).catch(function () {});
+        };
+        newWin.on('minimize', function () { suspendRuffle(true); });
+        newWin.on('restore', function () { suspendRuffle(false); });
+    }
     
     // Page-load injections (cleanup, previews, account sync…) belong to the active plugin:
     // the platform only forwards did-finish-load to its registered navigation hooks.

@@ -19,7 +19,6 @@ function _browserPreloadPath() {
     return path.join(appRoot, 'res', 'platform', 'preload_browser.js');
 }
 
-// Window shapes: "game"/"main" hold the game (Flash, no sandbox), anything else is a browser window.
 function _getWinConfig(type){
     const isGame = (type == "game" || type == "main");
     return {
@@ -29,13 +28,11 @@ function _getWinConfig(type){
         icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
-            sandbox: isGame ? false : true,
+            sandbox: true,
             webviewTag: false,
             preload: isGame ?
                 path.join(appRoot, 'res', 'features', 'capture', 'preload_capture.js') :
                 _browserPreloadPath(),
-            // Plugins (Flash) are enabled everywhere: pages a plugin links to may embed Flash.
-            plugins: true,
             contextIsolation: true,
             backgroundThrottling: !isGame
         }
@@ -69,7 +66,6 @@ exports.settingsConfig = {
         sandbox: true,
         webviewTag: false,
         preload: path.join(appRoot, 'res', 'features', 'settings', 'preload_settings.js'),
-        plugins: false,
         contextIsolation: true
     }
 };
