@@ -1,5 +1,5 @@
-const WebSocket = require('ws');
 const net = require('net');
+let WebSocket = null;
 
 // Ruffle (running in a sandboxed renderer) can't open raw TCP sockets the way Flash's
 // Socket class does, so games with raw-socket netcode need a local relay. Ruffle's own
@@ -35,6 +35,7 @@ function isAllowedHost(host) {
 
 function start() {
     if (wss) return;
+    if (!WebSocket) WebSocket = require('ws');
     wss = new WebSocket.Server({ port: PROXY_PORT, host: PROXY_HOST, perMessageDeflate: false });
 
     wss.on('connection', (ws, req) => {

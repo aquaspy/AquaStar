@@ -3,7 +3,6 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const yauzl = require('yauzl');
 
 const RELEASES_URL = 'https://api.github.com/repos/ruffle-rs/ruffle/releases?per_page=30';
 const LATEST_URL = 'https://api.github.com/repos/ruffle-rs/ruffle/releases/latest';
@@ -53,6 +52,8 @@ async function download(url, destination) {
 // avoids extract-zip's larger dependency tree, which Electron Builder 22 copies
 // twice on Linux when asar is disabled.
 function extractArchive(zipPath, destination) {
+    // Only an actual download needs the unzipper. Startup leaves auto-update off.
+    const yauzl = require('yauzl');
     return new Promise((resolve, reject) => {
         yauzl.open(zipPath, { lazyEntries: true }, (openError, zipfile) => {
             if (openError) return reject(openError);

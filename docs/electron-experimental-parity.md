@@ -60,7 +60,7 @@ Counts: 17 ported, 13 ported with changes, 5 not possible. 35 items.
 | Example companion | ported | `boxmover.swf` rendered under xvfb (canvas fallback, no GPU). |
 | Plugin web site (`npm run web:build`, `web:preview`) | ported | Scripts were not rewritten. |
 | Game window sandbox | ported with changes | Game and main windows are `sandbox: true` with `contextIsolation` and a preload. `plugins` is no longer a webPreference. |
-| asar archive | ported with changes | `asar` is on. The player is loaded through `aquastar://ruffle/` because a renderer `fetch` cannot read an asar. Plugins are required from inside the archive. No `asarUnpack` entry. The Pepper reason for leaving the archive off is gone. |
+| asar archive | ported with changes | `asar` is on. The player is loaded through `aquastar://ruffle/` because a renderer `fetch` cannot read an asar. Plugins are required from inside the archive. No `asarUnpack` entry. The pack omits docs, tests, patch sources, markdown, and source maps. Chromium locale packs kept are en-US and pt-BR. |
 | Windows, Linux, and macOS packages | ported with changes | electron-builder targets stay nsis, AppImage, deb, zip, and dmg. `scripts/strip-mac-signature.js` is still `afterPack`. Packages are x64 only. Linux does not pass `--no-sandbox`. The AppImage launcher adds it when user namespaces are missing, and the deb postinstall sets the setuid helper in that same case. |
 | 32-bit and armv7l installers | not possible | Electron 45 does not ship those architectures for this app. `scripts/build-arch.sh` accepts x64 only. |
 | Tests, plugin smoke, lint | ported | `npm test`, `npm run lint`, and `npm run smoke:plugins` are the same commands. |

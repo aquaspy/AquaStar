@@ -39,9 +39,24 @@
   "build": {
     "publish": null,
     "asar": true,
+    "electronLanguages": [
+      "en-US",
+      "pt-BR"
+    ],
     "files": [
       "**/*",
-      "!squashfs-root/**"
+      "!squashfs-root/**",
+      "!docs/**",
+      "!test/**",
+      "!ruffle/**",
+      "!scripts/**",
+      "!**/*.map",
+      "!**/*.md",
+      "!**/.cursor/**",
+      "!**/.github/**",
+      "!**/.eslintrc.cjs",
+      "!**/.prettierrc.json",
+      "!**/.prettierignore"
     ],
     "appId": "io.github.aquaspy.aquastar",
     "afterPack": "./scripts/strip-mac-signature.js",
