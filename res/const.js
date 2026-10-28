@@ -154,23 +154,10 @@ const originalKeybinds = {
 }
 exports.originalKeybinds = originalKeybinds;
 
-const recordingFormats = {
-    'h264-mkv': { mimeType: 'video/x-matroska;codecs=avc1', audioMimeType: 'video/x-matroska;codecs=avc1,opus', extension: 'mkv',  label: 'MKV (H.264)' },
-    'vp9-webm': { mimeType: 'video/webm;codecs=vp9',        audioMimeType: 'video/webm;codecs=vp9,opus',        extension: 'webm', label: 'WebM (VP9)'  },
-    'vp8-webm': { mimeType: 'video/webm;codecs=vp8',        audioMimeType: 'video/webm;codecs=vp8,opus',        extension: 'webm', label: 'WebM (VP8)'  }
-}
-exports.recordingFormats = recordingFormats;
-exports.defaultRecordingFormat = 'h264-mkv';
-exports.recordingFormatChoices = Object.keys(recordingFormats).map((id) => (
-    { id: id, label: recordingFormats[id].label }
-));
-exports.resolveRecordingFormat = function(id, hasAudio) {
-    var fmt = recordingFormats[id] || recordingFormats[exports.defaultRecordingFormat];
-    return {
-        mimeType:  (hasAudio && fmt.audioMimeType) ? fmt.audioMimeType : fmt.mimeType,
-        extension: fmt.extension
-    };
-}
+const recordingFormat = require('./features/capture/recording-format.js');
+exports.defaultRecordingFormat = recordingFormat.defaultRecordingFormat;
+exports.recordingFormatChoices = recordingFormat.recordingFormatChoices;
+exports.normalizeRecordingFormatId = recordingFormat.normalizeRecordingFormatId;
 
 const renderModes = {
     'ruffle': { label: 'Ruffle' }

@@ -6,7 +6,10 @@ function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else ret
 exports.titleMessages = {
     doneSavedAs: "",
     recording: "",
-    alreadyRecording: ""
+    alreadyRecording: "",
+    recordingFailed: "",
+    recordingWebmFallback: "",
+    screenRecordingDenied: ""
 };
 
 exports.dialogMessages = {

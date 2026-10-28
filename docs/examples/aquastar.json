@@ -25,7 +25,7 @@
     "playerCharacter": "",
     "featurePlayerName": false,
     "customUrl": "",
-    "recordingFormat": "h264-mkv",
+    "recordingFormat": "h264-mp4",
     "renderMode": "flash",
     "ruffleUpdateChannel": "latest",
     "ruffleAutoUpdate": false,

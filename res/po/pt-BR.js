@@ -3,7 +3,10 @@ function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else ret
 exports.titleMessages = {
     doneSavedAs: "Pronto! Salvo como ",
     recording: "GRAVANDO",
-    alreadyRecording: "Você já está gravando em alguma outra janela!"
+    alreadyRecording: "Você já está gravando em alguma outra janela!",
+    recordingFailed: "Não foi possível gravar esta janela.",
+    recordingWebmFallback: "WebM, MP4 indisponível",
+    screenRecordingDenied: "A gravação de tela está desligada para o AquaStar. Ative em Ajustes do Sistema, Privacidade e Segurança, Gravação de Tela, e tente de novo."
 }
 
 exports.dialogMessages = {
@@ -100,7 +103,7 @@ exports.settingsMessages = {
     optionHints: {
         appLanguage: "Idioma da interface do AquaStar e do plugin ativo. É preciso reiniciar depois de mudar.",
         customUrl: "Carrega uma URL de SWF diferente do jogo primário do plugin ativo. Deixe vazio para o padrão do plugin. Ignorada se um arquivo SWF local (abaixo) estiver ativo.",
-        recordingFormat: "Formato do arquivo ao gravar a tela do jogo (Ctrl+J). O app usa o primeiro formato desta lista que o MediaRecorder suporta.",
+        recordingFormat: "Formato do arquivo ao gravar a tela do jogo (Ctrl+J). O padrão é MP4 (H.264). Se este sistema não puder gravar MP4, o AquaStar salva WebM e avisa no título da janela.",
         renderMode: "Esta build abre SWFs com o player web do Ruffle que veio empacotado.",
         ruffleUpdateChannel: "Downloads do Ruffle oficial estão desligados. Esta build mantém o player empacotado.",
         ruffleAutoUpdate: "Fica desligado. Um player empacotado não é trocado por um download do Ruffle oficial.",

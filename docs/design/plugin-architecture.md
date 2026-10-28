@@ -527,8 +527,8 @@ Split by process: the Studio helper process has its **own** `ipcMain` graph and 
 | Channel | Module today | Owner after migration |
 |---------|--------------|------------------------|
 | `fetchWikiPage` | `plugins/adventure-quest-worlds/features/wikiview/wikiFetch.js` | AQW plugin (legacy name) |
-| `saveDialog`, `saveRecording`, `getDesktopCapturerSourceForWindow` | `res/ipc/recording.js` | Platform |
-| `getKeybindings`, `saveKeybindings`, `getRecordingFormat`, `getSettingsMessages`, `updateRuffle`, `getRuffleStatus`, `restoreBundledRuffle`, `restartApp`, `getCustomSwfStatus`, `chooseCustomSwf`, `removeCustomSwf` | `res/keybindings.js` | Platform |
+| `saveDialog`, `saveRecording`, `prepareRecordingCapture`, `recordingMimeCandidates`, `chooseRecordingFormat`, `recordingFileName` | `res/ipc/recording.js` | Platform |
+| `getKeybindings`, `saveKeybindings`, `getSettingsMessages`, `updateRuffle`, `getRuffleStatus`, `restoreBundledRuffle`, `restartApp`, `getCustomSwfStatus`, `chooseCustomSwf`, `removeCustomSwf` | `res/keybindings.js` | Platform |
 | `getReminders`, `getRemindersMessages`, `saveReminders`, `remindersCopyText` | `reminders.js` | AQW |
 | `getTodo`, `getTodoMessages`, `saveTodo`, `todoOpenLink`, `todoCopyText` | `todo.js` | AQW |
 | `getStrategy`, `getStrategyMessages`, `saveStrategy`, `setStrategyTimerShortcut`, `clearStrategyTimerShortcut` | `strategy.js` | AQW |

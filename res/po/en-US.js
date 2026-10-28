@@ -3,7 +3,10 @@ function expand (keyb) {if(Array.isArray(keyb)) return keyb.join(', '); else ret
 exports.titleMessages = {
     doneSavedAs: "Done! Saved as ",
     recording: "RECORDING",
-    alreadyRecording: "You are already recording another window!"
+    alreadyRecording: "You are already recording another window!",
+    recordingFailed: "Could not record this window.",
+    recordingWebmFallback: "WebM, MP4 unavailable",
+    screenRecordingDenied: "Screen Recording is off for AquaStar. Turn it on in System Settings, Privacy & Security, Screen Recording, then try again."
 }
 
 exports.dialogMessages = {
@@ -100,7 +103,7 @@ exports.settingsMessages = {
     optionHints: {
         appLanguage: "UI language for AquaStar and the active plugin. Restart required after changing.",
         customUrl: "Loads a different SWF URL instead of the active plugin's primary game. Leave empty for the plugin default. Ignored if a local SWF file (below) is active.",
-        recordingFormat: "File format used when recording the game screen (Ctrl+J). The app uses the first format in this list that MediaRecorder supports.",
+        recordingFormat: "File format for a game recording (Ctrl+J). The default is MP4 (H.264). If this system cannot record MP4, AquaStar saves WebM and says so on the window title.",
         renderMode: "This build plays SWFs with the pinned Ruffle web player.",
         ruffleUpdateChannel: "Stock Ruffle downloads are disabled. This build keeps the pinned player.",
         ruffleAutoUpdate: "Left off. A pinned player is not replaced by a stock Ruffle download.",

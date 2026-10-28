@@ -131,6 +131,7 @@ function createWindow () {
         const isGameWindow = typeof swfUrl === 'string' && constant.isRuffleEligible(swfUrl);
         callback(isGameWindow && (permission === 'media' || permission === 'display-capture'));
     });
+    ipcRecording.install(session.defaultSession);
 
     // Keybindings now in keybindings.js
     const finalkeyb = keyb.addKeybinding();

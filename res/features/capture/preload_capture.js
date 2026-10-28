@@ -1,156 +1,148 @@
-const { ipcRenderer } = require("electron");
+const { ipcRenderer } = require('electron');
 
-function desktopVideoConstraint(sourceId) {
-  return {
-    mandatory: {
-      chromeMediaSource: "desktop",
-      chromeMediaSourceId: sourceId
-    }
-  };
-}
-
-let mediaRecorder;
-let captureStream;
-let currentExtension = 'webm';
+let mediaRecorder = null;
+let captureStream = null;
 const recordedChunks = [];
-
-function getRecordName () {
-  var t = new Date();
-  return "Recording-" +
-    t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate() + "_" +
-    t.getHours() + "-" + t.getMinutes() +  "-" +
-    t.getSeconds() + "." + currentExtension;
-}
-
-async function pickFormat(hasAudio) {
-  let desired = null;
-  try {
-    desired = await ipcRenderer.invoke('getRecordingFormat', hasAudio);
-  } catch (e) {
-    console.log("[AquaStar] getRecordingFormat error:", e);
-  }
-
-  const candidates = [];
-  if (desired && desired.mimeType) candidates.push(desired);
-  // Fallbacks, in the unlikely case the configured format isn't supported here.
-  const opus = hasAudio ? ',opus' : '';
-  candidates.push({ mimeType: 'video/webm;codecs=vp8' + opus, extension: 'webm' });
-  candidates.push({ mimeType: 'video/webm;codecs=vp9' + opus, extension: 'webm' });
-  candidates.push({ mimeType: 'video/webm', extension: 'webm' });
-
-  for (let i = 0; i < candidates.length; i++) {
-    if (MediaRecorder.isTypeSupported(candidates[i].mimeType)) return candidates[i];
-  }
-  return { mimeType: 'video/webm', extension: 'webm' };
-}
+let failedMessage = 'Could not record this window.';
+let requestId = 0;
 
 function releaseCaptureStream() {
   if (!captureStream) return;
-  captureStream.getTracks().forEach((track) => track.stop());
+  captureStream.getTracks().forEach(function (track) { track.stop(); });
   captureStream = null;
 }
 
-(() => {
-  async function initRecorder() {
-    let matchedSource;
-    try {
-      matchedSource = await ipcRenderer.invoke('getDesktopCapturerSourceForWindow');
-    } catch (error) {
-      console.log("[AquaStar] desktopCapturer error:", error);
-      return false;
-    }
+function fail(message) {
+  console.log('[AquaStar] recording failed: ' + (message || failedMessage));
+  ipcRenderer.send('recording-failed', message || failedMessage);
+}
 
-    if (!matchedSource) {
-      console.log("[AquaStar] Could not find desktopCapturer source for this window.");
-      return false;
-    }
-
-    const videoConstraint = desktopVideoConstraint(matchedSource.id);
-    // Desktop audio loopback via chromeMediaSource: 'desktop' - Chromium can't isolate
-    // audio to a single window, so this picks up the whole system's audio output, not
-    // just Flash's. Only reliably supported on Windows; falls back to video-only elsewhere.
-    const withAudioConstraints = {
-      audio: { mandatory: { chromeMediaSource: 'desktop' } },
-      video: videoConstraint
-    };
-
-    try {
-      releaseCaptureStream();
-      try {
-        captureStream = await navigator.mediaDevices.getUserMedia(withAudioConstraints);
-      } catch (audioErr) {
-        console.log("[AquaStar] Desktop audio capture unavailable, recording video only:", audioErr);
-        captureStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraint });
-      }
-      await setupRecorder(captureStream);
-      return true;
-    } catch (e) {
-      console.log("[AquaStar] getUserMedia error:", e);
-      return false;
-    }
-  }
-
-  async function setupRecorder(stream) {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-    }
-
-    const hasAudio = stream.getAudioTracks().length > 0;
-    const format = await pickFormat(hasAudio);
-    currentExtension = format.extension;
-    mediaRecorder = new MediaRecorder(stream, {
-      mimeType: format.mimeType,
-      videoBitsPerSecond: 6000000
+async function openDisplay(withAudio) {
+  try {
+    return await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: !!withAudio
     });
-
-    mediaRecorder.ondataavailable = (e) => {
-      recordedChunks.push(e.data);
-    };
-    mediaRecorder.onstop = () => {
-      saveVideo();
-      releaseCaptureStream();
-      mediaRecorder = null;
-    };
+  } catch (err) {
+    console.log('[AquaStar] getDisplayMedia failed: ' + (err && err.name ? err.name : '') + ' ' + (err && err.message ? err.message : err));
+    return null;
   }
+}
 
-  async function triggerRecording(startRecording) {
-    if (!mediaRecorder) {
-      const ready = await initRecorder();
-      if (!ready || !mediaRecorder) {
-        console.log("[AquaStar] mediaRecorder is not initialized yet — cannot record.");
-        ipcRenderer.send("recording-failed", "");
-        return;
-      }
-    }
-
-    if (!startRecording) mediaRecorder.stop();
-    else {
-      recordedChunks.splice(0, recordedChunks.length);
-      mediaRecorder.start();
-    }
+async function openStream() {
+  const withAudio = await openDisplay(true);
+  if (withAudio) return withAudio;
+  const silent = await openDisplay(false);
+  if (silent) return silent;
+  let denied = '';
+  try {
+    const prepared = await ipcRenderer.invoke('prepareRecordingCapture', 'window');
+    if (prepared && prepared.failedMessage) failedMessage = prepared.failedMessage;
+    denied = prepared && prepared.screenDenied ? prepared.screenDenied : '';
+  } catch (err) {
+    console.log('[AquaStar] window capture setup failed: ' + err);
   }
+  const fromWindow = await openDisplay(false);
+  if (fromWindow) return fromWindow;
+  fail(denied || failedMessage);
+  return null;
+}
 
-  ipcRenderer.on('record', (event, message) => {
-    if (message && typeof message === 'object') triggerRecording(!!message.start);
-    else triggerRecording(!!message);
+async function chooseFormat(hasAudio) {
+  const candidates = await ipcRenderer.invoke('recordingMimeCandidates', hasAudio);
+  const supported = {};
+  (candidates || []).forEach(function (mime) {
+    try { supported[mime] = MediaRecorder.isTypeSupported(mime); }
+    catch (err) { supported[mime] = false; }
   });
+  const chosen = await ipcRenderer.invoke('chooseRecordingFormat', hasAudio, supported);
+  ipcRenderer.send('recording-format-notice', chosen);
+  return chosen;
+}
 
-  function saveVideo () {
-    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/webm' });
+function saveVideo(mimeType, extension) {
+  const blob = new Blob(recordedChunks, { type: mimeType || 'video/mp4' });
+  const reader = new FileReader();
+  reader.onload = async function () {
+    // Sandboxed preloads have no Node Buffer. The bytes go across as a view.
+    const bytes = new Uint8Array(this.result);
+    let recordName = 'Recording.' + (extension || 'mp4');
+    try {
+      recordName = await ipcRenderer.invoke('recordingFileName', extension);
+    } catch (err) {
+      console.log('[AquaStar] recording file name failed: ' + err);
+    }
+    ipcRenderer.once('saveDialogReply', function (_event, filename) {
+      if (filename != null) ipcRenderer.send('saveRecording', filename, bytes);
+    });
+    ipcRenderer.send('saveDialog', recordName);
+  };
+  reader.readAsArrayBuffer(blob);
+}
 
-    let fileReader = new FileReader();
-    fileReader.onload = function() {
-      let arrayBuffer = this.result;
-      const buffer = Buffer.from(arrayBuffer);
-      var recordName = getRecordName();
+async function setupRecorder(stream) {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  const hasAudio = stream.getAudioTracks().length > 0;
+  const format = await chooseFormat(hasAudio);
+  mediaRecorder = new MediaRecorder(stream, {
+    mimeType: format.mimeType,
+    videoBitsPerSecond: 6000000
+  });
+  mediaRecorder.ondataavailable = function (event) {
+    if (event.data && event.data.size) recordedChunks.push(event.data);
+  };
+  mediaRecorder.onerror = function (event) {
+    const err = event && event.error;
+    fail(err && err.message ? err.message : failedMessage);
+  };
+  const extension = format.extension;
+  const mimeType = format.mimeType;
+  mediaRecorder.onstop = function () {
+    saveVideo(mimeType, extension);
+    releaseCaptureStream();
+    mediaRecorder = null;
+  };
+}
 
-      ipcRenderer.send('saveDialog', recordName);
-      ipcRenderer.once('saveDialogReply', (event, filename) => {
-        if (filename != null && filename != undefined) {
-          ipcRenderer.send('saveRecording', filename, buffer);
-        }
-      });
-    };
-    fileReader.readAsArrayBuffer(blob);
+async function triggerRecording(startRecording) {
+  if (!startRecording) {
+    requestId++;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    return;
   }
-})();
+  if (mediaRecorder && mediaRecorder.state === 'recording') return;
+  const mine = ++requestId;
+  try {
+    const prepared = await ipcRenderer.invoke('prepareRecordingCapture', 'frame');
+    if (prepared && prepared.failedMessage) failedMessage = prepared.failedMessage;
+  } catch (err) {
+    console.log('[AquaStar] capture setup failed: ' + err);
+  }
+  if (mine !== requestId) return;
+  const stream = await openStream();
+  if (mine !== requestId) {
+    if (stream) stream.getTracks().forEach(function (track) { track.stop(); });
+    return;
+  }
+  if (!stream) return;
+  try {
+    captureStream = stream;
+    await setupRecorder(stream);
+  } catch (err) {
+    console.log('[AquaStar] MediaRecorder failed: ' + err);
+    releaseCaptureStream();
+    if (mine === requestId) fail(failedMessage);
+    return;
+  }
+  if (mine !== requestId || !mediaRecorder) {
+    releaseCaptureStream();
+    return;
+  }
+  recordedChunks.splice(0, recordedChunks.length);
+  mediaRecorder.start();
+}
+
+ipcRenderer.on('record', function (_event, message) {
+  const start = message && typeof message === 'object' ? !!message.start : !!message;
+  triggerRecording(start);
+});

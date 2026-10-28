@@ -44,7 +44,7 @@ Counts: 17 ported, 13 ported with changes, 5 not possible. 35 items.
 | Char page and char-page print | ported with changes | The page loads `aquastar://ruffle/ruffle.js` so the selfhosted polyfill replaces the Flash `<object>`. Alt+K treats `object`, `embed`, or `ruffle-player` as the movie. The window is sandboxed with web security on. The player scheme echoes CORS only for origins the plugin allows. |
 | Char Page Studio | ported with changes | Helper process remains. It no longer starts PPAPI. The lab page and the capture page are sandboxed with web security on. They load `aquastar://ruffle/ruffle.js`. The helper serves the two local SWFs on their Artix URLs and adds an Artix CORS header. Popups are denied. Shared focus CSS is inserted from the helper because a `file://` page cannot read a parent file. |
 | Screenshots (F2) | ported | `capturePage` from the main process. The smoke hook wrote PNGs of the game window. |
-| Screen recording (Ctrl+J) | ported with changes | Still MediaRecorder via the capture preload. The format is the first one in the settings list that this Chromium supports. A recording was not taken in the headless run. |
+| Screen recording (Ctrl+J) | ported with changes | The game window's web contents are captured with `getDisplayMedia`. The file is MP4 (H.264). Audio is AAC when MediaRecorder supports it, otherwise Opus in the MP4. WebM is only the fallback when MP4 is unsupported, and the window title says so. Start, stop, the save dialog, and `Recording-Y-M-D_H-M-S` names are unchanged. A saved `h264-mkv` setting records as MP4. macOS Screen Recording permission is reported when the desktop-window fallback is blocked. That permission and Wayland's portal were not exercised here. |
 | Global shortcuts | ported | F2 and Ctrl+J stay on `globalShortcut`. |
 | Menus, reminders, to-do, inventory, strategy | ported | Plugin windows and stores are unchanged. |
 | WikiView hover images | ported | Still fetched in the main process. |
@@ -70,6 +70,6 @@ Counts: 17 ported, 13 ported with changes, 5 not possible. 35 items.
 - A real AQW session. `https://game.aq.com/game/gamefiles/Loader4.swf?ver=b` returned Cloudflare HTML (HTTP 403) from this network, including with a launcher User-Agent and `artixmode`. Ruffle showed its load-error splash. The same request from a normal network may succeed.
 - Gameplay frame rate on a GPU. xvfb blocklists WebGL, so Ruffle used the canvas renderer. A machine with a GPU should get wgpu-webgl first.
 - Windows and macOS packages were not built here. The mac zip and `strip-mac-signature` were not executed.
-- A screen recording file was not written.
+- Wayland's screen portal, Windows, and macOS Screen Recording permission. The xvfb smoke captured the game web contents to an H.264 MP4. It did not open a portal or a macOS permission prompt.
 - `release.yml` is unchanged. A `v*` tag pushed from this branch would still run Release, and a tag with no hyphen would replace GitHub Latest. Do not push a tag.
 - GitHub Pages deploy is skipped when the workflow ref is `electron-experimental`. A dispatch of that workflow on this branch does not publish the tools site.

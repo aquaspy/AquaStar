@@ -74,14 +74,14 @@ The platform (`main.js`, `res/`, shared tooling in `scripts/`) names no game. An
 - **Background throttling is disabled** with `backgroundThrottling: false` on game and main windows. The old Chromium command-line flags are gone. Minimizing a SWF window sets `renderingSuspended` and calls `releaseMemory` when the player exposes it.
 - **F2 / Ctrl+J** use `globalShortcut` so a focused game window cannot swallow them.
 - **WikiView's hover-preview image** is fetched from the main process (`plugins/adventure-quest-worlds/features/wikiview/wikiFetch.js`), not the renderer - a page-side `fetch()` to aqwwiki.wikidot.com from an account.aq.com window would be blocked by CORS.
-- **Screen recording** uses MediaRecorder and saves the first supported format from the settings list. The old Chromium 87 VP8-only limit is gone.
+- **Screen recording** (Ctrl+J) captures the game window's web contents with `getDisplayMedia` and saves MP4 (H.264, plus AAC when MediaRecorder supports it, otherwise Opus). WebM is used only when MP4 is unsupported, and the window title says so. A saved `recordingFormat` of `h264-mkv` records as MP4. Files are still chosen in the save dialog, named `Recording-Y-M-D_H-M-S`. macOS Screen Recording permission is checked only for the desktop-window fallback. In-process capture does not prompt.
 - **User-Agent** for `*.aq.com` requests is an AQW plugin policy (`plugins/adventure-quest-worlds/user-agent.js`, applied by its `artix-ua` session rule): it matches what Artix Game Launcher 2.2.0 actually sends, `... (KHTML, like Gecko) Safari/537.36` with no `Chrome/`, `Electron/` or app-name tokens (the launcher's `replace(/Artix.*\s/, '')` eats them), plus an `artixmode: launcher` header. The platform only passes the browser's own UA to rules as `ctx.defaultUserAgent`.
 - **Ad blocking** blocks known ad domains only (aq.com traffic is not filtered). It is a platform-owned session rule (`res/platform/platform-rules.js`). All session rules, platform and plugin, go through `res/platform/session-rules.js`, which registers one listener per webRequest event, because Electron keeps only one and a second registration silently replaces the first.
 - **Char Page Studio** runs in a second Electron process, launched by the AQW plugin through `host.windows.spawnHelperProcess` (platform side: `res/platform/helper-process.js`; only scripts inside the bundled `plugins/` tree may run that way). Its scripts live under `plugins/adventure-quest-worlds/processes/`.
 
 ## Testing checklist
 
-Automated: `npm test` and `npm run smoke:plugins`.
+Automated: `npm test` and `npm run smoke:plugins`. Headless recording check, on a machine with a display: `xvfb-run -a node scripts/smoke-recording.js`.
 
 **Manual UI:** [`docs/electron-experimental-parity.md`](docs/electron-experimental-parity.md) is the checklist for this branch. [`docs/FLASH_CHECKLIST.md`](docs/FLASH_CHECKLIST.md) describes the classic PPAPI app on `dev`.
 

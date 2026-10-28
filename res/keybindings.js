@@ -2,6 +2,9 @@ const inst          = require('./instances.js');
 const constant      = require('./const.js');
 const windowsMenu   = require('./windows/menu.js');
 const ipcRecording  = require('./ipc/recording.js');
+ipcRecording.setPreferredFormatId(function () {
+    return finalKeybinds.recordingFormat;
+});
 const locale        = require('./locale.js');
 const platform      = require('./platform');
 const fs            = require('fs');
@@ -345,7 +348,9 @@ ipcMain.handle('getKeybindings', () => {
         });
     }
     return {
-        current:  Object.assign({}, finalKeybinds),
+        current:  Object.assign({}, finalKeybinds, {
+            recordingFormat: constant.normalizeRecordingFormatId(finalKeybinds.recordingFormat)
+        }),
         defaults: defaults,
         // Platform option defaults plus the active plugin's, so Reset restores both.
         options:  Object.assign({}, constant.originalOptions,
@@ -419,12 +424,6 @@ ipcMain.handle('getPluginList', (event, opts) => {
         errors: discovered.errors || [],
         localPluginsDir: path.join(constant.appDataDirectory, 'plugins')
     };
-});
-
-// Game window preload (res/features/capture/preload_capture.js) asks this before starting MediaRecorder -
-// it can't read aquastar.json itself (no Node access needed there beyond IPC).
-ipcMain.handle('getRecordingFormat', (event, hasAudio) => {
-    return constant.resolveRecordingFormat(finalKeybinds.recordingFormat, hasAudio);
 });
 
 ipcMain.handle('getSettingsMessages', () => {

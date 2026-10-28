@@ -59,7 +59,7 @@ function boot(platformName) {
     './res/platform/ruffle-origin.js': { registerScheme() {}, install() {} },
     './res/flash.js': { flashManager() {} },
     './res/keybindings.js': { addKeybinding: () => ({}) },
-    './res/ipc/recording.js': {},
+    './res/ipc/recording.js': { install() {} },
     './res/instances.js': {
       newBrowserWindow() {
         creates++;
