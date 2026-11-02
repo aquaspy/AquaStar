@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import platform
 import shutil
+import socket
 import sys
 import subprocess
 import tarfile
@@ -27,15 +28,22 @@ def run(args, cwd, env):
     subprocess.run([str(a) for a in args], cwd=cwd, env=env, check=True)
 
 def fetch(url, archive):
-    for attempt in range(1, 5):
-        try:
-            urllib.request.urlretrieve(url, archive)
-            return
-        except (urllib.error.URLError, TimeoutError, OSError):
-            archive.unlink(missing_ok=True)
-            if attempt == 4:
-                raise
-            time.sleep(2 ** attempt)
+    previous = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(60)
+    try:
+        for attempt in range(1, 8):
+            try:
+                urllib.request.urlretrieve(url, archive)
+                return
+            except (urllib.error.URLError, TimeoutError, OSError) as error:
+                archive.unlink(missing_ok=True)
+                if attempt == 7:
+                    raise
+                wait = min(60, 15 * attempt)
+                print(f'Download failed ({error}). Retrying in {wait}s.', flush=True)
+                time.sleep(wait)
+    finally:
+        socket.setdefaulttimeout(previous)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
