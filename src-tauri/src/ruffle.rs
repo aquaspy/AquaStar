@@ -1,11 +1,12 @@
 //! Ruffle desktop options shared by the launcher UI and the player process.
 //!
-//! Artix Ruffle 3.0.0's desktop CLI takes:
+//! Artix Ruffle 3.5.0's desktop CLI takes:
 //! - `--quality low|medium|high` (high is Ruffle's own default: 4x MSAA; low is no anti-aliasing)
 //! - `--graphics default|vulkan|metal|dx12|gl`
 //! - `--title`
 //!
-//! Artix 3.0.0 removed `--performance-mode`. AquaStar NEO does not pass it.
+//! Artix 3.0.0 removed `--performance-mode`, and 3.5.0 does not have it either.
+//! AquaStar NEO does not pass it.
 //! Smooth Motion (`frame_interpolation`) is a saved context-menu preference
 //! in that build, not a command-line flag.
 //!

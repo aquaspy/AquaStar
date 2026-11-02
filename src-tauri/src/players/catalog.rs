@@ -1080,45 +1080,45 @@ mod tests {
                 Os::Linux,
                 Arch::X86_64,
                 Cli::Artix,
-                "ruffle-artix-3.0.0",
+                "ruffle-artix-3.5.0",
                 "ruffle_desktop",
-                "https://chaoslabs.artix.com/Ruffle/3.0.0/ArtixGamesLauncher-Ruffle-3.0.0-linux-x64.zip",
+                "https://chaoslabs.artix.com/Ruffle/3.5.0/ArtixGamesLauncher-Ruffle-3.5.0-linux-x64.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Windows,
                 Arch::X86_64,
                 Cli::Artix,
-                "ruffle-artix-3.0.0-x64",
+                "ruffle-artix-3.5.0-x64",
                 "Artix Games Launcher.exe",
-                "https://chaoslabs.artix.com/Ruffle/3.0.0/ArtixGamesLauncher-3_0_0-windows.zip",
+                "https://chaoslabs.artix.com/Ruffle/3.5.0/ArtixGamesLauncher-Ruffle-3.5.0-windows.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Windows,
                 Arch::Aarch64,
                 Cli::Artix,
-                "ruffle-artix-3.0.0-arm64",
+                "ruffle-artix-3.5.0-arm64",
                 "Artix Games Launcher.exe",
-                "https://chaoslabs.artix.com/Ruffle/3.0.0/ArtixGamesLauncher-3_0_0-windows.zip",
+                "https://chaoslabs.artix.com/Ruffle/3.5.0/ArtixGamesLauncher-Ruffle-3.5.0-windows.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Macos,
                 Arch::Aarch64,
                 Cli::Artix,
-                "ruffle-artix-3.0.0",
+                "ruffle-artix-3.5.0",
                 "Artix Games Launcher · Ruffle",
-                "https://chaoslabs.artix.com/Ruffle/3.0.0/ArtixGamesLauncher-Ruffle-3.0.0-macOS-universal.zip",
+                "https://chaoslabs.artix.com/Ruffle/3.5.0/ArtixGamesLauncher-Ruffle-3.5.0-macOS-universal.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Macos,
                 Arch::X86_64,
                 Cli::Artix,
-                "ruffle-artix-3.0.0",
+                "ruffle-artix-3.5.0",
                 "Artix Games Launcher · Ruffle",
-                "https://chaoslabs.artix.com/Ruffle/3.0.0/ArtixGamesLauncher-Ruffle-3.0.0-macOS-universal.zip",
+                "https://chaoslabs.artix.com/Ruffle/3.5.0/ArtixGamesLauncher-Ruffle-3.5.0-macOS-universal.zip",
             ),
             (
                 Engine::Flash,
@@ -1197,7 +1197,7 @@ mod tests {
         assert_eq!(artix.extract, Extract::AppImage);
         assert_eq!(
             artix.binary_sha256.as_deref(),
-            Some("840b26ce1b66a0023a023a77091cbfa5ca575af309a4e029f67c69723035a9ec")
+            Some("b407084cf02fa9220e832902786e31383f9dc8dc143c2a9a93f0a6fb8a5fdc1d")
         );
         let windows = catalog
             .select(Engine::Ruffle, Os::Windows, Arch::X86_64)
@@ -1205,7 +1205,7 @@ mod tests {
         assert_eq!(windows.extract, Extract::SingleExe);
         assert_eq!(
             windows.inner_sha256.as_deref(),
-            Some("a0b35bbfa775825076b4ae7a83e9aa80e7da56cff0436b5d4b0673023cd1f19d")
+            Some("664e56e0bbfd3353f91665dc564136472c10cd9b17a742d143728eeed225972f")
         );
         assert!(catalog
             .select(Engine::Ruffle, Os::Linux, Arch::X86)
@@ -1582,7 +1582,7 @@ mod tests {
     #[test]
     fn single_exe_extract_lifts_the_arch_zip_then_publishes_one_exe() {
         let dir = scratch("nested-exe");
-        let inner_path = dir.join("ArtixGamesLauncher-Ruffle-3.0.0-windows-x64.zip");
+        let inner_path = dir.join("ArtixGamesLauncher-Ruffle-3.5.0-windows-x64.zip");
         {
             let file = fs::File::create(&inner_path).unwrap();
             let mut zip = zip::ZipWriter::new(file);
@@ -1619,7 +1619,7 @@ mod tests {
 
         let wrong = scratch("nested-wrong-arch");
         fs::write(
-            wrong.join("ArtixGamesLauncher-Ruffle-3.0.0-windows-x64.zip"),
+            wrong.join("ArtixGamesLauncher-Ruffle-3.5.0-windows-x64.zip"),
             &inner_bytes,
         )
         .unwrap();

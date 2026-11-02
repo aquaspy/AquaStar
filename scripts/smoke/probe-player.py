@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the pinned Artix Ruffle binary and record how it answers CLI flags.
 
-The macOS 3.0.0 zip publishes one universal binary and no ruffle_desktop file.
+The macOS 3.5.0 zip publishes one universal binary and no ruffle_desktop file.
 This probe checks that --version, --help, and --no-gui are handled by that
 binary (and by the Linux and Windows binaries) instead of by a launcher that
 ignores arguments. The --no-gui result is printed either way. A missing flag
