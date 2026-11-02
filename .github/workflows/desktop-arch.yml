@@ -1,5 +1,6 @@
 name: AquaStar NEO Native Arch Package
 
+# The package job downloads the pinned FFmpeg and OpenH264 sources while it builds.
 on:
   workflow_call:
     inputs:
