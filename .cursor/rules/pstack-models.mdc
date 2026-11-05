@@ -5,15 +5,14 @@ alwaysApply: true
 # pstack model configuration. One line per role. Delete a line to fall back to the skill default.
 # `inherit-parent` or `auto` as a value: the role runs on the parent chat model (omit Task `model`). Alias entries in a panel list still count toward its fan-out.
 # Never use fast-mode slugs.
-# User decision 2026-11-05 (same for all project repos): 4.7 high for code, investigation, swarm, review, judgment and synthesis; 4.7 low for exploration, tooling, prose and explanation; panels pair 4.7 high with 4.6 high; 4.7 xhigh only for the hardest tasks.
+# User decision 2026-11-05 (same for all project repos): 4.7 high for code, investigation, swarm, review, judgment and synthesis; 4.7 low for exploration, tooling and explanation; judgment and prose share one key on 4.7 high; panels pair 4.7 high with 4.6 high; 4.7 xhigh only for the hardest tasks.
 # Grok 4.6 high stays as a second voice on panels: AkitaOnRails LLM Benchmark v4 (code-review vigilance) scored it 98.5 vs 83.5 for 4.7.
 # budget: medium (high)
 feature, refactoring: grok-4.7-high
 bug-fix: grok-4.7-high
 perf-issue: grok-4.7-high
 hillclimb: grok-4.7-high
-judgment: grok-4.7-high
-prose: grok-4.7-low
+judgment and prose: grok-4.7-high
 hardest tasks: grok-4.7-xhigh
 how explorer: grok-4.7-low
 how explainer: grok-4.7-low
