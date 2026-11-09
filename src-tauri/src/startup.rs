@@ -477,8 +477,8 @@ mod tests {
     #[test]
     fn naming_a_plugin_opens_its_default_game_with_the_requested_player() {
         assert_eq!(
-            run("--aqw --no-launcher --ruffle3.5", None),
-            direct("adventure-quest-worlds", "aqw", Some((Engine::Ruffle, Some("3.5"))))
+            run("--aqw --no-launcher --ruffle4.6", None),
+            direct("adventure-quest-worlds", "aqw", Some((Engine::Ruffle, Some("4.6"))))
         );
         assert_eq!(run("--aqw --no-launcher", None), direct("adventure-quest-worlds", "aqw", None));
         assert_eq!(
@@ -494,7 +494,7 @@ mod tests {
         assert_eq!(page.direct, None);
         assert_eq!(page.show_plugin.as_deref(), Some("adventure-quest-worlds"));
         assert_eq!(page.notice, None);
-        let hinted = run("--aqw --ruffle3.5", None);
+        let hinted = run("--aqw --ruffle4.6", None);
         assert_eq!(hinted.direct, None);
         assert!(hinted.notice.unwrap().contains("--no-launcher"));
         assert_eq!(run("--aqw --game=dragonfable", Some(("adventure-quest-worlds", "aqw"))).direct, None);

@@ -2,58 +2,44 @@
   "players": [
     {
       "engine": "ruffle",
-      "version": "3.5.0",
+      "version": "4.6.0",
       "artifacts": [
         {
           "os": "linux",
           "arch": "x86_64",
-          "dir": "ruffle-artix-3.5.0",
+          "dir": "ruffle-artix-4.6.0",
           "cli": "artix",
           "kind": "zip",
           "extract": "appimage",
-          "url": "https://chaoslabs.artix.com/Ruffle/3.5.0/ArtixGamesLauncher-Ruffle-3.5.0-linux-x64.zip",
-          "sha256": "5035e5219fa06198cca426bfb7f0f11f2c8d228ec786cd08ac6fcc5f5ae7b1d6",
-          "binarySha256": "b407084cf02fa9220e832902786e31383f9dc8dc143c2a9a93f0a6fb8a5fdc1d",
+          "url": "https://chaoslabs.artix.com/Ruffle/4.6.0/ArtixGamesLauncher-BattleOnEngine-4.6.0-linux-x64.zip",
+          "sha256": "1b0d67cc455fa197a6275c8ddd50107550dbe7bfb656311df928077447a1c6d1",
+          "binarySha256": "93c070a5d5adef128fe82d71b928d5bb8bf8f5f67f9db28b7c357e768ba9be62",
           "exe": "ruffle_desktop"
         },
         {
           "os": "windows",
           "arch": "x86_64",
-          "dir": "ruffle-artix-3.5.0-x64",
+          "dir": "ruffle-artix-4.6.0-x64",
           "cli": "artix",
           "kind": "zip",
           "extract": "single-exe",
-          "url": "https://chaoslabs.artix.com/Ruffle/3.5.0/ArtixGamesLauncher-Ruffle-3.5.0-windows.zip",
-          "sha256": "a26cd413a99afad22e32874069a5beaf12a83dbecbe2bf56aa974726d5a689e4",
-          "innerSha256": "664e56e0bbfd3353f91665dc564136472c10cd9b17a742d143728eeed225972f",
-          "binarySha256": "1119c90ea02e11e11981eff195ff1b65a2b3669813978f4b63e43ba5db718ecd",
-          "exe": "Artix Games Launcher.exe"
-        },
-        {
-          "os": "windows",
-          "arch": "aarch64",
-          "dir": "ruffle-artix-3.5.0-arm64",
-          "cli": "artix",
-          "kind": "zip",
-          "extract": "single-exe",
-          "url": "https://chaoslabs.artix.com/Ruffle/3.5.0/ArtixGamesLauncher-Ruffle-3.5.0-windows.zip",
-          "sha256": "a26cd413a99afad22e32874069a5beaf12a83dbecbe2bf56aa974726d5a689e4",
-          "innerSha256": "82d084cc34f6831a4514561130451d54153ea400eacd33cabe977b059480b155",
-          "binarySha256": "bfb65a2600d77136ea59497495af82f23571524f9d46c800fa45a7752b7178c4",
+          "url": "https://chaoslabs.artix.com/Ruffle/4.6.0/ArtixGamesLauncher-BattleOnEngine-4.6.0-windows-x64.zip",
+          "sha256": "d0c3362cf450c1e29e538969b17e81e600a779a4cfc0186f36a475919413f6b5",
+          "binarySha256": "28b7c8de93570d6b692840e1939410b6803201ef90865721c906bde6afe9b248",
           "exe": "Artix Games Launcher.exe"
         },
         {
           "os": "macos",
           "arch": "aarch64",
           "also": ["x86_64"],
-          "dir": "ruffle-artix-3.5.0",
+          "dir": "ruffle-artix-4.6.0",
           "cli": "artix",
           "kind": "zip",
           "extract": "macos-cli",
-          "url": "https://chaoslabs.artix.com/Ruffle/3.5.0/ArtixGamesLauncher-Ruffle-3.5.0-macOS-universal.zip",
-          "sha256": "f8cbd5e2d71ded0885ef0d054800b059e89d07d5509c8bb7c2e3d2953a47d8ad",
-          "binarySha256": "2a90299c3d502885afcd530e7d88da560af8d0d8c022117b03167e29be161162",
-          "exe": "Artix Games Launcher · Ruffle"
+          "url": "https://chaoslabs.artix.com/Ruffle/4.6.0/ArtixGamesLauncher-BattleOnEngine-4.6.0-macOS-universal.zip",
+          "sha256": "d809ecda323d48af0b7cf04a39cf52ec5d297c06539212e98cfdaec9ea219f0d",
+          "binarySha256": "6899751d4fcb1caa9d4f27e4630e296eaa260dcc0a645b69886c30b28517d72d",
+          "exe": "Artix Games Launcher · The BattleOn Engine"
         }
       ]
     },

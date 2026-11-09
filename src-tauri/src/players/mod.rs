@@ -72,7 +72,7 @@ impl Engine {
         }
     }
 
-    /// Version of the player AquaStar NEO ships for this system (`3.5.0`, `32.0.0.465`).
+    /// Version of the player AquaStar NEO ships for this system (`4.6.0`, `32.0.0.465`).
     pub fn version_on(&self, os: catalog::Os, arch: catalog::Arch) -> Option<String> {
         catalog::Catalog::pinned()
             .select(*self, os, arch)
@@ -1357,12 +1357,12 @@ mod pin_tests {
         );
         assert_eq!(
             Engine::preferred_for(catalog::Os::Windows, catalog::Arch::Aarch64),
-            Some(Engine::Ruffle)
+            None
         );
         assert!(!Engine::Ruffle.supported_on(catalog::Os::Linux, catalog::Arch::Aarch64));
         assert!(!Engine::Ruffle.supported_on(catalog::Os::Linux, catalog::Arch::X86));
         assert!(!Engine::Ruffle.supported_on(catalog::Os::Windows, catalog::Arch::X86));
-        assert!(Engine::Ruffle.supported_on(catalog::Os::Windows, catalog::Arch::Aarch64));
+        assert!(!Engine::Ruffle.supported_on(catalog::Os::Windows, catalog::Arch::Aarch64));
         assert!(Engine::Flash.supported_on(catalog::Os::Macos, catalog::Arch::Aarch64));
         assert!(Engine::Flash.supported_on(catalog::Os::Macos, catalog::Arch::X86_64));
         assert!(Engine::Ruffle.supported_on(catalog::Os::Linux, catalog::Arch::X86_64));

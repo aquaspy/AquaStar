@@ -18,7 +18,7 @@ PLAYER_NAMES = {
     ("Windows", "flash"): ["flashplayer_32_sa.exe"],
     ("Windows", "ruffle"): ["Artix Games Launcher.exe"],
     ("Darwin", "flash"): ["Flash Player"],
-    ("Darwin", "ruffle"): ["Artix Games Launcher · Ruffle"],
+    ("Darwin", "ruffle"): ["Artix Games Launcher · The BattleOn Engine"],
     ("Linux", "flash"): ["flashplayer"],
     ("Linux", "ruffle"): ["ruffle_desktop"],
 }
