@@ -18,7 +18,12 @@ PLAYER_NAMES = {
     ("Windows", "flash"): ["flashplayer_32_sa.exe"],
     ("Windows", "ruffle"): ["Artix Games Launcher.exe"],
     ("Darwin", "flash"): ["Flash Player"],
-    ("Darwin", "ruffle"): ["Artix Games Launcher · The BattleOn Engine"],
+    # Smoke launches the published app, still named "· Ruffle", while
+    # the 4.6.0 pin ships "· The BattleOn Engine".
+    ("Darwin", "ruffle"): [
+        "Artix Games Launcher · The BattleOn Engine",
+        "Artix Games Launcher · Ruffle",
+    ],
     ("Linux", "flash"): ["flashplayer"],
     ("Linux", "ruffle"): ["ruffle_desktop"],
 }
