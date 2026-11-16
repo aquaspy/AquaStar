@@ -1,4 +1,6 @@
 name: AquaStar Capture Check
+
+# Builds the bundled media libraries and runs the capture tests on Linux, Windows, and macOS.
 on:
   push:
     branches: [neo-dev]
