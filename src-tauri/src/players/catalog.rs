@@ -1081,36 +1081,36 @@ mod tests {
                 Os::Linux,
                 Arch::X86_64,
                 Cli::Artix,
-                "ruffle-artix-4.6.0",
+                "ruffle-artix-5.6.1",
                 "ruffle_desktop",
-                "https://chaoslabs.artix.com/Ruffle/4.6.0/ArtixGamesLauncher-BattleOnEngine-4.6.0-linux-x64.zip",
+                "https://chaoslabs.artix.com/Ruffle/5.6.1/ArtixGamesLauncher-BattleOnEngine-5.6.1-linux-x64.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Windows,
                 Arch::X86_64,
                 Cli::Artix,
-                "ruffle-artix-4.6.0-x64",
+                "ruffle-artix-5.6.1-x64",
                 "Artix Games Launcher.exe",
-                "https://chaoslabs.artix.com/Ruffle/4.6.0/ArtixGamesLauncher-BattleOnEngine-4.6.0-windows-x64.zip",
+                "https://chaoslabs.artix.com/Ruffle/5.6.1/ArtixGamesLauncher-BattleOnEngine-5.6.1-windows-x64.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Macos,
                 Arch::Aarch64,
                 Cli::Artix,
-                "ruffle-artix-4.6.0",
+                "ruffle-artix-5.6.1",
                 "Artix Games Launcher · The BattleOn Engine",
-                "https://chaoslabs.artix.com/Ruffle/4.6.0/ArtixGamesLauncher-BattleOnEngine-4.6.0-macOS-universal.zip",
+                "https://chaoslabs.artix.com/Ruffle/5.6.1/ArtixGamesLauncher-BattleOnEngine-5.6.1-macOS-universal.zip",
             ),
             (
                 Engine::Ruffle,
                 Os::Macos,
                 Arch::X86_64,
                 Cli::Artix,
-                "ruffle-artix-4.6.0",
+                "ruffle-artix-5.6.1",
                 "Artix Games Launcher · The BattleOn Engine",
-                "https://chaoslabs.artix.com/Ruffle/4.6.0/ArtixGamesLauncher-BattleOnEngine-4.6.0-macOS-universal.zip",
+                "https://chaoslabs.artix.com/Ruffle/5.6.1/ArtixGamesLauncher-BattleOnEngine-5.6.1-macOS-universal.zip",
             ),
             (
                 Engine::Flash,
@@ -1189,7 +1189,7 @@ mod tests {
         assert_eq!(artix.extract, Extract::AppImage);
         assert_eq!(
             artix.binary_sha256.as_deref(),
-            Some("93c070a5d5adef128fe82d71b928d5bb8bf8f5f67f9db28b7c357e768ba9be62")
+            Some("0ec9535af305d4b8ed66e4eb8ec0192b5fe385c16bd503a7793dd34f215e9962")
         );
         let windows = catalog
             .select(Engine::Ruffle, Os::Windows, Arch::X86_64)
@@ -1198,7 +1198,7 @@ mod tests {
         assert!(windows.inner_sha256.is_none());
         assert_eq!(
             windows.binary_sha256.as_deref(),
-            Some("28b7c8de93570d6b692840e1939410b6803201ef90865721c906bde6afe9b248")
+            Some("98582acb4a99fc558afc5c4c170437ceaf02eac13a83f357cc9a40eaa6b85500")
         );
         assert!(catalog
             .select(Engine::Ruffle, Os::Linux, Arch::X86)

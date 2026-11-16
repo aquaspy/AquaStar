@@ -72,7 +72,7 @@ impl Engine {
         }
     }
 
-    /// Version of the player AquaStar NEO ships for this system (`4.6.0`, `32.0.0.465`).
+    /// Version of the player AquaStar NEO ships for this system (`5.6.1`, `32.0.0.465`).
     pub fn version_on(&self, os: catalog::Os, arch: catalog::Arch) -> Option<String> {
         catalog::Catalog::pinned()
             .select(*self, os, arch)
